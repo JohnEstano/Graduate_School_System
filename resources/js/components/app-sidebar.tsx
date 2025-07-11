@@ -27,25 +27,25 @@ const mainNavItems: MainNavItem[] = [
             },
             {
                 title: 'Defense Requests',
-                href: '/defense-requests',
+                href: '/defense-request',
 
             }
         ]
     },
     {
-        title: 'Payment',
+        title: 'Payments',
         href: '/payment',
         icon: CreditCard,
     },
   
        {
-        title: 'Schedule',
+        title: 'Schedules',
         href: '/schedule',
         icon: CalendarSync,
     },
       {
         title: 'Notifications',
-        href: '/notifications',
+        href: '/notification',
         icon: Bell,
     },
 ];
