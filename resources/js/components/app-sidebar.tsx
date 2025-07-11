@@ -2,39 +2,65 @@ import { NavFooter } from '@/components/nav-footer';
 import { NavMain } from '@/components/nav-main';
 import { NavUser } from '@/components/nav-user';
 import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '@/components/ui/sidebar';
-import { type NavItem } from '@/types';
+import { MainNavItem, type NavItem } from '@/types';
 import { Link } from '@inertiajs/react';
-import { BookOpen, Folder, LayoutGrid } from 'lucide-react';
+import { BookOpen, Folder, LayoutGrid, Bell, FileText, CreditCard, CalendarSync} from 'lucide-react';
 import AppLogo from './app-logo';
 
-const mainNavItems: NavItem[] = [
+
+const mainNavItems: MainNavItem[] = [
     {
         title: 'Dashboard',
         href: '/dashboard',
         icon: LayoutGrid,
     },
+    {
+        title: 'Submissions',
+        href: '/submission',
+        icon: FileText,
+        subItems: [
+
+            {
+                title: 'Comprehensive Exam',
+                href: '/comprehensive-exam',
+               
+            },
+            {
+                title: 'Defense Requests',
+                href: '/defense-requests',
+
+            }
+        ]
+    },
+    {
+        title: 'Payment',
+        href: '/payment',
+        icon: CreditCard,
+    },
+  
+       {
+        title: 'Schedule',
+        href: '/schedule',
+        icon: CalendarSync,
+    },
+      {
+        title: 'Notifications',
+        href: '/notifications',
+        icon: Bell,
+    },
 ];
 
 const footerNavItems: NavItem[] = [
-    {
-        title: 'Repository',
-        href: 'https://github.com/laravel/react-starter-kit',
-        icon: Folder,
-    },
-    {
-        title: 'Documentation',
-        href: 'https://laravel.com/docs/starter-kits#react',
-        icon: BookOpen,
-    },
+
 ];
 
 export function AppSidebar() {
     return (
-        <Sidebar collapsible="icon" variant="inset">
+        <Sidebar collapsible="offcanvas" className='px-3 pt-5' variant="inset">
             <SidebarHeader>
                 <SidebarMenu>
                     <SidebarMenuItem>
-                        <SidebarMenuButton size="lg" asChild>
+                        <SidebarMenuButton size="xl" asChild>
                             <Link href="/dashboard" prefetch>
                                 <AppLogo />
                             </Link>
