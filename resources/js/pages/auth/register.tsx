@@ -14,6 +14,7 @@ type RegisterForm = {
     email: string;
     password: string;
     password_confirmation: string;
+    role: string;
 };
 
 export default function Register() {
@@ -22,6 +23,7 @@ export default function Register() {
         email: '',
         password: '',
         password_confirmation: '',
+        role: 'Student',
     });
 
     const submit: FormEventHandler = (e) => {
@@ -101,7 +103,26 @@ export default function Register() {
                         <InputError message={errors.password_confirmation} />
                     </div>
 
-                    <Button type="submit" className="mt-2 w-full" tabIndex={5} disabled={processing}>
+                    <div className="grid gap-2">
+                        <Label htmlFor="role">Role (For development only)</Label>
+                        <select
+                            id="role"
+                            required
+                            tabIndex={5}
+                            value={data.role}
+                            onChange={(e) => setData('role', e.target.value)}
+                            disabled={processing}
+                            className="border rounded px-3 py-2"
+                        >
+                            <option value="Student">Student</option>
+                            <option value="Administrative Assistant">AA</option>
+                            <option value="Coordinator">Coordinator</option>
+                            <option value="Dean">Dean</option>
+                        </select>
+                        <InputError message={errors.role} />
+                    </div>
+
+                    <Button type="submit" className="mt-2 w-full" tabIndex={6} disabled={processing}>
                         {processing && <LoaderCircle className="h-4 w-4 animate-spin" />}
                         Create account
                     </Button>
@@ -109,7 +130,7 @@ export default function Register() {
 
                 <div className="text-muted-foreground text-center text-sm">
                     Already have an account?{' '}
-                    <TextLink href={route('login')} tabIndex={6}>
+                    <TextLink href={route('login')} tabIndex={7}>
                         Log in
                     </TextLink>
                 </div>

@@ -16,6 +16,7 @@ type PageProps = {
         user: {
             id: number;
             name: string;
+            role: string;
         } | null;
     };
 
@@ -38,7 +39,7 @@ export default function Dashboard() {
                         {user?.name ?? 'Guest'}
                     </h1>
                     <p className="text-sm text-gray-400">
-                        Student/ Dean/ AA / Coordinator
+                        {user?.role ?? 'Student'}
                     </p>
                 </div>
 
