@@ -25,7 +25,7 @@ export function NavMain({ items = [] }: NavMainProps) {
   return (
     <SidebarGroup className="px-2 py-0">
       <SidebarGroupLabel>Graduate School</SidebarGroupLabel>
-      <SidebarMenu>
+      <SidebarMenu> 
         {items.map((item) => {
           const isActive = item.href === page.url;
           const hasSubs = !!item.subItems?.length;
