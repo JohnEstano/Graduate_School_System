@@ -44,7 +44,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         return Inertia::render('submissions/comprehensive-exam/Index');
     })->name('comprehensive-exam.index');
 
-
+    
 
 });
 
