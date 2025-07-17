@@ -3,7 +3,7 @@ import { Stepper } from '@/components/ui/Stepper';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import HeadingSmall from '@/components/heading-small';
-import { Plus} from 'lucide-react';
+import { Plus, Paperclip} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -64,7 +64,7 @@ export default function DefenseRequestForm() {
         <form className="space-y-4 pb-5 text-sm">
           <HeadingSmall title="Step 3: Required Attachments" />
           <div className="flex flex-col gap-3 pt-3">
-            <div><Label htmlFor="attachment_notes">Sample Attachment</Label><Input id="attachment_notes" name="attachment_notes" placeholder="Link or File" /></div>
+            <div><Label htmlFor="attachment_notes">Sample Attachment</Label><Input startIcon={Paperclip} id="attachment_notes" name="attachment_notes" placeholder="Link or File" /></div>
           </div>
         </form>
       ),
