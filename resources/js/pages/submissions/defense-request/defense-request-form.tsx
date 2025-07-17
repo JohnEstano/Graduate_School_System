@@ -3,7 +3,7 @@ import { Stepper } from '@/components/ui/Stepper';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import HeadingSmall from '@/components/heading-small';
-import { Plus, Paperclip } from 'lucide-react';
+import { Plus} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,

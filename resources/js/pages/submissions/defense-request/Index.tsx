@@ -21,20 +21,14 @@ export default function DefenseRequestIndex() {
                     <DefenseRequestForm />
                 </div>
 
-                <div className="grid auto-rows-min gap-4 md:grid-cols-3">
+                <div className="grid auto-rows-min gap-4 md:grid-cols-1 h-screen">
                     <div className="border-sidebar-border/70 dark:border-sidebar-border relative aspect-video overflow-hidden rounded-xl border p-5">
                         <div className="flex items-start justify-between">
-                            <h3 className="text-[13px] font-medium">Defense Requests:</h3>
-
+                        
                         </div>
                     </div>
 
-                    <div className="border-sidebar-border/70 dark:border-sidebar-border relative aspect-video overflow-hidden rounded-xl border p-5">
-                        <div className="flex items-start justify-between">
-                            <h3 className="text-[13px] font-medium">Status </h3>
-
-                        </div>
-                    </div>
+                   
 
 
                 </div>
