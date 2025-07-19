@@ -44,7 +44,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
         return Inertia::render('submissions/comprehensive-exam/Index');
     })->name('comprehensive-exam.index');
 
-    
+    //Defense Request route
+    Route::get('honorarium', function () {
+        return Inertia::render('honorarium/Index');
+    })->name('honorarium.index');
 
 });
 
