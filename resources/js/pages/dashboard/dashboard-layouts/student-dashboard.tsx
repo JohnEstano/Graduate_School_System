@@ -1,5 +1,5 @@
 import { usePage } from '@inertiajs/react';
-import { CircleEllipsis, Ellipsis, EllipsisVertical, Info, BellRing } from 'lucide-react';
+import { Ellipsis, Info, BellRing } from 'lucide-react';
 
 type PageProps = {
     auth: {
@@ -41,19 +41,19 @@ export default function StudentDashboard() {
                 <div className="border-sidebar-border/70 dark:border-sidebar-border relative aspect-video overflow-hidden rounded-xl border p-5">
                     <div className="flex items-start justify-between">
                         <h3 className="text-[13px] font-medium">Subjects Completed:</h3>
-                        <EllipsisVertical className="size-4 text-zinc-700" />
+                        <Ellipsis className="size-4 text-zinc-700" />
                     </div>
                 </div>
                 <div className="border-sidebar-border/70 dark:border-sidebar-border relative aspect-video overflow-hidden rounded-xl border p-5">
                     <div className="flex items-start justify-between">
                         <h3 className="text-[13px] font-medium">Document Status:</h3>
-                        <CircleEllipsis className="size-4 text-zinc-700" />
+                        <Ellipsis className="size-4 text-zinc-700" />
                     </div>
                 </div>
                 <div className="border-sidebar-border/70 dark:border-sidebar-border relative aspect-video overflow-hidden rounded-xl border p-5">
                     <div className="flex items-start justify-between">
                         <h3 className="text-[13px] font-medium">Application Deadline:</h3>
-                        <CircleEllipsis className="size-4 text-zinc-700" />
+                        <Ellipsis className="size-4 text-zinc-700" />
                     </div>
                 </div>
             </div>

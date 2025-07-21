@@ -3,6 +3,7 @@
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\DefenseRequestController;
 
 Route::get('/', function () {
     return Inertia::render('welcome');
@@ -36,15 +37,21 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     //Submissions routes 
     //Defense Request route
-    Route::get('defense-request', function () {
-        return Inertia::render('submissions/defense-request/Index');
-    })->name('defense-request.index');
+    Route::get('/defense-request', [DefenseRequestController::class, 'index'])
+        ->name('defense-request.index');
+
+    Route::post('/defense-request', [DefenseRequestController::class, 'store'])
+        ->name('defense-request.store');
+
+
+
+
     //Comprehensive Exam route
     Route::get('comprehensive-exam', function () {
         return Inertia::render('submissions/comprehensive-exam/Index');
     })->name('comprehensive-exam.index');
 
-    
+
 
 });
 
