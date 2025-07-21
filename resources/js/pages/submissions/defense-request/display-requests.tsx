@@ -4,7 +4,7 @@ import { useState } from "react"
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { format } from "date-fns"
-import { Calendar, Info, Paperclip } from "lucide-react"
+import { Calendar, Info, Paperclip, Send } from "lucide-react"
 import { Separator } from "@/components/ui/separator"
 
 type Props = {
@@ -43,10 +43,9 @@ export default function DisplayRequest({ request }: Props) {
 
   return (
     <Card className="pt-10 pb-10">
-      {/* HEADER */}
       <CardHeader className="flex flex-row justify-between items-start col-span-2">
         <div>
-          <CardTitle className="text-2xl pl-2">Your Defense Request Was Sent</CardTitle>
+          <CardTitle className="text-2xl pl-2 flex gap-3 ">Your Defense Request Was Sent</CardTitle>
           <div className="pb-5 pl-2">
             <h1 className="text-muted-foreground">
               The request will be reviewed shortly
@@ -103,57 +102,83 @@ export default function DisplayRequest({ request }: Props) {
             <Info className="size-5" />
           </button>
         </div>
-       
+
         {showDetails && (
-          <div className="mt-4 space-y-6 pt-4 bg-zinc-100 p-5 rounded-lg">
-            <div>
-              <h3 className="text-xs text-zinc-600">Committee</h3>
-              <ul className="list-disc list-inside text-sm ">
-                <li>Adviser: {request.defense_adviser}</li>
-                <li>Chair: {request.defense_chairperson}</li>
-                <li>Panelist I: {request.defense_panelist1}</li>
-                {request.defense_panelist2 && (
-                  <li>Panelist II: {request.defense_panelist2}</li>
-                )}
-                {request.defense_panelist3 && (
-                  <li>Panelist III: {request.defense_panelist3}</li>
-                )}
-                {request.defense_panelist4 && (
-                  <li>Panelist IV: {request.defense_panelist4}</li>
-                )}
-              </ul>
-            </div>
-            <div>
-              <h3 className="text-xs text-zinc-600 mb-2">Attachments</h3>
-              <div className="space-y-2">
-                {attachments.map(
-                  ({ label, url }) =>
-                    url && (
-                      <a
-                        key={label}
-                        href={url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center space-x-2"
-                      >
-                        <div className="p-2 bg-rose-500 rounded">
-                          <Paperclip className="w-4 h-4 text-white" />
-                        </div>
-                        <span className="text-sm underline hover:text-rose-600">
-                          {label}
-                        </span>
-                      </a>
-                    )
-                )}
-                {!attachments.some((att) => att.url) && (
-                  <p className="text-sm text-muted-foreground">
-                    No attachments available.
-                  </p>
-                )}
+          <div className="mt-4 pt-4 p-5  rounded-lg">
+            <div className="flex flex-col lg:flex-row gap-6">
+
+              <div className="w-full lg:w-1/2">
+                <h3 className="text-xs text-zinc-600 mb-2">Attachments</h3>
+                <div className="flex flex-col space-y-2">
+                  {attachments.map(
+                    ({ label, url }) =>
+                      url && (
+                        <a
+                          key={label}
+                          href={url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center space-x-3 p-2 border rounded-lg hover:bg-zinc-50 transition w-full"
+                        >
+                          <div className="flex-shrink-0 p-2 bg-rose-500 rounded">
+                            <Paperclip className="w-4 h-4 text-white" />
+                          </div>
+                          <div className="flex flex-col">
+                            <span className="text-sm font-medium">{label}</span>
+                            <span className="text-xs text-muted-foreground">
+                              {url.split("/").pop()}
+                            </span>
+                          </div>
+                        </a>
+                      )
+                  )}
+                  {!attachments.some((att) => att.url) && (
+                    <p className="text-sm text-muted-foreground">
+                      No attachments available.
+                    </p>
+                  )}
+                </div>
+              </div>
+              <div className="w-full lg:w-1/2">
+                <h3 className="text-xs text-zinc-600 mb-2">Committee</h3>
+                <div className="space-y-2 text-sm">
+                  <div>
+                    <span className="font-medium">Adviser:</span>{" "}
+                    {request.defense_adviser}
+                  </div>
+                  <div>
+                    <span className="font-medium">Chair:</span>{" "}
+                    {request.defense_chairperson}
+                  </div>
+                  <div>
+                    <span className="font-medium">Panelist I:</span>{" "}
+                    {request.defense_panelist1}
+                  </div>
+                  {request.defense_panelist2 && (
+                    <div>
+                      <span className="font-medium">Panelist II:</span>{" "}
+                      {request.defense_panelist2}
+                    </div>
+                  )}
+                  {request.defense_panelist3 && (
+                    <div>
+                      <span className="font-medium">Panelist III:</span>{" "}
+                      {request.defense_panelist3}
+                    </div>
+                  )}
+                  {request.defense_panelist4 && (
+                    <div>
+                      <span className="font-medium">Panelist IV:</span>{" "}
+                      {request.defense_panelist4}
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           </div>
         )}
+
+
       </CardContent>
     </Card>
   )
