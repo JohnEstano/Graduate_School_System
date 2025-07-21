@@ -1,4 +1,3 @@
-import React from 'react'
 import { usePage, Link } from '@inertiajs/react'
 import {
     Sidebar,
@@ -13,7 +12,7 @@ import { NavFooter } from '@/components/nav-footer'
 import { NavMain } from '@/components/nav-main'
 import { NavUser } from '@/components/nav-user'
 import { MainNavItem, type NavItem } from '@/types'
-import { LayoutGrid, FileText, Bell, CalendarSync, CreditCard, MessageSquareText, DollarSign , Users } from 'lucide-react'
+import { LayoutGrid, FileText, Bell, CalendarSync, CreditCard, MessageSquareText, DollarSign , Users, File} from 'lucide-react'
 import AppLogo from './app-logo'
 
 type PageProps = {
@@ -60,7 +59,7 @@ const studentNavItems: MainNavItem[] = [
 
 const assistantNavItems: MainNavItem[] = [
     { title: 'Dashboard', href: '/dashboard', icon: LayoutGrid },
-    { title: 'Requests', href: '/requests', icon: Bell },
+    { title: 'Requests', href: '/requests', icon: File },
     {
         title: 'Honorarium',
         href: '/honorarium',
