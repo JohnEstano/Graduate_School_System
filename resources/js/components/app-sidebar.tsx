@@ -12,7 +12,7 @@ import { NavFooter } from '@/components/nav-footer'
 import { NavMain } from '@/components/nav-main'
 import { NavUser } from '@/components/nav-user'
 import { MainNavItem, type NavItem } from '@/types'
-import { LayoutGrid, FileText, Bell, CalendarSync, CreditCard, MessageSquareText, DollarSign , Users, File} from 'lucide-react'
+import { LayoutGrid, FileText, Bell, CalendarSync, CreditCard, MessageSquareText, DollarSign, Users, File } from 'lucide-react'
 import AppLogo from './app-logo'
 
 type PageProps = {
@@ -59,7 +59,16 @@ const studentNavItems: MainNavItem[] = [
 
 const assistantNavItems: MainNavItem[] = [
     { title: 'Dashboard', href: '/dashboard', icon: LayoutGrid },
-    { title: 'Requests', href: '/requests', icon: File },
+    {   title: 'Requests',
+        href: '/requests',
+        icon: File,
+        subItems: [
+            { title: 'Defense Requests', href: '/defense-request' },
+            { title: 'Comprehensive Exams', href: '/comprehensive-exam' },
+            { title: 'Honorarium', href: '/honorarium' },
+        ]
+    
+    },
     {
         title: 'Honorarium',
         href: '/honorarium',
@@ -82,10 +91,10 @@ export function AppSidebar() {
     const {
         auth: { user },
     } = usePage<PageProps>().props
-    const items =
-        user.role === 'Administrative Assistant'
-            ? assistantNavItems
-            : studentNavItems
+
+    const staffRoles = ['Administrative Assistant', 'Coordinator', 'Dean']
+    const isStaff = staffRoles.includes(user.role)
+     const items = isStaff ? assistantNavItems : studentNavItems
 
     return (
         <Sidebar collapsible="offcanvas" className="px-3 pt-5" variant="inset">
