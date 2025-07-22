@@ -42,6 +42,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::post('/defense-request', [DefenseRequestController::class, 'store'])
         ->name('defense-request.store');
+        
 
 
 

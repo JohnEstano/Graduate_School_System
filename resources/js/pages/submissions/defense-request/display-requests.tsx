@@ -4,8 +4,38 @@ import { useState } from "react"
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { format } from "date-fns"
-import { Calendar, Info, Paperclip, Send } from "lucide-react"
+import { Info, Paperclip, Check } from "lucide-react"
 import { Separator } from "@/components/ui/separator"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
+
+
+export type DefenseRequestFull = {
+  first_name: string
+  middle_name: string | null
+  last_name: string
+  school_id: string
+  program: string
+  thesis_title: string
+  date_of_defense: string
+  mode_defense: string
+  defense_type: string
+  defense_adviser: string
+  defense_chairperson: string
+  defense_panelist1: string
+  defense_panelist2?: string
+  defense_panelist3?: string
+  defense_panelist4?: string
+  advisers_endorsement?: string
+  rec_endorsement?: string
+  proof_of_payment?: string
+  reference_no?: string
+  status?: 'pending' | 'approved' | 'rejected' | 'needs-info'
+}
+
 
 type Props = {
   request: {
@@ -45,7 +75,7 @@ export default function DisplayRequest({ request }: Props) {
     <Card className="pt-10 pb-10">
       <CardHeader className="flex flex-row justify-between items-start col-span-2">
         <div>
-          <CardTitle className="text-2xl pl-2 flex gap-3 ">Your Defense Request Was Sent</CardTitle>
+          <CardTitle className="text-2xl pl-2 flex gap-3 font-medium items-center ">Your Defense Request Was Sent<Check className="text-rose-500" /></CardTitle>
           <div className="pb-5 pl-2">
             <h1 className="text-muted-foreground">
               The request will be reviewed shortly
@@ -53,25 +83,61 @@ export default function DisplayRequest({ request }: Props) {
           </div>
         </div>
 
+        <div className="me-10 space-x-2">
+          <Badge className="text-xs">Hello</Badge>
+          <Badge className="text-xs" variant="secondary">Hello</Badge>
+        </div>
+
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-5">
         <Separator className="w-full" />
+
         <div className="pl-3">
-          <h3 className="text-xs text-zinc-600">Thesis Title</h3>
-          <h1 className="text-xl font-bold">{request.thesis_title}</h1>
+          <div className="justify-between items-center flex flex-col md:flex-row gap-4">
+            <div>
+              <h3 className="text-xs text-zinc-600">Thesis Title</h3>
+              <h1 className="text-xl font-bold">{request.thesis_title}</h1>
+
+            </div>
+
+            <div className=" space-x-2">
+
+              <Tooltip>
+                <TooltipTrigger>  <button
+                  onClick={() => setShowDetails((v) => !v)}
+                  aria-label="Toggle details"
+                  className="p-2 rounded-lg hover:bg-zinc-100 "
+                >
+                  <Info className="size-5" />
+                </button></TooltipTrigger>
+                <TooltipContent>
+                  <p>More Info</p>
+                </TooltipContent>
+              </Tooltip>
+
+            </div>
+          </div>
+
+
+
           <div className="mt-2 space-x-2">
             <Badge variant="secondary">{request.mode_defense}</Badge>
             <Badge variant="secondary">{request.defense_type}</Badge>
           </div>
+
         </div>
+
+
+
+
         <div className="flex flex-col md:flex-row items-baseline pl-3 gap-8">
           <div className="flex flex-col">
             <h3 className="text-xs text-zinc-600 mb-1">Presenter</h3>
             <h1 className="text-sm font-bold leading-tight">
-              {`${request.first_name} ${request.middle_name ?? ""} ${request.last_name}`}
+              {`${request.first_name} ${request.middle_name ?? ""} ${request.last_name}`}  <span className="font-thin text-xs text-muted-foreground">/ {request.school_id}</span>
             </h1>
             <p className="text-xs text-muted-foreground mt-1">
-              {request.school_id}
+
             </p>
           </div>
           <div className="flex flex-col">
@@ -82,7 +148,7 @@ export default function DisplayRequest({ request }: Props) {
           </div>
           <div className="flex flex-col">
             <div className="flex items-center space-x-1 mb-1">
-              <Calendar className="size-4 text-zinc-600" />
+
               <h3 className="text-xs text-zinc-600">Date Scheduled</h3>
             </div>
             <p className="text-sm font-bold leading-tight">
@@ -93,15 +159,7 @@ export default function DisplayRequest({ request }: Props) {
 
         </div>
 
-        <div className="flex justify-end items-center space-x-2">
-          <button
-            onClick={() => setShowDetails((v) => !v)}
-            aria-label="Toggle details"
-            className="p-2 rounded-lg hover:bg-zinc-100 "
-          >
-            <Info className="size-5" />
-          </button>
-        </div>
+
 
         {showDetails && (
           <div className="mt-4 pt-4 p-5  rounded-lg">

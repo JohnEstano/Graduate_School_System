@@ -51,6 +51,9 @@ export interface SharedData {
     [key: string]: unknown;
 }
 
+
+
+
 export interface User {
     id: number;
     first_name: string;
@@ -65,4 +68,32 @@ export interface User {
     created_at: string;
     updated_at: string;
     [key: string]: unknown; // This allows for additional properties...
+}
+
+
+
+
+export interface DefenseRequest {
+  id: number;
+  first_name: string;
+  middle_name?: string | null;
+  last_name: string;
+  school_id: string;
+  program: string;
+  thesis_title: string;
+  date_of_defense: string;
+  mode_defense: string;
+  defense_type: string;
+  advisers_endorsement?: string;
+  rec_endorsement?: string;
+  proof_of_payment?: string;
+  reference_no?: string;
+  defense_adviser: string;
+  defense_chairperson: string;
+  defense_panelist1: string;
+  defense_panelist2?: string;
+  defense_panelist3?: string;
+  defense_panelist4?: string;
+  status?: 'pending' | 'approved' | 'rejected' | 'needs-info';
+  created_at?: string;
 }

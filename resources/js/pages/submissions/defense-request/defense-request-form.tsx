@@ -155,6 +155,7 @@ export default function DefenseRequestForm() {
               <Input
                 name="lastName"
                 value={form.data.lastName}
+            
                 onChange={(e) => form.setData("lastName", e.target.value)}
               />
             </div>
@@ -189,6 +190,7 @@ export default function DefenseRequestForm() {
               <Input
                 name="thesisTitle"
                 value={form.data.thesisTitle}
+                placeholder="Title"
                 onChange={(e) => form.setData("thesisTitle", e.target.value)}
               />
             </div>
@@ -267,6 +269,9 @@ export default function DefenseRequestForm() {
       title: "Required Attachments",
       content: (
         <>
+        <div>
+          
+        </div>
           <HeadingSmall title="Step 3: Required Attachments" />
           {(
             [
@@ -278,7 +283,7 @@ export default function DefenseRequestForm() {
           ).map(([field, label, inputRef]) => (
             <div key={field}>
               <Label>{label}</Label>
-              <div className="flex gap-2 items-center">
+              <div className="flex gap-2  mb-3 items-center">
                 <Input
                   readOnly
                   value={form.data[field]?.name || ""}
