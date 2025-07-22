@@ -1,51 +1,68 @@
-import AppLayout from '@/layouts/app-layout';
-import { Head } from '@inertiajs/react';
-import { type BreadcrumbItem } from '@/types';
-import DefenseRequestForm from './defense-request-form';
+// resources/js/Pages/submissions/defense-request/Index.tsx
+import AppLayout from '@/layouts/app-layout'
+import { Head, usePage } from '@inertiajs/react'
+import { type BreadcrumbItem } from '@/types'
+import DefenseRequestForm from './defense-request-form'
+import ShowAllRequests, {
+  type DefenseRequestSummary,
+} from './show-all-requests'
+import DisplayRequest, {
+  type DefenseRequestFull,
+} from './display-requests'
 
 const breadcrumbs: BreadcrumbItem[] = [
-    { title: 'Dashboard', href: '/dashboard' },
-    { title: 'Defense Requests', href: '/defense-request' },
-];
+  { title: 'Dashboard', href: '/dashboard' },
+  { title: 'Defense Requests', href: '/defense-request' },
+]
+
+type PageProps = {
+  auth: {
+    user: {
+      role: string
+      school_id: string
+    }
+  }
+  defenseRequest?: DefenseRequestFull | null
+  defenseRequests?: DefenseRequestSummary[]
+}
 
 export default function DefenseRequestIndex() {
-    return (
-        <AppLayout breadcrumbs={breadcrumbs}>
-            <Head title="Defense Requests" />
+  const { props } = usePage<PageProps>()
+  const { auth, defenseRequest, defenseRequests } = props
+  const role = auth.user.role
 
+  const staffRoles = ['Administrative Assistant', 'Coordinator', 'Dean']
+  const isStaff = staffRoles.includes(role)
 
-            <div className="flex h-full pb-5 flex-1 flex-col pt-5 gap-4 rounded-xl pl-7 pr-7 overflow-auto">
+  return (
+    <AppLayout breadcrumbs={breadcrumbs}>
+      <Head title="Defense Requests" />
 
-                <div className="flex justify-between ">
-                    <h1 className='text-xl font-extrabold tracking-tight'>Defense Request</h1>
-                    <DefenseRequestForm />
+      <div className="flex h-full pb-5 flex-1 flex-col pt-5 gap-4 px-7 overflow-auto">
+        {isStaff ? (
+          <ShowAllRequests defenseRequests={defenseRequests || []} />
+        ) : (
+          <div className="grid auto-rows-min gap-4 md:grid-cols-1">
+            {defenseRequest ? (
+              <DisplayRequest request={defenseRequest} />
+            ) : (
+              <div className="border border-gray-200 rounded-xl p-5">
+                <div className="flex flex-1 flex-col justify-center h-full items-center gap-5">
+                  <div className="gap-2 items-center flex flex-col">
+                    <h2 className="text-lg font-semibold text-gray-700">
+                      No defense request sent
+                    </h2>
+                    <p className="text-sm text-gray-500">
+                      If you're eligible to apply for a defense, submit your request here.
+                    </p>
+                  </div>
+                  <DefenseRequestForm />
                 </div>
-
-                <div className="grid auto-rows-min gap-4 md:grid-cols-3">
-                    <div className="border-sidebar-border/70 dark:border-sidebar-border relative aspect-video overflow-hidden rounded-xl border p-5">
-                        <div className="flex items-start justify-between">
-                            <h3 className="text-[13px] font-medium">Defense Requests:</h3>
-
-                        </div>
-                    </div>
-
-                    <div className="border-sidebar-border/70 dark:border-sidebar-border relative aspect-video overflow-hidden rounded-xl border p-5">
-                        <div className="flex items-start justify-between">
-                            <h3 className="text-[13px] font-medium">Status </h3>
-
-                        </div>
-                    </div>
-
-
-                </div>
-
-            </div>
-
-
-
-
-
-
-        </AppLayout>
-    );
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    </AppLayout>
+  )
 }

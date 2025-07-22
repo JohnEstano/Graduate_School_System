@@ -1,62 +1,103 @@
-import { NavFooter } from '@/components/nav-footer';
-import { NavMain } from '@/components/nav-main';
-import { NavUser } from '@/components/nav-user';
-import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '@/components/ui/sidebar';
-import { MainNavItem, type NavItem } from '@/types';
-import { Link } from '@inertiajs/react';
-import { BookOpen, Folder, LayoutGrid, Bell, FileText, CreditCard, CalendarSync} from 'lucide-react';
-import AppLogo from './app-logo';
+import { usePage, Link } from '@inertiajs/react'
+import {
+    Sidebar,
+    SidebarContent,
+    SidebarFooter,
+    SidebarHeader,
+    SidebarMenu,
+    SidebarMenuButton,
+    SidebarMenuItem,
+} from '@/components/ui/sidebar'
+import { NavFooter } from '@/components/nav-footer'
+import { NavMain } from '@/components/nav-main'
+import { NavUser } from '@/components/nav-user'
+import { MainNavItem, type NavItem } from '@/types'
+import { LayoutGrid, FileText, Bell, CalendarSync, CreditCard, MessageSquareText, DollarSign, Users, File } from 'lucide-react'
+import AppLogo from './app-logo'
 
+type PageProps = {
+    auth: {
+        user: {
+            id: number
+            name: string
+            role: string
+        }
+    }
+}
 
-const mainNavItems: MainNavItem[] = [
+const studentNavItems: MainNavItem[] = [
     {
         title: 'Dashboard',
         href: '/dashboard',
-        icon: LayoutGrid,
+        icon: LayoutGrid
     },
     {
         title: 'Submissions',
         href: '/submission',
         icon: FileText,
         subItems: [
-
-            {
-                title: 'Comprehensive Exam',
-                href: '/comprehensive-exam',
-               
-            },
-            {
-                title: 'Defense Requests',
-                href: '/defense-request',
-
-            }
-        ]
+            { title: 'Comprehensive Exam', href: '/comprehensive-exam' },
+            { title: 'Defense Requests', href: '/defense-request' },
+        ],
     },
     {
         title: 'Payments',
         href: '/payment',
-        icon: CreditCard,
+        icon: CreditCard
     },
-  
-       {
+    {
         title: 'Schedules',
         href: '/schedule',
-        icon: CalendarSync,
+        icon: CalendarSync
     },
-      {
+    {
         title: 'Notifications',
         href: '/notification',
-        icon: Bell,
+        icon: Bell
     },
-];
+]
 
-const footerNavItems: NavItem[] = [
+const assistantNavItems: MainNavItem[] = [
+    { title: 'Dashboard', href: '/dashboard', icon: LayoutGrid },
+    {   title: 'Requests',
+        href: '/requests',
+        icon: File,
+        subItems: [
+            { title: 'Defense Requests', href: '/defense-request' },
+            { title: 'Comprehensive Exams', href: '/comprehensive-exam' },
+            { title: 'Honorarium', href: '/honorarium' },
+        ]
+    
+    },
+    {
+        title: 'Honorarium',
+        href: '/honorarium',
+        icon: DollarSign,
+        subItems: [
+            { title: 'Honorarium Summary', href: '/honorarium-summary' },
+            { title: 'Generate Report', href: '/generate-report' },
+        ]
 
-];
+    },
+    { title: 'Student Records', href: '/student-records', icon: Users },
+    { title: 'Messaging', href: '/messaging', icon: MessageSquareText },
+    { title: 'Notifications', href: '/notifications', icon: Bell },
+
+]
+
+const footerNavItems: NavItem[] = []
 
 export function AppSidebar() {
+    const {
+        auth: { user },
+    } = usePage<PageProps>().props
+
+    const staffRoles = ['Administrative Assistant', 'Coordinator', 'Dean']
+    const isStaff = staffRoles.includes(user.role)
+     const items = isStaff ? assistantNavItems : studentNavItems
+
     return (
-        <Sidebar collapsible="offcanvas" className='px-3 pt-5' variant="inset">
+        <Sidebar collapsible="offcanvas" className="px-3 pt-5" variant="inset">
             <SidebarHeader>
                 <SidebarMenu>
                     <SidebarMenuItem>
@@ -70,7 +111,7 @@ export function AppSidebar() {
             </SidebarHeader>
 
             <SidebarContent>
-                <NavMain items={mainNavItems} />
+                <NavMain items={items} />
             </SidebarContent>
 
             <SidebarFooter>
@@ -78,5 +119,5 @@ export function AppSidebar() {
                 <NavUser />
             </SidebarFooter>
         </Sidebar>
-    );
+    )
 }
