@@ -38,11 +38,31 @@ const mainNavItems: MainNavItem[] = [
         icon: CreditCard,
     },
   
-       {
+    {
         title: 'Schedules',
         href: '/schedule',
         icon: CalendarSync,
     },
+
+    {
+        title: 'Honorarium',
+        href: '/honorarium',
+        icon: FileText,
+        subItems: [
+
+            {
+                title: 'Honorarium Summary',
+                href: '/honorarium-summary',
+               
+            },
+            {
+                title: 'Generate Report',
+                href: '/generate-report',
+
+            }
+        ]
+    },
+
       {
         title: 'Notifications',
         href: '/notification',

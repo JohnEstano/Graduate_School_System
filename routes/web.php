@@ -44,10 +44,17 @@ Route::middleware(['auth', 'verified'])->group(function () {
         return Inertia::render('submissions/comprehensive-exam/Index');
     })->name('comprehensive-exam.index');
 
-    //Defense Request route
-    Route::get('honorarium', function () {
-        return Inertia::render('honorarium/Index');
-    })->name('honorarium.index');
+    //Honorarium route
+    // generate-report route
+    Route::get('generate-report', function () {
+        return Inertia::render('honorarium/generate-report/Index');
+    })->name('generate-report.index');
+
+    // honorarium-summary route
+    Route::get('honorarium-summary', function () {
+        return Inertia::render('honorarium/honorarium-summary/Index');
+    })->name('honorarium-summary.index');
+
 
 });
 
