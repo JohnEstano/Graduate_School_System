@@ -4,7 +4,7 @@ import { useState } from "react"
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { format } from "date-fns"
-import { Info, Paperclip, Check } from "lucide-react"
+import { Info, Paperclip, CircleCheck } from "lucide-react"
 import { Separator } from "@/components/ui/separator"
 import {
   Tooltip,
@@ -75,7 +75,7 @@ export default function DisplayRequest({ request }: Props) {
     <Card className="pt-10 pb-10">
       <CardHeader className="flex flex-row justify-between items-start col-span-2">
         <div>
-          <CardTitle className="text-2xl pl-2 flex gap-3 font-medium items-center ">Your Defense Request Was Sent<Check className="text-rose-500" /></CardTitle>
+          <CardTitle className="text-2xl pl-2 flex gap-3 font-medium items-center ">Your Defense Request Was Sent<CircleCheck className="text-rose-500" /></CardTitle>
           <div className="pb-5 pl-2">
             <h1 className="text-muted-foreground">
               The request will be reviewed shortly
