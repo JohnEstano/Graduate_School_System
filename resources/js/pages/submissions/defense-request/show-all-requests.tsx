@@ -77,126 +77,137 @@ export default function ShowAllRequests({
   }
 
   return (
-    <Card className="shadow">
-      <CardHeader className="flex flex-col md:flex-row md:items-center md:justify-between space-y-4 md:space-y-0">
-        <CardTitle>All Defense Requests</CardTitle>
-        <Input
-          placeholder="Search by student or title…"
-          value={search}
-          onChange={(e) => { setSearch(e.currentTarget.value); setPage(1) }}
-          className="max-w-sm"
-        />
-      </CardHeader>
 
-      <CardContent className="overflow-auto">
-        <Table className="min-w-[800px]">
-          <TableHeader>
-            <TableRow>
-              <TableHead>Student</TableHead>
-              <TableHead>Program</TableHead>
-              <TableHead>Thesis Title</TableHead>
-              <TableHead>Date</TableHead>
-              <TableHead>Mode</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {paged.map((r, idx) => (
-              <TableRow
-                key={r.id}
-                className={`${idx % 2 === 0 ? 'bg-muted' : ''
-                  } hover:bg-muted/50 transition-colors`}
-              >
-                <TableCell>
-                  {r.first_name}{' '}
-                  {r.middle_name ? `${r.middle_name.charAt(0)}. ` : ''}
-                  {r.last_name}
-                </TableCell>
-                <TableCell>{r.program}</TableCell>
-                <TableCell>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <span className="inline-block max-w-xs truncate cursor-help">
-                        {r.thesis_title}
-                      </span>
-                    </TooltipTrigger>
-                    <TooltipContent>{r.thesis_title}</TooltipContent>
-                  </Tooltip>
-                </TableCell>
-                <TableCell>{format(new Date(r.date_of_defense), 'MMM dd, yyyy')}</TableCell>
-                <TableCell className="capitalize">{r.mode_defense.replace('-', ' ')}</TableCell>
-                <TableCell>
-                  <Badge
-                    variant={
-                      r.status === 'approved'
-                        ? 'default'
-                        : r.status === 'rejected'
-                          ? 'destructive'
-                          : r.status === 'needs-info'
-                            ? 'secondary'
-                            : 'outline'
-                    }
-                  >
-                    {(r.status || 'pending').replace('-', ' ')}
-                  </Badge>
 
-                </TableCell>
-                <TableCell className="text-right">
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button size="icon" variant="ghost">
-                        <MoreHorizontal />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      {(['approve', 'reject', 'needs-info'] as const).map((act) => (
-                        <DropdownMenuItem
-                          key={act}
-                          onClick={() => handleAction(r.id, act)}
-                          disabled={loadingId === r.id}
-                        >
-                          {loadingId === r.id ? (
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          ) : null}
-                          {act === 'needs-info' ? 'Needs Info' : act.charAt(0).toUpperCase() + act.slice(1)}
-                        </DropdownMenuItem>
-                      ))}
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </TableCell>
+    <div className=''>
+
+      <div>
+        <h1 className='text-xl p-2 font-bold'>
+         All defense requests
+        </h1>
+      </div>
+      <Card className="shadow rounded-sm">
+        <CardHeader className="flex flex-col md:flex-row md:items-center md:justify-between space-y-4 md:space-y-0">
+
+          <Input
+            placeholder="Search by student or title…"
+            value={search}
+            onChange={(e) => { setSearch(e.currentTarget.value); setPage(1) }}
+            className="max-w-sm"
+          />
+        </CardHeader>
+
+        <CardContent className="overflow-auto">
+          <Table className="min-w-[800px]">
+            <TableHeader>
+              <TableRow>
+                <TableHead>Student</TableHead>
+                <TableHead>Program</TableHead>
+                <TableHead>Thesis Title</TableHead>
+                <TableHead>Date</TableHead>
+                <TableHead>Mode</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </CardContent>
+            </TableHeader>
+            <TableBody>
+              {paged.map((r, idx) => (
+                <TableRow
+                  key={r.id}
+                  className={`${idx % 2 === 0 ? 'bg-muted' : ''
+                    } hover:bg-muted/50 transition-colors`}
+                >
+                  <TableCell>
+                    {r.first_name}{' '}
+                    {r.middle_name ? `${r.middle_name.charAt(0)}. ` : ''}
+                    {r.last_name}
+                  </TableCell>
+                  <TableCell>{r.program}</TableCell>
+                  <TableCell>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span className="inline-block max-w-xs truncate cursor-help">
+                          {r.thesis_title}
+                        </span>
+                      </TooltipTrigger>
+                      <TooltipContent>{r.thesis_title}</TooltipContent>
+                    </Tooltip>
+                  </TableCell>
+                  <TableCell>{format(new Date(r.date_of_defense), 'MMM dd, yyyy')}</TableCell>
+                  <TableCell className="capitalize">{r.mode_defense.replace('-', ' ')}</TableCell>
+                  <TableCell>
+                    <Badge
+                      variant={
+                        r.status === 'approved'
+                          ? 'default'
+                          : r.status === 'rejected'
+                            ? 'destructive'
+                            : r.status === 'needs-info'
+                              ? 'secondary'
+                              : 'outline'
+                      }
+                    >
+                      {(r.status || 'pending').replace('-', ' ')}
+                    </Badge>
 
-      <CardFooter className="flex items-center justify-between">
-        <p className="text-sm text-muted-foreground">
-          {filtered.length} request{filtered.length !== 1 ? 's' : ''} total
-        </p>
-        <div className="space-x-2">
-          <Button
-            size="sm"
-            variant="outline"
-            disabled={page <= 1}
-            onClick={() => setPage((p) => Math.max(1, p - 1))}
-          >
-            Prev
-          </Button>
-          <span className="text-sm">
-            Page {page} of {totalPages}
-          </span>
-          <Button
-            size="sm"
-            variant="outline"
-            disabled={page >= totalPages}
-            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-          >
-            Next
-          </Button>
-        </div>
-      </CardFooter>
-    </Card>
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button size="icon" variant="ghost">
+                          <MoreHorizontal />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        {(['approve', 'reject', 'needs-info'] as const).map((act) => (
+                          <DropdownMenuItem
+                            key={act}
+                            onClick={() => handleAction(r.id, act)}
+                            disabled={loadingId === r.id}
+                          >
+                            {loadingId === r.id ? (
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            ) : null}
+                            {act === 'needs-info' ? 'Needs Info' : act.charAt(0).toUpperCase() + act.slice(1)}
+                          </DropdownMenuItem>
+                        ))}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </CardContent>
+
+        <CardFooter className="flex items-center justify-between">
+          <p className="text-sm text-muted-foreground">
+            {filtered.length} request{filtered.length !== 1 ? 's' : ''} total
+          </p>
+          <div className="space-x-2">
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={page <= 1}
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+            >
+              Prev
+            </Button>
+            <span className="text-sm">
+              Page {page} of {totalPages}
+            </span>
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={page >= totalPages}
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+            >
+              Next
+            </Button>
+          </div>
+        </CardFooter>
+      </Card>
+    </div>
+
   )
 }

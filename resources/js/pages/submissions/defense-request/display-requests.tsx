@@ -4,8 +4,13 @@ import { useState } from "react"
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { format } from "date-fns"
-import { Info, Paperclip, Send } from "lucide-react"
+import { Info, Paperclip, Check } from "lucide-react"
 import { Separator } from "@/components/ui/separator"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 
 
 export type DefenseRequestFull = {
@@ -70,7 +75,7 @@ export default function DisplayRequest({ request }: Props) {
     <Card className="pt-10 pb-10">
       <CardHeader className="flex flex-row justify-between items-start col-span-2">
         <div>
-          <CardTitle className="text-2xl pl-2 flex gap-3 font-medium ">Your Defense Request Was Sent</CardTitle>
+          <CardTitle className="text-2xl pl-2 flex gap-3 font-medium items-center ">Your Defense Request Was Sent<Check className="text-rose-500" /></CardTitle>
           <div className="pb-5 pl-2">
             <h1 className="text-muted-foreground">
               The request will be reviewed shortly
@@ -96,13 +101,20 @@ export default function DisplayRequest({ request }: Props) {
             </div>
 
             <div className=" space-x-2">
-              <button
-                onClick={() => setShowDetails((v) => !v)}
-                aria-label="Toggle details"
-                className="p-2 rounded-lg hover:bg-zinc-100 "
-              >
-                <Info className="size-5" />
-              </button>
+
+              <Tooltip>
+                <TooltipTrigger>  <button
+                  onClick={() => setShowDetails((v) => !v)}
+                  aria-label="Toggle details"
+                  className="p-2 rounded-lg hover:bg-zinc-100 "
+                >
+                  <Info className="size-5" />
+                </button></TooltipTrigger>
+                <TooltipContent>
+                  <p>More Info</p>
+                </TooltipContent>
+              </Tooltip>
+
             </div>
           </div>
 
