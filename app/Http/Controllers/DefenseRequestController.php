@@ -23,7 +23,16 @@ class DefenseRequestController extends Controller
                 ->first();
         }
 
-        return Inertia::render('submissions/defense-request/Index', $props);
+        $viewMap = [
+            'Student' => 'student/submissions/defense-request/Index',
+            'Administrative Assistant' => 'aa/submissions/defense-request/Index',
+            'Coordinator' => 'coordinator/submissions/defense-request/Index',
+            'Dean' => 'dean/submissions/defense-request/Index',
+        ];
+
+        $view = $viewMap[$user->role] ?? 'student/submissions/defense-request/Index';
+
+        return Inertia::render($view, $props);
     }
 
     public function review(DefenseRequest $defenseRequest, Request $request)
@@ -96,7 +105,6 @@ class DefenseRequestController extends Controller
             'defense_panelist4' => $data['defensePanelist4'] ?? null,
         ]);
 
-        return Redirect::back()
-            ->with('success', 'Your defense request has been submitted!');
+        return Redirect::back()->with('success', 'Your defense request has been submitted!');
     }
 }

@@ -41,7 +41,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     // Comprehensive Exam route
     Route::get('comprehensive-exam', function () {
-        return Inertia::render('submissions/comprehensive-exam/Index');
+        return Inertia::render('student/submissions/comprehensive-exam/Index');
     })->name('comprehensive-exam.index');
 
 });

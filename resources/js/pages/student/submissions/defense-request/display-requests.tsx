@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { format } from 'date-fns';
-import { Check, Info, Paperclip } from 'lucide-react';
+import { CircleCheck, Info, Paperclip } from 'lucide-react';
 import { useState } from 'react';
 
 export type DefenseRequestFull = {
@@ -71,7 +71,7 @@ export default function DisplayRequest({ request }: Props) {
                 <div>
                     <CardTitle className="flex items-center gap-3 pl-2 text-2xl font-medium">
                         Your Defense Request Was Sent
-                        <Check className="text-rose-500" />
+                        <CircleCheck className="text-rose-500" />
                     </CardTitle>
                     <div className="pb-5 pl-2">
                         <h1 className="text-muted-foreground">The request will be reviewed shortly</h1>
