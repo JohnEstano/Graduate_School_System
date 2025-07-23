@@ -56,9 +56,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
     })->name('honorarium-summary.index');
 
     // honorarium-course-selection route
-    Route::get('honorarium-course-selection', function () {
-        return Inertia::render('honorarium/honorarium-course-selection/Index');
-    })->name('honorarium-program-selection.index');
+    // This route is for selecting courses for the honorarium
+    // It allows users to choose courses they are involved with for the honorarium process.
+    Route::get('/honorarium/information-technology', function () {
+    return Inertia::render('Honorarium/Course-Program/Information-Technology');
+    });
 
 
 });
