@@ -44,6 +44,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
         return Inertia::render('submissions/comprehensive-exam/Index');
     })->name('comprehensive-exam.index');
 
+    // Student Records
+    Route::get('student-records', function () {
+        return Inertia::render('student-records/Index');
+    })->name('student-records.index');
+
 });
 
 require __DIR__.'/settings.php';
