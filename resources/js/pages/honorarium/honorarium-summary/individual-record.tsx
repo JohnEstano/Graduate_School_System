@@ -3,58 +3,44 @@ import { Head } from '@inertiajs/react';
 import { Eye, X } from 'lucide-react';
 import ViewPanelist from './view-panelist';
 
-const studentInfo = {
-  firstName: 'Troy Wendell',
-  middleName: 'Guido',
-  lastName: 'Peralta',
-  gender: 'Male',
-  course: 'BSIT - 2A',
-  schoolYear: '2nd Year',
-  dob: '2005-03-22',
-  idNumber: '230000001926',
-  academicStatus: 'Regular',
-};
+const panelistInfo = {
+  panelistName: 'Troy Wendell G. Peralta',
+  role: 'Panelist',
+  defenseType: 'Final Defense',
+  recievedDate: '2025-05-12',
+  amountRecieved: '₱450.00',
+}
 
 const paymentRecords = [
   {
-    schoolYear: '2023-2024',
-    course: 'BSIT - 2A',
-    defenseType: 'Proposal',
-    paymentDate: '03-12-2024',
-    amount: '₱450.00',
-    status: 'Completed',
+    studentName: 'Troy Wendell G. Peralta',
+    paymentDate: '2025-05-12',
+    defenseStatus: 'Completed',
+    paymentAmount: '₱450.00',
   },
   {
-    schoolYear: '2023-2024',
-    course: 'BSIT - 2A',
-    defenseType: 'Pre-final',
-    paymentDate: '04-07-2024',
-    amount: '₱450.00',
-    status: 'Completed',
+    studentName: 'Troy Wendell G. Peralta',
+    paymentDate: '2025-05-12',
+    defenseStatus: 'Completed',
+    paymentAmount: '₱450.00',
   },
   {
-    schoolYear: '2023-2024',
-    course: 'BSIT - 2A',
-    defenseType: 'Final',
-    paymentDate: '08-16-2024',
-    amount: '₱450.00',
-    status: 'Completed',
+    studentName: 'Troy Wendell G. Peralta',
+    paymentDate: '2025-05-12',
+    defenseStatus: 'Completed',
+    paymentAmount: '₱450.00',
   },
   {
-    schoolYear: '2024-2025',
-    course: 'BSIT - 2A',
-    defenseType: 'Proposal',
-    paymentDate: '03-12-2025',
-    amount: '₱500.00',
-    status: 'Completed',
+    studentName: 'Troy Wendell G. Peralta',
+    paymentDate: '2025-05-12',
+    defenseStatus: 'Completed',
+    paymentAmount: '₱450.00',
   },
   {
-    schoolYear: '2024-2025',
-    course: 'BSIT - 2A',
-    defenseType: 'Pre-final',
-    paymentDate: '04-07-2025',
-    amount: '₱990.00',
-    status: 'Ongoing',
+    studentName: 'Troy Wendell G. Peralta',
+    paymentDate: '2025-05-12',
+    defenseStatus: 'Completed',
+    paymentAmount: '₱450.00',
   },
 ];
 
@@ -66,19 +52,19 @@ export default function IndividualRecord() {
       <Head title="Individual Record" />
 
       {showModal && (
-        <div className="fixed inset-0 z-50 bg-black/60 flex justify-center items-center">
-          <div className="relative bg-white shadow-xl rounded-xl p-6 max-w-4xl w-full">
-            <ViewPanelist />
+  <div className="fixed inset-0 z-50 bg-black/60 flex justify-center items-center">
+    <div className="relative bg-white shadow-xl rounded-xl p-6 max-w-4xl w-full">
+      <ViewPanelist onClose={() => setShowModal(false)} />
 
-            <button
-              className="absolute top-3 right-3 text-gray-500 hover:text-red-500"
-              onClick={() => setShowModal(false)}
-            >
-              <X className="w-6 h-6" />
-            </button>
-          </div>
-        </div>
-      )}
+      <button
+        className="absolute top-3 right-3 text-gray-500 hover:text-red-500"
+        onClick={() => setShowModal(false)}
+      >
+        <X className="w-6 h-6" />
+      </button>
+    </div>
+  </div>
+)}
 
       <div className="flex justify-between mb-6">
         <h1 className="text-2xl font-bold">Honorarium Summary</h1>
@@ -89,14 +75,11 @@ export default function IndividualRecord() {
         <div className="flex gap-6 border-b pb-6 mb-4">
           <div className="w-32 h-32 bg-gray-300 rounded-full" />
           <div className="grid grid-cols-2 gap-4 text-sm">
-            <p><strong>First name:</strong> {studentInfo.firstName}</p>
-            <p><strong>Gender:</strong> {studentInfo.gender}</p>
-            <p><strong>Middle name:</strong> {studentInfo.middleName}</p>
-            <p><strong>School Year:</strong> {studentInfo.schoolYear}</p>
-            <p><strong>Last name:</strong> {studentInfo.lastName}</p>
-            <p><strong>Date of Birth:</strong> {studentInfo.dob}</p>
-            <p><strong>ID number:</strong> {studentInfo.idNumber}</p>
-            <p><strong>Academic Status:</strong> {studentInfo.academicStatus}</p>
+            <p><strong>First name:</strong> {panelistInfo.panelistName}</p>
+            <p><strong>Role: </strong> {panelistInfo.role}</p>
+            <p><strong>Defense type: </strong> {panelistInfo.defenseType}</p>
+            <p><strong>Recieved date: </strong> {panelistInfo.recievedDate}</p>
+            <p><strong>Amount recieved: </strong> {panelistInfo.amountRecieved}</p>
           </div>
         </div>
 
@@ -117,12 +100,12 @@ export default function IndividualRecord() {
             <tbody>
               {paymentRecords.map((record, index) => (
                 <tr key={index} className="text-center border-t hover:bg-gray-100">
-                  <td className="p-2">{record.schoolYear}</td>
-                  <td className="p-2">{record.course}</td>
-                  <td className="p-2">{record.defenseType}</td>
+                  <td className="p-2">2024-2025</td>
+                  <td className="p-2">BSCS 4A</td>
+                  <td className="p-2">{panelistInfo.defenseType}</td>
                   <td className="p-2">{record.paymentDate}</td>
-                  <td className="p-2">{record.amount}</td>
-                  <td className="p-2">{record.status}</td>
+                  <td className="p-2">{record.paymentAmount}</td>
+                  <td className="p-2">{record.defenseStatus}</td>
                   <td className="p-2">
                     <button
                       onClick={() => setShowModal(true)}

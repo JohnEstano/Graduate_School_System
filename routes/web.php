@@ -55,6 +55,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
         return Inertia::render('honorarium/honorarium-summary/Index');
     })->name('honorarium-summary.index');
 
+    // honorarium-course-selection route
+    Route::get('honorarium-course-selection', function () {
+        return Inertia::render('honorarium/honorarium-course-selection/Index');
+    })->name('honorarium-program-selection.index');
+
 
 });
 
