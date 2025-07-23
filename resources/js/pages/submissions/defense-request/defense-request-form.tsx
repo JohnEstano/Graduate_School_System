@@ -103,7 +103,6 @@ export default function DefenseRequestForm() {
         if (form.processing) return;
         form.post('/defense-request', {
             onSuccess: () => {
-                // keep dialog open, show our success panel
                 setShowSuccessPanel(true);
             },
         });
