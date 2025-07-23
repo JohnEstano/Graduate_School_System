@@ -17,8 +17,7 @@ import {
 } from 'lucide-react';
 
 const breadcrumbs: BreadcrumbItem[] = [
-  { title: 'Honorarium', href: '/honorarium' },
-  { title: 'Honorarium Submision', href: '/honorarium-submision' },
+  { title: 'Student Records', href: '/student-records' },
 ];
 
 export default function Index() {
@@ -77,7 +76,7 @@ export default function Index() {
       <Head title="Honorarium Submision" />
 
       <div className="flex justify-between mt-5 ml-10">
-        <h1 className="text-xl font-extrabold tracking-tight">Honorarium Summary</h1>
+        <h1 className="text-xl font-extrabold tracking-tight">Student Records</h1>
       </div>
 
       {/* Individual Record Modal */}
