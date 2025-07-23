@@ -1,4 +1,3 @@
-// resources/js/Pages/submissions/defense-request/Index.tsx
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
 import { Head, usePage } from '@inertiajs/react';
@@ -43,9 +42,9 @@ export default function DefenseRequestIndex() {
                             <DisplayRequest request={defenseRequest} />
                         ) : (
                             <div className="rounded-xl border border-gray-200 p-5">
-                                <div className="flex h-full flex-1 flex-col items-center justify-center gap-5">
+                                <div className="flex h-screen flex-1 flex-col items-center  justify-center gap-5">
                                     <div className="flex flex-col items-center gap-2">
-                                        <h2 className="text-lg font-semibold text-gray-700">No defense request sent</h2>
+                                        <h2 className="text-lg font-semibold text-gray-700 ">No defense request sent</h2>
                                         <p className="text-sm text-gray-500">If you're eligible to apply for a defense, submit your request here.</p>
                                     </div>
                                     <DefenseRequestForm />
