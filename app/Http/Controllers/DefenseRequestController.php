@@ -2,23 +2,41 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
-use Inertia\Inertia;
 use App\Models\DefenseRequest;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Redirect;
+use Inertia\Inertia;
 
 class DefenseRequestController extends Controller
 {
     public function index()
     {
-        $defenseRequest = DefenseRequest::where('school_id', auth()->user()->school_id)
-            ->latest()
-            ->first();
+        $user = Auth::user();
+        $props = [];
 
-        return Inertia::render('submissions/defense-request/Index', [
-            'defenseRequest' => $defenseRequest,
+        if (in_array($user->role, ['Administrative Assistant', 'Coordinator', 'Dean'])) {
+            $props['defenseRequests'] = DefenseRequest::all();
+        } else {
+            $props['defenseRequest'] = DefenseRequest::where('school_id', $user->school_id)
+                ->latest()
+                ->first();
+        }
+
+        return Inertia::render('submissions/defense-request/Index', $props);
+    }
+
+    public function review(DefenseRequest $defenseRequest, Request $request)
+    {
+        $request->validate([
+            'action' => 'required|in:approve,reject,needs-info',
         ]);
-        
+
+        $defenseRequest->update([
+            'status' => $request->action,
+        ]);
+
+        return back()->with('success', 'Status updated successfully');
     }
 
     public function store(Request $request)
@@ -77,7 +95,6 @@ class DefenseRequestController extends Controller
             'defense_panelist3' => $data['defensePanelist3'] ?? null,
             'defense_panelist4' => $data['defensePanelist4'] ?? null,
         ]);
-
 
         return Redirect::back()
             ->with('success', 'Your defense request has been submitted!');
