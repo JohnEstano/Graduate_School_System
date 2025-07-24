@@ -8,7 +8,6 @@ export interface Auth {
 export interface BreadcrumbItem {
     title: string;
     href: string;
-    isActive?: boolean;
 }
 
 export interface NavGroup {

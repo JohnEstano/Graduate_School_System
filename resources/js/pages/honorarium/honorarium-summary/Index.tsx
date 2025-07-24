@@ -1,6 +1,5 @@
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
-// 1. CRITICAL: Make sure 'Link' is imported from Inertia.
 import { Head, Link } from '@inertiajs/react';
 import React, { useState, useMemo } from 'react';
 import { Search } from 'lucide-react';
@@ -49,7 +48,7 @@ const HonorariumSearch: React.FC = () => {
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Honorarium Department Search" />
             <div className="max-w-4xl mx-auto">
-                <div className="sticky top-0 z-10 bg-white mt-3 py-4 flex justify-center">
+                <div className="sticky top-0 z-10 mt-3 py-4 flex justify-center">
                     <div className="relative">
                         <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                             <Search className="h-5 w-5 text-gray-400" />
