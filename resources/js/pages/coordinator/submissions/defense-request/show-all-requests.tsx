@@ -1,11 +1,9 @@
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
-import { router } from '@inertiajs/react';
-import { format } from 'date-fns';
+
 
 import { Button } from '@/components/ui/button';
-import Details from './details';
 import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
@@ -26,8 +24,6 @@ import {
 } from '@/components/ui/popover';
 import { Separator } from '@/components/ui/separator';
 import TableDefenseRequests from './table-defense-requests';
-import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@/components/ui/dropdown-menu';
-import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 
 export type DefenseRequestSummary = {
@@ -39,8 +35,8 @@ export type DefenseRequestSummary = {
     thesis_title: string;
     date_of_defense: string;
     mode_defense: string;
-    status?: 'Pending' | 'In progress' | 'Approved' | 'Rejected' | 'Needs-info';
-    priority?: 'Low' | 'Medium' | 'High';
+    status: 'Pending' | 'In progress' | 'Approved' | 'Rejected' | 'Needs-info'; // remove ?
+    priority: 'Low' | 'Medium' | 'High'; 
 };
 
 export default function ShowAllRequests({
@@ -56,7 +52,7 @@ export default function ShowAllRequests({
     const [statusFilter, setStatusFilter] = useState<string[]>([]);
     const [priorityFilter, setPriorityFilter] = useState<string[]>([]);
     const [selectedIndex, setSelectedIndex] = useState<number>(0);
-    const [selectedRequest, setSelectedRequest] = useState<any>(null);
+    const [selectedRequest, setSelectedRequest] = useState<DefenseRequestSummary | null>(null);
     const [columns, setColumns] = useState<Record<string, boolean>>({
         title: true,
         presenter: true,
@@ -245,9 +241,6 @@ export default function ShowAllRequests({
     const handleBulkStatus = (status: string) => {
         setConfirmDialog({ open: true, type: 'bulk-status', value: status });
     };
-    const handleBulkPriority = (priority: string) => {
-        setConfirmDialog({ open: true, type: 'bulk-priority', value: priority });
-    };
 
     return (
         <div className="h-screen p-2 flex flex-col gap-2">
@@ -269,7 +262,7 @@ export default function ShowAllRequests({
                                 />
                             </div>
                             <div className="flex gap-2">
-                                {/* Status Filter */}
+                                
                                 <Popover>
                                     <PopoverTrigger asChild>
                                         <Button
@@ -447,17 +440,17 @@ export default function ShowAllRequests({
                         columns={columns}
                         selected={selected}
                         toggleSelectOne={toggleSelectOne}
-                        headerChecked={headerChecked}
+                        headerChecked={headerChecked === 'indeterminate' ? false : headerChecked}
                         toggleSelectAll={toggleSelectAll}
                         toggleSort={toggleSort}
                         sortDir={sortDir}
-                        setSelectedRequest={setSelectedRequest}
+                        setSelectedRequest={(r) => setSelectedRequest(r)}
                         setSelectedIndex={setSelectedIndex}
                         sorted={sorted}
                         selectedRequest={selectedRequest}
                         selectedIndex={selectedIndex}
-                        onStatusChange={onStatusChange}
-                        onPriorityChange={onPriorityChange}
+                        onStatusChange={handleStatusChange}
+                        onPriorityChange={handlePriorityChange}
                     />
                 </CardContent>
                 <CardFooter className="flex justify-between items-center text-sm px-2 pt-3 pb-2">

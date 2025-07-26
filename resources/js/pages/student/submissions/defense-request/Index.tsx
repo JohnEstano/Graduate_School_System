@@ -21,8 +21,8 @@ type PageProps = {
 
 export default function DefenseRequestIndex() {
     const { props } = usePage<PageProps>();
-    const { auth, defenseRequest } = props;
-    const role = auth.user.role;
+    const { defenseRequest } = props;
+
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>

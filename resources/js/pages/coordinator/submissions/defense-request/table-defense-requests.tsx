@@ -15,6 +15,25 @@ import Details from './details';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@/components/ui/dropdown-menu';
 import { Badge } from '@/components/ui/badge';
 import { Clock, Check, CircleCheckBig, CircleX, BadgeInfo, Circle } from 'lucide-react';
+import type { DefenseRequestSummary } from './show-all-requests';
+
+type TableDefenseRequestsProps = {
+  paged: DefenseRequestSummary[];
+  columns: Record<string, boolean>;
+  selected: number[];
+  toggleSelectOne: (id: number) => void;
+  headerChecked: boolean;
+  toggleSelectAll: () => void;
+  toggleSort: () => void;
+  sortDir: 'asc' | 'desc' | null | undefined;
+  setSelectedRequest: (r: DefenseRequestSummary) => void;
+  setSelectedIndex: (i: number) => void;
+  sorted: DefenseRequestSummary[];
+  selectedRequest: DefenseRequestSummary | null;
+  selectedIndex: number;
+  onStatusChange: (id: number, status: string) => void;
+  onPriorityChange: (id: number, priority: string) => void;
+};
 
 export default function TableDefenseRequests({
   paged,
@@ -32,7 +51,7 @@ export default function TableDefenseRequests({
   selectedIndex,
   onStatusChange,
   onPriorityChange,
-}: any) {
+}: TableDefenseRequestsProps) {
   const statusIcon = (status: string) => {
     switch (status) {
       case 'In progress':
@@ -93,7 +112,7 @@ export default function TableDefenseRequests({
           </TableRow>
         </TableHeader>
         <TableBody>
-          {paged.map((r: any, i: number) => (
+          {paged.map((r, i) => (
             <TableRow key={r.id} className="hover:bg-muted/50">
               <TableCell className="px-2 py-2">
                 <Checkbox
@@ -209,8 +228,9 @@ export default function TableDefenseRequests({
                   <DialogContent className="max-w-5xl min-w-260 w-full max-h-[90vh]">
                     <div className="max-h-[80vh] overflow-y-auto px-1">
                       {selectedRequest && (
+                         
                         <Details
-                          request={selectedRequest}
+                          request={selectedRequest as any}
                           onNavigate={(dir) => {
                             const ni =
                               dir === 'next'
