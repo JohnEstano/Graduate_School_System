@@ -218,7 +218,7 @@ export default function DefenseRequestForm() {
             title: 'Required Attachments',
             content: (
                 <>
-                    <div></div>
+                    
                     <HeadingSmall title="Step 3: Required Attachments" />
                     {(
                         [
@@ -228,7 +228,7 @@ export default function DefenseRequestForm() {
                             ['referenceNo', 'Reference No.', referenceRef],
                         ] as const
                     ).map(([field, label, inputRef]) => (
-                        <div key={field}>
+                        <div key={field} >
                             <Label>{label}</Label>
                             <div className="mb-3 flex items-center gap-2">
                                 <Input readOnly value={form.data[field]?.name || ''} placeholder="No file chosen" className="flex-1" />
@@ -251,17 +251,22 @@ export default function DefenseRequestForm() {
                     <div className="space-y-4 pt-3 pb-5">
                         {(
                             [
-                                'defenseAdviser',
-                                'defenseChairperson',
-                                'defensePanelist1',
-                                'defensePanelist2',
-                                'defensePanelist3',
-                                'defensePanelist4',
+                                { key: 'defenseAdviser', label: 'Adviser', placeholder: 'Enter adviser’s name' },
+                                { key: 'defenseChairperson', label: 'Chairperson', placeholder: 'Enter chairperson’s name' },
+                                { key: 'defensePanelist1', label: 'Panelist 1', placeholder: 'Enter panelist I name' },
+                                { key: 'defensePanelist2', label: 'Panelist 2', placeholder: 'Enter panelist II name' },
+                                { key: 'defensePanelist3', label: 'Panelist 3', placeholder: 'Enter panelist III name' },
+                                { key: 'defensePanelist4', label: 'Panelist 4', placeholder: 'Enter panelist IV name' },
                             ] as const
-                        ).map((field) => (
-                            <div key={field}>
-                                <Label>{field.replace('defense', '')}</Label>
-                                <Input name={field} value={form.data[field]} onChange={(e) => form.setData(field, e.target.value)} />
+                        ).map(({ key, label, placeholder }) => (
+                            <div key={key}>
+                                <Label>{label}</Label>
+                                <Input
+                                    name={key}
+                                    value={form.data[key]}
+                                    onChange={(e) => form.setData(key, e.target.value)}
+                                    placeholder={placeholder}
+                                />
                             </div>
                         ))}
                     </div>

@@ -59,30 +59,49 @@ export interface User {
     role: string;
     created_at: string;
     updated_at: string;
-    [key: string]: unknown; // This allows for additional properties...
+    [key: string]: unknown;
 }
 
 export interface DefenseRequest {
     id: number;
+    thesis_title: string;
     first_name: string;
     middle_name?: string | null;
     last_name: string;
-    school_id: string;
-    program: string;
-    thesis_title: string;
     date_of_defense: string;
     mode_defense: string;
-    defense_type: string;
-    advisers_endorsement?: string;
-    rec_endorsement?: string;
-    proof_of_payment?: string;
-    reference_no?: string;
-    defense_adviser: string;
-    defense_chairperson: string;
-    defense_panelist1: string;
-    defense_panelist2?: string;
-    defense_panelist3?: string;
-    defense_panelist4?: string;
-    status?: 'pending' | 'approved' | 'rejected' | 'needs-info';
-    created_at?: string;
+    status: string;
+    priority: string;
+   
 }
+
+export type DefenseRequestSummary = {
+    id: number;
+    thesis_title: string;
+    first_name: string;
+    middle_name?: string | null;
+    last_name: string;
+    date_of_defense: string;
+    mode_defense: string;
+    status: string;
+    priority: string;
+    
+};
+
+type TableDefenseRequestsProps = {
+  paged: DefenseRequestFull[];
+  columns: Record<string, boolean>;
+  selected: number[];
+  toggleSelectOne: (id: number) => void;
+  headerChecked: boolean;
+  toggleSelectAll: () => void;
+  toggleSort: () => void;
+  sortDir: 'asc' | 'desc' | null | undefined;
+  setSelectedRequest: (r: DefenseRequestFull) => void;
+  setSelectedIndex: (i: number) => void;
+  sorted: DefenseRequestFull[];
+  selectedRequest: DefenseRequestFull | null;
+  selectedIndex: number;
+  onStatusChange: (id: number, status: string) => void;
+  onPriorityChange: (id: number, priority: string) => void;
+};
