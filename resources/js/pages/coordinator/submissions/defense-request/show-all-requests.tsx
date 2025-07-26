@@ -28,6 +28,7 @@ import { Separator } from '@/components/ui/separator';
 import TableDefenseRequests from './table-defense-requests';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@/components/ui/dropdown-menu';
 import { Badge } from '@/components/ui/badge';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
 
 export type DefenseRequestSummary = {
     id: number;
@@ -64,6 +65,12 @@ export default function ShowAllRequests({
         status: true,
         priority: true,
     });
+    const [confirmDialog, setConfirmDialog] = useState<{
+        open: boolean;
+        type: 'status' | 'priority' | 'bulk-status' | 'bulk-priority' | null;
+        id?: number;
+        value?: string;
+    }>({ open: false, type: null });
 
     const perPage = 10;
 
@@ -83,14 +90,14 @@ export default function ShowAllRequests({
         }
         if (statusFilter.length) {
             result = result.filter((r) =>
-                statusFilter.includes((r.status || 'pending').toLowerCase())
+                statusFilter.includes(r.status || 'Pending')
             );
         }
         if (priorityFilter.length) {
             result = result.filter(
                 (r) =>
                     r.priority &&
-                    priorityFilter.includes(r.priority.toLowerCase())
+                    priorityFilter.includes(r.priority)
             );
         }
         return result;
@@ -139,14 +146,16 @@ export default function ShowAllRequests({
         }));
     };
 
-    const csrfToken = (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content;
+    function getCsrfToken() {
+      return (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content;
+    }
 
     const onStatusChange = async (id: number, status: string) => {
         const res = await fetch(`/defense-requests/${id}/status`, {
             method: 'PATCH',
             headers: {
                 'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': csrfToken,
+                'X-CSRF-TOKEN': getCsrfToken(),
                 'Accept': 'application/json',
             },
             body: JSON.stringify({ status }),
@@ -163,11 +172,11 @@ export default function ShowAllRequests({
     };
 
     const onPriorityChange = async (id: number, priority: string) => {
-        const res = await fetch(route('defense-requests.update-priority', id), {
+        const res = await fetch(`/defense-requests/${id}/priority`, {
             method: 'PATCH',
             headers: {
                 'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': csrfToken,
+                'X-CSRF-TOKEN': getCsrfToken(),
                 'Accept': 'application/json',
             },
             body: JSON.stringify({ priority }),
@@ -178,6 +187,8 @@ export default function ShowAllRequests({
                     request.id === id ? { ...request, priority } : request
                 ) as DefenseRequestSummary[]
             );
+        } else {
+            alert('Failed to update priority');
         }
     };
 
@@ -186,7 +197,7 @@ export default function ShowAllRequests({
             method: 'PATCH',
             headers: {
                 'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': csrfToken,
+                'X-CSRF-TOKEN': getCsrfToken(),
                 'Accept': 'application/json',
             },
             body: JSON.stringify({ ids: selected, status }),
@@ -208,7 +219,7 @@ export default function ShowAllRequests({
             method: 'PATCH',
             headers: {
                 'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': csrfToken,
+                'X-CSRF-TOKEN': getCsrfToken(),
                 'Accept': 'application/json',
             },
             body: JSON.stringify({ ids: selected, priority }),
@@ -225,6 +236,19 @@ export default function ShowAllRequests({
         }
     };
 
+    const handleStatusChange = (id: number, status: string) => {
+        setConfirmDialog({ open: true, type: 'status', id, value: status });
+    };
+    const handlePriorityChange = (id: number, priority: string) => {
+        setConfirmDialog({ open: true, type: 'priority', id, value: priority });
+    };
+    const handleBulkStatus = (status: string) => {
+        setConfirmDialog({ open: true, type: 'bulk-status', value: status });
+    };
+    const handleBulkPriority = (priority: string) => {
+        setConfirmDialog({ open: true, type: 'bulk-priority', value: priority });
+    };
+
     return (
         <div className="h-screen p-2 flex flex-col gap-2">
             <Card className="flex-1 flex flex-col rounded-lg p-2">
@@ -235,6 +259,7 @@ export default function ShowAllRequests({
                                 <Search className="absolute left-2 top-2 h-4 w-4 text-muted-foreground" />
                                 <Input
                                     placeholder="Search…"
+                                    startIcon={Search}
                                     value={search}
                                     onChange={(e) => {
                                         setSearch(e.currentTarget.value);
@@ -388,17 +413,17 @@ export default function ShowAllRequests({
                             className="rounded-full px-3 py-2 h-auto text-xs flex items-center gap-1"
                             onClick={() => {
                                 if (selected.length === 0) return;
-                                bulkUpdateStatus('In progress');
+                                handleBulkStatus('In progress');
                             }}
                         >
-                            <Clock size={12} /> Mark as In Progress
+                        <Clock size={12} /> Mark as In Progress
                         </Button>
                         <Button
                             variant="outline"
                             className="rounded-full px-3 py-2 h-auto text-xs flex items-center gap-1"
                             onClick={() => {
                                 if (selected.length === 0) return;
-                                bulkUpdateStatus('Approved');
+                                handleBulkStatus('Approved');
                             }}
                         >
                             <CheckCircle size={12} /> Mark as Approved
@@ -408,7 +433,7 @@ export default function ShowAllRequests({
                             className="rounded-full px-3 py-2 h-auto text-xs flex items-center gap-1"
                             onClick={() => {
                                 if (selected.length === 0) return;
-                                bulkUpdateStatus('Needs-info');
+                                handleBulkStatus('Needs-info');
                             }}
                         >
                             <BadgeInfo size={12} /> Mark as Needs Info
@@ -463,6 +488,39 @@ export default function ShowAllRequests({
                     </div>
                 </CardFooter>
             </Card>
+            <Dialog open={confirmDialog.open} onOpenChange={open => setConfirmDialog(c => ({ ...c, open }))}>
+              <DialogContent>
+                <div className="space-y-4">
+                  <div className="text-lg font-semibold">
+                    {confirmDialog.type === 'status' && `Change status to "${confirmDialog.value}"?`}
+                    {confirmDialog.type === 'priority' && `Change priority to "${confirmDialog.value}"?`}
+                    {confirmDialog.type === 'bulk-status' && `Update status to "${confirmDialog.value}" for all selected?`}
+                    {confirmDialog.type === 'bulk-priority' && `Update priority to "${confirmDialog.value}" for all selected?`}
+                  </div>
+                  <div className="flex gap-2 justify-end">
+                    <Button variant="secondary" onClick={() => setConfirmDialog({ open: false, type: null })}>
+                      Cancel
+                    </Button>
+                    <Button
+                      variant="default"
+                      onClick={async () => {
+                        setConfirmDialog({ open: false, type: null });
+                        if (confirmDialog.type === 'status' && confirmDialog.id && confirmDialog.value)
+                          await onStatusChange(confirmDialog.id, confirmDialog.value);
+                        if (confirmDialog.type === 'priority' && confirmDialog.id && confirmDialog.value)
+                          await onPriorityChange(confirmDialog.id, confirmDialog.value);
+                        if (confirmDialog.type === 'bulk-status' && confirmDialog.value)
+                          await bulkUpdateStatus(confirmDialog.value);
+                        if (confirmDialog.type === 'bulk-priority' && confirmDialog.value)
+                          await bulkUpdatePriority(confirmDialog.value);
+                      }}
+                    >
+                      Confirm
+                    </Button>
+                  </div>
+                </div>
+              </DialogContent>
+            </Dialog>
         </div>
     );
 }
