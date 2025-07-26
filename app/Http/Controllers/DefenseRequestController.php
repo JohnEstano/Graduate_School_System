@@ -107,4 +107,58 @@ class DefenseRequestController extends Controller
 
         return Redirect::back()->with('success', 'Your defense request has been submitted!');
     }
+
+    public function updateStatus(Request $request, DefenseRequest $defenseRequest)
+    {
+        $request->validate([
+            'status' => 'required|in:Pending,In progress,Approved,Rejected,Needs-info',
+        ]);
+        $defenseRequest->update([
+            'status' => $request->status,
+            'last_status_updated_at' => now(),
+            'last_status_updated_by' => auth()->id(),
+        ]);
+        return response()->json(['success' => true, 'status' => $defenseRequest->status]);
+    }
+
+    public function updatePriority(Request $request, DefenseRequest $defenseRequest)
+    {
+        $request->validate([
+            'priority' => 'required|in:Low,Medium,High',
+        ]);
+        $defenseRequest->update([
+            'priority' => $request->priority,
+            'last_status_updated_at' => now(),
+            'last_status_updated_by' => auth()->id(),
+        ]);
+        return response()->json(['success' => true, 'priority' => $defenseRequest->priority]);
+    }
+
+    public function bulkUpdateStatus(Request $request)
+    {
+        $request->validate([
+            'ids' => 'required|array',
+            'status' => 'required|in:Pending,In progress,Approved,Rejected,Needs-info',
+        ]);
+        DefenseRequest::whereIn('id', $request->ids)->update([
+            'status' => $request->status,
+            'last_status_updated_at' => now(),
+            'last_status_updated_by' => auth()->id(),
+        ]);
+        return response()->json(['success' => true]);
+    }
+
+    public function bulkUpdatePriority(Request $request)
+    {
+        $request->validate([
+            'ids' => 'required|array',
+            'priority' => 'required|in:Low,Medium,High',
+        ]);
+        DefenseRequest::whereIn('id', $request->ids)->update([
+            'priority' => $request->priority,
+            'last_status_updated_at' => now(),
+            'last_status_updated_by' => auth()->id(),
+        ]);
+        return response()->json(['success' => true]);
+    }
 }

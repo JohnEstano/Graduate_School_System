@@ -44,6 +44,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
         return Inertia::render('student/submissions/comprehensive-exam/Index');
     })->name('comprehensive-exam.index');
 
+    Route::patch('/defense-requests/{defenseRequest}/status', [DefenseRequestController::class, 'updateStatus'])->name('defense-requests.update-status');
+    Route::patch('/defense-requests/{defenseRequest}/priority', [DefenseRequestController::class, 'updatePriority'])->name('defense-requests.update-priority');
+    Route::patch('/defense-requests/bulk-status', [DefenseRequestController::class, 'bulkUpdateStatus']);
+    Route::patch('/defense-requests/bulk-priority', [DefenseRequestController::class, 'bulkUpdatePriority']);
 });
 
 require __DIR__.'/settings.php';

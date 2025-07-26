@@ -72,6 +72,7 @@ export default function Details({
           <Button variant="outline" className="rounded-sm">
             Track Request
           </Button>
+
           <Button variant="outline" className="rounded-sm">
             Contact Assistant
           </Button>
