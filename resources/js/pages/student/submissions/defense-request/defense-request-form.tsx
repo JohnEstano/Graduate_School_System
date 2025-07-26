@@ -218,7 +218,7 @@ export default function DefenseRequestForm() {
             title: 'Required Attachments',
             content: (
                 <>
-                    <div></div>
+                    
                     <HeadingSmall title="Step 3: Required Attachments" />
                     {(
                         [
@@ -228,7 +228,7 @@ export default function DefenseRequestForm() {
                             ['referenceNo', 'Reference No.', referenceRef],
                         ] as const
                     ).map(([field, label, inputRef]) => (
-                        <div key={field}>
+                        <div key={field} >
                             <Label>{label}</Label>
                             <div className="mb-3 flex items-center gap-2">
                                 <Input readOnly value={form.data[field]?.name || ''} placeholder="No file chosen" className="flex-1" />
