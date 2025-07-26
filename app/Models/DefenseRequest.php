@@ -13,5 +13,6 @@ class DefenseRequest extends Model
         'advisers_endorsement', 'rec_endorsement', 'proof_of_payment', 'reference_no',
         'defense_adviser', 'defense_chairperson',
         'defense_panelist1', 'defense_panelist2', 'defense_panelist3', 'defense_panelist4',
+        'status', 'priority', 'last_status_updated_at', 'last_status_updated_by',
     ];
 }

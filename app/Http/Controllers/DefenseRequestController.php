@@ -23,7 +23,16 @@ class DefenseRequestController extends Controller
                 ->first();
         }
 
-        return Inertia::render('submissions/defense-request/Index', $props);
+        $viewMap = [
+            'Student' => 'student/submissions/defense-request/Index',
+            'Administrative Assistant' => 'aa/submissions/defense-request/Index',
+            'Coordinator' => 'coordinator/submissions/defense-request/Index',
+            'Dean' => 'dean/submissions/defense-request/Index',
+        ];
+
+        $view = $viewMap[$user->role] ?? 'student/submissions/defense-request/Index';
+
+        return Inertia::render($view, $props);
     }
 
     public function review(DefenseRequest $defenseRequest, Request $request)
@@ -96,7 +105,60 @@ class DefenseRequestController extends Controller
             'defense_panelist4' => $data['defensePanelist4'] ?? null,
         ]);
 
-        return Redirect::back()
-            ->with('success', 'Your defense request has been submitted!');
+        return Redirect::back()->with('success', 'Your defense request has been submitted!');
+    }
+
+    public function updateStatus(Request $request, DefenseRequest $defenseRequest)
+    {
+        $request->validate([
+            'status' => 'required|in:Pending,In progress,Approved,Rejected,Needs-info',
+        ]);
+        $defenseRequest->update([
+            'status' => $request->status,
+            'last_status_updated_at' => now(),
+            'last_status_updated_by' => auth()->id(),
+        ]);
+        return response()->json(['success' => true, 'status' => $defenseRequest->status]);
+    }
+
+    public function updatePriority(Request $request, DefenseRequest $defenseRequest)
+    {
+        $request->validate([
+            'priority' => 'required|in:Low,Medium,High',
+        ]);
+        $defenseRequest->update([
+            'priority' => $request->priority,
+            'last_status_updated_at' => now(),
+            'last_status_updated_by' => auth()->id(),
+        ]);
+        return response()->json(['success' => true, 'priority' => $defenseRequest->priority]);
+    }
+
+    public function bulkUpdateStatus(Request $request)
+    {
+        $request->validate([
+            'ids' => 'required|array',
+            'status' => 'required|in:Pending,In progress,Approved,Rejected,Needs-info',
+        ]);
+        DefenseRequest::whereIn('id', $request->ids)->update([
+            'status' => $request->status,
+            'last_status_updated_at' => now(),
+            'last_status_updated_by' => auth()->id(),
+        ]);
+        return response()->json(['success' => true]);
+    }
+
+    public function bulkUpdatePriority(Request $request)
+    {
+        $request->validate([
+            'ids' => 'required|array',
+            'priority' => 'required|in:Low,Medium,High',
+        ]);
+        DefenseRequest::whereIn('id', $request->ids)->update([
+            'priority' => $request->priority,
+            'last_status_updated_at' => now(),
+            'last_status_updated_by' => auth()->id(),
+        ]);
+        return response()->json(['success' => true]);
     }
 }

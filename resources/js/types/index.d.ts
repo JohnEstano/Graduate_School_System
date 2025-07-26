@@ -59,7 +59,7 @@ export interface User {
     role: string;
     created_at: string;
     updated_at: string;
-    [key: string]: unknown; // This allows for additional properties...
+    [key: string]: unknown;
 }
 
 export interface DefenseRequest {
@@ -86,3 +86,16 @@ export interface DefenseRequest {
     status?: 'pending' | 'approved' | 'rejected' | 'needs-info';
     created_at?: string;
 }
+
+export type DefenseRequestSummary = {
+    id?: number;
+    first_name?: string;
+    middle_name?: string | null;
+    last_name?: string;
+    program?: string;
+    thesis_title?: string;
+    date_of_defense?: string;
+    mode_defense?: string;
+    status?: 'Pending' | 'In progress' | 'Approved' | 'Rejected' | 'Needs-info';
+    priority?: 'Low' | 'Medium' | 'High';
+};
