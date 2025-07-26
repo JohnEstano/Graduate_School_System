@@ -7,7 +7,6 @@ use Inertia\Inertia;
 
 class DashboardController extends Controller
 {
-
     public function index(Request $request)
     {
         $user = $request->user();
@@ -19,14 +18,11 @@ class DashboardController extends Controller
                     'name' => $user->name,
                     'email' => $user->email,
                     'avatar' => $user->avatar ?? null,
-                    'role' => $user->role, 
+                    'role' => $user->role,
                     'created_at' => $user->created_at,
                     'updated_at' => $user->updated_at,
                 ],
             ],
         ]);
     }
-
-
-
 }

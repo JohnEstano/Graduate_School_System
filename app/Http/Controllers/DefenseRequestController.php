@@ -2,11 +2,11 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
-use Inertia\Inertia;
-use Illuminate\Support\Facades\Auth; 
 use App\Models\DefenseRequest;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Redirect;
+use Inertia\Inertia;
 
 class DefenseRequestController extends Controller
 {
@@ -26,18 +26,19 @@ class DefenseRequestController extends Controller
         return Inertia::render('submissions/defense-request/Index', $props);
     }
 
-     public function review(DefenseRequest $defenseRequest, Request $request)
+    public function review(DefenseRequest $defenseRequest, Request $request)
     {
         $request->validate([
-            'action' => 'required|in:approve,reject,needs-info'
+            'action' => 'required|in:approve,reject,needs-info',
         ]);
 
         $defenseRequest->update([
-            'status' => $request->action
+            'status' => $request->action,
         ]);
 
         return back()->with('success', 'Status updated successfully');
     }
+
     public function store(Request $request)
     {
         $data = $request->validate([
@@ -94,7 +95,6 @@ class DefenseRequestController extends Controller
             'defense_panelist3' => $data['defensePanelist3'] ?? null,
             'defense_panelist4' => $data['defensePanelist4'] ?? null,
         ]);
-
 
         return Redirect::back()
             ->with('success', 'Your defense request has been submitted!');

@@ -33,12 +33,13 @@ class User extends Authenticatable
      *
      * @var list<string>
      */
-
     public function getNameAttribute()
     {
-        $middleInitial = $this->middle_name ? strtoupper(substr($this->middle_name, 0, 1)) . '. ' : '';
+        $middleInitial = $this->middle_name ? strtoupper(substr($this->middle_name, 0, 1)).'. ' : '';
+
         return trim("{$this->first_name} {$middleInitial}{$this->last_name}");
     }
+
     protected $hidden = [
         'password',
         'remember_token',
