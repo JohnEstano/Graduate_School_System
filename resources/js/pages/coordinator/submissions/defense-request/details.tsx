@@ -1,6 +1,5 @@
 'use client';
 
-
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
 import { format } from 'date-fns';
@@ -72,7 +71,6 @@ export default function Details({
           <Button variant="outline" className="rounded-sm">
             Track Request
           </Button>
-
           <Button variant="outline" className="rounded-sm">
             Contact Assistant
           </Button>

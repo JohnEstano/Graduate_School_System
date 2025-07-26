@@ -230,7 +230,7 @@ export default function TableDefenseRequests({
                       {selectedRequest && (
                          
                         <Details
-                          request={selectedRequest as any}
+                          request={selectedRequest as unknown as import('./details').DefenseRequestFull}
                           onNavigate={(dir) => {
                             const ni =
                               dir === 'next'
