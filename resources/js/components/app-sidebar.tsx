@@ -7,8 +7,7 @@ import { Link, usePage } from '@inertiajs/react';
 import { Bell, CalendarSync, CreditCard, DollarSign, File, FileText, LayoutGrid, MessageSquareText, Users } from 'lucide-react';
 import AppLogo from './app-logo';
 import { useEffect, useState } from "react";
-import { Dot } from "lucide-react"; // Lucide icon for the dot
-import { Badge } from "@/components/ui/badge"; // shadcn badge
+
 
 type PageProps = {
     auth: {
@@ -99,10 +98,13 @@ export function AppSidebar() {
                     const data = await res.json();
                     setDefenseRequestCount(data.count);
                 }
-            } catch (e) {}
+            } catch {
+
+                //errrrroorror
+            }
         }
         fetchCount();
-        const interval = setInterval(fetchCount, 1000); // Poll every 5 seconds
+        const interval = setInterval(fetchCount, 1000); 
         return () => clearInterval(interval);
     }, []);
 

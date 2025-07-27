@@ -1,9 +1,9 @@
-import { Badge } from '@/components/ui/badge';
+
 import { Separator } from '@/components/ui/separator';
 import { SidebarGroup, SidebarGroupLabel, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '@/components/ui/sidebar';
 import { MainNavItem } from '@/types';
 import { Link, usePage } from '@inertiajs/react';
-import { ChevronRight, Dot } from 'lucide-react';
+import { ChevronRight } from 'lucide-react';
 import React, { useState } from 'react';
 
 interface NavMainProps {

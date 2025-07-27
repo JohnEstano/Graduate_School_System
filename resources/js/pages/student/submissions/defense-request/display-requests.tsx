@@ -85,8 +85,8 @@ export default function DisplayRequest({ request }: Props) {
                     const data = await res.json();
                     setLiveRequest(data);
                 }
-            } catch (e) {
-                
+            } catch {
+                //erorrorrr
             }
         }, 5000);
 
