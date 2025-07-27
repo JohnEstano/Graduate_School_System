@@ -1,12 +1,12 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { format } from 'date-fns';
-import { CircleCheck, Info, Paperclip } from 'lucide-react';
-import { useState } from 'react';
+import { CircleCheck, Info, Paperclip, BadgeCheck, XCircle, Clock, Info as InfoIcon } from 'lucide-react';
 
 export type DefenseRequestFull = {
     first_name: string;
@@ -28,41 +28,76 @@ export type DefenseRequestFull = {
     rec_endorsement?: string;
     proof_of_payment?: string;
     reference_no?: string;
-    status?: 'pending' | 'approved' | 'rejected' | 'needs-info';
+    status?: 'Pending' | 'Approved' | 'Rejected' | 'Needs-info' | 'In progress';
 };
 
 type Props = {
-    request: {
-        first_name: string;
-        middle_name: string | null;
-        last_name: string;
-        school_id: string;
-        program: string;
-        thesis_title: string;
-        date_of_defense: string;
-        mode_defense: string;
-        defense_type: string;
-        advisers_endorsement?: string;
-        rec_endorsement?: string;
-        proof_of_payment?: string;
-        reference_no?: string;
-        defense_adviser: string;
-        defense_chairperson: string;
-        defense_panelist1: string;
-        defense_panelist2?: string;
-        defense_panelist3?: string;
-        defense_panelist4?: string;
-    };
+    request: DefenseRequestFull;
 };
 
+function statusBadge(status?: string) {
+    switch (status) {
+        case 'Approved':
+            return (
+                <Badge className="bg-green-100 text-green-700 border border-green-200 flex items-center gap-1">
+                    <BadgeCheck size={14} /> Approved
+                </Badge>
+            );
+        case 'Rejected':
+            return (
+                <Badge className="bg-rose-100 text-rose-700 border border-rose-200 flex items-center gap-1">
+                    <XCircle size={14} /> Rejected
+                </Badge>
+            );
+        case 'Needs-info':
+            return (
+                <Badge className="bg-blue-100 text-blue-700 border border-blue-200 flex items-center gap-1">
+                    <InfoIcon size={14} /> Needs Info
+                </Badge>
+            );
+        case 'In progress':
+            return (
+                <Badge className="bg-amber-100 text-amber-700 border border-amber-200 flex items-center gap-1">
+                    <Clock size={14} /> In Progress
+                </Badge>
+            );
+        case 'Pending':
+        default:
+            return (
+                <Badge className="bg-gray-100 text-gray-700 border border-gray-200 flex items-center gap-1">
+                    <Clock size={14} /> Pending
+                </Badge>
+            );
+    }
+}
+
 export default function DisplayRequest({ request }: Props) {
+    const [liveRequest, setLiveRequest] = useState<DefenseRequestFull>(request);
     const [showDetails, setShowDetails] = useState(false);
 
+
+    useEffect(() => {
+        const interval = setInterval(async () => {
+            try {
+             
+                const res = await fetch(`/api/defense-request/${request.school_id}`);
+                if (res.ok) {
+                    const data = await res.json();
+                    setLiveRequest(data);
+                }
+            } catch (e) {
+                
+            }
+        }, 5000);
+
+        return () => clearInterval(interval);
+    }, [request.school_id]);
+
     const attachments: { label: string; url?: string }[] = [
-        { label: 'Adviser’s Endorsement', url: request.advisers_endorsement },
-        { label: 'REC Endorsement', url: request.rec_endorsement },
-        { label: 'Proof of Payment', url: request.proof_of_payment },
-        { label: 'Reference No.', url: request.reference_no },
+        { label: 'Adviser’s Endorsement', url: liveRequest.advisers_endorsement },
+        { label: 'REC Endorsement', url: liveRequest.rec_endorsement },
+        { label: 'Proof of Payment', url: liveRequest.proof_of_payment },
+        { label: 'Reference No.', url: liveRequest.reference_no },
     ];
 
     return (
@@ -73,16 +108,10 @@ export default function DisplayRequest({ request }: Props) {
                         Your Defense Request Was Sent
                         <CircleCheck className="text-rose-500" />
                     </CardTitle>
-                    <div className="pb-5 pl-2">
+                    <div className="pb-5 pl-2 flex items-center gap-2">
                         <h1 className="text-muted-foreground">The request will be reviewed shortly</h1>
+                        {statusBadge(liveRequest.status)}
                     </div>
-                </div>
-
-                <div className="me-10 space-x-2">
-                    <Badge className="text-xs">Hello</Badge>
-                    <Badge className="text-xs" variant="secondary">
-                        Hello
-                    </Badge>
                 </div>
             </CardHeader>
             <CardContent className="space-y-5">

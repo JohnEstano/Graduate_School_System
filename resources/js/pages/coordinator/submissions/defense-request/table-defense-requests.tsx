@@ -57,13 +57,13 @@ export default function TableDefenseRequests({
       case 'In progress':
         return <Clock size={16} className="mr-1" />;
       case 'Approved':
-        return <CircleCheckBig size={16} className="mr-1" />;
+        return <CircleCheckBig size={16} className="mr-1 text-green-500" />;
       case 'Rejected':
         return <CircleX size={16} className="mr-1" />;
       case 'Needs-info':
-        return <BadgeInfo size={16} className="mr-1" />;
+        return <BadgeInfo size={16} className="mr-1 text-blue-500" />;
       default:
-        return <Circle size={16} className="mr-1" />; // Pending
+        return <Circle size={16} className="mr-1" />; 
     }
   };
 

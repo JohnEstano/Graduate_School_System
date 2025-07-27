@@ -6,6 +6,9 @@ import { MainNavItem, type NavItem } from '@/types';
 import { Link, usePage } from '@inertiajs/react';
 import { Bell, CalendarSync, CreditCard, DollarSign, File, FileText, LayoutGrid, MessageSquareText, Users } from 'lucide-react';
 import AppLogo from './app-logo';
+import { useEffect, useState } from "react";
+import { Dot } from "lucide-react"; // Lucide icon for the dot
+import { Badge } from "@/components/ui/badge"; // shadcn badge
 
 type PageProps = {
     auth: {
@@ -86,6 +89,41 @@ export function AppSidebar() {
     const isStaff = staffRoles.includes(user.role);
     const items = isStaff ? assistantNavItems : studentNavItems;
 
+    const [defenseRequestCount, setDefenseRequestCount] = useState<number>(0);
+
+    useEffect(() => {
+        async function fetchCount() {
+            try {
+                const res = await fetch('/api/defense-requests/count');
+                if (res.ok) {
+                    const data = await res.json();
+                    setDefenseRequestCount(data.count);
+                }
+            } catch (e) {}
+        }
+        fetchCount();
+        const interval = setInterval(fetchCount, 1000); // Poll every 5 seconds
+        return () => clearInterval(interval);
+    }, []);
+
+    let navItems = items;
+    if (isStaff) {
+        navItems = assistantNavItems.map(item => {
+            if (item.title === 'Requests') {
+                return {
+                    ...item,
+                    indicator: defenseRequestCount > 0,
+                    subItems: item.subItems?.map(sub =>
+                        sub.title === 'Defense Requests'
+                            ? { ...sub, count: defenseRequestCount }
+                            : sub
+                    ),
+                };
+            }
+            return item;
+        });
+    }
+
     return (
         <Sidebar collapsible="offcanvas" className="px-3 pt-5" variant="inset">
             <SidebarHeader>
@@ -101,7 +139,7 @@ export function AppSidebar() {
             </SidebarHeader>
 
             <SidebarContent>
-                <NavMain items={items} />
+                <NavMain items={navItems} />
             </SidebarContent>
 
             <SidebarFooter>
