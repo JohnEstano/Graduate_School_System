@@ -28,6 +28,7 @@ export interface MainNavItem {
     icon?: LucideIcon | null;
     isActive?: boolean;
     subItems?: SubItems[];
+     indicator?: boolean;
 }
 
 export interface SubItems {
@@ -35,6 +36,7 @@ export interface SubItems {
     href: string;
     icon?: LucideIcon | null;
     isActive?: boolean;
+    count?: number;
 }
 
 export interface SharedData {
@@ -86,22 +88,4 @@ export type DefenseRequestSummary = {
     status: string;
     priority: string;
     
-};
-
-type TableDefenseRequestsProps = {
-  paged: DefenseRequestFull[];
-  columns: Record<string, boolean>;
-  selected: number[];
-  toggleSelectOne: (id: number) => void;
-  headerChecked: boolean;
-  toggleSelectAll: () => void;
-  toggleSort: () => void;
-  sortDir: 'asc' | 'desc' | null | undefined;
-  setSelectedRequest: (r: DefenseRequestFull) => void;
-  setSelectedIndex: (i: number) => void;
-  sorted: DefenseRequestFull[];
-  selectedRequest: DefenseRequestFull | null;
-  selectedIndex: number;
-  onStatusChange: (id: number, status: string) => void;
-  onPriorityChange: (id: number, priority: string) => void;
 };

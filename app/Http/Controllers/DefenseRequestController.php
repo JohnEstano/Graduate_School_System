@@ -161,4 +161,10 @@ class DefenseRequestController extends Controller
         ]);
         return response()->json(['success' => true]);
     }
+
+    public function count()
+    {
+        $count = DefenseRequest::where('status', 'Pending')->count();
+        return response()->json(['count' => $count]);
+    }
 }

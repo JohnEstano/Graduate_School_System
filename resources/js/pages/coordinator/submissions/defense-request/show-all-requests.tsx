@@ -419,7 +419,7 @@ export default function ShowAllRequests({
                                 handleBulkStatus('Approved');
                             }}
                         >
-                            <CheckCircle size={12} /> Mark as Approved
+                            <CheckCircle size={12} className='text-green-500' /> Mark as Approved
                         </Button>
                         <Button
                             variant="outline"
@@ -429,7 +429,7 @@ export default function ShowAllRequests({
                                 handleBulkStatus('Needs-info');
                             }}
                         >
-                            <BadgeInfo size={12} /> Mark as Needs Info
+                            <BadgeInfo size={12}  className='text-blue-500'/> Mark as Needs Info
                         </Button>
                         <Button variant="outline" className="rounded-full px-3 py-2 h-auto text-xs flex items-center gap-1">
                             <Trash2 size={12} /> Delete
