@@ -44,8 +44,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::patch('/defense-requests/bulk-status', [DefenseRequestController::class, 'bulkUpdateStatus']);
     Route::patch('/defense-requests/bulk-priority', [DefenseRequestController::class, 'bulkUpdatePriority']);
 
-    Route::get('/api/defense-requests/count', [DefenseRequestController::class, 'count']);
-
+  
     // Comprehensive Exam route
     Route::get('comprehensive-exam', function () {
         return Inertia::render('student/submissions/comprehensive-exam/Index');
@@ -58,6 +57,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::get('/defense-requests/calendar', [DefenseRequestController::class, 'calendar']);
 });
+
+    
+  Route::get('/api/defense-requests/count', [DefenseRequestController::class, 'count']);
+
 
 
 require __DIR__ . '/settings.php';
