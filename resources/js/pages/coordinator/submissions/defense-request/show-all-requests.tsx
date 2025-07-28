@@ -252,7 +252,7 @@ export default function ShowAllRequests({
                             <div className="relative">
                                 <Search className="absolute left-2 top-2 h-4 w-4 text-muted-foreground" />
                                 <Input
-                                    placeholder="Search…"
+                                    placeholder="Searc"
                                     startIcon={Search}
                                     value={search}
                                     onChange={(e) => {
