@@ -15,6 +15,7 @@ import {
     CirclePlus,
     Settings2,
     BadgeInfo,
+    CircleX,
 } from 'lucide-react';
 
 import {
@@ -430,6 +431,16 @@ export default function ShowAllRequests({
                             }}
                         >
                             <BadgeInfo size={12}  className='text-blue-500'/> Mark as Needs Info
+                        </Button>
+                        <Button
+                            variant="outline"
+                            className="rounded-full px-3 py-2 h-auto text-xs flex items-center gap-1"
+                            onClick={() => {
+                                if (selected.length === 0) return;
+                                handleBulkStatus('Rejected');
+                            }}
+                        >
+                            <CircleX size={12}  className='text-red-500'/> Mark as Rejected
                         </Button>
                         <Button variant="outline" className="rounded-full px-3 py-2 h-auto text-xs flex items-center gap-1">
                             <Trash2 size={12} /> Delete

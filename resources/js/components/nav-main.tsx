@@ -77,7 +77,7 @@ export function NavMain({ items = [] }: NavMainProps) {
                                                         >
                                                             <span>{sub.title}</span>
                                                             {sub.title === 'Defense Requests' && !!sub.count && (
-                                                                <p className="ml-2 mr-2 text-xs text-rose-700 font-semibold">
+                                                                <p className="ml-2 mr-2 text-xs text-rose-500 font-semibold">
                                                                     {sub.count}
                                                                 </p>
                                                             )}

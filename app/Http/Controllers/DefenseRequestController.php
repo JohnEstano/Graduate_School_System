@@ -167,4 +167,11 @@ class DefenseRequestController extends Controller
         $count = DefenseRequest::where('status', 'Pending')->count();
         return response()->json(['count' => $count]);
     }
+
+    public function calendar()
+    {
+        return \App\Models\DefenseRequest::where('status', 'Approved')
+            ->select('id', 'thesis_title', 'date_of_defense')
+            ->get();
+    }
 }
