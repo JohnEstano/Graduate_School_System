@@ -60,7 +60,7 @@ export default function Details({
 
   return (
     <div className="w-full max-w-5xl mx-auto px-4 py-6">
-    
+
       <div className="flex flex-row items-start justify-between mb-6">
         <div className="flex items-center gap-2 text-2xl font-semibold">
           Details
@@ -97,9 +97,9 @@ export default function Details({
         </div>
       </div>
 
-      {/* Main details + status side panel */}
+
       <div className="flex flex-col md:flex-row gap-8">
-        {/* Main details column */}
+
         <div className="flex-1 space-y-6">
           <div>
             <h3 className="text-xs text-zinc-500">Thesis Title</h3>
@@ -127,6 +127,22 @@ export default function Details({
                 {format(new Date(request.date_of_defense), 'PPP')} /{' '}
                 {request.mode_defense.replace('-', ' ')}
               </p>
+            </div>
+            <div className="w-full md:w-64 flex-shrink-1 bg-white border rounded-lg p-4 h-fit space-y-6">
+              <div>
+                <h4 className="text-[10px] text-zinc-500 mb-1">Last Status Updated By</h4>
+                <p className="text-xs font-semibold break-words">
+                  {lastStatusUpdatedBy || <span className="text-muted-foreground">—</span>}
+                </p>
+              </div>
+              <div>
+                <h4 className="text-[10px] text-zinc-500 mb-1">Last Status Updated At</h4>
+                <p className="text-xs font-semibold">
+                  {lastStatusUpdatedAt
+                    ? format(new Date(lastStatusUpdatedAt), 'PPP p')
+                    : <span className="text-muted-foreground">—</span>}
+                </p>
+              </div>
             </div>
           </div>
 
@@ -203,23 +219,7 @@ export default function Details({
           </div>
         </div>
 
-        {/* Side panel for status updates */}
-        <div className="w-full md:w-64 flex-shrink-0 bg-white border rounded-lg p-4 h-fit space-y-6">
-          <div>
-            <h4 className="text-xs text-zinc-500 mb-1">Last Status Updated By</h4>
-            <p className="text-base font-semibold break-words">
-              {lastStatusUpdatedBy || <span className="text-muted-foreground">—</span>}
-            </p>
-          </div>
-          <div>
-            <h4 className="text-xs text-zinc-500 mb-1">Last Status Updated At</h4>
-            <p className="text-base font-semibold">
-              {lastStatusUpdatedAt
-                ? format(new Date(lastStatusUpdatedAt), 'PPP p')
-                : <span className="text-muted-foreground">—</span>}
-            </p>
-          </div>
-        </div>
+
       </div>
     </div>
   );

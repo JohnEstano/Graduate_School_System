@@ -15,6 +15,7 @@ import {
     Settings2,
     BadgeInfo,
     CircleX,
+    X
 } from 'lucide-react';
 
 import {
@@ -305,11 +306,11 @@ export default function ShowAllRequests({
                                             className="w-full"
                                             onClick={() => setStatusFilter([])}
                                         >
-                                            Clear Filters
+                                          <X/>  Clear Filters
                                         </Button>
                                     </PopoverContent>
                                 </Popover>
-                                {/* Priority Filter */}
+
                                 <Popover>
                                     <PopoverTrigger asChild>
                                         <Button
@@ -346,13 +347,13 @@ export default function ShowAllRequests({
                                             className="w-full"
                                             onClick={() => setPriorityFilter([])}
                                         >
-                                            Clear Filters
+                                           <X/> Clear Filters
                                         </Button>
                                     </PopoverContent>
                                 </Popover>
                             </div>
                         </div>
-                        {/* Column Visibility */}
+
                         <div>
                             <Popover>
                                 <PopoverTrigger asChild>
