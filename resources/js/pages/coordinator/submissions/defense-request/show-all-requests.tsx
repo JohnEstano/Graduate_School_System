@@ -2,7 +2,6 @@
 
 import { useState, useMemo, useEffect } from 'react';
 
-
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -26,6 +25,7 @@ import {
 import { Separator } from '@/components/ui/separator';
 import TableDefenseRequests from './table-defense-requests';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
+import {toast, Toaster} from 'sonner';
 
 export type DefenseRequestSummary = {
     id: number;
@@ -36,7 +36,7 @@ export type DefenseRequestSummary = {
     thesis_title: string;
     date_of_defense: string;
     mode_defense: string;
-    status: 'Pending' | 'In progress' | 'Approved' | 'Rejected' | 'Needs-info'; // remove ?
+    status: 'Pending' | 'In progress' | 'Approved' | 'Rejected' | 'Needs-info';
     priority: 'Low' | 'Medium' | 'High'; 
 };
 
@@ -135,7 +135,6 @@ export default function ShowAllRequests({
             d === 'asc' ? 'desc' : d === 'desc' ? null : 'asc'
         );
 
-    // Fix: Add toggleColumn for column visibility
     const toggleColumn = (key: string) => {
         setColumns((cols) => ({
             ...cols,
@@ -147,6 +146,7 @@ export default function ShowAllRequests({
       return (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content;
     }
 
+   
     const onStatusChange = async (id: number, status: string) => {
         const res = await fetch(`/defense-requests/${id}/status`, {
             method: 'PATCH',
@@ -163,8 +163,9 @@ export default function ShowAllRequests({
                     request.id === id ? { ...request, status } : request
                 ) as DefenseRequestSummary[]
             );
+            toast.success('Status updated!', { position: 'bottom-right' });
         } else {
-            alert('Failed to update status');
+            toast.error('Failed to update status', { position: 'bottom-right' });
         }
     };
 
@@ -184,8 +185,9 @@ export default function ShowAllRequests({
                     request.id === id ? { ...request, priority } : request
                 ) as DefenseRequestSummary[]
             );
+            toast.success('Priority updated!', { position: 'bottom-right' });
         } else {
-            alert('Failed to update priority');
+            toast.error('Failed to update priority', { position: 'bottom-right' });
         }
     };
 
@@ -206,8 +208,9 @@ export default function ShowAllRequests({
                 ) as DefenseRequestSummary[]
             );
             setSelected([]);
+            toast.success('Status updated!', { position: 'bottom-right' });
         } else {
-            alert('Failed to update status');
+            toast.error('Failed to update status', { position: 'bottom-right' });
         }
     };
 
@@ -228,8 +231,9 @@ export default function ShowAllRequests({
                 ) as DefenseRequestSummary[]
             );
             setSelected([]);
+            toast.success('Bulk priority updated!', { position: 'bottom-right' });
         } else {
-            alert('Failed to update priority');
+            toast.error('Failed to update priority', { position: 'bottom-right' });
         }
     };
 
@@ -245,6 +249,7 @@ export default function ShowAllRequests({
 
     return (
         <div className="h-screen p-2 flex flex-col gap-2">
+            <Toaster position="top-right" richColors  />
             <Card className="flex-1 flex flex-col rounded-lg p-2">
                 <div className="flex flex-wrap items-center justify-between px-2 pt-2">
                     <div className="flex flex-1 justify-between items-center flex-wrap gap-2 px-2 pt-2">
@@ -252,7 +257,7 @@ export default function ShowAllRequests({
                             <div className="relative">
                                 <Search className="absolute left-2 top-2 h-4 w-4 text-muted-foreground" />
                                 <Input
-                                    placeholder="Search…"
+                                    placeholder="Search..."
                                     startIcon={Search}
                                     value={search}
                                     onChange={(e) => {

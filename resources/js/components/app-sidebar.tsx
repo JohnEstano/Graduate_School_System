@@ -4,7 +4,7 @@ import { NavUser } from '@/components/nav-user';
 import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '@/components/ui/sidebar';
 import { MainNavItem, type NavItem } from '@/types';
 import { Link, usePage } from '@inertiajs/react';
-import { Bell, CalendarFold, CalendarSync, CreditCard, DollarSign, File, FileText, LayoutGrid, MessageSquareText, ScrollText, Users } from 'lucide-react';
+import {  CalendarFold, CreditCard, DollarSign, File, FileText, LayoutGrid, MessageSquareText, ScrollText, Users } from 'lucide-react';
 import AppLogo from './app-logo';
 import { useEffect, useState } from "react";
 
@@ -42,18 +42,9 @@ const studentNavItems: MainNavItem[] = [
     {
         title: 'Schedules',
         href: '/schedule',
-        icon: CalendarSync,
+        icon: CalendarFold,
     },
-    {
-        title: 'Notifications',
-        href: '/notification',
-        icon: Bell,
-    },
-    {
-        title: 'Messages',
-        href: '/messages',
-        icon: MessageSquareText,
-    },
+    
 ];
 
 const assistantNavItems: MainNavItem[] = [
@@ -96,7 +87,6 @@ export function AppSidebar() {
     const items = isStaff ? assistantNavItems : studentNavItems;
 
     const [defenseRequestCount, setDefenseRequestCount] = useState<number>(0);
-    const [messageCount, setMessageCount] = useState<number>(0);
 
     useEffect(() => {
         async function fetchCount() {
@@ -107,28 +97,12 @@ export function AppSidebar() {
                     setDefenseRequestCount(data.count);
                 }
             } catch {
+
                 //errrrroorror
             }
         }
-        
-        async function fetchMessageCount() {
-            try {
-                const res = await fetch('/messages/unread-count');
-                if (res.ok) {
-                    const data = await res.json();
-                    setMessageCount(data.count);
-                }
-            } catch {
-                //error fetching message count
-            }
-        }
-
         fetchCount();
-        fetchMessageCount();
-        const interval = setInterval(() => {
-            fetchCount();
-            fetchMessageCount();
-        }, 1000);
+        const interval = setInterval(fetchCount, 1000);
         return () => clearInterval(interval);
     }, []);
 
@@ -144,23 +118,6 @@ export function AppSidebar() {
                             ? { ...sub, count: defenseRequestCount }
                             : sub
                     ),
-                };
-            } else if (item.title === 'Messages') {
-                return {
-                    ...item,
-                    count: messageCount > 0 ? messageCount : undefined,
-                    indicator: messageCount > 0,
-                };
-            }
-            return item;
-        });
-    } else {
-        navItems = studentNavItems.map(item => {
-            if (item.title === 'Messages') {
-                return {
-                    ...item,
-                    count: messageCount > 0 ? messageCount : undefined,
-                    indicator: messageCount > 0,
                 };
             }
             return item;
