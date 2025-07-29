@@ -74,6 +74,8 @@ export interface DefenseRequest {
     mode_defense: string;
     status: string;
     priority: string;
+    last_status_updated_by?: string;
+    last_status_updated_at?: string;
    
 }
 
