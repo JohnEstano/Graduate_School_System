@@ -1,5 +1,6 @@
 import { usePage } from '@inertiajs/react';
 import { CircleEllipsis, Ellipsis, EllipsisVertical } from 'lucide-react';
+import MessagingWidget from '@/components/messaging-widget';
 
 type PageProps = {
     auth: {
@@ -52,8 +53,8 @@ export default function DeanDashboard() {
             </div>
 
             <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-                <div className="border-sidebar-border/70 flex-cols dark:border-sidebar-border relative flex min-h-[100vh] grid-cols-2 gap-2 overflow-hidden rounded-xl border p-5 md:col-span-1">
-                    <h3 className="text-[14px] font-medium">Quick Actions</h3>
+                <div className="border-sidebar-border/70 dark:border-sidebar-border relative overflow-hidden rounded-xl border md:col-span-1">
+                    <MessagingWidget />
                 </div>
 
                 <div className="border-sidebar-border/70 flex-cols dark:border-sidebar-border relative flex min-h-[100vh] grid-cols-2 justify-between gap-2 overflow-hidden rounded-xl border p-5 md:col-span-2">
