@@ -77,24 +77,7 @@ const assistantNavItems: MainNavItem[] = [
     { title: 'Student Records', href: '/student-records', icon: Users },
     { title: 'Schedules', href: '/schedules', icon: CalendarFold },
     { title: 'Messages', href: '/messages', icon: MessageSquareText },
-     {
-        title: 'Honorarium',
-        href: '/honorarium',
-        icon: FileText,
-        subItems: [
-
-            {
-                title: 'Honorarium Summary',
-                href: '/honorarium-summary',
-               
-            },
-            {
-                title: 'Generate Report',
-                href: '/generate-report',
-
-            }
-        ]
-    },
+     
 
 
 ];
