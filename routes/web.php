@@ -50,6 +50,19 @@ Route::middleware(['auth', 'verified'])->group(function () {
         return Inertia::render('student/submissions/comprehensive-exam/Index');
     })->name('comprehensive-exam.index');
 
+    //Honorarium route
+    // generate-report route
+    Route::get('generate-report', function () {
+        return Inertia::render('honorarium/generate-report/Index');
+    })->name('generate-report.index');
+
+    // honorarium-summary route
+    Route::get('honorarium-summary', function () {
+        return Inertia::render('honorarium/honorarium-summary/Index');
+    })->name('honorarium-summary.index');
+
+    
+
     //Schedules route
     Route::get('schedules', function () {
         return Inertia::render('coordinator/schedule/Index');
@@ -71,6 +84,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/system-status', function () {
         return Inertia::render('system-status');
     })->name('system-status');
+
 });
 
     
