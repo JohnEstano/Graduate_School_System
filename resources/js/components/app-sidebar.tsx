@@ -43,6 +43,7 @@ const studentNavItems: MainNavItem[] = [
         title: 'Schedules',
         href: '/schedule',
         icon: CalendarFold,
+       
     },
  
 ];

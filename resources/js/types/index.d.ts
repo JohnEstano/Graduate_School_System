@@ -28,7 +28,8 @@ export interface MainNavItem {
     icon?: LucideIcon | null;
     isActive?: boolean;
     subItems?: SubItems[];
-     indicator?: boolean;
+    indicator?: boolean;
+    count?: number;
 }
 
 export interface SubItems {

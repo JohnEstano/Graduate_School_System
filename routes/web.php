@@ -44,8 +44,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::patch('/defense-requests/bulk-status', [DefenseRequestController::class, 'bulkUpdateStatus']);
     Route::patch('/defense-requests/bulk-priority', [DefenseRequestController::class, 'bulkUpdatePriority']);
 
-    Route::get('/api/defense-requests/count', [DefenseRequestController::class, 'count']);
-
+  
     // Comprehensive Exam route
     Route::get('comprehensive-exam', function () {
         return Inertia::render('student/submissions/comprehensive-exam/Index');
@@ -57,7 +56,26 @@ Route::middleware(['auth', 'verified'])->group(function () {
     })->name('schedules.index');
 
     Route::get('/defense-requests/calendar', [DefenseRequestController::class, 'calendar']);
+
+    // Messaging routes
+    Route::prefix('messages')->name('messages.')->group(function () {
+        Route::get('/', [App\Http\Controllers\MessageController::class, 'index'])->name('index');
+        Route::get('/conversations/{conversation}/messages', [App\Http\Controllers\MessageController::class, 'getMessages'])->name('get-messages');
+        Route::post('/send', [App\Http\Controllers\MessageController::class, 'store'])->name('send');
+        Route::post('/conversations', [App\Http\Controllers\MessageController::class, 'createConversation'])->name('create-conversation');
+        Route::get('/unread-count', [App\Http\Controllers\MessageController::class, 'getUnreadCount'])->name('unread-count');
+        Route::get('/search-users', [App\Http\Controllers\MessageController::class, 'searchUsers'])->name('search-users');
+    });
+
+    // System status page (for testing)
+    Route::get('/system-status', function () {
+        return Inertia::render('system-status');
+    })->name('system-status');
 });
+
+    
+  Route::get('/api/defense-requests/count', [DefenseRequestController::class, 'count']);
+
 
 
 require __DIR__ . '/settings.php';
