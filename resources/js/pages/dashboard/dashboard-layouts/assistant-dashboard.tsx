@@ -1,9 +1,6 @@
-import { PlaceholderPattern } from '@/components/ui/placeholder-pattern';
-import AppLayout from '@/layouts/app-layout';
-import { type BreadcrumbItem } from '@/types';
-import { Head } from '@inertiajs/react';
 import { usePage } from '@inertiajs/react';
 import { CircleEllipsis, Ellipsis, EllipsisVertical } from 'lucide-react';
+import MessagingWidget from '@/components/messaging-widget';
 
 type PageProps = {
     auth: {
@@ -13,7 +10,6 @@ type PageProps = {
             role: string;
         } | null;
     };
-
 };
 
 export default function AssistantDashboard() {
@@ -21,17 +17,11 @@ export default function AssistantDashboard() {
         auth: { user },
     } = usePage<PageProps>().props;
 
-
     return (
-
-        <div className="flex h-full flex-1 flex-col pt-5 gap-4 rounded-xl pl-7 pr-7 overflow-auto">
+        <div className="flex h-full flex-1 flex-col gap-4 overflow-auto rounded-xl pt-5 pr-7 pl-7">
             <div className="flex flex-col gap-1">
-                <h1 className="text-3xl font-bold">
-                    {user?.name ?? 'Guest'}
-                </h1>
-                <p className="text-sm text-gray-400">
-                    {user?.role ?? 'Student'}
-                </p>
+                <h1 className="text-3xl font-bold">{user?.name ?? 'Guest'}</h1>
+                <p className="text-sm text-gray-400">{user?.role ?? 'Student'}</p>
             </div>
 
             <div className="grid auto-rows-min gap-4 md:grid-cols-4">
@@ -62,24 +52,16 @@ export default function AssistantDashboard() {
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-
-                <div className="border-sidebar-border/70 flex flex-cols grid-cols-2 gap-2 dark:border-sidebar-border relative overflow-hidden rounded-xl border p-5 min-h-[100vh] md:col-span-1">
-                  
-                    <h3 className="text-[14px] font-medium">Quick Actions</h3>
-
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                <div className="border-sidebar-border/70 dark:border-sidebar-border relative overflow-hidden rounded-xl border md:col-span-1">
+                    <MessagingWidget />
                 </div>
 
-
-                <div className="border-sidebar-border/70 flex flex-cols grid-cols-2 gap-2 justify-between dark:border-sidebar-border relative overflow-hidden rounded-xl border p-5 min-h-[100vh] md:col-span-2">
-                
+                <div className="border-sidebar-border/70 flex-cols dark:border-sidebar-border relative flex min-h-[100vh] grid-cols-2 justify-between gap-2 overflow-hidden rounded-xl border p-5 md:col-span-2">
                     <h3 className="text-[14px] font-medium">Recent Exam Applications</h3>
-                    <p className='text-pink-500 text-[13px]'>View All</p>
+                    <p className="text-[13px] text-pink-500">View All</p>
                 </div>
             </div>
-
-
-
         </div>
-    )
+    );
 }

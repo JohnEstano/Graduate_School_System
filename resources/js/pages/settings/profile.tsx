@@ -52,7 +52,7 @@ export default function Profile({ mustVerifyEmail, status }: { mustVerifyEmail: 
                     <HeadingSmall title="Profile information" description="Update your name and email address" />
 
                     <form onSubmit={submit} className="space-y-6">
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
                             <div className="grid gap-2">
                                 <Label htmlFor="first_name">First Name</Label>
                                 <Input
@@ -94,24 +94,14 @@ export default function Profile({ mustVerifyEmail, status }: { mustVerifyEmail: 
                             </div>
                         </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                        <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
                             <div className="grid gap-2">
                                 <Label>School ID</Label>
-                                <Input
-                                    value={auth.user.school_id ?? ''}
-                                    disabled
-                                    readOnly
-                                    className="mt-1 block w-full bg-muted"
-                                />
+                                <Input value={auth.user.school_id ?? ''} disabled readOnly className="bg-muted mt-1 block w-full" />
                             </div>
                             <div className="grid gap-2">
                                 <Label>Program</Label>
-                                <Input
-                                    value={auth.user.program ?? ''}
-                                    disabled
-                                    readOnly
-                                    className="mt-1 block w-full bg-muted"
-                                />
+                                <Input value={auth.user.program ?? ''} disabled readOnly className="bg-muted mt-1 block w-full" />
                             </div>
                         </div>
                         <div className="grid gap-2">

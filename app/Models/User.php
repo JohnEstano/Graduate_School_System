@@ -33,12 +33,13 @@ class User extends Authenticatable
      *
      * @var list<string>
      */
-
     public function getNameAttribute()
     {
-        $middleInitial = $this->middle_name ? strtoupper(substr($this->middle_name, 0, 1)) . '. ' : '';
+        $middleInitial = $this->middle_name ? strtoupper(substr($this->middle_name, 0, 1)).'. ' : '';
+
         return trim("{$this->first_name} {$middleInitial}{$this->last_name}");
     }
+
     protected $hidden = [
         'password',
         'remember_token',
@@ -55,5 +56,32 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
         ];
+    }
+
+    /**
+     * Get all conversations for this user.
+     */
+    public function conversations()
+    {
+        return $this->belongsToMany(Conversation::class, 'message_participants')
+                    ->withPivot(['joined_at', 'last_read_at', 'is_admin'])
+                    ->withTimestamps()
+                    ->orderBy('last_message_at', 'desc');
+    }
+
+    /**
+     * Get all messages sent by this user.
+     */
+    public function messages()
+    {
+        return $this->hasMany(Message::class);
+    }
+
+    /**
+     * Get user's full name for display
+     */
+    public function getDisplayNameAttribute(): string
+    {
+        return $this->name;
     }
 }

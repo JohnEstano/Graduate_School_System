@@ -24,22 +24,20 @@ export interface NavItem {
 
 export interface MainNavItem {
     title: string;
-     href: string;
+    href: string;
     icon?: LucideIcon | null;
     isActive?: boolean;
     subItems?: SubItems[];
-
-
+    indicator?: boolean;
+    count?: number;
 }
-
 
 export interface SubItems {
     title: string;
     href: string;
     icon?: LucideIcon | null;
     isActive?: boolean;
-
-    
+    count?: number;
 }
 
 export interface SharedData {
@@ -54,15 +52,43 @@ export interface SharedData {
 export interface User {
     id: number;
     first_name: string;
-    middle_name:string;
-    last_name:string;
-    school_id:string;
-    program:string;
+    middle_name: string;
+    last_name: string;
+    school_id: string;
+    program: string;
     email: string;
     avatar?: string;
     email_verified_at: string | null;
     role: string;
     created_at: string;
     updated_at: string;
-    [key: string]: unknown; // This allows for additional properties...
+    [key: string]: unknown;
 }
+
+export interface DefenseRequest {
+    id: number;
+    thesis_title: string;
+    first_name: string;
+    middle_name?: string | null;
+    last_name: string;
+    date_of_defense: string;
+    mode_defense: string;
+    status: string;
+    priority: string;
+    last_status_updated_by?: string;
+    last_status_updated_at?: string;
+   
+}
+
+export type DefenseRequestSummary = {
+    id: number;
+    thesis_title: string;
+    first_name: string;
+    middle_name?: string | null;
+    last_name: string;
+    date_of_defense: string;
+    mode_defense: string;
+    status: string;
+    priority: string;
+    
+};

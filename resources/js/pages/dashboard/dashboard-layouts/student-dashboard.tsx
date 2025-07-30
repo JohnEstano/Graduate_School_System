@@ -1,9 +1,6 @@
-import { PlaceholderPattern } from '@/components/ui/placeholder-pattern';
-import AppLayout from '@/layouts/app-layout';
-import { type BreadcrumbItem } from '@/types';
-import { Head } from '@inertiajs/react';
 import { usePage } from '@inertiajs/react';
-import { CircleEllipsis, Ellipsis, EllipsisVertical, Info, BellRing } from 'lucide-react';
+import { CircleEllipsis, Ellipsis, BellRing, Info } from 'lucide-react';
+import MessagingWidget from '@/components/messaging-widget';
 
 type PageProps = {
     auth: {
@@ -13,7 +10,6 @@ type PageProps = {
             role: string;
         } | null;
     };
-
 };
 
 export default function StudentDashboard() {
@@ -21,17 +17,11 @@ export default function StudentDashboard() {
         auth: { user },
     } = usePage<PageProps>().props;
 
-
     return (
-
-        <div className="flex h-full pb-5 flex-1 flex-col pt-5 gap-4 rounded-xl pl-7 pr-7 overflow-auto">
+        <div className="flex h-full flex-1 flex-col gap-4 overflow-auto rounded-xl pt-5 pr-7 pb-5 pl-7">
             <div className="flex flex-col gap-1">
-                <h1 className="text-3xl font-bold">
-                    {user?.name ?? 'Guest'}
-                </h1>
-                <p className="text-sm text-gray-400">
-                    {user?.role ?? 'Student'}
-                </p>
+                <h1 className="text-3xl font-bold">{user?.name ?? 'Guest'}</h1>
+                <p className="text-sm text-gray-400">{user?.role ?? 'Student'}</p>
             </div>
 
             <div className="grid auto-rows-min gap-4 md:grid-cols-4">
@@ -45,42 +35,35 @@ export default function StudentDashboard() {
                 <div className="border-sidebar-border/70 dark:border-sidebar-border relative aspect-video overflow-hidden rounded-xl border p-5">
                     <div className="flex items-start justify-between">
                         <h3 className="text-[13px] font-medium">Subjects Completed:</h3>
-                        <EllipsisVertical className="size-4 text-zinc-700" />
+                        <Ellipsis className="size-4 text-zinc-700" />
                     </div>
                 </div>
                 <div className="border-sidebar-border/70 dark:border-sidebar-border relative aspect-video overflow-hidden rounded-xl border p-5">
                     <div className="flex items-start justify-between">
                         <h3 className="text-[13px] font-medium">Document Status:</h3>
-                        <CircleEllipsis className="size-4 text-zinc-700" />
+                        <Ellipsis className="size-4 text-zinc-700" />
                     </div>
                 </div>
                 <div className="border-sidebar-border/70 dark:border-sidebar-border relative aspect-video overflow-hidden rounded-xl border p-5">
                     <div className="flex items-start justify-between">
                         <h3 className="text-[13px] font-medium">Application Deadline:</h3>
-                        <CircleEllipsis className="size-4 text-zinc-700" />
+                        <Ellipsis className="size-4 text-zinc-700" />
                     </div>
                 </div>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-
-                <div className="border-sidebar-border/70 flex flex-cols grid-cols-2 gap-2 dark:border-sidebar-border relative overflow-hidden rounded-xl border p-5 min-h-[100vh] md:col-span-1">
-                    <Info className='size-5' />
-                    <h3 className="text-[14px] font-medium">Eligibility Details</h3>
-
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                <div className="border-sidebar-border/70 dark:border-sidebar-border relative overflow-hidden rounded-xl border md:col-span-1">
+                    <MessagingWidget />
                 </div>
 
-
-                <div className="border-sidebar-border/70 justify-between flex dark:border-sidebar-border relative overflow-hidden rounded-xl border p-5 min-h-[100vh] md:col-span-2">
-                    <div className='flex flex-cols grid-cols-2 gap-2 '>
-                        <BellRing className='size-5' />
+                <div className="border-sidebar-border/70 dark:border-sidebar-border relative flex min-h-[100vh] justify-between overflow-hidden rounded-xl border p-5 md:col-span-2">
+                    <div className="flex-cols flex grid-cols-2 gap-2">
+                        <BellRing className="size-5" />
                         <h3 className="text-[14px] font-medium">Recent Notifications</h3>
-
                     </div>
-                    <p className='text-pink-500 text-[13px]'>View All</p>
+                    <p className="text-[13px] text-pink-500">View All</p>
                 </div>
             </div>
-
-
         </div>
-    )
+    );
 }
