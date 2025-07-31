@@ -4,7 +4,7 @@ import { NavUser } from '@/components/nav-user';
 import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '@/components/ui/sidebar';
 import { MainNavItem, type NavItem } from '@/types';
 import { Link, usePage } from '@inertiajs/react';
-import { Bell, Calendar, CalendarFold, CalendarSync, CreditCard, DollarSign, File, FileText, LayoutGrid, MessageSquareText, ScrollText, Users } from 'lucide-react';
+import { CalendarFold, CreditCard, DollarSign, FileText, LayoutGrid, MessageSquareText, ScrollText, Users } from 'lucide-react';
 import AppLogo from './app-logo';
 import { useEffect, useState } from "react";
 
