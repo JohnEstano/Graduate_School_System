@@ -16,14 +16,22 @@ class DefenseRequestController extends Controller
         $props = [];
 
         if (in_array($user->role, ['Administrative Assistant', 'Coordinator', 'Dean'])) {
-        
-            $props['defenseRequests'] = DefenseRequest::with('lastStatusUpdater')->get();
+            $defenseRequests = DefenseRequest::with('lastStatusUpdater')->get();
+            // Map user name
+            $defenseRequests->transform(function ($item) {
+                $item->last_status_updated_by = $item->lastStatusUpdater?->name;
+                return $item;
+            });
+            $props['defenseRequests'] = $defenseRequests;
         } else {
-           
-            $props['defenseRequest'] = DefenseRequest::with('lastStatusUpdater')
+            $defenseRequest = DefenseRequest::with('lastStatusUpdater')
                 ->where('school_id', $user->school_id)
                 ->latest()
                 ->first();
+            if ($defenseRequest) {
+                $defenseRequest->last_status_updated_by = $defenseRequest->lastStatusUpdater?->name;
+            }
+            $props['defenseRequest'] = $defenseRequest;
         }
 
         $viewMap = [
@@ -121,7 +129,14 @@ class DefenseRequestController extends Controller
             'last_status_updated_at' => now(),
             'last_status_updated_by' => auth()->id(),
         ]);
-        return response()->json(['success' => true, 'status' => $defenseRequest->status]);
+        // Eager load user for response
+        $defenseRequest->load('lastStatusUpdater');
+        return response()->json([
+            'success' => true,
+            'status' => $defenseRequest->status,
+            'last_status_updated_by' => $defenseRequest->lastStatusUpdater?->name,
+            'last_status_updated_at' => $defenseRequest->last_status_updated_at,
+        ]);
     }
 
     public function updatePriority(Request $request, DefenseRequest $defenseRequest)
@@ -134,7 +149,13 @@ class DefenseRequestController extends Controller
             'last_status_updated_at' => now(),
             'last_status_updated_by' => auth()->id(),
         ]);
-        return response()->json(['success' => true, 'priority' => $defenseRequest->priority]);
+        $defenseRequest->load('lastStatusUpdater');
+        return response()->json([
+            'success' => true,
+            'priority' => $defenseRequest->priority,
+            'last_status_updated_by' => $defenseRequest->lastStatusUpdater?->name,
+            'last_status_updated_at' => $defenseRequest->last_status_updated_at,
+        ]);
     }
 
     public function bulkUpdateStatus(Request $request)

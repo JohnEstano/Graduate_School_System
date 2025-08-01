@@ -27,6 +27,8 @@ import { Separator } from '@/components/ui/separator';
 import TableDefenseRequests from './table-defense-requests';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import {toast, Toaster} from 'sonner';
+import { SummaryCards } from './summary-cards';
+import { Badge } from "@/components/ui/badge";
 
 export type DefenseRequestSummary = {
     id: number;
@@ -159,10 +161,18 @@ export default function ShowAllRequests({
             body: JSON.stringify({ status }),
         });
         if (res.ok) {
+            const data = await res.json();
             setDefenseRequests((requests) =>
                 requests.map((request) =>
-                    request.id === id ? { ...request, status } : request
-                ) as DefenseRequestSummary[]
+                    request.id === id
+                        ? {
+                            ...request,
+                            status: data.status,
+                            last_status_updated_by: data.last_status_updated_by,
+                            last_status_updated_at: data.last_status_updated_at,
+                        }
+                        : request
+                )
             );
             toast.success('Status updated!', { position: 'bottom-right' });
         } else {
@@ -181,10 +191,18 @@ export default function ShowAllRequests({
             body: JSON.stringify({ priority }),
         });
         if (res.ok) {
+            const data = await res.json();
             setDefenseRequests((requests) =>
                 requests.map((request) =>
-                    request.id === id ? { ...request, priority } : request
-                ) as DefenseRequestSummary[]
+                    request.id === id
+                        ? {
+                            ...request,
+                            priority: data.priority,
+                            last_status_updated_by: data.last_status_updated_by,
+                            last_status_updated_at: data.last_status_updated_at,
+                        }
+                        : request
+                )
             );
             toast.success('Priority updated!', { position: 'bottom-right' });
         } else {
@@ -248,9 +266,22 @@ export default function ShowAllRequests({
         setConfirmDialog({ open: true, type: 'bulk-status', value: status });
     };
 
+    const total = defenseRequests.length;
+    const pending = defenseRequests.filter(r => r.status === "Pending").length;
+    const inProgress = defenseRequests.filter(r => r.status === "In progress").length;
+    const approved = defenseRequests.filter(r => r.status === "Approved").length;
+    const rejected = defenseRequests.filter(r => r.status === "Rejected").length;
+
     return (
         <div className="h-screen p-2 flex flex-col gap-2">
             <Toaster position="top-right" richColors  />
+            <SummaryCards
+              total={total}
+              pending={pending}
+              inProgress={inProgress}
+              approved={approved}
+              rejected={rejected}
+            />
             <Card className="flex-1 flex flex-col rounded-lg p-2">
                 <div className="flex flex-wrap items-center justify-between px-2 pt-2">
                     <div className="flex flex-1 justify-between items-center flex-wrap gap-2 px-2 pt-2">
@@ -270,16 +301,24 @@ export default function ShowAllRequests({
                             </div>
                             <div className="flex gap-2">
                                 
+                                {/* Status Filter */}
                                 <Popover>
                                     <PopoverTrigger asChild>
                                         <Button
                                             variant="outline"
-                                            className="rounded-md border-dashed text-xs h-8 px-3"
+                                            className="rounded-md border-dashed text-xs h-8 px-3 flex items-center gap-1"
                                         >
                                             <CirclePlus /> Status
-                                            {statusFilter.length > 0
-                                                ? `: ${statusFilter.join(', ')}`
-                                                : ''}
+                                            {statusFilter.length > 0 && (
+                                              <Badge
+                                                variant="secondary"
+                                                className="ml-1 px-2 py-0.5 rounded-full text-xs bg-accent text-accent-foreground"
+                                              >
+                                                {statusFilter.length > 1
+                                                  ? `${statusFilter.length} selected`
+                                                  : statusFilter[0]}
+                                              </Badge>
+                                            )}
                                         </Button>
                                     </PopoverTrigger>
                                     <PopoverContent className="w-44 p-1" side="bottom" align="start">
@@ -311,16 +350,24 @@ export default function ShowAllRequests({
                                     </PopoverContent>
                                 </Popover>
 
+                            
                                 <Popover>
                                     <PopoverTrigger asChild>
                                         <Button
                                             variant="outline"
-                                            className="rounded-md border-dashed text-xs h-8 px-3"
+                                            className="rounded-md border-dashed text-xs h-8 px-3 flex items-center gap-1"
                                         >
                                             <CirclePlus /> Priority
-                                            {priorityFilter.length > 0
-                                                ? `: ${priorityFilter.join(', ')}`
-                                                : ''}
+                                            {priorityFilter.length > 0 && (
+                                              <Badge
+                                                variant="secondary"
+                                                className="ml-1 px-2 py-0.5 rounded-full text-xs bg-accent text-accent-foreground"
+                                              >
+                                                {priorityFilter.length > 1
+                                                  ? `${priorityFilter.length} selected`
+                                                  : priorityFilter[0]}
+                                              </Badge>
+                                            )}
                                         </Button>
                                     </PopoverTrigger>
                                     <PopoverContent className="w-44 p-1" side="bottom" align="start">
@@ -351,6 +398,21 @@ export default function ShowAllRequests({
                                         </Button>
                                     </PopoverContent>
                                 </Popover>
+                                {(statusFilter.length > 0 || priorityFilter.length > 0) && (
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-8 px-3 flex items-center gap-1"
+                                    onClick={() => {
+                                        setStatusFilter([]);
+                                        setPriorityFilter([]);
+                                    }}
+                                    aria-label="Reset all filters"
+                                >
+                                    <X className="w-4 h-4 text-rose-500" />
+                                    Reset
+                                </Button>
+                                )}
                             </div>
                         </div>
 

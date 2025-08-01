@@ -18,6 +18,6 @@ class DefenseRequest extends Model
 
     public function lastStatusUpdater()
     {
-        return $this->belongsTo(User::class, 'last_status_updated_by');
+        return $this->belongsTo(\App\Models\User::class, 'last_status_updated_by');
     }
 }
