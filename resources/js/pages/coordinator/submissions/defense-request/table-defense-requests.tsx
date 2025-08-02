@@ -31,8 +31,9 @@ type TableDefenseRequestsProps = {
   sorted: DefenseRequestSummary[];
   selectedRequest: DefenseRequestSummary | null;
   selectedIndex: number;
-  onStatusChange: (id: number, status: string) => void;
-  onPriorityChange: (id: number, priority: string) => void;
+  onStatusChange: (id: number, status: string) => Promise<void>;
+  onPriorityChange: (id: number, priority: string) => Promise<void>;
+  formatLocalDateTime: (isoString?: string) => string;
 };
 
 export default function TableDefenseRequests({
@@ -51,6 +52,7 @@ export default function TableDefenseRequests({
   selectedIndex,
   onStatusChange,
   onPriorityChange,
+  formatLocalDateTime,
 }: TableDefenseRequestsProps) {
   const statusIcon = (status: string) => {
     switch (status) {
@@ -68,7 +70,7 @@ export default function TableDefenseRequests({
   };
 
   return (
-    <div className="rounded-lg overflow-x-auto border border-border">
+    <div className="rounded-md overflow-x-auto border border-border">
       <Table className="min-w-full text-sm">
         <TableHeader>
           <TableRow>
@@ -79,14 +81,14 @@ export default function TableDefenseRequests({
               />
             </TableHead>
             {columns.title && (
-              <TableHead className="w-[30%] px-2 py-2">Title</TableHead>
+              <TableHead className="w-[25%] px-2 py-2">Title</TableHead>
             )}
             {columns.presenter && (
-              <TableHead className="w-[20%] px-2 py-2">Presenter</TableHead>
+              <TableHead className="w-[15%] px-2 py-2">Presenter</TableHead>
             )}
             {columns.date && (
               <TableHead
-                className="w-[15%] text-center cursor-pointer px-2 py-2"
+                className="w-[12%] text-center cursor-pointer px-2 py-2"
                 onClick={toggleSort}
               >
                 <div className="flex justify-center items-center gap-1">
@@ -100,15 +102,15 @@ export default function TableDefenseRequests({
               </TableHead>
             )}
             {columns.mode && (
-              <TableHead className="w-[10%] text-center px-2 py-2">Mode</TableHead>
+              <TableHead className="w-[8%] text-center px-2 py-2">Mode</TableHead>
             )}
             {columns.status && (
-              <TableHead className="w-[10%] text-center px-2 py-2">Status</TableHead>
+              <TableHead className="w-[8%] text-center px-2 py-2">Status</TableHead>
             )}
             {columns.priority && (
-              <TableHead className="w-[10%] text-center px-2 py-2">Priority</TableHead>
+              <TableHead className="w-[8%] text-center px-2 py-2">Priority</TableHead>
             )}
-            <TableHead className="w-[5%] text-center px-2 py-2" />
+            <TableHead className="w-[3%] text-left px-2 py-2" />
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -123,7 +125,7 @@ export default function TableDefenseRequests({
               {columns.title && (
                 <TableCell
                   className="px-2 py-2 font-semibold truncate cursor-pointer"
-                  style={{ maxWidth: '300px' }}
+                  style={{ maxWidth: '220px' }}
                   onClick={() => toggleSelectOne(r.id)}
                 >
                   {r.thesis_title}
@@ -228,7 +230,6 @@ export default function TableDefenseRequests({
                   <DialogContent className="max-w-5xl min-w-260 w-full max-h-[90vh]">
                     <div className="max-h-[80vh] overflow-y-auto px-1">
                       {selectedRequest && (
-                         
                         <Details
                           request={selectedRequest as unknown as import('./details').DefenseRequestFull}
                           onNavigate={(dir) => {
@@ -243,6 +244,8 @@ export default function TableDefenseRequests({
                           }}
                           disablePrev={selectedIndex === 0}
                           disableNext={selectedIndex === sorted.length - 1}
+                          onStatusChange={onStatusChange}
+                          onPriorityChange={onPriorityChange}
                         />
                       )}
                     </div>

@@ -41,6 +41,8 @@ export type DefenseRequestSummary = {
     mode_defense: string;
     status: 'Pending' | 'In progress' | 'Approved' | 'Rejected' | 'Needs-info';
     priority: 'Low' | 'Medium' | 'High'; 
+    last_status_updated_by?: string;
+    last_status_updated_at?: string;
 };
 
 export default function ShowAllRequests({
@@ -115,19 +117,21 @@ export default function ShowAllRequests({
     const totalPages = Math.ceil(filtered.length / perPage);
     const paged = useMemo(() => {
         const start = (page - 1) * perPage;
-        return sorted.slice(start, start + perPage);
+        return Array.isArray(sorted) ? sorted.slice(start, start + perPage) : [];
     }, [sorted, page]);
 
+    function formatLocalDateTime(isoString?: string) {
+        if (!isoString) return '';
+        const date = new Date(isoString);
+        return date.toLocaleString();
+    }
+
     const headerChecked =
-        selected.length === paged.length
-            ? true
-            : selected.length > 0
-            ? 'indeterminate'
-            : false;
+        selected.length === paged.length;
 
     const toggleSelectAll = () =>
         setSelected((s) =>
-            s.length === paged.length ? [] : paged.map((r) => r.id)
+            s.length === paged.length ? [] : paged.map((r: DefenseRequestSummary) => r.id)
         );
     const toggleSelectOne = (id: number) =>
         setSelected((s) =>
@@ -150,7 +154,7 @@ export default function ShowAllRequests({
     }
 
    
-    const onStatusChange = async (id: number, status: string) => {
+    const onStatusChange = async (id: number, status: string): Promise<void> => {
         const res = await fetch(`/defense-requests/${id}/status`, {
             method: 'PATCH',
             headers: {
@@ -174,13 +178,33 @@ export default function ShowAllRequests({
                         : request
                 )
             );
+          
+            setSelectedRequest((prev) =>
+                prev && prev.id === id
+                    ? {
+                        ...prev,
+                        status: data.status,
+                        last_status_updated_by: data.last_status_updated_by,
+                        last_status_updated_at: data.last_status_updated_at,
+                    }
+                    : prev
+            );
+           
+            if (selectedRequest && selectedRequest.id === id) {
+                setSelectedRequest((prev) => prev ? {
+                    ...prev,
+                    status: data.status,
+                    last_status_updated_by: data.last_status_updated_by,
+                    last_status_updated_at: data.last_status_updated_at,
+                } : prev);
+            }
             toast.success('Status updated!', { position: 'bottom-right' });
         } else {
             toast.error('Failed to update status', { position: 'bottom-right' });
         }
     };
 
-    const onPriorityChange = async (id: number, priority: string) => {
+    const onPriorityChange = async (id: number, priority: string): Promise<void> => {
         const res = await fetch(`/defense-requests/${id}/priority`, {
             method: 'PATCH',
             headers: {
@@ -204,6 +228,26 @@ export default function ShowAllRequests({
                         : request
                 )
             );
+           
+            setSelectedRequest((prev) =>
+                prev && prev.id === id
+                    ? {
+                        ...prev,
+                        priority: data.priority,
+                        last_status_updated_by: data.last_status_updated_by,
+                        last_status_updated_at: data.last_status_updated_at,
+                    }
+                    : prev
+            );
+         
+            if (selectedRequest && selectedRequest.id === id) {
+                setSelectedRequest((prev) => prev ? {
+                    ...prev,
+                    priority: data.priority,
+                    last_status_updated_by: data.last_status_updated_by,
+                    last_status_updated_at: data.last_status_updated_at,
+                } : prev);
+            }
             toast.success('Priority updated!', { position: 'bottom-right' });
         } else {
             toast.error('Failed to update priority', { position: 'bottom-right' });
@@ -220,16 +264,87 @@ export default function ShowAllRequests({
             },
             body: JSON.stringify({ ids: selected, status }),
         });
+        let updated = [];
+        let parsed = false;
+        let raw = '';
+        let errorMsg = '';
+        try {
+            raw = await res.clone().text();
+            updated = JSON.parse(raw);
+            parsed = true;
+        } catch (e) {
+            console.warn('Bulk status raw response (parse error):', raw);
+        }
+        console.log('Bulk status response:', { raw, updated });
         if (res.ok) {
-            setDefenseRequests((requests) =>
-                requests.map((request) =>
-                    selected.includes(request.id) ? { ...request, status } : request
-                ) as DefenseRequestSummary[]
-            );
+            const fallbackBy = (window as any)?.currentUserName || 'You';
+            const fallbackAt = new Date().toISOString();
+            setDefenseRequests((requests) => {
+                let newRequests;
+                if (parsed && Array.isArray(updated)) {
+                    newRequests = requests.map((request) => {
+                        const found = updated.find((u) => u.id === request.id);
+                        if (found) {
+                            return {
+                                ...request,
+                                status: found.status,
+                                last_status_updated_by: found.last_status_updated_by,
+                                last_status_updated_at: found.last_status_updated_at,
+                            };
+                        }
+                        return request;
+                    });
+                } else {
+                 
+                    newRequests = requests.map((request) => {
+                        if (selected.includes(request.id)) {
+                            return {
+                                ...request,
+                                status: status,
+                                last_status_updated_by: fallbackBy,
+                                last_status_updated_at: fallbackAt,
+                            };
+                        }
+                        return request;
+                    });
+                }
+                return [...newRequests];
+            });
+            setSelectedRequest((prev) => {
+                if (!prev) return prev;
+                if (parsed && Array.isArray(updated)) {
+                    const found = updated.find((u) => u.id === prev.id);
+                    if (found) {
+                        return {
+                            ...prev,
+                            status: found.status,
+                            last_status_updated_by: found.last_status_updated_by,
+                            last_status_updated_at: found.last_status_updated_at,
+                        } as DefenseRequestSummary;
+                    }
+                }
+                if (selected.includes(prev.id)) {
+                    return {
+                        ...prev,
+                        status: status,
+                        last_status_updated_by: fallbackBy,
+                        last_status_updated_at: fallbackAt,
+                    } as DefenseRequestSummary;
+                }
+                return prev;
+            });
             setSelected([]);
             toast.success('Status updated!', { position: 'bottom-right' });
+            setTimeout(() => {
+                console.log('DefenseRequests after bulk update:', defenseRequests);
+            }, 100);
         } else {
-            toast.error('Failed to update status', { position: 'bottom-right' });
+            if (parsed && updated && updated.error) {
+                errorMsg = updated.error;
+            } else {
+                errorMsg = 'Failed to update status';
+            }
+            toast.error(errorMsg, { position: 'bottom-right' });
         }
     };
 
@@ -244,11 +359,55 @@ export default function ShowAllRequests({
             body: JSON.stringify({ ids: selected, priority }),
         });
         if (res.ok) {
+            const updated = await res.json();
             setDefenseRequests((requests) =>
-                requests.map((request) =>
-                    selected.includes(request.id) ? { ...request, priority } : request
-                ) as DefenseRequestSummary[]
+                requests.map((request) => {
+                    if (Array.isArray(updated)) {
+                        const found = updated.find((u: any) => u.id === request.id);
+                        if (found) {
+                            return {
+                                ...request,
+                                priority: found.priority,
+                                last_status_updated_by: found.last_status_updated_by,
+                                last_status_updated_at: found.last_status_updated_at,
+                            };
+                        }
+                    }
+                 
+                    if (selected.includes(request.id)) {
+                        return {
+                            ...request,
+                            priority: priority,
+                            last_status_updated_by: updated?.last_status_updated_by ?? request.last_status_updated_by,
+                            last_status_updated_at: updated?.last_status_updated_at ?? request.last_status_updated_at,
+                        };
+                    }
+                    return request;
+                }) as DefenseRequestSummary[]
             );
+            setSelectedRequest((prev) => {
+                if (prev && selected.includes(prev.id)) {
+                    if (Array.isArray(updated)) {
+                        const found = updated.find((u: any) => u.id === prev.id);
+                        if (found) {
+                            return {
+                                ...prev,
+                                priority: found.priority,
+                                last_status_updated_by: found.last_status_updated_by,
+                                last_status_updated_at: found.last_status_updated_at,
+                            };
+                        }
+                    }
+                 
+                    return {
+                        ...prev,
+                        priority: priority,
+                        last_status_updated_by: updated?.last_status_updated_by ?? prev.last_status_updated_by,
+                        last_status_updated_at: updated?.last_status_updated_at ?? prev.last_status_updated_at,
+                    };
+                }
+                return prev;
+            });
             setSelected([]);
             toast.success('Bulk priority updated!', { position: 'bottom-right' });
         } else {
@@ -256,10 +415,10 @@ export default function ShowAllRequests({
         }
     };
 
-    const handleStatusChange = (id: number, status: string) => {
+    const handleStatusChange = async (id: number, status: string): Promise<void> => {
         setConfirmDialog({ open: true, type: 'status', id, value: status });
     };
-    const handlePriorityChange = (id: number, priority: string) => {
+    const handlePriorityChange = async (id: number, priority: string): Promise<void> => {
         setConfirmDialog({ open: true, type: 'priority', id, value: priority });
     };
     const handleBulkStatus = (status: string) => {
@@ -296,12 +455,12 @@ export default function ShowAllRequests({
                                         setSearch(e.currentTarget.value);
                                         setPage(1);
                                     }}
-                                    className="pl-8 h-8 text-sm w-[200px]"
+                                    className="pl-8 h-8 text-sm w-[300px]"
                                 />
                             </div>
                             <div className="flex gap-2">
                                 
-                                {/* Status Filter */}
+                               
                                 <Popover>
                                     <PopoverTrigger asChild>
                                         <Button
@@ -409,7 +568,7 @@ export default function ShowAllRequests({
                                     }}
                                     aria-label="Reset all filters"
                                 >
-                                    <X className="w-4 h-4 text-rose-500" />
+                                    <X className="w-4 h-4 rose-500" />
                                     Reset
                                 </Button>
                                 )}
@@ -519,7 +678,7 @@ export default function ShowAllRequests({
                         columns={columns}
                         selected={selected}
                         toggleSelectOne={toggleSelectOne}
-                        headerChecked={headerChecked === 'indeterminate' ? false : headerChecked}
+                        headerChecked={headerChecked}
                         toggleSelectAll={toggleSelectAll}
                         toggleSort={toggleSort}
                         sortDir={sortDir}
@@ -530,6 +689,7 @@ export default function ShowAllRequests({
                         selectedIndex={selectedIndex}
                         onStatusChange={handleStatusChange}
                         onPriorityChange={handlePriorityChange}
+                        formatLocalDateTime={formatLocalDateTime}
                     />
                 </CardContent>
                 <CardFooter className="flex justify-between items-center text-sm px-2 pt-3 pb-2">
@@ -561,16 +721,30 @@ export default function ShowAllRequests({
                 </CardFooter>
             </Card>
             <Dialog open={confirmDialog.open} onOpenChange={open => setConfirmDialog(c => ({ ...c, open }))}>
-              <DialogContent>
-                <div className="space-y-4">
-                  <div className="text-lg font-semibold">
-                    {confirmDialog.type === 'status' && `Change status to "${confirmDialog.value}"?`}
-                    {confirmDialog.type === 'priority' && `Change priority to "${confirmDialog.value}"?`}
-                    {confirmDialog.type === 'bulk-status' && `Update status to "${confirmDialog.value}" for all selected?`}
-                    {confirmDialog.type === 'bulk-priority' && `Update priority to "${confirmDialog.value}" for all selected?`}
+              <DialogContent className="max-w-sm p-6">
+                <div className="space-y-3">
+                  <div className="font-medium text-lg">
+                    {confirmDialog.type === 'status' && 'Confirm Status Update'}
+                    {confirmDialog.type === 'priority' && 'Confirm Priority Update'}
+                    {confirmDialog.type === 'bulk-status' && 'Confirm Bulk Status Update'}
+                    {confirmDialog.type === 'bulk-priority' && 'Confirm Bulk Priority Update'}
                   </div>
-                  <div className="flex gap-2 justify-end">
-                    <Button variant="secondary" onClick={() => setConfirmDialog({ open: false, type: null })}>
+                  <div className="text-sm text-muted-foreground">
+                    {confirmDialog.type === 'status' && (
+                      <>Change status to <span className="font-semibold">{confirmDialog.value}</span> for this request?</>
+                    )}
+                    {confirmDialog.type === 'priority' && (
+                      <>Change priority to <span className="font-semibold">{confirmDialog.value}</span> for this request?</>
+                    )}
+                    {confirmDialog.type === 'bulk-status' && (
+                      <>Update status to <span className="font-semibold">{confirmDialog.value}</span> for <span className="font-semibold">{selected.length}</span> selected requests?</>
+                    )}
+                    {confirmDialog.type === 'bulk-priority' && (
+                      <>Update priority to <span className="font-semibold">{confirmDialog.value}</span> for <span className="font-semibold">{selected.length}</span> selected requests?</>
+                    )}
+                  </div>
+                  <div className="flex gap-2 justify-end pt-2">
+                    <Button variant="ghost" onClick={() => setConfirmDialog({ open: false, type: null })}>
                       Cancel
                     </Button>
                     <Button

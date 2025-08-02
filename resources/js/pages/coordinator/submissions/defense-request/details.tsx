@@ -1,17 +1,24 @@
 'use client';
 
-import { Separator } from '@/components/ui/separator';
+import { useState } from "react";
 import { Button } from '@/components/ui/button';
-import { format } from 'date-fns';
+import {Separator} from '@/components/ui/separator';
 import {
   Paperclip,
   MoreHorizontal,
   ChevronRight,
   ChevronLeft,
-  History
+  MessageSquare,
+  Clock,
+  CheckCircle,
+  BadgeInfo,
+  CircleX,
+  Trash2,
 } from 'lucide-react';
+import { format } from 'date-fns';
 
 export type DefenseRequestFull = {
+  id: number; 
   first_name: string;
   middle_name: string | null;
   last_name: string;
@@ -31,9 +38,10 @@ export type DefenseRequestFull = {
   rec_endorsement?: string;
   proof_of_payment?: string;
   reference_no?: string;
-  last_status_updated_by?: string; // Should be the user's name
+  last_status_updated_by?: string; 
   last_status_updated_at?: string;
-  status?: 'pending' | 'approved' | 'rejected' | 'needs-info';
+  status?: 'Pending' | 'In progress' | 'Approved' | 'Rejected' | 'Needs-info';
+  priority?: 'Low' | 'Medium' | 'High';
 };
 
 type DetailsProps = {
@@ -41,6 +49,8 @@ type DetailsProps = {
   onNavigate?: (direction: 'next' | 'prev') => void;
   disablePrev?: boolean;
   disableNext?: boolean;
+  onStatusChange: (id: number, status: string) => Promise<void>;
+  onPriorityChange: (id: number, priority: string) => Promise<void>;
 };
 
 export default function Details({
@@ -48,7 +58,10 @@ export default function Details({
   onNavigate,
   disablePrev,
   disableNext,
+  onStatusChange, 
 }: DetailsProps) {
+  const [loading, setLoading] = useState<string | null>(null);
+
   const attachments: { label: string; url?: string }[] = [
     { label: "Adviser’s Endorsement", url: request.advisers_endorsement },
     { label: 'REC Endorsement', url: request.rec_endorsement },
@@ -58,6 +71,13 @@ export default function Details({
 
   const lastStatusUpdatedBy = request.last_status_updated_by ?? '';
   const lastStatusUpdatedAt = request.last_status_updated_at ?? '';
+
+
+  const handleStatusUpdate = async (status: string) => {
+    setLoading(status);
+    await onStatusChange(request.id, status); 
+    setLoading(null);
+  };
 
   return (
     <div className="w-full max-w-5xl mx-auto px-4 py-6">
@@ -76,7 +96,7 @@ export default function Details({
             Track Request
           </Button>
           <Button variant="outline" className="rounded-sm">
-            Contact Assistant
+            <MessageSquare className="size-5" />
           </Button>
           <Button
             variant="outline"
@@ -96,13 +116,48 @@ export default function Details({
           </Button>
         </div>
       </div>
+      <div className="w-full rounded-md p-1 border mb-4 flex gap-1 flex-wrap text-xs">
+        <Button
+          variant="ghost"
+          className=" px-3 py-2 h-auto text-xs flex items-center gap-1"
+          disabled={loading === 'In progress'}
+          onClick={() => handleStatusUpdate('In progress')}
+        >
+          <Clock size={12} /> Mark as In Progress
+        </Button>
+        <Button
+          variant="ghost"
+          className=" px-3 py-2 h-auto text-xs flex items-center gap-1"
+          disabled={loading === 'Approved'}
+          onClick={() => handleStatusUpdate('Approved')}
+        >
+          <CheckCircle size={12} className="text-green-500" /> Mark as Approved
+        </Button>
+        <Button
+          variant="ghost"
+          className=" px-3 py-2 h-auto text-xs flex items-center gap-1"
+          disabled={loading === 'Needs-info'}
+          onClick={() => handleStatusUpdate('Needs-info')}
+        >
+          <BadgeInfo size={12} className="text-blue-500" /> Mark as Needs Info
+        </Button>
+        <Button
+          variant="ghost"
+          className=" px-3 py-2 h-auto text-xs flex items-center gap-1"
+          disabled={loading === 'Rejected'}
+          onClick={() => handleStatusUpdate('Rejected')}
+        >
+          <CircleX size={12} className="text-red-500" /> Mark as Rejected
+        </Button>
+      </div>
 
-      {/* Title/Details + Status Update Side by Side */}
-      <div className="flex flex-col md:flex-row gap-6 mb-8">
-        {/* Left: Title, Presenter, Program, Date & Mode */}
+      <div className="flex flex-col md:flex-row gap-2 mb-8">
+    
         <div className="flex-1 flex flex-col gap-4">
           <div>
             <h3 className="text-xs text-zinc-500">Thesis Title</h3>
+
+            
             <p className="text-base font-semibold">{request.thesis_title}</p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -128,19 +183,31 @@ export default function Details({
               </p>
             </div>
           </div>
+          
         </div>
   
-        {/* Right: Last Status Updated */}
-        <div className="w-full md:w-64 flex-shrink-0 bg-white border rounded-lg p-4 h-fit space-y-6">
+       
+
+    
+        
+        <div className="hidden md:flex items-stretch">
+          <Separator
+            orientation="vertical"
+            className="mx-2 h-full w-[2px] bg-zinc-300"
+          />
+        </div>
+
+        <div className="w-full md:w-64 flex-shrink-0 bg-white border rounded-lg p-4 h-fit space-y-4">
+          
           <div>
             <h4 className="text-[10px] text-zinc-500 mb-1">Last Status Updated By</h4>
-            <p className="text-xs font-semibold break-words">
+            <p className="text-xs font-semibold break-words text-muted-foreground">
               {lastStatusUpdatedBy || <span className="text-muted-foreground">—</span>}
             </p>
           </div>
           <div>
             <h4 className="text-[10px] text-zinc-500 mb-1">Last Status Updated At</h4>
-            <p className="text-xs font-semibold">
+            <p className="text-xs font-semibold text-muted-foreground">
               {lastStatusUpdatedAt
                 ? format(new Date(lastStatusUpdatedAt), 'PPP p')
                 : <span className="text-muted-foreground">—</span>}
