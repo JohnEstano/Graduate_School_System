@@ -29,6 +29,7 @@ import { Dialog, DialogContent } from '@/components/ui/dialog';
 import {toast, Toaster} from 'sonner';
 import { SummaryCards } from './summary-cards';
 import { Badge } from "@/components/ui/badge";
+import PrintSelected from "./print-selected";
 
 export type DefenseRequestSummary = {
     id: number;
@@ -424,6 +425,36 @@ export default function ShowAllRequests({
     const handleBulkStatus = (status: string) => {
         setConfirmDialog({ open: true, type: 'bulk-status', value: status });
     };
+    const handleBulkPrint = () => {
+        const selectedRows = defenseRequests.filter(r => selected.includes(r.id));
+        const printWindow = window.open("", "_blank", "width=900,height=700");
+        if (printWindow) {
+            printWindow.document.write(`
+              <html>
+                <head>
+                  <title>Graduate School Defense Requests</title>
+                  <style>
+                    body { font-family: Arial, sans-serif; }
+                    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+                    th, td { border: 1px solid #ddd; padding: 8px; }
+                    th { background: #f5f5f5; }
+                  </style>
+                </head>
+                <body>
+                  <div id="print-root"></div>
+                </body>
+              </html>
+            `);
+            printWindow.document.close();
+
+            // Render the PrintSelected component to HTML and inject
+            import("react-dom/server").then(({ renderToStaticMarkup }) => {
+              const html = renderToStaticMarkup(<PrintSelected rows={selectedRows} />);
+              printWindow.document.getElementById("print-root")!.innerHTML = html;
+              setTimeout(() => printWindow.print(), 500);
+            });
+          }
+        };
 
     const total = defenseRequests.length;
     const pending = defenseRequests.filter(r => r.status === "Pending").length;
@@ -663,7 +694,7 @@ export default function ShowAllRequests({
                         <Button variant="outline" className="rounded-full px-3 py-2 h-auto text-xs flex items-center gap-1">
                             <Trash2 size={12} /> Delete
                         </Button>
-                           <Button variant="outline" className="rounded-full px-3 py-2 h-auto text-xs flex items-center gap-1">
+                           <Button variant="outline" className="rounded-full px-3 py-2 h-auto text-xs flex items-center gap-1" onClick={handleBulkPrint}>
                             <Printer size={12} /> Print
                         </Button>
                     </div>
