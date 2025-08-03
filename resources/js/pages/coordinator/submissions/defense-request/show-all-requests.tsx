@@ -13,9 +13,9 @@ import {
     Search,
     CirclePlus,
     Settings2,
-    BadgeInfo,
     CircleX,
-    X
+    X,
+    Printer
 } from 'lucide-react';
 
 import {
@@ -433,15 +433,16 @@ export default function ShowAllRequests({
 
     return (
         <div className="h-screen p-2 flex flex-col gap-2">
-            <Toaster position="top-right" richColors  />
-            <SummaryCards
+             <SummaryCards
               total={total}
               pending={pending}
               inProgress={inProgress}
               approved={approved}
               rejected={rejected}
             />
-            <Card className="flex-1 flex flex-col rounded-lg p-2">
+            <Toaster position="top-right" richColors  />
+           
+            <Card className="flex-1 flex flex-col shadow-md  rounded-lg p-2">
                 <div className="flex flex-wrap items-center justify-between px-2 pt-2">
                     <div className="flex flex-1 justify-between items-center flex-wrap gap-2 px-2 pt-2">
                         <div className="flex flex-1 items-center gap-2">
@@ -481,7 +482,7 @@ export default function ShowAllRequests({
                                         </Button>
                                     </PopoverTrigger>
                                     <PopoverContent className="w-44 p-1" side="bottom" align="start">
-                                        {['Pending', 'In progress', 'Approved', 'Rejected', 'Needs-info'].map(
+                                        {['Pending', 'In progress', 'Approved', 'Rejected'].map(
                                             (s) => (
                                                 <div
                                                     key={s}
@@ -654,16 +655,6 @@ export default function ShowAllRequests({
                             className="rounded-full px-3 py-2 h-auto text-xs flex items-center gap-1"
                             onClick={() => {
                                 if (selected.length === 0) return;
-                                handleBulkStatus('Needs-info');
-                            }}
-                        >
-                            <BadgeInfo size={12}  className='text-blue-500'/> Mark as Needs Info
-                        </Button>
-                        <Button
-                            variant="outline"
-                            className="rounded-full px-3 py-2 h-auto text-xs flex items-center gap-1"
-                            onClick={() => {
-                                if (selected.length === 0) return;
                                 handleBulkStatus('Rejected');
                             }}
                         >
@@ -671,6 +662,9 @@ export default function ShowAllRequests({
                         </Button>
                         <Button variant="outline" className="rounded-full px-3 py-2 h-auto text-xs flex items-center gap-1">
                             <Trash2 size={12} /> Delete
+                        </Button>
+                           <Button variant="outline" className="rounded-full px-3 py-2 h-auto text-xs flex items-center gap-1">
+                            <Printer size={12} /> Print
                         </Button>
                     </div>
                     <TableDefenseRequests
@@ -723,7 +717,7 @@ export default function ShowAllRequests({
             <Dialog open={confirmDialog.open} onOpenChange={open => setConfirmDialog(c => ({ ...c, open }))}>
               <DialogContent className="max-w-sm p-6">
                 <div className="space-y-3">
-                  <div className="font-medium text-lg">
+                  <div className="font-bold text-lg">
                     {confirmDialog.type === 'status' && 'Confirm Status Update'}
                     {confirmDialog.type === 'priority' && 'Confirm Priority Update'}
                     {confirmDialog.type === 'bulk-status' && 'Confirm Bulk Status Update'}
@@ -744,7 +738,7 @@ export default function ShowAllRequests({
                     )}
                   </div>
                   <div className="flex gap-2 justify-end pt-2">
-                    <Button variant="ghost" onClick={() => setConfirmDialog({ open: false, type: null })}>
+                    <Button variant="outline" onClick={() => setConfirmDialog({ open: false, type: null })}>
                       Cancel
                     </Button>
                     <Button

@@ -11,7 +11,6 @@ import {
   MessageSquare,
   Clock,
   CheckCircle,
-  BadgeInfo,
   CircleX,
   Trash2,
 } from 'lucide-react';
@@ -40,7 +39,7 @@ export type DefenseRequestFull = {
   reference_no?: string;
   last_status_updated_by?: string; 
   last_status_updated_at?: string;
-  status?: 'Pending' | 'In progress' | 'Approved' | 'Rejected' | 'Needs-info';
+  status?: 'Pending' | 'In progress' | 'Approved' | 'Rejected' ;
   priority?: 'Low' | 'Medium' | 'High';
 };
 
@@ -132,14 +131,6 @@ export default function Details({
           onClick={() => handleStatusUpdate('Approved')}
         >
           <CheckCircle size={12} className="text-green-500" /> Mark as Approved
-        </Button>
-        <Button
-          variant="ghost"
-          className=" px-3 py-2 h-auto text-xs flex items-center gap-1"
-          disabled={loading === 'Needs-info'}
-          onClick={() => handleStatusUpdate('Needs-info')}
-        >
-          <BadgeInfo size={12} className="text-blue-500" /> Mark as Needs Info
         </Button>
         <Button
           variant="ghost"

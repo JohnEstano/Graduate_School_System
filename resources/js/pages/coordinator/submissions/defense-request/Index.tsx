@@ -28,17 +28,20 @@ export default function DefenseRequestIndex() {
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Defense Requests" />
-            <div className="flex h-full flex-1 flex-col gap-4 overflow-auto px-2 pt-5 pb-5">
-                {isCoordinator ? (
-                    <ShowAllRequests defenseRequests={defenseRequests || []} />
-                ) : (
-                    <div className="rounded-xl border border-gray-200 ">
-                        <div className="flex h-full min-h-[300px] flex-col items-center justify-center gap-4 text-center">
-                            <h2 className="text-lg font-semibold text-gray-700">Access Restricted</h2>
-                            <p className="text-sm text-gray-500">This section is only accessible to Coordinators.</p>
+            <div className="flex h-full flex-1 flex-col gap-4 px-2 pt-5 pb-5">
+                <div className="flex-1 overflow-auto">
+                    {isCoordinator ? (
+                        
+                        <ShowAllRequests defenseRequests={defenseRequests || []} />
+                    ) : (
+                        <div className="rounded-xl border border-gray-200 ">
+                            <div className="flex h-full min-h-[300px] flex-col items-center justify-center gap-4 text-center">
+                                <h2 className="text-lg font-semibold text-gray-700">Access Restricted</h2>
+                                <p className="text-sm text-gray-500">This section is only accessible to Coordinators.</p>
+                            </div>
                         </div>
-                    </div>
-                )}
+                    )}
+                </div>
             </div>
         </AppLayout>
     );

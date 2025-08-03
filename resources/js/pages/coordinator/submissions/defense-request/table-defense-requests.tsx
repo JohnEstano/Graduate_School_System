@@ -14,7 +14,7 @@ import { format } from 'date-fns';
 import Details from './details';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@/components/ui/dropdown-menu';
 import { Badge } from '@/components/ui/badge';
-import { Clock, Check, CircleCheckBig, CircleX, BadgeInfo, Circle } from 'lucide-react';
+import { Clock, Check, CircleCheckBig, CircleX, Circle } from 'lucide-react';
 import type { DefenseRequestSummary } from './show-all-requests';
 
 type TableDefenseRequestsProps = {
@@ -62,10 +62,8 @@ export default function TableDefenseRequests({
         return <CircleCheckBig size={16} className="mr-1 text-green-500" />;
       case 'Rejected':
         return <CircleX size={16} className="mr-1 text-red-500" />;
-      case 'Needs-info':
-        return <BadgeInfo size={16} className="mr-1 text-blue-500" />;
       default:
-        return <Circle size={16} className="mr-1" />; 
+        return <Circle size={16} className="mr-1" />;
     }
   };
 
@@ -163,7 +161,7 @@ export default function TableDefenseRequests({
                       </Badge>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent>
-                      {['Pending', 'In progress', 'Approved', 'Rejected', 'Needs-info'].map((status) => (
+                      {['Pending', 'In progress', 'Approved', 'Rejected'].map((status) => (
                         <DropdownMenuItem
                           key={status}
                           onClick={() => onStatusChange(r.id, status)}
