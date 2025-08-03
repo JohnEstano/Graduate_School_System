@@ -668,6 +668,7 @@ export default function ShowAllRequests({
                                 if (selected.length === 0) return;
                                 handleBulkStatus('In progress');
                             }}
+                            disabled={selected.length === 0}
                         >
                         <Clock size={12} /> Mark as In Progress
                         </Button>
@@ -678,6 +679,7 @@ export default function ShowAllRequests({
                                 if (selected.length === 0) return;
                                 handleBulkStatus('Approved');
                             }}
+                            disabled={selected.length === 0}
                         >
                             <CheckCircle size={12} className='text-green-500' /> Mark as Approved
                         </Button>
@@ -688,13 +690,23 @@ export default function ShowAllRequests({
                                 if (selected.length === 0) return;
                                 handleBulkStatus('Rejected');
                             }}
+                            disabled={selected.length === 0}
                         >
                             <CircleX size={12}  className='text-red-500'/> Mark as Rejected
                         </Button>
-                        <Button variant="outline" className="rounded-full px-3 py-2 h-auto text-xs flex items-center gap-1">
+                        <Button
+                            variant="outline"
+                            className="rounded-full px-3 py-2 h-auto text-xs flex items-center gap-1"
+                            disabled={selected.length === 0}
+                        >
                             <Trash2 size={12} /> Delete
                         </Button>
-                           <Button variant="outline" className="rounded-full px-3 py-2 h-auto text-xs flex items-center gap-1" onClick={handleBulkPrint}>
+                        <Button
+                            variant="outline"
+                            className="rounded-full px-3 py-2 h-auto text-xs flex items-center gap-1"
+                            onClick={handleBulkPrint}
+                            disabled={selected.length === 0}
+                        >
                             <Printer size={12} /> Print
                         </Button>
                     </div>
