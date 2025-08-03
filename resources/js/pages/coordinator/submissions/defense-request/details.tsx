@@ -53,6 +53,42 @@ type DetailsProps = {
   onPriorityChange: (id: number, priority: string) => Promise<void>;
 };
 
+const programAbbr: Record<string, string> = {
+  "Master of Arts in Education major in English": "MAEd-Eng",
+  "Master of Arts in Education major in Sociology": "MAEd-Soc",
+  "Master of Arts in Education major in Mathematics": "MAEd-Math",
+  "Master of Arts in Education major in Physical Education": "MAEd-PE",
+  "Master of Arts in Educational Management": "MAEM",
+  "Master of Arts in Elementary Education": "MAElemEd",
+  "Master of Arts in Teaching College Chemistry": "MATCChem",
+  "Master of Arts in Teaching College Physics": "MATCPhys",
+  "Master of Arts in Engineering Education with majors in Civil Engineering": "MAEngEd-CE",
+  "Master of Arts in Engineering Education with majors in Electronics Communications Engineering": "MAEngEd-ECE",
+  "Master of Arts in Values Education": "MAVE",
+  "Master in Business Administration": "MBA",
+  "Master of Information Technology": "MIT",
+  "Master in Information Systems": "MIS",
+  "Master of Science in Pharmacy": "MSPharm",
+  "Master of Science in Medical Technology/ Medical Laboratory Science": "MSMedTech",
+  "Master of Arts in Education major in Filipino": "MAEd-Fil",
+  "Master of Arts in Education major in Music Education": "MAEd-Music",
+  "Master of Arts in Education major in Information Technology Integration": "MAEd-IT",
+  "Doctor in Business Management": "DBM",
+  "Doctor of Philosophy in Education major in Applied Linguistics": "PhD-Ed-Ling",
+  "Doctor of Philosophy in Education major in Educational Leadership": "PhD-Ed-Lead",
+  "Doctor of Philosophy in Education major in Filipino": "PhD-Ed-Fil",
+  "Doctor of Philosophy in Education major in Mathematics": "PhD-Ed-Math",
+  "Doctor of Philosophy in Education major in Counseling": "PhD-Ed-Counsel",
+  "Doctor of Philosophy in Education major in  Information Technology Integration": "PhD-Ed-IT",
+  "Doctor of Philosophy in Education major in Physical Education": "PhD-Ed-PE",
+  "DOCTOR OF PHILOSOPHY IN PHARMACY": "PhD-Pharm",
+  "Master in Counseling": "MCounsel",
+};
+
+function getProgramAbbr(program: string) {
+  return programAbbr[program] || program;
+}
+
 export default function Details({
   request,
   onNavigate,
@@ -116,7 +152,7 @@ export default function Details({
           </Button>
         </div>
       </div>
-      <div className="w-full rounded-md p-1 border mb-1 flex gap-1 flex-wrap text-xs">
+      <div className="w-full rounded-md  mb-1 flex gap-1 flex-wrap text-xs">
         <Button
           variant="ghost"
           className=" px-3 py-2 h-auto text-xs flex items-center gap-1"
@@ -146,10 +182,24 @@ export default function Details({
 
       <ScrollArea className="h-[calc(93vh-250px)] w-full rounded-md p-1">
         <div className="flex flex-col md:flex-row gap-2 mb-8 px-2 py-4">
-          <div className="flex-1 flex flex-col gap-4">
-            <div>
+          <div className="flex-1 flex flex-col gap-4 ">
+            <div >
               <h3 className="text-xs text-zinc-500">Thesis Title</h3>
               <p className="text-base font-semibold">{request.thesis_title}</p>
+              <p className="text-xs mt-1">
+                <span className="font-semibold text-zinc-600">Status:</span>{" "}
+                <span className={
+                  request.status === "Approved"
+                    ? "text-green-600 font-bold"
+                    : request.status === "Rejected"
+                    ? "text-red-500 font-bold"
+                    : request.status === "In progress"
+                    ? "text-yellow-600 font-bold"
+                    : "text-gray-500 font-bold"
+                }>
+                  {request.status}
+                </span>
+              </p>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
@@ -164,10 +214,10 @@ export default function Details({
               </div>
               <div>
                 <h4 className="text-xs text-zinc-500 mb-1">Program</h4>
-                <p className="text-sm font-medium">{request.program}</p>
+                <p className="text-sm font-medium">{getProgramAbbr(request.program)}</p>
               </div>
               <div>
-                <h4 className="text-xs text-zinc-500 mb-1"> Scheduled Date</h4>
+                <h4 className="text-xs text-zinc-500 mb-1">  Date & Mode</h4>
                 <p className="text-sm font-medium">
                   {format(new Date(request.date_of_defense), 'PPP')} /{' '}
                   {request.mode_defense.replace('-', ' ')}
@@ -184,13 +234,13 @@ export default function Details({
           <div className="w-full md:w-64 flex-shrink-0 bg-white border rounded-lg p-4 h-fit space-y-4">
             <div>
               <h4 className="text-[10px] text-zinc-500 mb-1">Last Status Updated By</h4>
-              <p className="text-xs font-semibold break-words text-muted-foreground">
+              <p className="text-xs font-semibold break-words text-zinc-600">
                 {lastStatusUpdatedBy || <span className="text-muted-foreground">—</span>}
               </p>
             </div>
             <div>
               <h4 className="text-[10px] text-zinc-500 mb-1">Last Status Updated At</h4>
-              <p className="text-xs font-semibold text-muted-foreground">
+              <p className="text-xs font-semibold text-zinc-600">
                 {lastStatusUpdatedAt
                   ? format(new Date(lastStatusUpdatedAt), 'PPP p')
                   : <span className="text-muted-foreground">—</span>}
