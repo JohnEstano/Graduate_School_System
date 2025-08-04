@@ -23,8 +23,8 @@ const breadcrumbs: BreadcrumbItem[] = [
     href: '/honorarium',
   },
   {
-    title: 'Honorarium Submision',
-    href: '/honorarium-submision',
+    title: 'Honorarium Summary',
+    href: '/honorarium-summary',
   },
 ];
 
@@ -172,7 +172,7 @@ export default function Index() {
 
   return (
     <AppLayout breadcrumbs={breadcrumbs}>
-      <Head title="Honorarium Submision" />
+      <Head title="Honorarium Summary" />
 
       <div className="container mx-auto p-6 dark:bg-[#0a0a0a] min-h-screen">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6">
