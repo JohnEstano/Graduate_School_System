@@ -48,8 +48,10 @@ export type DefenseRequestSummary = {
 
 export default function ShowAllRequests({
     defenseRequests: initialRequests,
+    onStatusChange,
 }: {
     defenseRequests: DefenseRequestSummary[];
+    onStatusChange: (id: number, newStatus: DefenseRequestSummary["status"]) => void; // <-- FIX HERE
 }) {
     const [defenseRequests, setDefenseRequests] = useState(initialRequests);
     const [search, setSearch] = useState('');
@@ -155,7 +157,7 @@ export default function ShowAllRequests({
     }
 
    
-    const onStatusChange = async (id: number, status: string): Promise<void> => {
+    const onStatusChangeInternal = async (id: number, status: string): Promise<void> => {
         const res = await fetch(`/defense-requests/${id}/status`, {
             method: 'PATCH',
             headers: {
@@ -789,7 +791,7 @@ export default function ShowAllRequests({
                       onClick={async () => {
                         setConfirmDialog({ open: false, type: null });
                         if (confirmDialog.type === 'status' && confirmDialog.id && confirmDialog.value)
-                          await onStatusChange(confirmDialog.id, confirmDialog.value);
+                          await onStatusChangeInternal(confirmDialog.id, confirmDialog.value);
                         if (confirmDialog.type === 'priority' && confirmDialog.id && confirmDialog.value)
                           await onPriorityChange(confirmDialog.id, confirmDialog.value);
                         if (confirmDialog.type === 'bulk-status' && confirmDialog.value)
