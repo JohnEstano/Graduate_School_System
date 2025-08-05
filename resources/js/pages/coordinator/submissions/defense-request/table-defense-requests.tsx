@@ -14,7 +14,7 @@ import { format } from 'date-fns';
 import Details from './details';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@/components/ui/dropdown-menu';
 import { Badge } from '@/components/ui/badge';
-import { Clock, Check, CircleCheckBig, CircleX, BadgeInfo, Circle } from 'lucide-react';
+import { Clock, Check, CircleCheckBig, CircleX, Circle } from 'lucide-react';
 import type { DefenseRequestSummary } from './show-all-requests';
 
 type TableDefenseRequestsProps = {
@@ -31,8 +31,9 @@ type TableDefenseRequestsProps = {
   sorted: DefenseRequestSummary[];
   selectedRequest: DefenseRequestSummary | null;
   selectedIndex: number;
-  onStatusChange: (id: number, status: string) => void;
-  onPriorityChange: (id: number, priority: string) => void;
+  onStatusChange: (id: number, status: string) => Promise<void>;
+  onPriorityChange: (id: number, priority: string) => Promise<void>;
+  formatLocalDateTime: (isoString?: string) => string;
 };
 
 export default function TableDefenseRequests({
@@ -51,6 +52,7 @@ export default function TableDefenseRequests({
   selectedIndex,
   onStatusChange,
   onPriorityChange,
+  formatLocalDateTime,
 }: TableDefenseRequestsProps) {
   const statusIcon = (status: string) => {
     switch (status) {
@@ -60,55 +62,56 @@ export default function TableDefenseRequests({
         return <CircleCheckBig size={16} className="mr-1 text-green-500" />;
       case 'Rejected':
         return <CircleX size={16} className="mr-1 text-red-500" />;
-      case 'Needs-info':
-        return <BadgeInfo size={16} className="mr-1 text-blue-500" />;
       default:
-        return <Circle size={16} className="mr-1" />; 
+        return <Circle size={16} className="mr-1" />;
     }
   };
 
   return (
-    <div className="rounded-lg overflow-x-auto border border-border">
+    <div className="rounded-md overflow-x-auto border border-border">
       <Table className="min-w-full text-sm">
         <TableHeader>
           <TableRow>
-            <TableHead className="w-[5%] px-2 py-2">
+            <TableHead className="w-[5%]  py-2">
               <Checkbox
                 checked={headerChecked}
                 onCheckedChange={toggleSelectAll}
               />
             </TableHead>
             {columns.title && (
-              <TableHead className="w-[30%] px-2 py-2">Title</TableHead>
+              <TableHead className="w-[15A%] px-1">Title</TableHead>
             )}
             {columns.presenter && (
-              <TableHead className="w-[20%] px-2 py-2">Presenter</TableHead>
+              <TableHead className="w-[13%] px-1  py-2">Presenter</TableHead>
             )}
             {columns.date && (
               <TableHead
-                className="w-[15%] text-center cursor-pointer px-2 py-2"
+                className="w-[11%] text-center cursor-pointer px-1 py-2"
                 onClick={toggleSort}
               >
                 <div className="flex justify-center items-center gap-1">
-                  <span>Scheduled Date</span>
+                  <span>Date</span>
                   {sortDir === 'asc' && <ArrowUp size={12} />}
                   {sortDir === 'desc' && <ArrowDown size={12} />}
                   {!sortDir && (
                     <ChevronsUpDown size={12} className="opacity-50" />
                   )}
-                </div>
+                </div>  
               </TableHead>
             )}
             {columns.mode && (
-              <TableHead className="w-[10%] text-center px-2 py-2">Mode</TableHead>
+              <TableHead className="w-[7%] text-center px-1 py-2">Mode</TableHead>
             )}
             {columns.status && (
-              <TableHead className="w-[10%] text-center px-2 py-2">Status</TableHead>
+              <TableHead className="w-[7%] text-center px-1 py-2">Status</TableHead>
             )}
+
+
             {columns.priority && (
-              <TableHead className="w-[10%] text-center px-2 py-2">Priority</TableHead>
+              <TableHead className="w-[7%] text-center px-1 py-2">Priority</TableHead>
             )}
-            <TableHead className="w-[5%] text-center px-2 py-2" />
+            <TableHead className="w-[14%] px-1 py-2 text-center">Last Updated</TableHead>
+            <TableHead className="w-[3%] text-left px-1 py-2" />
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -122,32 +125,32 @@ export default function TableDefenseRequests({
               </TableCell>
               {columns.title && (
                 <TableCell
-                  className="px-2 py-2 font-semibold truncate cursor-pointer"
-                  style={{ maxWidth: '300px' }}
+                  className="px-1 py-2 font-semibold truncate cursor-pointer"
+                  style={{ maxWidth: '140px' }}
                   onClick={() => toggleSelectOne(r.id)}
                 >
-                  {r.thesis_title}
+                  {r.thesis_title.length > 40 ? r.thesis_title.slice(0, 37) + "..." : r.thesis_title}
                 </TableCell>
               )}
               {columns.presenter && (
-                <TableCell className="px-2 py-2 truncate">
+                <TableCell className="px-1 py-2 truncate">
                   {r.first_name}{' '}
                   {r.middle_name ? `${r.middle_name[0]}. ` : ''}
                   {r.last_name}
                 </TableCell>
               )}
               {columns.date && (
-                <TableCell className="px-2 py-2 text-center whitespace-nowrap">
+                <TableCell className="px-1 py-2 text-start whitespace-nowrap">
                   {format(new Date(r.date_of_defense), 'MMM dd, yyyy')}
                 </TableCell>
               )}
               {columns.mode && (
-                <TableCell className="px-2 py-2 text-center capitalize">
+                <TableCell className="px-1 py-2 text-center capitalize">
                   {r.mode_defense.replace('-', ' ')}
                 </TableCell>
               )}
               {columns.status && (
-                <TableCell className="px-2 py-2 text-center">
+                <TableCell className="px-1 py-2 text-center">
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Badge
@@ -161,7 +164,7 @@ export default function TableDefenseRequests({
                       </Badge>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent>
-                      {['Pending', 'In progress', 'Approved', 'Rejected', 'Needs-info'].map((status) => (
+                      {['Pending', 'In progress', 'Approved', 'Rejected'].map((status) => (
                         <DropdownMenuItem
                           key={status}
                           onClick={() => onStatusChange(r.id, status)}
@@ -178,8 +181,10 @@ export default function TableDefenseRequests({
                   </DropdownMenu>
                 </TableCell>
               )}
+
+
               {columns.priority && (
-                <TableCell className="px-2 py-2 text-center">
+                <TableCell className="px-1 py-2 text-center">
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Badge
@@ -188,8 +193,8 @@ export default function TableDefenseRequests({
                           (r.priority === 'High'
                             ? "bg-rose-100 text-rose-700 border border-rose-200"
                             : r.priority === 'Low'
-                            ? "bg-sky-100 text-sky-700 border border-sky-200"
-                            : "bg-amber-100 text-amber-700 border border-amber-200")
+                              ? "bg-sky-100 text-sky-700 border border-sky-200"
+                              : "bg-amber-100 text-amber-700 border border-amber-200")
                         }
                         variant="outline"
                       >
@@ -204,14 +209,30 @@ export default function TableDefenseRequests({
                           className="flex items-center justify-between"
                         >
                           <span>{priority}</span>
-                          {r.priority === priority && <Check size={16}/>}
+                          {r.priority === priority && <Check size={16} />}
                         </DropdownMenuItem>
                       ))}
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </TableCell>
               )}
-              <TableCell className="px-2 py-2 text-center">
+              <TableCell className="px-1 py-2 text-xs text-muted-foreground text-center">
+                <div>
+                  <span className='font-bold'>
+                    {r.last_status_updated_by
+                      ? r.last_status_updated_by
+                      : <span className="italic">—</span>}
+                  </span>
+                </div>
+                <div>
+                  <span>
+                    {r.last_status_updated_at
+                      ? formatLocalDateTime(r.last_status_updated_at)
+                      : <span className="italic">—</span>}
+                  </span>
+                </div>
+              </TableCell>
+              <TableCell className="px-1 py-2 text-center">
                 <Dialog>
                   <DialogTrigger asChild>
                     <Button
@@ -228,7 +249,6 @@ export default function TableDefenseRequests({
                   <DialogContent className="max-w-5xl min-w-260 w-full max-h-[90vh]">
                     <div className="max-h-[80vh] overflow-y-auto px-1">
                       {selectedRequest && (
-                         
                         <Details
                           request={selectedRequest as unknown as import('./details').DefenseRequestFull}
                           onNavigate={(dir) => {
@@ -243,6 +263,8 @@ export default function TableDefenseRequests({
                           }}
                           disablePrev={selectedIndex === 0}
                           disableNext={selectedIndex === sorted.length - 1}
+                          onStatusChange={onStatusChange}
+                          onPriorityChange={onPriorityChange}
                         />
                       )}
                     </div>
