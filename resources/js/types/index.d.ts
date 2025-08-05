@@ -28,7 +28,8 @@ export interface MainNavItem {
     icon?: LucideIcon | null;
     isActive?: boolean;
     subItems?: SubItems[];
-     indicator?: boolean;
+    indicator?: boolean;
+    count?: number;
 }
 
 export interface SubItems {
@@ -74,7 +75,8 @@ export interface DefenseRequest {
     mode_defense: string;
     status: string;
     priority: string;
-   
+    last_status_updated_by?: string;
+    last_status_updated_at?: string;
 }
 
 export type DefenseRequestSummary = {
@@ -87,5 +89,6 @@ export type DefenseRequestSummary = {
     mode_defense: string;
     status: string;
     priority: string;
-    
+    last_status_updated_by?: string;
+    last_status_updated_at?: string;
 };

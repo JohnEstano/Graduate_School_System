@@ -4,7 +4,7 @@ import { NavUser } from '@/components/nav-user';
 import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '@/components/ui/sidebar';
 import { MainNavItem, type NavItem } from '@/types';
 import { Link, usePage } from '@inertiajs/react';
-import {  CalendarFold, CreditCard, DollarSign, File, FileText, LayoutGrid, MessageSquareText, ScrollText, Users } from 'lucide-react';
+import { CalendarFold, CreditCard, DollarSign, FileText, LayoutGrid, MessageSquareText, ScrollText, Users } from 'lucide-react';
 import AppLogo from './app-logo';
 import { useEffect, useState } from "react";
 
@@ -43,8 +43,14 @@ const studentNavItems: MainNavItem[] = [
         title: 'Schedules',
         href: '/schedule',
         icon: CalendarFold,
+       
     },
-    
+     {
+        title: 'Messages',
+        href: '/messages',
+        icon: MessageSquareText,
+    },
+ 
 ];
 
 const assistantNavItems: MainNavItem[] = [
@@ -71,6 +77,7 @@ const assistantNavItems: MainNavItem[] = [
     { title: 'Student Records', href: '/student-records', icon: Users },
     { title: 'Schedules', href: '/schedules', icon: CalendarFold },
     { title: 'Messages', href: '/messages', icon: MessageSquareText },
+     
 
 
 ];

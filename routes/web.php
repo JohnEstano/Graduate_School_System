@@ -50,12 +50,41 @@ Route::middleware(['auth', 'verified'])->group(function () {
         return Inertia::render('student/submissions/comprehensive-exam/Index');
     })->name('comprehensive-exam.index');
 
+    //Honorarium route
+    // generate-report route
+    Route::get('generate-report', function () {
+        return Inertia::render('honorarium/generate-report/Index');
+    })->name('generate-report.index');
+
+    // honorarium-summary route
+    Route::get('honorarium-summary', function () {
+        return Inertia::render('honorarium/honorarium-summary/Index');
+    })->name('honorarium-summary.index');
+
+    
+
     //Schedules route
     Route::get('schedules', function () {
         return Inertia::render('coordinator/schedule/Index');
     })->name('schedules.index');
 
     Route::get('/defense-requests/calendar', [DefenseRequestController::class, 'calendar']);
+
+    // Messaging routes
+    Route::prefix('messages')->name('messages.')->group(function () {
+        Route::get('/', [App\Http\Controllers\MessageController::class, 'index'])->name('index');
+        Route::get('/conversations/{conversation}/messages', [App\Http\Controllers\MessageController::class, 'getMessages'])->name('get-messages');
+        Route::post('/send', [App\Http\Controllers\MessageController::class, 'store'])->name('send');
+        Route::post('/conversations', [App\Http\Controllers\MessageController::class, 'createConversation'])->name('create-conversation');
+        Route::get('/unread-count', [App\Http\Controllers\MessageController::class, 'getUnreadCount'])->name('unread-count');
+        Route::get('/search-users', [App\Http\Controllers\MessageController::class, 'searchUsers'])->name('search-users');
+    });
+
+    // System status page (for testing)
+    Route::get('/system-status', function () {
+        return Inertia::render('system-status');
+    })->name('system-status');
+
 });
 
     

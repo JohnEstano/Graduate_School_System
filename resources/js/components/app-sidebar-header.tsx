@@ -4,6 +4,7 @@ import { SidebarTrigger } from '@/components/ui/sidebar';
 import { type BreadcrumbItem as BreadcrumbItemType } from '@/types';
 import { Bell } from 'lucide-react';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
 
 const testNotifications = [
 	{
@@ -53,15 +54,16 @@ export function AppSidebarHeader({ breadcrumbs = [] }: { breadcrumbs?: Breadcrum
 								</div>
 
 								<div className="mr-5 relative">
-										<button
+										<Button
 												ref={bellBtnRef}
-												type="button"
-												className="relative p-2 hover:bg-accent rounded-full transition-colors duration-200 focus:outline-none"
+												variant="ghost"
+												className="h-8 w-8 p-3 rounded-full hover:bg-accent focus:bg"
+												
 												onClick={() => setOpen((v) => !v)} 
 												aria-label="Show notifications"
 										>
 												<Bell className="size-5 stroke-[1.5]" />
-										</button>
+										</Button>
 										{open && (
 												<div
 														ref={dropdownRef}

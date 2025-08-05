@@ -16,11 +16,22 @@ class DefenseRequestController extends Controller
         $props = [];
 
         if (in_array($user->role, ['Administrative Assistant', 'Coordinator', 'Dean'])) {
-            $props['defenseRequests'] = DefenseRequest::all();
+            $defenseRequests = DefenseRequest::with('lastStatusUpdater')->get();
+         
+            $defenseRequests->transform(function ($item) {
+                $item->last_status_updated_by = $item->lastStatusUpdater?->name;
+                return $item;
+            });
+            $props['defenseRequests'] = $defenseRequests;
         } else {
-            $props['defenseRequest'] = DefenseRequest::where('school_id', $user->school_id)
+            $defenseRequest = DefenseRequest::with('lastStatusUpdater')
+                ->where('school_id', $user->school_id)
                 ->latest()
                 ->first();
+            if ($defenseRequest) {
+                $defenseRequest->last_status_updated_by = $defenseRequest->lastStatusUpdater?->name;
+            }
+            $props['defenseRequest'] = $defenseRequest;
         }
 
         $viewMap = [
@@ -115,10 +126,17 @@ class DefenseRequestController extends Controller
         ]);
         $defenseRequest->update([
             'status' => $request->status,
-            'last_status_updated_at' => now(),
+            'last_status_updated_at' => now()->setTimezone('Asia/Manila'),
             'last_status_updated_by' => auth()->id(),
         ]);
-        return response()->json(['success' => true, 'status' => $defenseRequest->status]);
+     
+        $defenseRequest->load('lastStatusUpdater');
+        return response()->json([
+            'success' => true,
+            'status' => $defenseRequest->status,
+            'last_status_updated_by' => $defenseRequest->lastStatusUpdater?->name,
+            'last_status_updated_at' => optional($defenseRequest->last_status_updated_at)->setTimezone('Asia/Manila')->toISOString(),
+        ]);
     }
 
     public function updatePriority(Request $request, DefenseRequest $defenseRequest)
@@ -128,24 +146,74 @@ class DefenseRequestController extends Controller
         ]);
         $defenseRequest->update([
             'priority' => $request->priority,
-            'last_status_updated_at' => now(),
+            'last_status_updated_at' => now()->setTimezone('Asia/Manila'),
             'last_status_updated_by' => auth()->id(),
         ]);
-        return response()->json(['success' => true, 'priority' => $defenseRequest->priority]);
+        $defenseRequest->load('lastStatusUpdater');
+        return response()->json([
+            'success' => true,
+            'priority' => $defenseRequest->priority,
+            'last_status_updated_by' => $defenseRequest->lastStatusUpdater?->name,
+            'last_status_updated_at' => optional($defenseRequest->last_status_updated_at)->setTimezone('Asia/Manila')->toISOString(),
+        ]);
     }
 
     public function bulkUpdateStatus(Request $request)
     {
-        $request->validate([
-            'ids' => 'required|array',
+        \Log::info('Bulk status update request', $request->all());
+
+        $validator = \Validator::make($request->all(), [
+            'ids' => 'required|array|min:1',
+            'ids.*' => 'integer',
             'status' => 'required|in:Pending,In progress,Approved,Rejected,Needs-info',
         ]);
-        DefenseRequest::whereIn('id', $request->ids)->update([
-            'status' => $request->status,
-            'last_status_updated_at' => now(),
-            'last_status_updated_by' => auth()->id(),
-        ]);
-        return response()->json(['success' => true]);
+        if ($validator->fails()) {
+            \Log::error('Bulk status update validation failed', [
+                'errors' => $validator->errors()->all(),
+                'request' => $request->all()
+            ]);
+            return response()->json(['error' => $validator->errors()->first()], 422);
+        }
+        $ids = $request->ids;
+        if (empty($ids) || !is_array($ids)) {
+            \Log::error('Bulk status update: No IDs provided or not array', ['ids' => $ids, 'request' => $request->all()]);
+            return response()->json(['error' => 'No IDs provided'], 400);
+        }
+        try {
+            $updateCount = DefenseRequest::whereIn('id', $ids)->update([
+                'status' => $request->status,
+                'last_status_updated_at' => now()->setTimezone('Asia/Manila'),
+                'last_status_updated_by' => auth()->id(),
+            ]);
+            \Log::info('Bulk status update DB result', ['updateCount' => $updateCount, 'ids' => $ids]);
+            $updated = DefenseRequest::with('lastStatusUpdater')->whereIn('id', $ids)->get();
+            $result = $updated->map(function ($item) {
+                $lastStatusUpdatedAt = null;
+                if ($item->last_status_updated_at) {
+                    if ($item->last_status_updated_at instanceof \Carbon\Carbon) {
+                        $lastStatusUpdatedAt = $item->last_status_updated_at->setTimezone('Asia/Manila')->toISOString();
+                    } else {
+                 
+                        $lastStatusUpdatedAt = $item->last_status_updated_at;
+                    }
+                }
+                return [
+                    'id' => $item->id,
+                    'status' => $item->status,
+                    'last_status_updated_by' => $item->lastStatusUpdater?->name,
+                    'last_status_updated_at' => $lastStatusUpdatedAt,
+                ];
+            });
+            \Log::info('Bulk status update result', ['ids' => $ids, 'result' => $result]);
+            return response()->json($result);
+        } catch (\Throwable $e) {
+            \Log::error('Bulk status update error', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+                'request' => $request->all()
+            ]);
+            return response()->json(['error' => 'Bulk update failed', 'details' => $e->getMessage()], 500);
+        }
     }
 
     public function bulkUpdatePriority(Request $request)
@@ -154,12 +222,31 @@ class DefenseRequestController extends Controller
             'ids' => 'required|array',
             'priority' => 'required|in:Low,Medium,High',
         ]);
-        DefenseRequest::whereIn('id', $request->ids)->update([
+        $ids = $request->ids;
+        DefenseRequest::whereIn('id', $ids)->update([
             'priority' => $request->priority,
-            'last_status_updated_at' => now(),
+            'last_status_updated_at' => now()->setTimezone('Asia/Manila'),
             'last_status_updated_by' => auth()->id(),
         ]);
-        return response()->json(['success' => true]);
+ 
+        $updated = DefenseRequest::with('lastStatusUpdater')->whereIn('id', $ids)->get();
+        $result = $updated->map(function ($item) {
+            $lastStatusUpdatedAt = null;
+            if ($item->last_status_updated_at) {
+                if ($item->last_status_updated_at instanceof \Carbon\Carbon) {
+                    $lastStatusUpdatedAt = $item->last_status_updated_at->setTimezone('Asia/Manila')->toISOString();
+                } else {
+                    $lastStatusUpdatedAt = $item->last_status_updated_at;
+                }
+            }
+            return [
+                'id' => $item->id,
+                'priority' => $item->priority,
+                'last_status_updated_by' => $item->lastStatusUpdater?->name,
+                'last_status_updated_at' => $lastStatusUpdatedAt,
+            ];
+        });
+        return response()->json($result);
     }
 
     public function count()
