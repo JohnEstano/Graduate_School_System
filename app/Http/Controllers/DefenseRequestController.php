@@ -16,9 +16,12 @@ class DefenseRequestController extends Controller
         $props = [];
 
         if (in_array($user->role, ['Administrative Assistant', 'Coordinator', 'Dean'])) {
-            $props['defenseRequests'] = DefenseRequest::all();
+        
+            $props['defenseRequests'] = DefenseRequest::with('lastStatusUpdater')->get();
         } else {
-            $props['defenseRequest'] = DefenseRequest::where('school_id', $user->school_id)
+           
+            $props['defenseRequest'] = DefenseRequest::with('lastStatusUpdater')
+                ->where('school_id', $user->school_id)
                 ->latest()
                 ->first();
         }

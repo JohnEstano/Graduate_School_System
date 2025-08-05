@@ -57,4 +57,31 @@ class User extends Authenticatable
             'password' => 'hashed',
         ];
     }
+
+    /**
+     * Get all conversations for this user.
+     */
+    public function conversations()
+    {
+        return $this->belongsToMany(Conversation::class, 'message_participants')
+                    ->withPivot(['joined_at', 'last_read_at', 'is_admin'])
+                    ->withTimestamps()
+                    ->orderBy('last_message_at', 'desc');
+    }
+
+    /**
+     * Get all messages sent by this user.
+     */
+    public function messages()
+    {
+        return $this->hasMany(Message::class);
+    }
+
+    /**
+     * Get user's full name for display
+     */
+    public function getDisplayNameAttribute(): string
+    {
+        return $this->name;
+    }
 }
