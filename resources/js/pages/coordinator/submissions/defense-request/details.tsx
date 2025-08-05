@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Button } from '@/components/ui/button';
-import {Separator} from '@/components/ui/separator';
+import { Separator } from '@/components/ui/separator';
 import {
   Paperclip,
   MoreHorizontal,
@@ -13,12 +13,14 @@ import {
   CheckCircle,
   CircleX,
   Trash2,
+  Info,
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Badge } from "@/components/ui/badge";
 
 export type DefenseRequestFull = {
-  id: number; 
+  id: number;
   first_name: string;
   middle_name: string | null;
   last_name: string;
@@ -38,9 +40,9 @@ export type DefenseRequestFull = {
   rec_endorsement?: string;
   proof_of_payment?: string;
   reference_no?: string;
-  last_status_updated_by?: string; 
+  last_status_updated_by?: string;
   last_status_updated_at?: string;
-  status?: 'Pending' | 'In progress' | 'Approved' | 'Rejected' ;
+  status?: 'Pending' | 'In progress' | 'Approved' | 'Rejected';
   priority?: 'Low' | 'Medium' | 'High';
 };
 
@@ -94,7 +96,7 @@ export default function Details({
   onNavigate,
   disablePrev,
   disableNext,
-  onStatusChange, 
+  onStatusChange,
 }: DetailsProps) {
   const [loading, setLoading] = useState<string | null>(null);
 
@@ -111,7 +113,7 @@ export default function Details({
 
   const handleStatusUpdate = async (status: string) => {
     setLoading(status);
-    await onStatusChange(request.id, status); 
+    await onStatusChange(request.id, status);
     setLoading(null);
   };
 
@@ -119,9 +121,30 @@ export default function Details({
     <div className="w-full max-w-5xl mx-auto px-4 py-6">
       <div className="flex flex-row items-start justify-between mb-6">
         <div className="flex items-center gap-2 text-2xl font-semibold">
+          <div className="w-8 h-8 rounded-md bg-rose-100 flex items-center justify-center">
+            <Info className="size-5 text-rose-500" />
+          </div>
           Details
         </div>
+
         <div className="flex items-center gap-2">
+
+          {request.status && (
+            <span
+              className={
+                "mt-1 text-xs font-bold px-2 py-0.5 rounded-full inline-block " +
+                (request.status === "Approved"
+                  ? "bg-green-100 text-green-600"
+                  : request.status === "Rejected"
+                    ? "bg-red-100 text-red-500"
+                    : request.status === "In progress"
+                      ? "bg-yellow-100 text-yellow-600"
+                      : "bg-gray-100 text-gray-500")
+              }
+            >
+              {request.status}
+            </span>
+          )}
           <Button variant="outline" className="rounded-sm">
             <MoreHorizontal className="size-5" />
           </Button>
@@ -154,24 +177,24 @@ export default function Details({
       </div>
       <div className="w-full rounded-md  mb-1 flex gap-1 flex-wrap text-xs">
         <Button
-          variant="ghost"
-          className=" px-3 py-2 h-auto text-xs flex items-center gap-1"
+          variant="outline"
+          className=" px-3 py-2 rounded-full h-auto text-xs flex items-center gap-1"
           disabled={loading === 'In progress'}
           onClick={() => handleStatusUpdate('In progress')}
         >
           <Clock size={12} /> Mark as In Progress
         </Button>
         <Button
-          variant="ghost"
-          className=" px-3 py-2 h-auto text-xs flex items-center gap-1"
+          variant="outline"
+          className=" px-3 py-2 rounded-full h-auto text-xs flex items-center gap-1"
           disabled={loading === 'Approved'}
           onClick={() => handleStatusUpdate('Approved')}
         >
           <CheckCircle size={12} className="text-green-500" /> Mark as Approved
         </Button>
         <Button
-          variant="ghost"
-          className=" px-3 py-2 h-auto text-xs flex items-center gap-1"
+          variant="outline"
+          className=" px-3 py-2 rounded-full h-auto text-xs flex items-center gap-1"
           disabled={loading === 'Rejected'}
           onClick={() => handleStatusUpdate('Rejected')}
         >
@@ -183,46 +206,54 @@ export default function Details({
       <ScrollArea className="h-[calc(93vh-250px)] w-full rounded-md p-1">
         <div className="flex flex-col md:flex-row gap-2 mb-8 px-2 py-4">
           <div className="flex-1 flex flex-col gap-4 ">
-            <div >
-              <h3 className="text-xs text-zinc-500">Thesis Title</h3>
-              <p className="text-base font-semibold">{request.thesis_title}</p>
-              <p className="text-xs mt-1">
-                <span className="font-semibold text-zinc-600">Status:</span>{" "}
-                <span className={
-                  request.status === "Approved"
-                    ? "text-green-600 font-bold"
-                    : request.status === "Rejected"
-                    ? "text-red-500 font-bold"
-                    : request.status === "In progress"
-                    ? "text-yellow-600 font-bold"
-                    : "text-gray-500 font-bold"
-                }>
-                  {request.status}
-                </span>
-              </p>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <h4 className="text-xs text-zinc-500 mb-1">Presenter</h4>
-                <p className="text-sm font-medium">
-                  {`${request.first_name} ${request.middle_name ?? ''} ${request.last_name}`}
-                  <span className="text-xs text-muted-foreground font-normal">
-                    {' '}
-                    / {request.school_id}
-                  </span>
-                </p>
+            <div className="flex gap-6 items-start justify-between">
+              <div className="flex flex-col gap-1">
+                <h3 className="text-xs text-zinc-500">Thesis Title</h3>
+                <div className="flex flex-row gap-3 items-center">
+                  <p className="text-base font-semibold pt-1">{request.thesis_title}</p>
+                  {request.defense_type ? (
+                    <Badge variant="outline" className="text-xs px-2 py-0 h-5 leading-tight">
+                      {request.defense_type}
+                    </Badge>
+                  ) : ( 
+                    <span className="text-xs text-muted-foreground">—</span>
+                  )}
+                </div>
+
               </div>
+
+
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-start">
+              <div>
+                <h4 className="text-xs text-zinc-500 mb-1 max-w-[200px]">Presenter</h4>
+                <div className="flex flex-col">
+                  <span className="text-sm font-medium">
+                    {`${request.first_name} ${request.middle_name ?? ''} ${request.last_name}`}
+                  </span>
+                  <span className="text-xs text-muted-foreground font-normal">
+                    {request.school_id}
+                  </span>
+                </div>
+              </div>
+
               <div>
                 <h4 className="text-xs text-zinc-500 mb-1">Program</h4>
-                <p className="text-sm font-medium">{getProgramAbbr(request.program)}</p>
+                <span className="text-sm font-medium  max-w-[50px] ">
+                  {getProgramAbbr(request.program)}
+                </span>
               </div>
               <div>
-                <h4 className="text-xs text-zinc-500 mb-1">  Date & Mode</h4>
+                <h4 className="text-xs text-zinc-500 mb-1">Scheduled Date</h4>
                 <p className="text-sm font-medium">
-                  {format(new Date(request.date_of_defense), 'PPP')} /{' '}
-                  {request.mode_defense.replace('-', ' ')}
+                  {format(new Date(request.date_of_defense), 'PPP')}
                 </p>
               </div>
+              <div>
+                <h4 className="text-xs text-zinc-500 mb-1">Mode</h4>
+                <p className="text-sm font-medium"> {request.mode_defense.replace('-', ' ')}</p>
+              </div>
+
             </div>
           </div>
           <div className="hidden md:flex items-stretch">

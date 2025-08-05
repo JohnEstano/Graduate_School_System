@@ -4,7 +4,6 @@ import { Separator } from "@/components/ui/separator";
 import { Input } from "@/components/ui/input";
 import { Search } from "lucide-react";
 
-// Expect defenseRequests prop from parent (Index.tsx)
 import { type DefenseRequestSummary } from "./show-all-requests";
 
 type HonorariumProps = {
@@ -14,7 +13,7 @@ type HonorariumProps = {
 export default function ShowAllHonorarium({ defenseRequests }: HonorariumProps) {
 	const [search, setSearch] = useState("");
 
-	// Dynamically filter approved requests by search
+
 	const approved = useMemo(
 		() =>
 			(defenseRequests || []).filter(
@@ -25,7 +24,7 @@ export default function ShowAllHonorarium({ defenseRequests }: HonorariumProps) 
 		[defenseRequests, search]
 	);
 
-	// Show only first 8 cards for now (for demo, adjust as needed)
+
 	const cardsToShow = approved.slice(0, 8);
 
 	return (
@@ -33,13 +32,17 @@ export default function ShowAllHonorarium({ defenseRequests }: HonorariumProps) 
 			<div className="flex flex-wrap items-center justify-between px-2 pt-2">
 				<div className="flex flex-1 items-center gap-2">
 					<div className="relative">
-						<Search className="absolute left-2 top-2 h-4 w-4 text-muted-foreground" />
+
 						<Input
-							placeholder="Search honorarium..."
+							placeholder="Search..."
+							startIcon={Search}
 							value={search}
 							onChange={(e) => setSearch(e.currentTarget.value)}
-							className="pl-8 h-10 text-base w-[400px]"
+							className="pl-8 h-8 text-sm w-[300px]"
 						/>
+
+
+
 					</div>
 				</div>
 			</div>

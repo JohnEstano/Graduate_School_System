@@ -1,11 +1,11 @@
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
-import { Head, usePage } from '@inertiajs/react';
+import { Head, Link, usePage } from '@inertiajs/react';
 import ShowAllRequests, { type DefenseRequestSummary } from './show-all-requests';
 import ShowAllHonorarium from './show-all-honorarium';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { useState } from "react";
-import { Box} from 'lucide-react';
+import { Box, CalendarFold} from 'lucide-react';
 
 const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Dashboard', href: '/dashboard' },
@@ -48,11 +48,23 @@ export default function DefenseRequestIndex() {
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Defense Requests" />
             <div className="flex h-full flex-1 flex-col gap-4 px-2 pt-4">
+                <div className="flex items-center justify-between">
+                    <Tabs value={tab} onValueChange={setTab} className="">
+                        <TabsList>
+                            <TabsTrigger value="requests"><Box />Requests</TabsTrigger>
+                            <TabsTrigger value="honorarium">Honorariums</TabsTrigger>
+                        </TabsList>
+                    </Tabs>
+                    <Link
+                        href="/schedules"
+                        className="text-sm hover:underline flex items-center gap-2 px-2 py-1 text-primary"
+                        style={{ width: "auto" }}
+                    >
+                        <CalendarFold className="size-4" />
+                        View schedules
+                    </Link>
+                </div>
                 <Tabs value={tab} onValueChange={setTab} className="w-full">
-                    <TabsList className="">
-                        <TabsTrigger value="requests"><Box />Requests</TabsTrigger>
-                        <TabsTrigger value="honorarium">Honorariums</TabsTrigger>
-                    </TabsList>
                     <TabsContent value="requests">
                         <div className="flex-1">
                             {isCoordinator ? (
