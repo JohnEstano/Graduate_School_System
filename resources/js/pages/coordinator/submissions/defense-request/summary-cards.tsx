@@ -15,9 +15,9 @@ export function SummaryCards({
   rejected,
 }: SummaryCardsProps) {
   return (
-    <Card className="w-full rounded-sm border-none shadow-none h-auto p-0">
+    <Card className="w-full rounded-sm border-none  h-auto p-0">
       <CardContent className="flex flex-row items-center justify-between px-4 min-h-10">
-        <div className="flex items-center p-1 shadow border  rounded gap-2">
+        <div className="flex items-center p-1    rounded gap-2">
           <CircleAlert className="size-4 text-rose-500" />
           <span className="text-xs  text-muted-foreground font-medium">
             Pending Request:
