@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models\DefenseRequest;
+use App\Models\Notification;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Redirect;
@@ -116,6 +118,21 @@ class DefenseRequestController extends Controller
             'defense_panelist4' => $data['defensePanelist4'] ?? null,
         ]);
 
+        $defenseRequest = DefenseRequest::latest()->first();
+
+     
+        $recipients = User::whereIn('role', ['Coordinator', 'Administrative Assistant'])->get();
+
+        foreach ($recipients as $recipient) {
+            Notification::create([
+                'user_id' => $recipient->id,
+                'type' => 'defense-request',
+                'title' => 'New Defense Request Submitted',
+                'message' => "{$defenseRequest->first_name} {$defenseRequest->last_name} submitted a new defense request for review.",
+                'link' => url("/defense-request/{$defenseRequest->id}"),
+            ]);
+        }
+
         return Redirect::back()->with('success', 'Your defense request has been submitted!');
     }
 
@@ -131,6 +148,16 @@ class DefenseRequestController extends Controller
         ]);
      
         $defenseRequest->load('lastStatusUpdater');
+        $student = User::where('school_id', $defenseRequest->school_id)->first();
+        if ($student) {
+            Notification::create([
+                'user_id' => $student->id,
+                'type' => 'defense-request',
+                'title' => 'Defense Request Status Updated',
+                'message' => "Your defense request has been {$defenseRequest->status}.",
+                'link' => url("/defense-request/{$defenseRequest->id}"),
+            ]);
+        }
         return response()->json([
             'success' => true,
             'status' => $defenseRequest->status,

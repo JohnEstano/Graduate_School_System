@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DefenseRequestController;
+use App\Http\Controllers\NotificationController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -44,7 +45,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::patch('/defense-requests/bulk-status', [DefenseRequestController::class, 'bulkUpdateStatus']);
     Route::patch('/defense-requests/bulk-priority', [DefenseRequestController::class, 'bulkUpdatePriority']);
 
-  
+
     // Comprehensive Exam route
     Route::get('comprehensive-exam', function () {
         return Inertia::render('student/submissions/comprehensive-exam/Index');
@@ -61,7 +62,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         return Inertia::render('honorarium/honorarium-summary/Index');
     })->name('honorarium-summary.index');
 
-    
+
 
     //Schedules route
     Route::get('schedules', function () {
@@ -85,10 +86,14 @@ Route::middleware(['auth', 'verified'])->group(function () {
         return Inertia::render('system-status');
     })->name('system-status');
 
+//Notifications api route
+    Route::get('/notifications', [NotificationController::class, 'index']);
+    Route::post('/notifications/read/{notification}', [NotificationController::class, 'markAsRead'])->middleware(['auth']);
+    Route::post('/notifications/read-all', [NotificationController::class, 'markAllAsRead'])->middleware(['auth']);
 });
 
-    
-  Route::get('/api/defense-requests/count', [DefenseRequestController::class, 'count']);
+
+Route::get('/api/defense-requests/count', [DefenseRequestController::class, 'count']);
 
 
 
