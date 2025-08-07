@@ -20,6 +20,8 @@ import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+// CHANGE 1: Import Avatar components for consistent UI
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
 import { SearchInput } from '@/components/ui/search-input';
 import AddProgramModal from './honorarium-modals/modal-add';
@@ -32,10 +34,10 @@ const breadcrumbs: BreadcrumbItem[] = [
 ];
 
 const initialRecords = [
-  { name: 'Master in Information Technology', program: 'MIT', recentlyUpdated: '2 hours ago', timeLastOpened: '12:09 PM', dateEdited: '2025-07-24' },
-  { name: 'Master in Business Administration', program: 'MBA', recentlyUpdated: '1 day ago', timeLastOpened: '9:30 AM', dateEdited: '2025-07-23' },
-  { name: 'Master of Computer Science', program: 'MCS', recentlyUpdated: '3 days ago', timeLastOpened: '3:45 PM', dateEdited: '2025-07-21' },
-  { name: 'Master of Arts in Education', program: 'MAED', recentlyUpdated: '5 days ago', timeLastOpened: '11:00 AM', dateEdited: '2025-07-19' },
+  { name: 'Master in Information Technology', program: 'MIT', recentlyUpdated: '2 hours ago', timeLastOpened: '12:09 PM', dateEdited: '2025-08-07' },
+  { name: 'Master in Business Administration', program: 'MBA', recentlyUpdated: '1 day ago', timeLastOpened: '9:30 AM', dateEdited: '2025-08-06' },
+  { name: 'Master of Computer Science', program: 'MCS', recentlyUpdated: '3 days ago', timeLastOpened: '3:45 PM', dateEdited: '2025-08-04' },
+  { name: 'Master of Arts in Education', program: 'MAED', recentlyUpdated: '5 days ago', timeLastOpened: '11:00 AM', dateEdited: '2025-08-02' },
 ];
 
 type ProgramRecord = typeof initialRecords[0];
@@ -95,10 +97,10 @@ export default function Index() {
       name: newProgramName.trim(),
       program: acronym,
       recentlyUpdated: 'Just now',
-      timeLastOpened: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      timeLastOpened: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
       dateEdited: new Date().toISOString().split('T')[0],
     };
-    setAllRecords((prev) => [...prev, newRecord]);
+    setAllRecords((prev) => [...prev, newRecord].sort((a, b) => new Date(b.dateEdited).getTime() - new Date(a.dateEdited).getTime()));
     setNewProgramName('');
     setNewProgramAcronym('');
     setShowAddModal(false);
@@ -208,53 +210,65 @@ export default function Index() {
             </Popover>
           </div>
         </div>
-        <div className="rounded-lg border shadow-sm">
-          <Table>
+        <div className="rounded-md overflow-x-auto border border-border bg-white dark:bg-[#121212] p-2">
+          <Table className="min-w-full text-sm">
             <TableHeader>
               <TableRow>
-                <TableHead className="pl-14 pr-4">Program</TableHead>
-                <TableHead>Updated</TableHead>
-                <TableHead>Time Last Opened</TableHead>
-                <TableHead>Date Edited</TableHead>
-                <TableHead className="text-center">Actions</TableHead>
+                <TableHead className="w-[45%] px-1 py-2">Program</TableHead>
+                <TableHead className="w-[15%] px-1 py-2">Updated</TableHead>
+                <TableHead className="w-[15%] px-1 py-2">Time</TableHead>
+                <TableHead className="w-[15%] px-1 py-2">Date Edited</TableHead>
+                <TableHead className="w-[10%] text-center px-1 py-2">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {paginatedRecords.map((record, index) => (
-                <TableRow key={index}>
-                  <TableCell className="flex items-center space-x-3 py-3 pl-4">
-                    <img src={`https://placehold.co/40x40/EBF4FF/76A9FA?text=${record.program.charAt(0)}`} alt="avatar" className="w-10 h-10 rounded-full" />
-                    <div>
-                      <div className="font-medium">{record.name}</div>
-                      <div className="text-sm text-muted-foreground">{record.program}</div>
-                    </div>
-                  </TableCell>
-                  <TableCell>{record.recentlyUpdated}</TableCell>
-                  <TableCell>{record.timeLastOpened}</TableCell>
-                  <TableCell>{record.dateEdited}</TableCell>
-                  <TableCell>
-                    <div className="flex items-center justify-center space-x-2">
-                      <Button variant="outline" size="sm" className="flex items-center" onClick={() => handleViewRecordsClick(record)}>
-                        <Eye className="w-4 h-4 mr-1.5" />
-                        View Records
-                      </Button>
-                      <Button variant="outline" size="icon">
-                        <Download className="w-4 h-4" />
-                      </Button>
-                    </div>
+              {paginatedRecords.length > 0 ? (
+                paginatedRecords.map((record, index) => (
+                  <TableRow key={index} className="hover:bg-muted/50">
+                    <TableCell className="flex items-center space-x-4 px-1 py-2">
+                      <Avatar className="h-10 w-10 flex-shrink-0 bg-blue-100 text-blue-600 dark:bg-blue-900 dark:text-blue-300">
+                        <AvatarFallback>{record.program.charAt(0)}</AvatarFallback>
+                      </Avatar>
+                      <div>
+                        <div className="font-medium">{record.name}</div>
+                        <div className="text-sm text-muted-foreground">{record.program}</div>
+                      </div>
+                    </TableCell>
+                    <TableCell className="px-1 py-2">{record.recentlyUpdated}</TableCell>
+                    <TableCell className="px-1 py-2">{record.timeLastOpened}</TableCell>
+                    <TableCell className="px-1 py-2">{record.dateEdited}</TableCell>
+                    <TableCell className="px-1 py-2">
+                      <div className="flex items-center justify-center space-x-2">
+                        <Button variant="outline" size="sm" className="rounded-md px-3 py-2 h-auto text-xs flex items-center gap-1" onClick={() => handleViewRecordsClick(record)}>
+                          <Eye className="w-4 h-4" />
+                          <span className="hidden sm:inline-block">View Records</span>
+                        </Button>
+                        <Button variant="outline" size="icon" className="rounded-md h-auto p-2">
+                          <Download className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))
+              ) : (
+                <TableRow>
+                  <TableCell colSpan={5} className="h-24 text-center">
+                    No results found.
                   </TableCell>
                 </TableRow>
-              ))}
+              )}
             </TableBody>
           </Table>
         </div>
-        <div className="mt-4 flex justify-end items-center space-x-2 text-sm text-muted-foreground">
-          <span>Page {currentPage} of {totalPages}</span>
-          <Button variant="outline" size="icon" onClick={() => handlePageChange(1)} disabled={currentPage === 1}><ChevronsLeft className="w-4 h-4" /></Button>
-          <Button variant="outline" size="icon" onClick={() => handlePageChange(currentPage - 1)} disabled={currentPage === 1}><ChevronLeft className="w-4 h-4" /></Button>
-          <Button variant="outline" size="icon" onClick={() => handlePageChange(currentPage + 1)} disabled={currentPage === totalPages}><ChevronRight className="w-4 h-4" /></Button>
-          <Button variant="outline" size="icon" onClick={() => handlePageChange(totalPages)} disabled={currentPage === totalPages}><ChevronsRight className="w-4 h-4" /></Button>
-        </div>
+        {totalPages > 1 && (
+          <div className="mt-4 flex justify-end items-center space-x-2 text-sm text-muted-foreground">
+            <span>Page {currentPage} of {totalPages}</span>
+            <Button variant="outline" size="icon" onClick={() => handlePageChange(1)} disabled={currentPage === 1}><ChevronsLeft className="w-4 h-4" /></Button>
+            <Button variant="outline" size="icon" onClick={() => handlePageChange(currentPage - 1)} disabled={currentPage === 1}><ChevronLeft className="w-4 h-4" /></Button>
+            <Button variant="outline" size="icon" onClick={() => handlePageChange(currentPage + 1)} disabled={currentPage === totalPages}><ChevronRight className="w-4 h-4" /></Button>
+            <Button variant="outline" size="icon" onClick={() => handlePageChange(totalPages)} disabled={currentPage === totalPages}><ChevronsRight className="w-4 h-4" /></Button>
+          </div>
+        )}
       </div>
       <AddProgramModal show={showAddModal} onClose={() => setShowAddModal(false)} onSubmit={handleAddProgram} newProgramName={newProgramName} setNewProgramName={setNewProgramName} newProgramAcronym={newProgramAcronym} setNewProgramAcronym={setNewProgramAcronym} />
       <RemoveProgramModal show={showRemoveModal} onClose={() => setShowRemoveModal(false)} onSubmit={handleRemoveProgram} programToRemove={programToRemove} setProgramToRemove={setProgramToRemove} uniquePrograms={uniquePrograms} />
