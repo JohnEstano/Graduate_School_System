@@ -34,6 +34,8 @@ type TableDefenseRequestsProps = {
   onStatusChange: (id: number, status: string) => Promise<void>;
   onPriorityChange: (id: number, priority: string) => Promise<void>;
   formatLocalDateTime: (isoString?: string) => string;
+  openDropdownId?: number | null;
+  setOpenDropdownId?: (id: number | null) => void;
 };
 
 export default function TableDefenseRequests({
@@ -53,6 +55,8 @@ export default function TableDefenseRequests({
   onStatusChange,
   onPriorityChange,
   formatLocalDateTime,
+  openDropdownId,
+  setOpenDropdownId,
 }: TableDefenseRequestsProps) {
   const statusIcon = (status: string) => {
     switch (status) {
@@ -125,11 +129,11 @@ export default function TableDefenseRequests({
               </TableCell>
               {columns.title && (
                 <TableCell
-                  className="px-1 py-2 font-semibold truncate cursor-pointer"
-                  style={{ maxWidth: '140px' }}
+                  className="px-1 py-2 font-semibold  truncate cursor-pointer"
+                  style={{ maxWidth: '130px' }}
                   onClick={() => toggleSelectOne(r.id)}
                 >
-                  {r.thesis_title.length > 40 ? r.thesis_title.slice(0, 37) + "..." : r.thesis_title}
+                  {r.thesis_title.length > 100 ? r.thesis_title.slice(0, 37) + "..." : r.thesis_title}
                 </TableCell>
               )}
               {columns.presenter && (
@@ -151,11 +155,15 @@ export default function TableDefenseRequests({
               )}
               {columns.status && (
                 <TableCell className="px-1 py-2 text-center">
-                  <DropdownMenu>
+                  <DropdownMenu
+                    open={openDropdownId === r.id}
+                    onOpenChange={(open) => setOpenDropdownId && setOpenDropdownId(open ? r.id : null)}
+                  >
                     <DropdownMenuTrigger asChild>
                       <Badge
                         variant="outline"
                         className="cursor-pointer"
+                        onClick={() => setOpenDropdownId && setOpenDropdownId(r.id)}
                       >
                         <div className="flex items-center justify-center gap-1">
                           {statusIcon(r.status)}
@@ -167,7 +175,10 @@ export default function TableDefenseRequests({
                       {['Pending', 'In progress', 'Approved', 'Rejected'].map((status) => (
                         <DropdownMenuItem
                           key={status}
-                          onClick={() => onStatusChange(r.id, status)}
+                          onClick={async () => {
+                            if (setOpenDropdownId) setOpenDropdownId(null); // CLOSE DROPDOWN
+                            await onStatusChange(r.id, status); // This will open the confirmation dialog
+                          }}
                           className="flex items-center justify-between"
                         >
                           <span className="flex items-center gap-1">
@@ -246,7 +257,7 @@ export default function TableDefenseRequests({
                       <Info />
                     </Button>
                   </DialogTrigger>
-                  <DialogContent className="max-w-5xl min-w-260 w-full max-h-[90vh]">
+                  <DialogContent className="max-w-3xl min-w-260 w-full max-h-[90vh]">
                     <div className="max-h-[80vh] overflow-y-auto px-1">
                       {selectedRequest && (
                         <Details

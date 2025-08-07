@@ -76,6 +76,7 @@ export default function ShowAllRequests({
         id?: number;
         value?: string;
     }>({ open: false, type: null });
+    const [openDropdownId, setOpenDropdownId] = useState<number | null>(null);
 
     const perPage = 10;
 
@@ -729,6 +730,8 @@ export default function ShowAllRequests({
                         onStatusChange={handleStatusChange}
                         onPriorityChange={handlePriorityChange}
                         formatLocalDateTime={formatLocalDateTime}
+                        openDropdownId={openDropdownId}
+                        setOpenDropdownId={setOpenDropdownId}
                     />
                 </CardContent>
                 <CardFooter className="flex justify-between items-center text-sm px-2 pt-3 pb-2">
