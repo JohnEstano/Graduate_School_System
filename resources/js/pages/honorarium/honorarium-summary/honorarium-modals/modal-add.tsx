@@ -46,8 +46,8 @@ export default function AddProgramModal({
         </DialogHeader>
         {/* We use a form with an ID to link it to the submit button in the footer. */}
         <form id="add-program-form" onSubmit={onSubmit} className="grid gap-4 py-4">
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="programName" className="text-right">
+          <div className="grid grid-cols-1 items-center gap-4">
+            <Label htmlFor="programName" className="text-left">
               Name
             </Label>
             <Input
@@ -59,8 +59,8 @@ export default function AddProgramModal({
               required
             />
           </div>
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="programAcronym" className="text-right">
+          <div className="grid grid-cols-1 items-center gap-4">
+            <Label htmlFor="programAcronym" className="text-left">
               Acronym
             </Label>
             <Input
