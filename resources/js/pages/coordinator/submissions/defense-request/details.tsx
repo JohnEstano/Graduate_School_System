@@ -178,7 +178,7 @@ export default function Details({
         </div>
 
 
-        {/*Scroll are for the details.tsx  */}
+       
         <ScrollArea className="h-[calc(94vh-240px)] w-full rounded-md p-1">
           <div className="flex flex-col md:flex-row gap-2 mb-8 px-2 py-4">
             <div className="flex-1 flex flex-col gap-4 ">

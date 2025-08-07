@@ -257,7 +257,7 @@ export default function TableDefenseRequests({
                       <Info />
                     </Button>
                   </DialogTrigger>
-                  <DialogContent className="max-w-5xl min-w-260 w-full max-h-[90vh]">
+                  <DialogContent className="max-w-3xl min-w-260 w-full max-h-[90vh]">
                     <div className="max-h-[80vh] overflow-y-auto px-1">
                       {selectedRequest && (
                         <Details
