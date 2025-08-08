@@ -198,12 +198,12 @@ export default function IndividualRecordModal({
               Honorarium summary for the {record.program} program. Last updated: {record.dateEdited}.
             </DialogDescription>
             <div className="flex justify-end space-x-2">
-              <Button onClick={() => setIsEditing(!isEditing)} variant="outline">
+              <Button onClick={() => setIsEditing(!isEditing)} variant="outline" className="rounded-md px-3 py-2 h-auto text-xs flex items-center gap-1">
                 <Pencil className="h-4 w-4 mr-2" />
                 {isEditing ? "Done" : "Edit Panelists"}
               </Button>
               {isEditing && (
-                <Button onClick={() => setShowAddModal(true)} variant="outline" className="text-green-500 hover:text-green-600">
+                <Button onClick={() => setShowAddModal(true)} variant="outline" className="rounded-md px-3 py-2 h-auto text-xs flex items-center gap-1 text-green-500 hover:text-green-600">
                   <Plus className="h-4 w-4 mr-2" />
                   Add Panelist
                 </Button>
@@ -211,15 +211,15 @@ export default function IndividualRecordModal({
             </div>
           </DialogHeader>
 
-          <div className="border rounded-lg w-auto overflow-x-auto">
-            <Table className="table-auto w-full">
+          <div className="rounded-md overflow-x-auto border border-border bg-white dark:bg-[#121212] p-2">
+            <Table className="min-w-full text-sm">
               <TableHeader>
-                <TableRow className="bg-muted/50 hover:bg-muted/50">
-                  <TableHead className="w-[250px]">Panelist</TableHead>
-                  <TableHead>Defense Type</TableHead>
-                  <TableHead>Received Date</TableHead>
-                  <TableHead className="text-right">Amount Received</TableHead>
-                  {isEditing && <TableHead className="text-right">Actions</TableHead>}
+                <TableRow className="hover:bg-muted/50">
+                  <TableHead className="w-[250px] px-1 py-2">Panelist</TableHead>
+                  <TableHead className="px-1 py-2">Defense Type</TableHead>
+                  <TableHead className="px-1 py-2">Received Date</TableHead>
+                  <TableHead className="text-right px-1 py-2">Amount Received</TableHead>
+                  {isEditing && <TableHead className="text-right px-1 py-2">Actions</TableHead>}
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -234,7 +234,7 @@ export default function IndividualRecordModal({
                         exit={{ opacity: 0, height: 0 }}
                         transition={{ duration: 0.3, ease: "easeInOut" }}
                       >
-                        <TableCell>
+                        <TableCell className="px-1 py-2">
                           <div className="flex items-center gap-3">
                             <Avatar className="w-9 h-9 bg-red-100 text-red-600 dark:bg-red-900 dark:text-red-300">
                               <AvatarFallback>{item.panelistName.charAt(0)}</AvatarFallback>
@@ -245,11 +245,11 @@ export default function IndividualRecordModal({
                             </div>
                           </div>
                         </TableCell>
-                        <TableCell>{item.defenseType}</TableCell>
-                        <TableCell>{item.receivedDate}</TableCell>
-                        <TableCell className="text-right">₱{item.amount.toFixed(2)}</TableCell>
+                        <TableCell className="px-1 py-2">{item.defenseType}</TableCell>
+                        <TableCell className="px-1 py-2">{item.receivedDate}</TableCell>
+                        <TableCell className="text-right px-1 py-2">₱{item.amount.toFixed(2)}</TableCell>
                         {isEditing && (
-                          <TableCell className="text-right">
+                          <TableCell className="text-right px-1 py-2">
                             <Button
                               variant="ghost"
                               size="icon"
@@ -264,7 +264,7 @@ export default function IndividualRecordModal({
                     ))
                   ) : (
                     <TableRow>
-                      <TableCell colSpan={isEditing ? 5 : 4} className="text-center h-24">
+                      <TableCell colSpan={isEditing ? 5 : 4} className="h-24 text-center">
                         No honorarium records found for this program.
                       </TableCell>
                     </TableRow>
