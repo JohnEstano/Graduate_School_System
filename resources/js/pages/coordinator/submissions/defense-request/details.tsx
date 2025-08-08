@@ -42,7 +42,7 @@ export type DefenseRequestFull = {
   reference_no?: string;
   last_status_updated_by?: string;
   last_status_updated_at?: string;
-  status?: 'Pending' | 'In progress' | 'Approved' | 'Rejected';
+  status?: 'Pending' | 'Approved' | 'Rejected';
   priority?: 'Low' | 'Medium' | 'High';
 };
 
@@ -119,17 +119,15 @@ export default function Details({
 
   return (
     <div>
-      <div className="w-full max-w-6xl  mx-auto px-4 py-7">
-        <div className="flex flex-row items-start justify-between mb-5">
+      <div className="w-full max-w-6xl mx-auto px-4 py-4">
+        <div className="flex flex-row items-start justify-between mb-2">
           <div className="flex items-center gap-2 text-2xl font-semibold">
             <div className="w-8 h-8 rounded-md bg-rose-100 flex items-center justify-center">
               <Info className="size-5 text-rose-500" />
             </div>
             Details
           </div>
-
           <div className="flex items-center gap-2">
-
             {request.status && (
               <span
                 className={
@@ -138,9 +136,7 @@ export default function Details({
                     ? "bg-green-100 text-green-600"
                     : request.status === "Rejected"
                       ? "bg-red-100 text-red-500"
-                      : request.status === "In progress"
-                        ? "bg-yellow-100 text-yellow-600"
-                        : "bg-gray-100 text-gray-500")
+                      : "bg-gray-100 text-gray-500")
                 }
               >
                 {request.status}
@@ -177,11 +173,9 @@ export default function Details({
           </div>
         </div>
 
-
-       
-        <ScrollArea className="h-[calc(94vh-240px)] w-full rounded-md p-1">
-          <div className="flex flex-col md:flex-row gap-2 mb-8 px-2 py-4">
-            <div className="flex-1 flex flex-col gap-4 ">
+        <ScrollArea className="h-[calc(94vh-230px)] w-full rounded-md p-0">
+          <div className="flex flex-col md:flex-row gap-2 mb-4 px-2 py-2">
+            <div className="flex-1 flex flex-col gap-4">
               <div className="flex gap-6 items-start justify-between">
                 <div className="flex flex-col gap-1">
                   <h3 className="text-xs text-zinc-500">Thesis Title</h3>
@@ -195,10 +189,7 @@ export default function Details({
                       <span className="text-xs text-muted-foreground">—</span>
                     )}
                   </div>
-
                 </div>
-
-
               </div>
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-start">
                 <div>
@@ -212,7 +203,6 @@ export default function Details({
                     </span>
                   </div>
                 </div>
-
                 <div>
                   <h4 className="text-xs text-zinc-500 mb-1">Program</h4>
                   <span className="text-sm font-medium  max-w-[50px] ">
@@ -229,7 +219,6 @@ export default function Details({
                   <h4 className="text-xs text-zinc-500 mb-1">Mode</h4>
                   <p className="text-sm font-medium"> {request.mode_defense.replace('-', ' ')}</p>
                 </div>
-
               </div>
             </div>
             <div className="hidden md:flex items-stretch">
@@ -256,7 +245,7 @@ export default function Details({
             </div>
           </div>
 
-          <div className="space-y-6 px-2 pb-4">
+          <div className="space-y-4 px-2 pb-2">
             <Separator />
             <div>
               <h4 className="text-xs text-zinc-500 mb-2">Attachments</h4>
@@ -327,37 +316,27 @@ export default function Details({
             </div>
           </div>
         </ScrollArea>
-
       </div>
 
-      {/*The footer buttons*/}
-      <div className="w-full rounded-md   justify-end flex gap-1 flex-wrap text-xs">
+    
+      <div className="w-full rounded-md justify-end flex gap-1 flex-wrap text-xs mt-2 pb-2">
         <Button
           variant="outline"
-          className=" px-3 py-2 rounded-md h-auto text-xs flex items-center gap-1"
-          disabled={loading === 'In progress'}
-          onClick={() => handleStatusUpdate('In progress')}
-        >
-          <Clock size={12} /> Mark as In Progress
-        </Button>
-        <Button
-          variant="outline"
-          className=" px-3 py-2 rounded-md h-auto text-xs flex items-center gap-1"
+          className="px-3 py-2 rounded-md h-auto text-xs flex items-center gap-1"
           disabled={loading === 'Approved'}
           onClick={() => handleStatusUpdate('Approved')}
         >
-          <CheckCircle size={12} className="text-green-500" /> Mark as Approved
+          <CheckCircle size={12} className="text-green-500" /> Approve
         </Button>
         <Button
           variant="outline"
-          className=" px-3 py-2 rounded-md h-auto text-xs flex items-center gap-1"
+          className="px-3 py-2 rounded-md h-auto text-xs flex items-center gap-1"
           disabled={loading === 'Rejected'}
           onClick={() => handleStatusUpdate('Rejected')}
         >
-          <CircleX size={12} className="text-red-500" /> Mark as Rejected
+          <CircleX size={12} className="text-red-500" /> Reject
         </Button>
       </div>
     </div>
-
   );
 }
