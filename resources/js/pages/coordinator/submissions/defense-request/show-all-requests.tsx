@@ -863,27 +863,27 @@ export default function ShowAllRequests({
                                 </div>
                                 {/* Dialog for Details */}
                                 <Dialog open={!!selectedRequest} onOpenChange={open => { if (!open) setSelectedRequest(null); }}>
-                                    <DialogContent className="max-w-3xl min-w-260 w-full max-h-[90vh]">
-                                        <div className="max-h-[80vh] overflow-y-auto px-1">
-                                            {selectedRequest && (
-                                              <Details
-                                                request={selectedRequest as any}
-                                                onNavigate={dir => {
-                                                  const ni = dir === 'next' ? selectedIndex + 1 : selectedIndex - 1;
-                                                  const arr = pagedRequests['approved'];
-                                                  if (ni >= 0 && ni < arr.length) {
-                                                    setSelectedRequest(arr[ni]);
-                                                    setSelectedIndex(ni);
-                                                  }
-                                                }}
-                                                disablePrev={selectedIndex === 0}
-                                                disableNext={selectedIndex === pagedRequests['approved'].length - 1}
-                                                onStatusAction={handleRequestStatusAction}
-                                                onPriorityChange={onPriorityChange}
-                                              />
-                                            )}
-                                        </div>
-                                    </DialogContent>
+                                  <DialogContent className="max-w-3xl min-w-260 w-full max-h-[90vh]">
+                                    <div className="max-h-[80vh] overflow-y-auto px-1">
+                                      {selectedRequest && (
+                                        <Details
+                                          request={selectedRequest as any}
+                                          onNavigate={dir => {
+                                            const arr = pagedRequests[tab];
+                                            const ni = dir === 'next' ? selectedIndex + 1 : selectedIndex - 1;
+                                            if (ni >= 0 && ni < arr.length) {
+                                              setSelectedRequest(arr[ni]);
+                                              setSelectedIndex(ni);
+                                            }
+                                          }}
+                                          disablePrev={selectedIndex === 0}
+                                          disableNext={selectedIndex === pagedRequests[tab].length - 1}
+                                          onStatusAction={handleRequestStatusAction}
+                                          onPriorityChange={onPriorityChange}
+                                        />
+                                      )}
+                                    </div>
+                                  </DialogContent>
                                 </Dialog>
                             </TabsContent>
                         </Tabs>
