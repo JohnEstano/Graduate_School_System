@@ -4,8 +4,9 @@ import { Head, Link, usePage } from '@inertiajs/react';
 import ShowAllRequests, { type DefenseRequestSummary } from './show-all-requests';
 import ShowAllHonorarium from './show-all-honorarium';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { useState } from "react";
-import { Box, CalendarFold} from 'lucide-react';
+import { Box, CalendarFold } from 'lucide-react';
 
 const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Dashboard', href: '/dashboard' },
@@ -29,10 +30,8 @@ export default function DefenseRequestIndex() {
     const isCoordinator = role === 'Coordinator';
     const [tab, setTab] = useState("requests");
 
-   
     const [defenseRequests, setDefenseRequests] = useState<DefenseRequestSummary[]>(initialRequests || []);
 
-    
     const handleStatusChange = (
         id: number,
         newStatus: DefenseRequestSummary["status"]
@@ -47,26 +46,22 @@ export default function DefenseRequestIndex() {
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Defense Requests" />
-            <div className="flex h-full flex-1 flex-col gap-4 px-2 pt-4">
-                <div className="flex items-center justify-between">
+            <ScrollArea className="flex-1 flex flex-col gap-4 px-2 pt-4 w-full max-w-full min-h-[90vh]">
+
+                {/* <div className="flex items-center  px-2 pt-2 justify-between">
                     <Tabs value={tab} onValueChange={setTab} className="">
                         <TabsList>
                             <TabsTrigger value="requests"><Box />Requests</TabsTrigger>
                             <TabsTrigger value="honorarium">Honorariums</TabsTrigger>
                         </TabsList>
                     </Tabs>
-                    <Link
-                        href="/schedules"
-                        className="text-sm hover:underline flex items-center gap-2 px-2 py-1 text-primary"
-                        style={{ width: "auto" }}
-                    >
-                        <CalendarFold className="size-4" />
-                        View schedules
-                    </Link>
                 </div>
-                <Tabs value={tab} onValueChange={setTab} className="w-full">
-                    <TabsContent value="requests">
-                        <div className="flex-1">
+                */}
+
+                
+                <Tabs value={tab} onValueChange={setTab} className="flex-1 w-full max-w-full">
+                    <TabsContent value="requests" className="flex-1 flex flex-col w-full max-w-full">
+                        <div className="flex-1 flex flex-col w-full max-w-full overflow-x-auto">
                             {isCoordinator ? (
                                 <ShowAllRequests
                                     defenseRequests={defenseRequests}
@@ -82,13 +77,13 @@ export default function DefenseRequestIndex() {
                             )}
                         </div>
                     </TabsContent>
-                    <TabsContent value="honorarium">
-                        <div className='flex-1'>
+                    <TabsContent value="honorarium" className="flex-1 flex flex-col w-full max-w-full">
+                        <div className='flex-1 w-full max-w-full overflow-x-auto'>
                             <ShowAllHonorarium defenseRequests={defenseRequests} />
                         </div>
                     </TabsContent>
                 </Tabs>
-            </div>
+            </ScrollArea>
         </AppLayout>
     );
 }
