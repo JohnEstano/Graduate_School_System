@@ -92,3 +92,13 @@ export type DefenseRequestSummary = {
     last_status_updated_by?: string;
     last_status_updated_at?: string;
 };
+
+export interface Notification {
+  id: number;
+  type: string;
+  title: string;
+  message: string;
+  link?: string;
+  read: boolean;
+  created_at: string;
+}

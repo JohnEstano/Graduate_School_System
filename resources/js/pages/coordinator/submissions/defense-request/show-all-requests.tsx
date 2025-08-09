@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
+import { startOfDay, endOfDay, isWithinInterval } from 'date-fns';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter } from '@/components/ui/card';
@@ -15,8 +16,10 @@ import {
     Settings2,
     CircleX,
     X,
-    Printer
+    Printer,
+    Calendar as CalendarIcon,
 } from 'lucide-react';
+import { ChevronsLeft, ChevronLeft, ChevronRight, ChevronsRight } from 'lucide-react';
 
 import {
     Popover,
@@ -30,6 +33,11 @@ import {toast, Toaster} from 'sonner';
 import { SummaryCards } from './summary-cards';
 import { Badge } from "@/components/ui/badge";
 import PrintSelected from "./print-selected";
+
+// Add shadcn/ui date picker
+import { format } from 'date-fns';
+import { Calendar } from "@/components/ui/calendar";
+import { DateRange } from "react-day-picker"; // If using react-day-picker types
 
 export type DefenseRequestSummary = {
     id: number;
@@ -51,7 +59,7 @@ export default function ShowAllRequests({
     onStatusChange,
 }: {
     defenseRequests: DefenseRequestSummary[];
-    onStatusChange: (id: number, newStatus: DefenseRequestSummary["status"]) => void; // <-- FIX HERE
+    onStatusChange: (id: number, newStatus: DefenseRequestSummary["status"]) => void;
 }) {
     const [defenseRequests, setDefenseRequests] = useState(initialRequests);
     const [search, setSearch] = useState('');
@@ -76,6 +84,11 @@ export default function ShowAllRequests({
         id?: number;
         value?: string;
     }>({ open: false, type: null });
+    const [openDropdownId, setOpenDropdownId] = useState<number | null>(null);
+
+    // Date filter state
+    const [datePopoverOpen, setDatePopoverOpen] = useState(false);
+    const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
 
     const perPage = 10;
 
@@ -105,8 +118,17 @@ export default function ShowAllRequests({
                     priorityFilter.includes(r.priority)
             );
         }
+      
+        if (dateRange?.from && dateRange?.to) {
+            const start = startOfDay(dateRange.from);
+            const end = endOfDay(dateRange.to);
+            result = result.filter((r) => {
+                const d = startOfDay(new Date(r.date_of_defense));
+                return isWithinInterval(d, { start, end });
+            });
+        }
         return result;
-    }, [search, statusFilter, priorityFilter, defenseRequests]);
+    }, [search, statusFilter, priorityFilter, defenseRequests, dateRange]);
 
     const sorted = useMemo(() => {
         if (!sortDir) return filtered;
@@ -156,7 +178,6 @@ export default function ShowAllRequests({
       return (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content;
     }
 
-   
     const onStatusChangeInternal = async (id: number, status: string): Promise<void> => {
         const res = await fetch(`/defense-requests/${id}/status`, {
             method: 'PATCH',
@@ -425,7 +446,7 @@ export default function ShowAllRequests({
         setConfirmDialog({ open: true, type: 'priority', id, value: priority });
     };
     const handleBulkStatus = (status: string) => {
-        setConfirmDialog({ open: true, type: 'bulk-status', value: status });
+        setConfirmDialog({ open: true, type: 'bulk-status', value: status === 'Accepted' ? 'Approved' : status });
     };
     const handleBulkPrint = () => {
         const selectedRows = defenseRequests.filter(r => selected.includes(r.id));
@@ -465,7 +486,7 @@ export default function ShowAllRequests({
     const rejected = defenseRequests.filter(r => r.status === "Rejected").length;
 
     return (
-        <div className="h-screen p-2 flex flex-col gap-2">
+        <div className="p-2 flex flex-col gap-2">
              <SummaryCards
               total={total}
               pending={pending}
@@ -475,9 +496,9 @@ export default function ShowAllRequests({
             />
             <Toaster position="top-right" richColors  />
            
-            <Card className="flex-1 flex flex-col shadow-md  rounded-lg p-2">
-                <div className="flex flex-wrap items-center justify-between px-2 pt-2">
-                    <div className="flex flex-1 justify-between items-center flex-wrap gap-2 px-2 pt-2">
+            <Card className="flex flex-col border-none shadow-none p-1">
+                <div className="flex flex-wrap items-center justify-between ">
+                    <div className="flex flex-1 justify-between items-center flex-wrap gap-2 ">
                         <div className="flex flex-1 items-center gap-2">
                             <div className="relative">
                                 <Search className="absolute left-2 top-2 h-4 w-4 text-muted-foreground" />
@@ -489,11 +510,10 @@ export default function ShowAllRequests({
                                         setSearch(e.currentTarget.value);
                                         setPage(1);
                                     }}
-                                    className="pl-8 h-8 text-sm w-[300px]"
+                                    className="pl-8 h-8  text-sm w-[250px]"
                                 />
                             </div>
                             <div className="flex gap-2">
-                                
                                
                                 <Popover>
                                     <PopoverTrigger asChild>
@@ -515,7 +535,7 @@ export default function ShowAllRequests({
                                         </Button>
                                     </PopoverTrigger>
                                     <PopoverContent className="w-44 p-1" side="bottom" align="start">
-                                        {['Pending', 'In progress', 'Approved', 'Rejected'].map(
+                                        {['Pending', 'Approved', 'Rejected'].map(
                                             (s) => (
                                                 <div
                                                     key={s}
@@ -542,7 +562,6 @@ export default function ShowAllRequests({
                                         </Button>
                                     </PopoverContent>
                                 </Popover>
-
                             
                                 <Popover>
                                     <PopoverTrigger asChild>
@@ -591,20 +610,57 @@ export default function ShowAllRequests({
                                         </Button>
                                     </PopoverContent>
                                 </Popover>
-                                {(statusFilter.length > 0 || priorityFilter.length > 0) && (
-                                <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    className="h-8 px-3 flex items-center gap-1"
-                                    onClick={() => {
-                                        setStatusFilter([]);
-                                        setPriorityFilter([]);
-                                    }}
-                                    aria-label="Reset all filters"
-                                >
-                                    <X className="w-4 h-4 rose-500" />
-                                    Reset
-                                </Button>
+                               
+                                <Popover open={datePopoverOpen} onOpenChange={setDatePopoverOpen}>
+                                    <PopoverTrigger asChild>
+                                        <Button
+                                            variant="outline"
+                                            className="rounded-md border-dashed text-xs h-8 px-3 flex items-center gap-1"
+                                        >
+                                            <CalendarIcon size={14} />
+                                            Date
+                                            {dateRange?.from && dateRange?.to && (
+                                                <Badge
+                                                    variant="secondary"
+                                                    className="ml-1 px-2 py-0.5 rounded-full text-xs bg-accent text-accent-foreground"
+                                                >
+                                                    {`${format(dateRange.from, 'MMM dd, yyyy')} - ${format(dateRange.to, 'MMM dd, yyyy')}`}
+                                                </Badge>
+                                            )}
+                                        </Button>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-auto p-2" side="bottom" align="start">
+                                        <Calendar
+                                            mode="range"
+                                            selected={dateRange}
+                                            onSelect={setDateRange}
+                                          
+                                        />
+                                        <Button
+                                            size="sm"
+                                            variant="ghost"
+                                            className="w-full mt-2"
+                                            onClick={() => setDateRange(undefined)}
+                                        >
+                                            <span>Clear Dates</span>
+                                        </Button>
+                                    </PopoverContent>
+                                </Popover>
+                                {(statusFilter.length > 0 || priorityFilter.length > 0 || dateRange?.from || dateRange?.to) && (
+                                    <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        className="h-8 px-3 flex items-center gap-1"
+                                        onClick={() => {
+                                            setStatusFilter([]);
+                                            setPriorityFilter([]);
+                                            setDateRange(undefined);
+                                        }}
+                                        aria-label="Reset all filters"
+                                    >
+                                        <X className="w-4 h-4 rose-500" />
+                                        Reset
+                                    </Button>
                                 )}
                             </div>
                         </div>
@@ -616,7 +672,7 @@ export default function ShowAllRequests({
                                         variant="outline"
                                         className="rounded-md border-dashed text-xs h-8 px-3"
                                     >
-                                        <Settings2 /> View
+                                        <Settings2 /> 
                                     </Button>
                                 </PopoverTrigger>
                                 <PopoverContent className="w-48 p-1" side="bottom" align="end">
@@ -660,104 +716,139 @@ export default function ShowAllRequests({
                         </div>
                     </div>
                 </div>
-                <CardContent className="flex-1 overflow-auto">
-                    <Separator className='mb-2' />
-                    <div className="flex gap-1 pb-2 flex-wrap text-xs">
-                        <Button
-                            variant="outline"
-                            className="rounded-full px-3 py-2 h-auto text-xs flex items-center gap-1"
-                            onClick={() => {
-                                if (selected.length === 0) return;
-                                handleBulkStatus('In progress');
-                            }}
-                            disabled={selected.length === 0}
-                        >
-                        <Clock size={12} /> Mark as In Progress
-                        </Button>
-                        <Button
-                            variant="outline"
-                            className="rounded-full px-3 py-2 h-auto text-xs flex items-center gap-1"
-                            onClick={() => {
-                                if (selected.length === 0) return;
-                                handleBulkStatus('Approved');
-                            }}
-                            disabled={selected.length === 0}
-                        >
-                            <CheckCircle size={12} className='text-green-500' /> Mark as Approved
-                        </Button>
-                        <Button
-                            variant="outline"
-                            className="rounded-full px-3 py-2 h-auto text-xs flex items-center gap-1"
-                            onClick={() => {
-                                if (selected.length === 0) return;
-                                handleBulkStatus('Rejected');
-                            }}
-                            disabled={selected.length === 0}
-                        >
-                            <CircleX size={12}  className='text-red-500'/> Mark as Rejected
-                        </Button>
-                        <Button
-                            variant="outline"
-                            className="rounded-full px-3 py-2 h-auto text-xs flex items-center gap-1"
-                            disabled={selected.length === 0}
-                        >
-                            <Trash2 size={12} /> Delete
-                        </Button>
-                        <Button
-                            variant="outline"
-                            className="rounded-full px-3 py-2 h-auto text-xs flex items-center gap-1"
-                            onClick={handleBulkPrint}
-                            disabled={selected.length === 0}
-                        >
-                            <Printer size={12} /> Print
-                        </Button>
+                <CardContent className="ps-0 pe-0">
+                    <div className="bg-white w-full max-w-full overflow-x-auto relative">
+                        {selected.length > 0 && (
+                            <div className="fixed left-1/2 z-30 -translate-x-1/2 bottom-4 md:bottom-6 flex items-center gap-1 bg-white border border-border shadow-lg rounded-lg px-4 py-1 text-xs animate-in fade-in slide-in-from-bottom-2">
+                                <span className="font-semibold min-w-[70px] text-center">{selected.length} selected</span>
+                                <Separator orientation="vertical" className="h-5 mx-1" />
+                                <div className="flex gap-1">
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="px-2 py-1 h-7 w-auto text-xs flex items-center gap-1"
+                                        onClick={() => handleBulkStatus('Approved')}
+                                        aria-label="Mark as Approved"
+                                    >
+                                        <CheckCircle size={13} className="text-green-500" />
+                                        <span className="hidden sm:inline">Approve</span>
+                                    </Button>
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className=" px-2 py-1 h-7 w-auto text-xs flex items-center gap-1"
+                                        onClick={() => handleBulkStatus('Rejected')}
+                                        aria-label="Mark as Rejected"
+                                    >
+                                        <CircleX size={13} className="text-red-500" />
+                                        <span className="hidden sm:inline">Reject</span>
+                                    </Button>
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className=" px-2 py-1 h-7 w-auto text-xs flex items-center gap-1"
+                                        // onClick={...}
+                                        aria-label="Delete"
+                                    >
+                                        <Trash2 size={13} />
+                                        <span className="hidden sm:inline">Delete</span>
+                                    </Button>
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className=" px-2 py-1 h-7 w-auto text-xs flex items-center gap-1"
+                                        onClick={handleBulkPrint}
+                                        aria-label="Print"
+                                    >
+                                        <Printer size={13} />
+                                        <span className="hidden sm:inline">Print</span>
+                                    </Button>
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className=" px-1 py-1 h-7 w-auto text-xs flex items-center"
+                                        onClick={() => setSelected([])}
+                                        aria-label="Clear selection"
+                                    >
+                                        <X size={14} />
+                                    </Button>
+                                </div>
+                            </div>
+                        )}
+                        <Separator className="mb-2" />
+                        <TableDefenseRequests
+                            paged={paged}
+                            columns={columns}
+                            selected={selected}
+                            toggleSelectOne={toggleSelectOne}
+                            headerChecked={headerChecked}
+                            toggleSelectAll={toggleSelectAll}
+                            toggleSort={toggleSort}
+                            sortDir={sortDir}
+                            setSelectedRequest={(r) => setSelectedRequest(r)}
+                            setSelectedIndex={setSelectedIndex}
+                            sorted={sorted}
+                            selectedRequest={selectedRequest}
+                            selectedIndex={selectedIndex}
+                            onStatusChange={handleStatusChange}
+                            onPriorityChange={handlePriorityChange}
+                            formatLocalDateTime={formatLocalDateTime}
+                            openDropdownId={openDropdownId}
+                            setOpenDropdownId={setOpenDropdownId}
+                        />
                     </div>
-                    <TableDefenseRequests
-                        paged={paged}
-                        columns={columns}
-                        selected={selected}
-                        toggleSelectOne={toggleSelectOne}
-                        headerChecked={headerChecked}
-                        toggleSelectAll={toggleSelectAll}
-                        toggleSort={toggleSort}
-                        sortDir={sortDir}
-                        setSelectedRequest={(r) => setSelectedRequest(r)}
-                        setSelectedIndex={setSelectedIndex}
-                        sorted={sorted}
-                        selectedRequest={selectedRequest}
-                        selectedIndex={selectedIndex}
-                        onStatusChange={handleStatusChange}
-                        onPriorityChange={handlePriorityChange}
-                        formatLocalDateTime={formatLocalDateTime}
-                    />
                 </CardContent>
                 <CardFooter className="flex justify-between items-center text-sm px-2 pt-3 pb-2">
-                    <div>
-                        {filtered.length} request
-                        {filtered.length !== 1 && 's'}
-                    </div>
-                    <div className="flex items-center gap-2">
-                        <Button
-                            size="sm"
-                            variant="outline"
-                            disabled={page === 1}
-                            onClick={() => setPage((p) => p - 1)}
-                        >
-                            Prev
-                        </Button>
-                        <span>
-                            Page {page} / {totalPages}
-                        </span>
-                        <Button
-                            size="sm"
-                            variant="outline"
-                            disabled={page === totalPages}
-                            onClick={() => setPage((p) => p + 1)}
-                        >
-                            Next
-                        </Button>
-                    </div>
-                </CardFooter>
+    <div>
+        {filtered.length} request
+        {filtered.length !== 1 && 's'}
+    </div>
+    <div className="flex items-center gap-2">
+        <span className="text-sm mr-2">
+            Pages {page} of {totalPages}
+        </span>
+        <Button
+            size="icon"
+            variant="outline"
+            className="h-8 w-8"
+            onClick={() => setPage(1)}
+            disabled={page === 1}
+            aria-label="First page"
+        >
+            <ChevronsLeft size={18} />
+        </Button>
+        <Button
+            size="icon"
+            variant="outline"
+            className="h-8 w-8"
+            onClick={() => setPage((p) => Math.max(1, p - 1))}
+            disabled={page === 1}
+            aria-label="Previous page"
+        >
+            <ChevronLeft size={18} />
+        </Button>
+        <Button
+            size="icon"
+            variant="outline"
+            className="h-8 w-8"
+            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+            disabled={page === totalPages}
+            aria-label="Next page"
+        >
+            <ChevronRight size={18} />
+        </Button>
+        <Button
+            size="icon"
+            variant="outline"
+            className="h-8 w-8"
+            onClick={() => setPage(totalPages)}
+            disabled={page === totalPages}
+            aria-label="Last page"
+        >
+            <ChevronsRight size={18} />
+        </Button>
+    </div>
+</CardFooter>
             </Card>
             <Dialog open={confirmDialog.open} onOpenChange={open => setConfirmDialog(c => ({ ...c, open }))}>
               <DialogContent className="max-w-sm p-6">

@@ -34,7 +34,22 @@ type TableDefenseRequestsProps = {
   onStatusChange: (id: number, status: string) => Promise<void>;
   onPriorityChange: (id: number, priority: string) => Promise<void>;
   formatLocalDateTime: (isoString?: string) => string;
+  openDropdownId?: number | null;
+  setOpenDropdownId?: (id: number | null) => void;
 };
+
+function getTimeAgo(dateStr?: string) {
+  if (!dateStr) return "—";
+  const now = new Date();
+  const date = new Date(dateStr);
+  const diff = (now.getTime() - date.getTime()) / 1000;
+  if (diff < 60) return "Just now";
+  if (diff < 3600) return `${Math.floor(diff / 60)} min${Math.floor(diff / 60) === 1 ? "" : "s"} ago`;
+  if (diff < 86400) return `${Math.floor(diff / 3600)} hour${Math.floor(diff / 3600) === 1 ? "" : "s"} ago`;
+  if (diff < 172800) return "Yesterday";
+  if (diff < 604800) return `${Math.floor(diff / 86400)} day${Math.floor(diff / 86400) === 1 ? "" : "s"} ago`;
+  return date.toLocaleDateString();
+}
 
 export default function TableDefenseRequests({
   paged,
@@ -53,23 +68,26 @@ export default function TableDefenseRequests({
   onStatusChange,
   onPriorityChange,
   formatLocalDateTime,
+  openDropdownId,
+  setOpenDropdownId,
 }: TableDefenseRequestsProps) {
+  // Helper to normalize status for display/UI
+  const normalizeStatus = (status: string) => status === 'Accepted' ? 'Approved' : status;
   const statusIcon = (status: string) => {
-    switch (status) {
-      case 'In progress':
-        return <Clock size={16} className="mr-1" />;
+    switch (normalizeStatus(status)) {
       case 'Approved':
         return <CircleCheckBig size={16} className="mr-1 text-green-500" />;
       case 'Rejected':
         return <CircleX size={16} className="mr-1 text-red-500" />;
+      case 'Pending':
       default:
-        return <Circle size={16} className="mr-1" />;
+        return <Clock size={16} className="mr-1" />;
     }
   };
 
   return (
-    <div className="rounded-md overflow-x-auto border border-border">
-      <Table className="min-w-full text-sm">
+    <div className="rounded-md overflow-x-auto border border-border bg-white w-full max-w-full">
+      <Table className="min-w-[900px] text-sm">
         <TableHeader>
           <TableRow>
             <TableHead className="w-[5%]  py-2">
@@ -81,9 +99,7 @@ export default function TableDefenseRequests({
             {columns.title && (
               <TableHead className="w-[15A%] px-1">Title</TableHead>
             )}
-            {columns.presenter && (
-              <TableHead className="w-[13%] px-1  py-2">Presenter</TableHead>
-            )}
+          
             {columns.date && (
               <TableHead
                 className="w-[11%] text-center cursor-pointer px-1 py-2"
@@ -105,8 +121,6 @@ export default function TableDefenseRequests({
             {columns.status && (
               <TableHead className="w-[7%] text-center px-1 py-2">Status</TableHead>
             )}
-
-
             {columns.priority && (
               <TableHead className="w-[7%] text-center px-1 py-2">Priority</TableHead>
             )}
@@ -125,20 +139,21 @@ export default function TableDefenseRequests({
               </TableCell>
               {columns.title && (
                 <TableCell
-                  className="px-1 py-2 font-semibold truncate cursor-pointer"
-                  style={{ maxWidth: '140px' }}
+                  className="px-1 py-2 font-semibold truncate leading-tight cursor-pointer"
+                  style={{ maxWidth: '110px' }}
                   onClick={() => toggleSelectOne(r.id)}
                 >
-                  {r.thesis_title.length > 40 ? r.thesis_title.slice(0, 37) + "..." : r.thesis_title}
+                  <div className="truncate" title={r.thesis_title}>
+                    {r.thesis_title}
+                  </div>
+                  <div className="text-xs font-normal text-muted-foreground mt-1 truncate">
+                    {r.first_name}{' '}
+                    {r.middle_name ? `${r.middle_name[0]}. ` : ''}
+                    {r.last_name}
+                  </div>
                 </TableCell>
               )}
-              {columns.presenter && (
-                <TableCell className="px-1 py-2 truncate">
-                  {r.first_name}{' '}
-                  {r.middle_name ? `${r.middle_name[0]}. ` : ''}
-                  {r.last_name}
-                </TableCell>
-              )}
+
               {columns.date && (
                 <TableCell className="px-1 py-2 text-start whitespace-nowrap">
                   {format(new Date(r.date_of_defense), 'MMM dd, yyyy')}
@@ -151,38 +166,43 @@ export default function TableDefenseRequests({
               )}
               {columns.status && (
                 <TableCell className="px-1 py-2 text-center">
-                  <DropdownMenu>
+                  <DropdownMenu
+                    open={openDropdownId === r.id}
+                    onOpenChange={(open) => setOpenDropdownId && setOpenDropdownId(open ? r.id : null)}
+                  >
                     <DropdownMenuTrigger asChild>
                       <Badge
                         variant="outline"
                         className="cursor-pointer"
+                        onClick={() => setOpenDropdownId && setOpenDropdownId(r.id)}
                       >
                         <div className="flex items-center justify-center gap-1">
                           {statusIcon(r.status)}
-                          {(r.status || 'Pending').replace('-', ' ')}
+                          {(normalizeStatus(r.status) || 'Pending').replace('-', ' ')}
                         </div>
                       </Badge>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent>
-                      {['Pending', 'In progress', 'Approved', 'Rejected'].map((status) => (
+                      {['Pending', 'Approved', 'Rejected'].map((status) => (
                         <DropdownMenuItem
                           key={status}
-                          onClick={() => onStatusChange(r.id, status)}
+                          onClick={async () => {
+                            if (setOpenDropdownId) setOpenDropdownId(null); // CLOSE DROPDOWN
+                            await onStatusChange(r.id, status); // This will open the confirmation dialog
+                          }}
                           className="flex items-center justify-between"
                         >
                           <span className="flex items-center gap-1">
                             {statusIcon(status)}
-                            {status.replace('-', ' ')}
+                            {status}
                           </span>
-                          {r.status === status && <Check size={16} />}
+                          {normalizeStatus(r.status) === status && <Check size={16} />}
                         </DropdownMenuItem>
                       ))}
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </TableCell>
               )}
-
-
               {columns.priority && (
                 <TableCell className="px-1 py-2 text-center">
                   <DropdownMenu>
@@ -217,17 +237,16 @@ export default function TableDefenseRequests({
                 </TableCell>
               )}
               <TableCell className="px-1 py-2 text-xs text-muted-foreground text-center">
-                <div>
-                  <span className='font-bold'>
-                    {r.last_status_updated_by
-                      ? r.last_status_updated_by
-                      : <span className="italic">—</span>}
-                  </span>
-                </div>
+              
                 <div>
                   <span>
-                    {r.last_status_updated_at
-                      ? formatLocalDateTime(r.last_status_updated_at)
+                    {getTimeAgo(r.last_status_updated_at)}
+                  </span>
+                </div>
+                  <div>
+                  <span className=''> by {''}
+                    {r.last_status_updated_by
+                      ? r.last_status_updated_by
                       : <span className="italic">—</span>}
                   </span>
                 </div>
@@ -246,7 +265,7 @@ export default function TableDefenseRequests({
                       <Info />
                     </Button>
                   </DialogTrigger>
-                  <DialogContent className="max-w-5xl min-w-260 w-full max-h-[90vh]">
+                  <DialogContent className="max-w-3xl min-w-260 w-full max-h-[90vh]">
                     <div className="max-h-[80vh] overflow-y-auto px-1">
                       {selectedRequest && (
                         <Details
