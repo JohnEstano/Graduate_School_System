@@ -151,120 +151,131 @@ export default function SchedulePage() {
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Schedules" />
             <div className="relative w-full bg-white flex flex-col overflow-hidden">
-                {/* Controls and stuff*/}
+                {/* Controls (not sticky anymore) */}
                 <div
-                    className="flex items-center gap-2"
-                    style={{
-                        width: "100%",
-                        maxWidth: "100%",
-                        margin: 0,
-                    }}
+                    className="w-full bg-white border-b"
+                    style={{ boxShadow: "0 1px 3px 0 rgba(0,0,0,0.03)" }}
                 >
+                    <div
+                        className="flex items-center gap-2"
+                        style={{
+                            width: "100%",
+                            maxWidth: "100%",
+                            margin: 0,
+                        }}
+                    >
+                        <div className='flex flex-1 justify-between w-full'>
+                            <div className="flex items-center min-w-[220px]">
 
-                    <div className='flex flex-1 justify-between w-full'>
-                        <div className="flex items-center   min-w-[220px]">
-
-                            {/* Month Picker */}
-                            <Select
-
-                                value={String(month.getMonth())}
-                                onValueChange={val => {
-                                    const newMonth = new Date(month);
-                                    newMonth.setMonth(Number(val));
-                                    setMonth(newMonth);
-                                }}
-                            >
-                                <SelectTrigger className="w-[110px] border-none rounded-none  h-8 text-sm">
-                                    <SelectValue>{MONTHS[month.getMonth()]}</SelectValue>
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectGroup>
-                                        {MONTHS.map((m, idx) => (
-                                            <SelectItem key={m} value={String(idx)}>{m}</SelectItem>
-                                        ))}
-                                    </SelectGroup>
-                                </SelectContent>
-                            </Select>
-                            {/* Year Picker */}
-                            <Select
-                                value={String(month.getFullYear())}
-                                onValueChange={val => {
-                                    const newMonth = new Date(month);
-                                    newMonth.setFullYear(Number(val));
-                                    setMonth(newMonth);
-                                }}
-                            >
-                                <SelectTrigger className="w-[80px] border-none rounded-none h-8 text-sm">
-                                    <SelectValue>{month.getFullYear()}</SelectValue>
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectGroup>
-                                        {YEARS.map(y => (
-                                            <SelectItem key={y} value={String(y)}>{y}</SelectItem>
-                                        ))}
-                                    </SelectGroup>
-                                </SelectContent>
-                            </Select>
-                            <div className=' flex gap-2 me-3'>
-                                <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    aria-label="Previous month"
-                                    className="h-7 w-7 "
-                                    onClick={() => setMonth(addDays(startOfMonth(month), -1))}
-                                >
-                                    <ChevronLeft className="w-4 font-bold  h-4" />
-                                </Button>
-                                <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    aria-label="Next month"
-                                    className="h-7 w-7 p-0 "
-                                    onClick={() => setMonth(addDays(endOfMonth(month), 1))}
-                                >
-                                    <ChevronRight className="w-4 font-extrabold  h-4" />
-                                </Button>
-                            </div>
-
-                        </div>
-                        <div className="flex-1  flex items-center ">
-                            <div className="w-36">
+                                {/* Month Picker */}
                                 <Select
-                                    value={statusFilter}
-                                    onValueChange={setStatusFilter}
+
+                                    value={String(month.getMonth())}
+                                    onValueChange={val => {
+                                        const newMonth = new Date(month);
+                                        newMonth.setMonth(Number(val));
+                                        setMonth(newMonth);
+                                    }}
                                 >
-                                    <SelectTrigger className="w-full rounded-none h-8 text-sm">
-                                        <SelectValue placeholder="Filter status" />
+                                    <SelectTrigger className="w-[110px] border-none rounded-none  h-8 text-sm">
+                                        <SelectValue>{MONTHS[month.getMonth()]}</SelectValue>
                                     </SelectTrigger>
                                     <SelectContent>
                                         <SelectGroup>
-                                            <SelectLabel className='text-xs text-muted-foreground'>
-                                                Filter Status:
-                                            </SelectLabel>
-                                            {STATUS_OPTIONS.map(opt => (
-                                                <SelectItem key={opt.value} value={opt.value} className="text-sm font-regular">
-                                                    {opt.label}
-                                                </SelectItem>
+                                            {MONTHS.map((m, idx) => (
+                                                <SelectItem key={m} value={String(idx)}>{m}</SelectItem>
                                             ))}
                                         </SelectGroup>
-
                                     </SelectContent>
                                 </Select>
+                                {/* Year Picker */}
+                                <Select
+                                    value={String(month.getFullYear())}
+                                    onValueChange={val => {
+                                        const newMonth = new Date(month);
+                                        newMonth.setFullYear(Number(val));
+                                        setMonth(newMonth);
+                                    }}
+                                >
+                                    <SelectTrigger className="w-[80px] border-none rounded-none h-8 text-sm">
+                                        <SelectValue>{month.getFullYear()}</SelectValue>
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectGroup>
+                                            {YEARS.map(y => (
+                                                <SelectItem key={y} value={String(y)}>{y}</SelectItem>
+                                            ))}
+                                        </SelectGroup>
+                                    </SelectContent>
+                                </Select>
+                                <div className=' flex gap-2 me-3'>
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        aria-label="Previous month"
+                                        className="h-7 w-7 "
+                                        onClick={() => setMonth(addDays(startOfMonth(month), -1))}
+                                    >
+                                        <ChevronLeft className="w-4 font-bold  h-4" />
+                                    </Button>
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        aria-label="Next month"
+                                        className="h-7 w-7 p-0 "
+                                        onClick={() => setMonth(addDays(endOfMonth(month), 1))}
+                                    >
+                                        <ChevronRight className="w-4 font-extrabold  h-4" />
+                                    </Button>
+                                </div>
+
                             </div>
-                            <Input
-                                placeholder="Search..."
-                                startIcon={Search}
-                                value={search}
-                                onChange={e => setSearch(e.target.value)}
-                                className="w-100 h-8 rounded-none text-sm"
-                                style={{ maxWidth: 180, minWidth: 120 }}
-                            />
+                            <div className="flex-1 flex items-center ">
+                                <div className="w-36">
+                                    <Select
+                                        value={statusFilter}
+                                        onValueChange={setStatusFilter}
+                                    >
+                                        <SelectTrigger className="w-full rounded-none h-8 text-sm">
+                                            <SelectValue placeholder="Filter status" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectGroup>
+                                                <SelectLabel className='text-xs text-muted-foreground'>
+                                                    Filter Status:
+                                                </SelectLabel>
+                                                {STATUS_OPTIONS.map(opt => (
+                                                    <SelectItem key={opt.value} value={opt.value} className="text-sm font-regular flex items-center gap-2">
+                                                        {/* Dot legend */}
+                                                        <span
+                                                            className={
+                                                                opt.value === "all"
+                                                                    ? "inline-block w-2 h-2 rounded-full bg-black mr-2"
+                                                                    : `inline-block w-2 h-2 rounded-full mr-2 ${getDotColor(opt.label)}`
+                                                            }
+                                                        />
+                                                        {opt.label}
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectGroup>
+
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                                <Input
+                                    placeholder="Search..."
+                                    startIcon={Search}
+                                    value={search}
+                                    onChange={e => setSearch(e.target.value)}
+                                    className="w-100 h-8 rounded-none text-sm"
+                                    style={{ maxWidth: 180, minWidth: 120 }}
+                                />
+                            </div>
                         </div>
                     </div>
-
                 </div>
-
-                <div className="flex flex-col  items-center justify-start w-full overflow-hidden">
+                {/* Calendar */}
+                <div className="flex flex-col items-center justify-start w-full overflow-hidden">
                     <div className="w-full flex justify-center p-0 items-start">
                         <div
                             className="border-t border-l text-xs bg-white flex flex-col"
@@ -272,11 +283,24 @@ export default function SchedulePage() {
                                 width: gridWidth,
                                 minWidth: 0,
                                 maxWidth: "100%",
-
                                 boxShadow: "0 1px 3px 0 rgba(0,0,0,0.03)"
                             }}
                         >
-                            {/* The scrollable part of the calendard*/}
+                   
+                            <div className="grid grid-cols-7 bg-white">
+                                {"Sun,Mon,Tue,Wed,Thu,Fri,Sat".split(",").map(d => (
+                                    <div
+                                        key={d}
+                                        className="text-[11px] font-semibold text-center py-1 border-b border-r bg-gray-50"
+                                        style={{
+                                            background: "#f9fafb"
+                                        }}
+                                    >
+                                        {d}
+                                    </div>
+                                ))}
+                            </div>
+                            {/* The scrolllable part of the calendard*/}
                             <div
                                 className="overflow-y-auto"
                                 style={{
@@ -284,23 +308,6 @@ export default function SchedulePage() {
                                     minHeight: 200,
                                 }}
                             >
-                                <div className="grid grid-cols-7 sticky top-0 z-20 bg-white">
-                                    {"Sun,Mon,Tue,Wed,Thu,Fri,Sat".split(",").map(d => (
-                                        <div
-                                            key={d}
-                                            className="text-[11px] font-semibold text-center py-1 border-b border-r bg-gray-50"
-                                            style={{
-                                                position: "sticky",
-                                                top: 0,
-                                                zIndex: 10,
-                                                background: "#f9fafb"
-                                            }}
-                                        >
-                                            {d}
-                                        </div>
-                                    ))}
-                                </div>
-                                {/* Calendar grid cells */}
                                 <div className="grid grid-cols-7">
                                     {weeks.flat().map((day, idx) => {
                                         const dateStr = format(day, "yyyy-MM-dd");
@@ -312,7 +319,7 @@ export default function SchedulePage() {
                                             <div
                                                 key={dateStr + idx}
                                                 className={cn(
-                                                    "h-25 w-full border-b border-r flex flex-col items-start justify-start p-1 cursor-pointer transition-all overflow-hidden", // Lowered from h-20 to h-16
+                                                    "h-25 w-full border-b border-r flex flex-col items-start justify-start p-1 cursor-pointer transition-all overflow-hidden",
                                                     isCurrentMonth ? "bg-white" : "bg-gray-100 text-gray-400",
                                                     isSelected && "ring-2 ring-primary-500 z-10",
                                                     isTodayDate && "border-2 border-rose-400"

@@ -465,7 +465,7 @@ export default function ShowAllRequests({
     }
 
     return (
-        <div className="p-2 flex flex-col gap-2">
+        <div className="p-2 flex flex-col gap-2 min-h-screen bg-background">
             <Toaster richColors position="bottom-right" />
             {/* Confirmation Dialog */}
             <Dialog open={confirmDialog.open} onOpenChange={open => setConfirmDialog(s => ({ ...s, open }))}>
@@ -497,7 +497,7 @@ export default function ShowAllRequests({
                     </div>
                 </DialogContent>
             </Dialog>
-            <Card className="flex flex-col border-none shadow-none p-1">
+            <Card className="flex flex-col border-none shadow-none p-1 flex-1 min-h-0">
                 <div className="flex flex-wrap items-center justify-between ">
                     <div className="flex flex-1 justify-between items-center flex-wrap gap-2 ">
                         <div className="flex flex-1 items-center gap-2">
@@ -664,9 +664,9 @@ export default function ShowAllRequests({
                        
                     </div>
                 </div>
-                <CardContent className="ps-0 pe-0">
-                    <div className="bg-white w-full max-w-full overflow-x-auto relative">
-                        {/* --- BULK BAR: showing for pending/rejected for relevant actions --- */}
+                <CardContent className="ps-0 pe-0 flex-1 flex flex-col min-h-0">
+                    <div className="bg-white w-full max-w-full flex-1 flex flex-col overflow-auto min-h-0 relative">
+                        {/* --- BULK BAR, filters, tabs, etc. --- */}
                         {selected.length > 0 && (tab === 'pending' || tab === 'rejected') && (
                             <div className="fixed left-1/2 z-30 -translate-x-1/2 bottom-4 md:bottom-6 flex items-center gap-1 bg-white border border-border shadow-lg rounded-lg px-4 py-1 text-xs animate-in fade-in slide-in-from-bottom-2">
                                 <span className="font-semibold min-w-[70px] text-center">{selected.length} selected</span>
@@ -805,76 +805,80 @@ export default function ShowAllRequests({
                                 </Popover>
                             </div>
                         </div>
-                        <Tabs value={tab} onValueChange={v => setTab(v as any)} className="w-full">
-                            <TabsContent value="pending">
-                                <Card className="border-none shadow-none p-1">
-                                    <CardContent className="ps-0 pe-0">
-                                        <TableDefenseRequests
-                                            key="pending"
-                                            paged={pagedRequests['pending']}
-                                            columns={columns}
-                                            selected={selected}
-                                            toggleSelectOne={toggleSelectOne}
-                                            headerChecked={headerChecked}
-                                            toggleSelectAll={toggleSelectAll}
-                                            toggleSort={toggleSort}
-                                            sortDir={sortDir}
-                                            setSelectedRequest={setSelectedRequest}
-                                            setSelectedIndex={setSelectedIndex}
-                                            sorted={pagedRequests['pending']}
-                                            selectedRequest={selectedRequest}
-                                            selectedIndex={selectedIndex}
-                                            onStatusChange={async (id, status) => {
-                                              if (status === 'Approved') openConfirmSingle(id, 'approve');
-                                              else if (status === 'Rejected') openConfirmSingle(id, 'reject');
-                                            }}
-                                            onPriorityChange={onPriorityChange}
-                                            formatLocalDateTime={formatLocalDateTime}
-                                            openDropdownId={openDropdownId}
-                                            setOpenDropdownId={setOpenDropdownId}
-                                            tabType="pending"
-                                            onRowApprove={id => openConfirmSingle(id, 'approve')}
-                                            onRowReject={id => openConfirmSingle(id, 'reject')}
-                                            onRowRetrieve={id => openConfirmSingle(id, 'retrieve')}
-                                        />
+                        <Tabs value={tab} onValueChange={v => setTab(v as any)} className="w-full flex-1 flex flex-col min-h-0">
+                            <TabsContent value="pending" className="flex-1 flex flex-col min-h-0">
+                                <Card className="border-none shadow-none p-1 flex-1 flex flex-col min-h-0">
+                                    <CardContent className="ps-0 pe-0 flex-1 flex flex-col min-h-0">
+                                        <div className="flex-1 flex flex-col min-h-0 overflow-auto">
+                                            <TableDefenseRequests
+                                                key="pending"
+                                                paged={pagedRequests['pending']}
+                                                columns={columns}
+                                                selected={selected}
+                                                toggleSelectOne={toggleSelectOne}
+                                                headerChecked={headerChecked}
+                                                toggleSelectAll={toggleSelectAll}
+                                                toggleSort={toggleSort}
+                                                sortDir={sortDir}
+                                                setSelectedRequest={setSelectedRequest}
+                                                setSelectedIndex={setSelectedIndex}
+                                                sorted={pagedRequests['pending']}
+                                                selectedRequest={selectedRequest}
+                                                selectedIndex={selectedIndex}
+                                                onStatusChange={async (id, status) => {
+                                                  if (status === 'Approved') openConfirmSingle(id, 'approve');
+                                                  else if (status === 'Rejected') openConfirmSingle(id, 'reject');
+                                                }}
+                                                onPriorityChange={onPriorityChange}
+                                                formatLocalDateTime={formatLocalDateTime}
+                                                openDropdownId={openDropdownId}
+                                                setOpenDropdownId={setOpenDropdownId}
+                                                tabType="pending"
+                                                onRowApprove={id => openConfirmSingle(id, 'approve')}
+                                                onRowReject={id => openConfirmSingle(id, 'reject')}
+                                                onRowRetrieve={id => openConfirmSingle(id, 'retrieve')}
+                                            />
+                                        </div>
                                     </CardContent>
                                 </Card>
                             </TabsContent>
-                            <TabsContent value="rejected">
-                                <Card className="border-none shadow-none p-1">
-                                    <CardContent className="ps-0 pe-0">
-                                        <TableDefenseRequests
-                                            key="rejected"
-                                            paged={pagedRequests['rejected']}
-                                            columns={columns}
-                                            selected={selected}
-                                            toggleSelectOne={toggleSelectOne}
-                                            headerChecked={headerChecked}
-                                            toggleSelectAll={toggleSelectAll}
-                                            toggleSort={toggleSort}
-                                            sortDir={sortDir}
-                                            setSelectedRequest={setSelectedRequest}
-                                            setSelectedIndex={setSelectedIndex}
-                                            sorted={pagedRequests['rejected']}
-                                            selectedRequest={selectedRequest}
-                                            selectedIndex={selectedIndex}
-                                            onStatusChange={async (id, status) => {
-                                                if (status === 'Pending') openConfirmSingle(id, 'retrieve');
-                                            }}
-                                            onPriorityChange={onPriorityChange}
-                                            formatLocalDateTime={formatLocalDateTime}
-                                            openDropdownId={openDropdownId}
-                                            setOpenDropdownId={setOpenDropdownId}
-                                            tabType="rejected"
-                                            onRowApprove={id => openConfirmSingle(id, 'approve')}
-                                            onRowReject={id => openConfirmSingle(id, 'reject')}
-                                            onRowRetrieve={id => openConfirmSingle(id, 'retrieve')}
-                                        />
+                            <TabsContent value="rejected" className="flex-1 flex flex-col min-h-0">
+                                <Card className="border-none shadow-none p-1 flex-1 flex flex-col min-h-0">
+                                    <CardContent className="ps-0 pe-0 flex-1 flex flex-col min-h-0">
+                                        <div className="flex-1 flex flex-col min-h-0 overflow-auto">
+                                            <TableDefenseRequests
+                                                key="rejected"
+                                                paged={pagedRequests['rejected']}
+                                                columns={columns}
+                                                selected={selected}
+                                                toggleSelectOne={toggleSelectOne}
+                                                headerChecked={headerChecked}
+                                                toggleSelectAll={toggleSelectAll}
+                                                toggleSort={toggleSort}
+                                                sortDir={sortDir}
+                                                setSelectedRequest={setSelectedRequest}
+                                                setSelectedIndex={setSelectedIndex}
+                                                sorted={pagedRequests['rejected']}
+                                                selectedRequest={selectedRequest}
+                                                selectedIndex={selectedIndex}
+                                                onStatusChange={async (id, status) => {
+                                                    if (status === 'Pending') openConfirmSingle(id, 'retrieve');
+                                                }}
+                                                onPriorityChange={onPriorityChange}
+                                                formatLocalDateTime={formatLocalDateTime}
+                                                openDropdownId={openDropdownId}
+                                                setOpenDropdownId={setOpenDropdownId}
+                                                tabType="rejected"
+                                                onRowApprove={id => openConfirmSingle(id, 'approve')}
+                                                onRowReject={id => openConfirmSingle(id, 'reject')}
+                                                onRowRetrieve={id => openConfirmSingle(id, 'retrieve')}
+                                            />
+                                        </div>
                                     </CardContent>
                                 </Card>
                             </TabsContent>
-                            <TabsContent value="approved">
-                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                            <TabsContent value="approved" className="flex-1 flex flex-col min-h-0">
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 flex-1">
                                     {pagedRequests['approved'].map((r, i) => (
                                         <Card key={r.id} className="border border-border shadow-none p-4 flex flex-col gap-2">
                                             <div className="font-semibold text-base truncate" title={r.thesis_title}>{r.thesis_title}</div>
