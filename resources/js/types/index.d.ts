@@ -71,6 +71,7 @@ export interface DefenseRequest {
     first_name: string;
     middle_name?: string | null;
     last_name: string;
+    defense_type: string;
     date_of_defense: string;
     mode_defense: string;
     status: string;
@@ -85,6 +86,7 @@ export type DefenseRequestSummary = {
     first_name: string;
     middle_name?: string | null;
     last_name: string;
+    defense_type: string;
     date_of_defense: string;
     mode_defense: string;
     status: string;
