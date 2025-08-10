@@ -3,6 +3,8 @@
 import { useState, useMemo, useEffect } from 'react';
 import { startOfDay, endOfDay, isWithinInterval } from 'date-fns';
 import { Toaster, toast } from 'sonner';
+import React from "react";
+import * as ReactDOMClient from "react-dom/client";
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -368,7 +370,42 @@ export default function ShowAllRequests({
         }
     };
 
-    const handleBulkPrint = () => { };
+    function handleBulkPrint() {
+      const rows = defenseRequests.filter(r => selected.includes(r.id));
+      const printWindow = window.open('', '', 'height=900,width=1200');
+      if (printWindow) {
+        printWindow.document.write(`
+          <html>
+            <head>
+              <title>Print Selected</title>
+              <style>
+                body { font-family: Arial, sans-serif; padding: 32px; }
+              </style>
+            </head>
+            <body>
+              <div id="print-root"></div>
+            </body>
+          </html>
+        `);
+        printWindow.document.close();
+
+      
+        printWindow.onload = () => {
+          const printRoot = printWindow.document.getElementById('print-root');
+          if (printRoot) {
+            ReactDOMClient.createRoot(printRoot).render(
+              <PrintSelected rows={rows} />
+            );
+            setTimeout(() => {
+              printWindow.print();
+            }, 500);
+          } else {
+          
+            printWindow.document.body.innerHTML = "<p>Failed to load print content.</p>";
+          }
+        };
+      }
+    }
 
     function formatLocalDateTime(dateString?: string) {
         if (!dateString) return '';
@@ -777,8 +814,8 @@ export default function ShowAllRequests({
                                             selectedRequest={selectedRequest}
                                             selectedIndex={selectedIndex}
                                             onStatusChange={async (id, status) => {
-                                                if (status === 'Approved') openConfirmSingle(id, 'approve');
-                                                else if (status === 'Rejected') openConfirmSingle(id, 'reject');
+                                              if (status === 'Approved') openConfirmSingle(id, 'approve');
+                                              else if (status === 'Rejected') openConfirmSingle(id, 'reject');
                                             }}
                                             onPriorityChange={onPriorityChange}
                                             formatLocalDateTime={formatLocalDateTime}
@@ -837,7 +874,7 @@ export default function ShowAllRequests({
                                                 <Badge variant="outline" className="truncate max-w-[100px]" title={r.defense_type}>{r.defense_type}</Badge>
                                                 <Badge variant="outline" className="truncate max-w-[80px]" title={r.priority}>{r.priority}</Badge>
                                             </div>
-                                            {/* Honorarium Status Progress Bar (shadcn/ui) */}
+                                        
                                             <div className="flex flex-col gap-1 mt-2">
                                                 <span className="text-xs text-muted-foreground">Honorarium Status</span>
                                                 <Progress value={40} className="w-full h-2" />
@@ -861,7 +898,7 @@ export default function ShowAllRequests({
                                         <div className="col-span-full text-center text-muted-foreground py-8">No approved requests.</div>
                                     )}
                                 </div>
-                                {/* Dialog for Details */}
+                            
                                 <Dialog open={!!selectedRequest} onOpenChange={open => { if (!open) setSelectedRequest(null); }}>
                                   <DialogContent className="max-w-3xl min-w-260 w-full max-h-[90vh]">
                                     <div className="max-h-[80vh] overflow-y-auto px-1">
