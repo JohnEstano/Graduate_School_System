@@ -1,6 +1,10 @@
-# Graduate School System — University of the Immaculate Conception (UIC)
+<p align="center">
+  <img src="public/grad_logo.png" alt="Graduate School Logo" width="200"/>
+</p>
 
-**Partial fulfillment for the Software Engineering course — University of the Immaculate Conception**
+# Graduate School System
+
+**In partial fulfillment for the Software Engineering course University of the Immaculate Conception**
 
 ---
 
@@ -104,30 +108,23 @@ This repository is the combined work of three collaborating groups:
 
 ---
 
-# Testing & quality assurance
 
-- Backend unit and feature tests for approval, honorarium creation, and scheduling flows.  
-- Frontend component and integration tests for role-specific UIs and notifications.  
-- End-to-end scenarios to validate full lifecycle operations.
 
----
+# Contributors
 
-# Extensibility & future directions
+- Defense Requests
+- Weszley Keith Empasis
+- Geoffrey Diapana 
+- John Paul Estano
 
-- Integrate payroll/finance systems for direct disbursement.  
-- Multi-tenant support for multiple programs.  
-- Analytics and reporting dashboards.  
-- PWA / mobile app for improved accessibility.  
-- Localization / multi-language UI.
+### Honorarium
 
----
+- Quezada Jim Nick
+- Bianca Noreen Otara
+- Troy Peralta
 
-# Documentation & deliverables
+### Comprehensive Exam
+- Nash Golosino
+- King Philipp Fernandez
+- Paula Honrada
 
-Repository should include API documentation (OpenAPI/Swagger), database schema diagrams, role-permission matrix, and deployment playbooks. This README provides a concise description of system purpose and features for evaluation.
-
----
-
-# Course statement
-
-This system was developed as partial fulfillment of the **Software Engineering** course requirement at the **University of the Immaculate Conception**.
