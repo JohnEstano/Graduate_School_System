@@ -63,12 +63,14 @@ type ConfirmDialogState = {
 
 function PaginationBar({ page, totalPages, onPageChange }: { page: number, totalPages: number, onPageChange: (page: number) => void }) {
     return (
-        <div className="flex justify-end items-center gap-2 px-4 py-2">
-            <Button size="sm" variant="outline" disabled={page === 1} onClick={() => onPageChange(1)}>&laquo;</Button>
-            <Button size="sm" variant="outline" disabled={page === 1} onClick={() => onPageChange(page - 1)}>&lsaquo;</Button>
+        <div className="flex justify-between items-center gap-2 px-4 py-2">
             <span className="text-xs">Page {page} of {totalPages}</span>
-            <Button size="sm" variant="outline" disabled={page === totalPages} onClick={() => onPageChange(page + 1)}>&rsaquo;</Button>
-            <Button size="sm" variant="outline" disabled={page === totalPages} onClick={() => onPageChange(totalPages)}>&raquo;</Button>
+            <div className="flex gap-1">
+                <Button size="sm" variant="outline" disabled={page === 1} onClick={() => onPageChange(1)}>&laquo;</Button>
+                <Button size="sm" variant="outline" disabled={page === 1} onClick={() => onPageChange(page - 1)}>&lsaquo;</Button>
+                <Button size="sm" variant="outline" disabled={page === totalPages} onClick={() => onPageChange(page + 1)}>&rsaquo;</Button>
+                <Button size="sm" variant="outline" disabled={page === totalPages} onClick={() => onPageChange(totalPages)}>&raquo;</Button>
+            </div>
         </div>
     );
 }
@@ -82,7 +84,11 @@ export default function ShowAllRequests({
 }) {
     const [defenseRequests, setDefenseRequests] = useState(initialRequests);
     const [search, setSearch] = useState('');
-    const [page, setPage] = useState(1);
+    const [pageByTab, setPageByTab] = useState<{ [key: string]: number }>({
+      pending: 1,
+      rejected: 1,
+      approved: 1,
+    });
     const [selectedByTab, setSelectedByTab] = useState<{ [key: string]: number[] }>({
         pending: [],
         rejected: [],
@@ -112,19 +118,18 @@ export default function ShowAllRequests({
     const [datePopoverOpen, setDatePopoverOpen] = useState(false);
     const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
     const [tab, setTab] = useState<'pending' | 'rejected' | 'approved'>('pending');
-    const perPage = 10;
+    const page = pageByTab[tab];
+    const setPage = (p: number) => setPageByTab(prev => ({ ...prev, [tab]: p }));
 
     useEffect(() => {
         setDefenseRequests(initialRequests);
     }, [initialRequests]);
 
     useEffect(() => {
-        setSelectedByTab((prev) => ({ ...prev, [tab]: [] }));
-    }, [tab]);
-
-    useEffect(() => {
-        setSelectedRequest(null);
-        setSelectedIndex(0);
+      setPageByTab(prev => ({ ...prev, [tab]: 1 }));
+      setSelectedByTab((prev) => ({ ...prev, [tab]: [] }));
+      setSelectedRequest(null);
+      setSelectedIndex(0);
     }, [tab]);
 
     const filtered = useMemo(() => {
@@ -168,11 +173,17 @@ export default function ShowAllRequests({
         });
     }, [filtered, sortDir]);
 
-    const totalPages = Math.ceil(sorted.length / perPage);
-    const pagedRequests = {
+    const tabRequests = {
         pending: sorted.filter(r => r.status === "Pending"),
         rejected: sorted.filter(r => r.status === "Rejected"),
         approved: sorted.filter(r => r.status === "Approved"),
+    };
+
+    const totalPages = Math.max(1, Math.ceil(tabRequests[tab].length / 10));
+    const pagedRequests = {
+        pending: tabRequests.pending.slice((pageByTab['pending'] - 1) * 10, pageByTab['pending'] * 10),
+        rejected: tabRequests.rejected.slice((pageByTab['rejected'] - 1) * 10, pageByTab['rejected'] * 10),
+        approved: tabRequests.approved.slice((pageByTab['approved'] - 1) * 10, pageByTab['approved'] * 10),
     };
     const paged = pagedRequests[tab];
     const pending = defenseRequests.filter(r => r.status === "Pending").length;
