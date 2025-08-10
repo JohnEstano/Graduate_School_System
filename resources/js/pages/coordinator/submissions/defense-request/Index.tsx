@@ -82,35 +82,32 @@ export default function DefenseRequestIndex() {
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Defense Requests" />
-            <ScrollArea className="flex-1 flex flex-col gap-4 px-2 pt-4 w-full max-w-full min-h-[90vh]">
+            <div className="flex-1 flex flex-col gap-4 px-2 pt-4 w-full max-w-full min-h-[90vh]">
                 <Tabs value={tab} onValueChange={setTab} className="flex-1 w-full max-w-full">
                     <TabsContent value="requests" className="flex-1 flex flex-col w-full max-w-full">
-                        {/* Add fixed height and scrolling here */}
-                        <div className="flex-1 flex flex-col w-full max-w-full overflow-x-auto">
-                            <div className="max-h-[520px] min-h-[320px] overflow-y-auto">
-                                {isCoordinator ? (
-                                    <ShowAllRequests
-                                        defenseRequests={defenseRequests}
-                                        onStatusChange={handleStatusChange}
-                                    />
-                                ) : (
-                                    <div className="rounded-xl border border-gray-200 ">
-                                        <div className="flex h-full min-h-[300px] flex-col items-center justify-center gap-4 text-center">
-                                            <h2 className="text-lg font-semibold text-gray-700">Access Restricted</h2>
-                                            <p className="text-sm text-gray-500">This section is only accessible to Coordinators.</p>
-                                        </div>
+                        <div className="flex-1 flex flex-col w-full max-w-full overflow-auto min-h-0">
+                            {isCoordinator ? (
+                                <ShowAllRequests
+                                    defenseRequests={defenseRequests}
+                                    onStatusChange={handleStatusChange}
+                                />
+                            ) : (
+                                <div className="rounded-xl border border-gray-200 ">
+                                    <div className="flex h-full min-h-[300px] flex-col items-center justify-center gap-4 text-center">
+                                        <h2 className="text-lg font-semibold text-gray-700">Access Restricted</h2>
+                                        <p className="text-sm text-gray-500">This section is only accessible to Coordinators.</p>
                                     </div>
-                                )}
-                            </div>
+                                </div>
+                            )}
                         </div>
                     </TabsContent>
                     <TabsContent value="honorarium" className="flex-1 flex flex-col w-full max-w-full">
-                        <div className='flex-1 w-full max-w-full overflow-x-auto'>
+                        <div className='flex-1 w-full max-w-full overflow-auto min-h-0'>
                             <ShowAllHonorarium defenseRequests={defenseRequests} />
                         </div>
                     </TabsContent>
                 </Tabs>
-            </ScrollArea>
+            </div>
         </AppLayout>
     );
 }

@@ -19,7 +19,7 @@ class DefenseRequestController extends Controller
 
         if (in_array($user->role, ['Administrative Assistant', 'Coordinator', 'Dean'])) {
             $defenseRequests = DefenseRequest::with('lastStatusUpdater')->get();
-         
+
             $defenseRequests->transform(function ($item) {
                 $item->last_status_updated_by = $item->lastStatusUpdater?->name;
                 return $item;
@@ -120,7 +120,7 @@ class DefenseRequestController extends Controller
 
         $defenseRequest = DefenseRequest::latest()->first();
 
-     
+
         $recipients = User::whereIn('role', ['Coordinator', 'Administrative Assistant'])->get();
 
         foreach ($recipients as $recipient) {
@@ -146,7 +146,7 @@ class DefenseRequestController extends Controller
             'last_status_updated_at' => now()->setTimezone('Asia/Manila'),
             'last_status_updated_by' => auth()->id(),
         ]);
-     
+
         $defenseRequest->load('lastStatusUpdater');
         $student = User::where('school_id', $defenseRequest->school_id)->first();
         if ($student) {
@@ -220,7 +220,7 @@ class DefenseRequestController extends Controller
                     if ($item->last_status_updated_at instanceof \Carbon\Carbon) {
                         $lastStatusUpdatedAt = $item->last_status_updated_at->setTimezone('Asia/Manila')->toISOString();
                     } else {
-                 
+
                         $lastStatusUpdatedAt = $item->last_status_updated_at;
                     }
                 }
@@ -255,7 +255,7 @@ class DefenseRequestController extends Controller
             'last_status_updated_at' => now()->setTimezone('Asia/Manila'),
             'last_status_updated_by' => auth()->id(),
         ]);
- 
+
         $updated = DefenseRequest::with('lastStatusUpdater')->whereIn('id', $ids)->get();
         $result = $updated->map(function ($item) {
             $lastStatusUpdatedAt = null;
@@ -284,8 +284,7 @@ class DefenseRequestController extends Controller
 
     public function calendar()
     {
-        return \App\Models\DefenseRequest::where('status', 'Approved')
-            ->select('id', 'thesis_title', 'date_of_defense')
+        return \App\Models\DefenseRequest::select('id', 'thesis_title', 'date_of_defense', 'status')
             ->get();
     }
 }
