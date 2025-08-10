@@ -71,13 +71,13 @@ export interface DefenseRequest {
     first_name: string;
     middle_name?: string | null;
     last_name: string;
+    defense_type: string;
     date_of_defense: string;
     mode_defense: string;
     status: string;
     priority: string;
     last_status_updated_by?: string;
     last_status_updated_at?: string;
-   
 }
 
 export type DefenseRequestSummary = {
@@ -86,9 +86,21 @@ export type DefenseRequestSummary = {
     first_name: string;
     middle_name?: string | null;
     last_name: string;
+    defense_type: string;
     date_of_defense: string;
     mode_defense: string;
     status: string;
     priority: string;
-    
+    last_status_updated_by?: string;
+    last_status_updated_at?: string;
 };
+
+export interface Notification {
+  id: number;
+  type: string;
+  title: string;
+  message: string;
+  link?: string;
+  read: boolean;
+  created_at: string;
+}
