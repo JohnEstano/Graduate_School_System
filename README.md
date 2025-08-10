@@ -1,14 +1,15 @@
 <p align="center">
   <img src="public/grad_logo.png" alt="Graduate School Logo" width="200"/>
 </p>
-
+<p align="center">
 # Graduate School System
-
+</p>
+<p align="center">
 **In partial fulfillment for the Software Engineering course University of the Immaculate Conception**
+</p>
 
 ---
-
-# Project overview
+# Description
 
 The **Graduate School System** is a web application designed to modernize and streamline administrative workflows for UIC’s Graduate School. The application supports core administrative processes for students, coordinators, administrative staff, deans, and the registrar.
 
@@ -112,7 +113,7 @@ This repository is the combined work of three collaborating groups:
 
 # Contributors
 
-- Defense Requests
+### Defense Requests
 - Weszley Keith Empasis
 - Geoffrey Diapana 
 - John Paul Estano
