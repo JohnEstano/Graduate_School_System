@@ -4,8 +4,7 @@
 
 
 <h1 align="center">Graduate School System</h1>
-<p align="center"><em>In partial fulfillment for the Software Engineering course<br>University of the Immaculate Conception</em></p>
-<p align="center">
+
   <img src="public/grad_banner.png" alt="Graduate School Banner" />
 </p>
 
