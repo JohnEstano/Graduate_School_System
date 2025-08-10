@@ -62,7 +62,7 @@ class DatabaseSeeder extends Seeder
                 'first_name' => fake()->firstName(),
                 'middle_name' => fake()->randomElement([fake()->firstName(), null]),
                 'last_name' => fake()->lastName(),
-                'email' => "coordinator{$i}@school.edu",
+                'email' => "coordinator{$i}@uic.edu.ph",
                 'password' => Hash::make('password'),
                 'role' => 'Coordinator',
                 'program' => $program,
@@ -76,7 +76,7 @@ class DatabaseSeeder extends Seeder
                 'first_name' => fake()->firstName(),
                 'middle_name' => fake()->randomElement([fake()->firstName(), null]),
                 'last_name' => fake()->lastName(),
-                'email' => "aa{$i}@school.edu",
+                'email' => "aa{$i}@uic.edu.ph",
                 'password' => Hash::make('password'),
                 'role' => 'Administrative Assistant',
                 'program' => null,
@@ -89,16 +89,16 @@ class DatabaseSeeder extends Seeder
             'first_name' => 'Dean',
             'middle_name' => null,
             'last_name' => 'Smith',
-            'email' => 'dean@school.edu',
+            'email' => 'dean@uic.edu.ph',
             'password' => Hash::make('password'),
             'role' => 'Dean',
             'program' => null,
             'school_id' => 'DEAN001',
         ]);
 
-        // 17 Students
+        // 50Students
         $students = [];
-        foreach (range(1, 17) as $i) {
+        foreach (range(1, 50) as $i) {
             $program = $programs[array_rand($programs)];
             $student = User::create([
                 'first_name' => fake()->firstName(),
@@ -121,33 +121,36 @@ class DatabaseSeeder extends Seeder
 
         // Defense Requests for each student
         foreach ($students as $student) {
-            $date = fake()->dateTimeBetween('-6 months', '+2 months');
-            $panelists = collect($panelistNames)->shuffle()->take(4)->values();
-            DefenseRequest::create([
-                'first_name' => $student->first_name,
-                'middle_name' => $student->middle_name,
-                'last_name' => $student->last_name,
-                'school_id' => $student->school_id,
-                'program' => $student->program,
-                'thesis_title' => fake()->sentence(6) . ' in ' . $student->program,
-                'date_of_defense' => $date->format('Y-m-d H:i:s'),
-                'mode_defense' => fake()->randomElement(['Online', 'Face To Face']),
-                'defense_type' => fake()->randomElement(['Proposal', 'Final', 'Prefinal']),
-                'advisers_endorsement' => 'sample.png',
-                'rec_endorsement' => 'sample.png',
-                'proof_of_payment' => 'sample.png',
-                'reference_no' => strtoupper(Str::random(10)),
-                'defense_adviser' => fake()->name(),
-                'defense_chairperson' => fake()->name(),
-                'defense_panelist1' => $panelists[0],
-                'defense_panelist2' => $panelists[1],
-                'defense_panelist3' => $panelists[2],
-                'defense_panelist4' => $panelists[3],
-                'status' => fake()->randomElement(['Pending', 'Approved', 'Rejected']),
-                'priority' => fake()->randomElement(['Low', 'Medium', 'High']),
-                'last_status_updated_at' => now()->subDays(rand(0, 60)),
-                'last_status_updated_by' => User::inRandomOrder()->first()->id,
-            ]);
+            // Each student can have 1-2 defense requests for more data
+            foreach (range(1, rand(1, 1)) as $j) {
+                $date = fake()->dateTimeBetween('-6 months', '+2 months');
+                $panelists = collect($panelistNames)->shuffle()->take(4)->values();
+                DefenseRequest::create([
+                    'first_name' => $student->first_name,
+                    'middle_name' => $student->middle_name,
+                    'last_name' => $student->last_name,
+                    'school_id' => $student->school_id,
+                    'program' => $student->program,
+                    'thesis_title' => fake()->sentence(6) . ' in ' . $student->program,
+                    'date_of_defense' => $date->format('Y-m-d H:i:s'),
+                    'mode_defense' => fake()->randomElement(['Online', 'Face To Face']),
+                    'defense_type' => fake()->randomElement(['Proposal', 'Final', 'Prefinal']),
+                    'advisers_endorsement' => 'sample.png',
+                    'rec_endorsement' => 'sample.png',
+                    'proof_of_payment' => 'sample.png',
+                    'reference_no' => strtoupper(Str::random(10)),
+                    'defense_adviser' => fake()->name(),
+                    'defense_chairperson' => fake()->name(),
+                    'defense_panelist1' => $panelists[0],
+                    'defense_panelist2' => $panelists[1],
+                    'defense_panelist3' => $panelists[2],
+                    'defense_panelist4' => $panelists[3],
+                    'status' => fake()->randomElement(['Pending', 'Approved', 'Rejected']),
+                    'priority' => fake()->randomElement(['Low', 'Medium', 'High']),
+                    'last_status_updated_at' => now()->subDays(rand(0, 60)),
+                    'last_status_updated_by' => User::inRandomOrder()->first()->id,
+                ]);
+            }
         }
     }
 }
