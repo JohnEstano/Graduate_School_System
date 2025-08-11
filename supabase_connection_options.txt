@@ -1,0 +1,32 @@
+# Backup of different connection formats to try
+# Copy ONE of these sections to your .env file
+
+# Option 1: Direct Connection
+# DB_CONNECTION=pgsql
+# DB_HOST=db.bzatvbbjjztvrzectkbr.supabase.co
+# DB_PORT=5432
+# DB_DATABASE=postgres
+# DB_USERNAME=postgres
+# DB_PASSWORD=[YOUR_PROJECT_PASSWORD_HERE]
+# DB_SSLMODE=require
+
+# Option 2: Connection Pooler
+# DB_CONNECTION=pgsql
+# DB_HOST=aws-0-us-east-1.pooler.supabase.com
+# DB_PORT=6543
+# DB_DATABASE=postgres
+# DB_USERNAME=postgres.bzatvbbjjztvrzectkbr
+# DB_PASSWORD=[YOUR_PROJECT_PASSWORD_HERE]
+# DB_SSLMODE=require
+
+# Option 3: Alternative pooler format
+# DB_CONNECTION=pgsql
+# DB_HOST=aws-0-us-east-1.pooler.supabase.com
+# DB_PORT=6543
+# DB_DATABASE=postgres
+# DB_USERNAME=postgres
+# DB_PASSWORD=[YOUR_PROJECT_PASSWORD_HERE]
+# DB_SSLMODE=require
+
+# Note: Replace [YOUR_PROJECT_PASSWORD_HERE] with the actual password from your dashboard
+# This is NOT the service role key, but the database password you set during project creation

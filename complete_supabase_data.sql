@@ -1,0 +1,50 @@
+-- Complete Supabase Data Import Script
+-- Run this in Supabase SQL Editor after running the migration script
+
+-- Insert Users Data
+INSERT INTO public.users (laravel_id, first_name, middle_name, last_name, email, password, role, program, school_id, email_verified_at, remember_token, created_at, updated_at) VALUES 
+(1, 'Academic', 'M.', 'Coordinator', 'aa@gmail.com', '$2y$12$JXo19asjRtJBFCrEuS3uNu.tdZJG9eYRuYqJlIQW3u20UO8zz3Nza', 'Administrative Assistant', 'Doctor of Philosophy in Education major in Information Technology Integration', '230000001047', NULL, NULL, '2025-08-10T05:15:44.000000Z', '2025-08-10T05:15:44.000000Z'),
+(2, 'Student', 'M.', 'Account', 'student@test.com', '$2y$12$ZZYORc8uKUEsTErVztqk0ulOPqO2oJ.W9v8nXxue4vZB\/xFnqUMtC', 'Student', 'Master of Arts in Teaching College Physics', '230000001044', NULL, 'jmXrmmPUaiwHnxJgsxw74GCe5mINCPiW2UG2Sn4AtZaH8vlip5eqoagrCpcO', '2025-08-10T05:15:44.000000Z', '2025-08-10T05:15:44.000000Z')
+ON CONFLICT (laravel_id) DO UPDATE SET
+    first_name = EXCLUDED.first_name,
+    middle_name = EXCLUDED.middle_name,
+    last_name = EXCLUDED.last_name,
+    email = EXCLUDED.email,
+    role = EXCLUDED.role,
+    program = EXCLUDED.program,
+    school_id = EXCLUDED.school_id,
+    updated_at = EXCLUDED.updated_at;
+
+-- Insert Defense Requests Data
+INSERT INTO public.defense_requests (
+    id, first_name, middle_name, last_name, school_id, program, thesis_title,
+    date_of_defense, mode_defense, defense_type, advisers_endorsement,
+    rec_endorsement, proof_of_payment, reference_no, defense_adviser,
+    defense_chairperson, defense_panelist1, defense_panelist2, defense_panelist3,
+    defense_panelist4, status, priority, last_status_updated_at, last_status_updated_by,
+    updated_by, created_at, updated_at
+) VALUES 
+(1, 'Student', 'M.', 'Account', '230000001044', 'Master of Arts in Teaching College Physics', 'Thesis Title Test', '2025-08-11', 'Face to Face', 'Proposal', 'defense-attachments/CHZ5UvF05oLf22Iu42CDvRWrTs1FoM8GdEnqZ66q.png', 'defense-attachments/byDXm4DM82wMJg2vnIWB8E4KDsIL77TgF1LNqTE3.png', 'defense-attachments/ZRMTCS0CdfAf56z2tcZjNgIK061Lf5Wro5hDZZNU.png', 'defense-attachments/7gHDBnG5OuRVpjO4dvHDt84MljSGDwMgmqn8ep0P.png', 'Adviser Name', 'Chairperson Name', 'Panel 1', 'Panel 2', 'Panel 3', 'Panel 4', 'Pending', 'Medium', NULL, NULL, NULL, '2025-08-10T05:22:05.000000Z', '2025-08-10T05:22:05.000000Z'),
+(2, 'Student', 'M.', 'Account', '230000001044', 'Master of Arts in Teaching College Physics', 'Thesis Title Test', '2025-08-11', 'Face to Face', 'Proposal', 'defense-attachments/DZiQ9aQXHQ292yGpqJxZrpSbp93aLsvlV05sxYXU.png', 'defense-attachments/KFxHB0yWjqvADtYYwSYhxEJpvAHDUQDyZpe1kTVO.png', 'defense-attachments/kT4XBSpBloHYT3mchvf7GmON515GXkkBA2vb7UV3.png', 'defense-attachments/obPwkdaxOizZmGWNqn2Ya4JleGbkuMmi0auBYqUg.png', 'Adviser Name', 'Chairperson Name', 'Panel 1', 'Panel 2', 'Panel 3', 'Panel 4', 'Pending', 'Medium', NULL, NULL, NULL, '2025-08-10T05:22:18.000000Z', '2025-08-10T05:22:18.000000Z'),
+(3, 'Student', 'M.', 'Account', '230000001044', 'Master of Arts in Teaching College Physics', 'Thesis Title Test', '2025-08-11', 'Face to Face', 'Proposal', 'defense-attachments/EqKsjRvOM9pTkdNGsGGCnjKsKnuPpgYXdVdBkDKZ.png', 'defense-attachments/JEuay3ayAQtXCOVV4Ne7eePhVetoJXTmYl3ya7mI.png', 'defense-attachments/cyC7EaOUYOoH0vwNEYQuTjhQrQ5fqc14e0JVhkxs.png', 'defense-attachments/KTGKtImTseEWkEEDpl2VBV0AZyd2Y7qcWOEGeUeQ.png', 'Adviser Name', 'Chairperson Name', 'Panel 1', 'Panel 2', 'Panel 3', 'Panel 4', 'Pending', 'Medium', NULL, NULL, NULL, '2025-08-10T05:22:19.000000Z', '2025-08-10T05:22:19.000000Z'),
+(4, 'Student', 'M.', 'Account', '230000001044', 'Master of Arts in Teaching College Physics', 'Thesis Title Test', '2025-08-11', 'Face to Face', 'Proposal', 'defense-attachments/0aj9SsmxaXkS8kpNKy5C9h2HyTuzYhASuFFJVuRn.png', 'defense-attachments/YRmeYct5DMklcFZnxoOMfmilvSzMs155yb77ji4z.png', 'defense-attachments/KzfumTg8SaoEwoqfjR1vPrGtK0KqJQB6ff8sJZQD.png', 'defense-attachments/T4mp23I1GQv9etQoshn2DQTDBsAvgJ37wsJjGjbC.png', 'Adviser Name', 'Chairperson Name', 'Panel 1', 'Panel 2', 'Panel 3', 'Panel 4', 'Pending', 'Medium', NULL, NULL, NULL, '2025-08-10T05:22:19.000000Z', '2025-08-10T05:22:19.000000Z'),
+(5, 'Student', 'M.', 'Account', '230000001044', 'Master of Arts in Teaching College Physics', 'Thesis Title Test', '2025-08-11', 'Face to Face', 'Proposal', 'defense-attachments/aU8OLsdXm3qR9cE3Ptd8r9B1JlrSH4pOHPHJM7vG.png', 'defense-attachments/WhVMCFYWOJkfwsvSVBVBJ95yK87fr3aIEOp6X8ju.png', 'defense-attachments/FfG1n4ra2f5008yqgTEhZi5tgCMDKAJepWavEH1f.png', 'defense-attachments/iBXd2Wk2117RxU4ODxjOf7LiCcrHzRC6jqpr3YqM.png', 'Adviser Name', 'Chairperson Name', 'Panel 1', 'Panel 2', 'Panel 3', 'Panel 4', 'Pending', 'Medium', NULL, NULL, NULL, '2025-08-10T05:22:20.000000Z', '2025-08-10T05:22:20.000000Z'),
+(6, 'Student', 'M.', 'Account', '230000001044', 'Master of Arts in Teaching College Physics', 'Thesis Title Test', '2025-08-11', 'Face to Face', 'Proposal', 'defense-attachments/Kl8uJOj0FRn4eTZrgGNCvJMTQhiZJ99p93IaoLny.png', 'defense-attachments/JcV40gvjZFxE4gbjmzKV9YPopimUvgH96VaEeaiw.png', 'defense-attachments/84KSC8uvJkUXvsTwVmgFH5X6N99vMtWEC6ncodCb.png', 'defense-attachments/5fCdBvF3ki3CIYfPSuu2SNNPXEKJronnPkw9oZWj.png', 'Adviser Name', 'Chairperson Name', 'Panel 1', 'Panel 2', 'Panel 3', 'Panel 4', 'Pending', 'Medium', NULL, NULL, NULL, '2025-08-10T05:22:21.000000Z', '2025-08-10T05:22:21.000000Z'),
+(7, 'Student', 'M.', 'Account', '230000001044', 'Master of Arts in Teaching College Physics', 'Thesis Title Test', '2025-08-11', 'Face to Face', 'Proposal', 'defense-attachments/PXCsFY5Gh050NqMwc5cp5SaybfGzecmA102rREG1.png', 'defense-attachments/8kB1uln3Ctpq065i7fn2QVGkVMw67AQdIJQd2oXF.png', 'defense-attachments/bLZ7VWDqfZa5S7w2Rp5MksKIQA3J6NoFtLjqu4me.png', 'defense-attachments/3WmvbBsuwVKFcIvMkFMBiclGvCi6DN0V58MmCbPo.png', 'Adviser Name', 'Chairperson Name', 'Panel 1', 'Panel 2', 'Panel 3', 'Panel 4', 'Pending', 'Medium', NULL, NULL, NULL, '2025-08-10T05:22:21.000000Z', '2025-08-10T05:22:21.000000Z'),
+(8, 'Student', 'M.', 'Account', '230000001044', 'Master of Arts in Teaching College Physics', 'Thesis Title Test', '2025-08-11', 'Face to Face', 'Proposal', 'defense-attachments/PjPwcQxEoZPGFYnXA80Gibu4Cr1GtmXrPk7F54qp.png', 'defense-attachments/PhOcU1sMKNK71yx7jJ6XUpQkm0t6EInjmY0o4dOp.png', 'defense-attachments/d79ApMzVfsQ0eg4bJq3g3kt0s0BABxX4BvS3eMha.png', 'defense-attachments/ru3k43LuYxC50tVogTaAnD3cEjghfESXOvr2vLO4.png', 'Adviser Name', 'Chairperson Name', 'Panel 1', 'Panel 2', 'Panel 3', 'Panel 4', 'Pending', 'Medium', NULL, NULL, NULL, '2025-08-10T05:22:22.000000Z', '2025-08-10T05:22:22.000000Z'),
+(9, 'Student', 'M.', 'Account', '230000001044', 'Master of Arts in Teaching College Physics', 'Thesis Title Test', '2025-08-11', 'Face to Face', 'Proposal', 'defense-attachments/53G7qvAFxuRmWrB5ySPGQsiiGPegQkws4SbJWuVk.png', 'defense-attachments/0KKOE9EDHcKvMRzBciQSV4V79Bn9WtJsrpBKrD.png', 'defense-attachments/n1NdJ5lznY8XVxSD3MWZwmstIpg1a6tjlKgdLWOc.png', 'defense-attachments/vBxIclsfGH7YCxV3EGEeJ8ArVbVsYftdDjSNabgC.png', 'Adviser Name', 'Chairperson Name', 'Panel 1', 'Panel 2', 'Panel 3', 'Panel 4', 'Pending', 'Medium', NULL, NULL, NULL, '2025-08-10T05:22:22.000000Z', '2025-08-10T05:22:22.000000Z'),
+(10, 'Student', 'M.', 'Account', '230000001044', 'Master of Arts in Teaching College Physics', 'Thesis Title Test', '2025-08-11', 'Face to Face', 'Proposal', 'defense-attachments/jqlMdTZtGAvgJ4ZOARvEbPM7QoUMNpCg650Ie85G.png', 'defense-attachments/B8mpctvbXYiEicHstdXUIuPC8uVcCd0tjnUllpW2.png', 'defense-attachments/yC4xWgFhKHb6mtdt73C2XN7nfRrBUIsTIl5xMx68.png', 'defense-attachments/I5yEwVzdG76EltoBGlVjS9g5IaiuZkhZM255VJGx.png', 'Adviser Name', 'Chairperson Name', 'Panel 1', 'Panel 2', 'Panel 3', 'Panel 4', 'Pending', 'Medium', NULL, NULL, NULL, '2025-08-10T05:22:23.000000Z', '2025-08-10T05:22:23.000000Z'),
+(11, 'Student', 'M.', 'Account', '230000001044', 'Master of Arts in Teaching College Physics', 'Thesis Title Test', '2025-08-11', 'Face to Face', 'Proposal', 'defense-attachments/bmrbPwotwDxfkY3BvOC3u34yAKyz3hilfEPnoV7d.png', 'defense-attachments/NrlHwpOOBVa81UO74crvnbN4aZNvvwPjf7mjTyUe.png', 'defense-attachments/yh4HSpej2xjg9OO5cmWX8Sy9NEkfkEw9FriD4cBW.png', 'defense-attachments/tRGRKuC619ogfEaxpXB5OMgsj2vKRXmg38PaCJe1.png', 'Adviser Name', 'Chairperson Name', 'Panel 1', 'Panel 2', 'Panel 3', 'Panel 4', 'Pending', 'Medium', NULL, NULL, NULL, '2025-08-10T05:22:34.000000Z', '2025-08-10T05:22:34.000000Z')
+ON CONFLICT (id) DO UPDATE SET
+    first_name = EXCLUDED.first_name,
+    middle_name = EXCLUDED.middle_name,
+    last_name = EXCLUDED.last_name,
+    school_id = EXCLUDED.school_id,
+    program = EXCLUDED.program,
+    thesis_title = EXCLUDED.thesis_title,
+    date_of_defense = EXCLUDED.date_of_defense,
+    mode_defense = EXCLUDED.mode_defense,
+    defense_type = EXCLUDED.defense_type,
+    status = EXCLUDED.status,
+    priority = EXCLUDED.priority,
+    updated_at = EXCLUDED.updated_at;

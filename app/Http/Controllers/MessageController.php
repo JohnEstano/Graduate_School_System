@@ -13,58 +13,68 @@ use Inertia\Inertia;
 class MessageController extends Controller
 {
     /**
-     * Display the main messaging interface.
+     * Display the main messaging interface with performance optimization.
      */
     public function index()
     {
         $user = Auth::user();
         
-        // Get user's conversations with latest message and unread count
-        $conversations = $user->conversations()
-            ->with(['latestMessage.user', 'users'])
-            ->get()
-            ->map(function ($conversation) use ($user) {
-                $latestMessage = $conversation->latestMessage->first();
-                $unreadCount = $conversation->getUnreadCountForUser($user->id);
-                
-                // Get other participants (exclude current user)
-                $otherParticipants = $conversation->users->where('id', '!=', $user->id);
-                
-                return [
-                    'id' => $conversation->id,
-                    'type' => $conversation->type,
-                    'title' => $conversation->title ?: $otherParticipants->pluck('name')->join(', '),
-                    'participants' => $otherParticipants->map(function ($participant) {
-                        return [
-                            'id' => $participant->id,
-                            'name' => $participant->name,
-                            'role' => $participant->role,
-                            'avatar' => $participant->avatar ?? null,
-                        ];
-                    }),
-                    'latest_message' => $latestMessage ? [
-                        'content' => $latestMessage->content,
-                        'user_name' => $latestMessage->user->name,
-                        'created_at' => $latestMessage->created_at,
-                        'formatted_time' => $latestMessage->formatted_time,
-                    ] : null,
-                    'unread_count' => $unreadCount,
-                    'last_message_at' => $conversation->last_message_at,
-                ];
-            });
+        // Cache user's conversations to improve performance
+        $cacheKey = "user_conversations_{$user->id}";
+        $conversations = cache()->remember($cacheKey, now()->addMinutes(10), function () use ($user) {
+            return $user->conversations()
+                ->with([
+                    'latestMessage.user:id,first_name,middle_name,last_name,role,avatar',
+                    'users:id,first_name,middle_name,last_name,role,avatar'
+                ])
+                ->select(['conversations.id', 'conversations.type', 'conversations.title', 'conversations.last_message_at'])
+                ->get()
+                ->map(function ($conversation) use ($user) {
+                    $latestMessage = $conversation->latestMessage->first();
+                    $unreadCount = $conversation->getUnreadCountForUser($user->id);
+                    
+                    // Get other participants (exclude current user)
+                    $otherParticipants = $conversation->users->where('id', '!=', $user->id);
+                    
+                    return [
+                        'id' => $conversation->id,
+                        'type' => $conversation->type,
+                        'title' => $conversation->title ?: $otherParticipants->pluck('name')->join(', '),
+                        'participants' => $otherParticipants->map(function ($participant) {
+                            return [
+                                'id' => $participant->id,
+                                'name' => $participant->name,
+                                'role' => $participant->role,
+                                'avatar' => $participant->avatar ?? null,
+                            ];
+                        }),
+                        'latest_message' => $latestMessage ? [
+                            'content' => $latestMessage->content,
+                            'user_name' => $latestMessage->user->name,
+                            'created_at' => $latestMessage->created_at,
+                            'formatted_time' => $latestMessage->formatted_time,
+                        ] : null,
+                        'unread_count' => $unreadCount,
+                        'last_message_at' => $conversation->last_message_at,
+                    ];
+                });
+        });
 
-        // Get all users for starting new conversations
-        $users = User::where('id', '!=', $user->id)
-            ->select('id', 'first_name', 'middle_name', 'last_name', 'role', 'email')
-            ->get()
-            ->map(function ($user) {
-                return [
-                    'id' => $user->id,
-                    'name' => $user->name,
-                    'role' => $user->role,
-                    'email' => $user->email,
-                ];
-            });
+        // Cache all users for starting new conversations
+        $usersCacheKey = "all_users_for_messaging_{$user->id}";
+        $users = cache()->remember($usersCacheKey, now()->addMinutes(15), function () use ($user) {
+            return User::where('id', '!=', $user->id)
+                ->select('id', 'first_name', 'middle_name', 'last_name', 'role', 'email')
+                ->get()
+                ->map(function ($user) {
+                    return [
+                        'id' => $user->id,
+                        'name' => $user->name,
+                        'role' => $user->role,
+                        'email' => $user->email,
+                    ];
+                });
+        });
 
         return Inertia::render('messaging/Index', [
             'conversations' => $conversations,
