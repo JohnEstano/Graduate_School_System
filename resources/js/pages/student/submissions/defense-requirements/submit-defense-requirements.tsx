@@ -177,9 +177,9 @@ export default function SubmitDefenseRequirements({ onFinish, open, onOpenChange
                         <Label className="text-xs mb-2 block">Type of Defense</Label>
                         <div className="flex gap-2 mb-4">
                             {[
-                                { value: "proposal", label: "Proposal" },
-                                { value: "prefinal", label: "Prefinal" },
-                                { value: "final", label: "Final" },
+                                { value: "Proposal", label: "Proposal" },
+                                { value: "Prefinal", label: "Prefinal" },
+                                { value: "Final", label: "Final" },
                             ].map(option => (
                                 <button
                                     type="button"

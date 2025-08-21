@@ -16,6 +16,15 @@ class DefenseRequirementController extends Controller
         ]);
     }
 
+    public function all(Request $request)
+    {
+        $requirements = DefenseRequirement::with('user')->get();
+
+        return inertia('adviser/defense-requirements/Index', [
+            'defenseRequirements' => $requirements,
+        ]);
+    }
+
     public function store(Request $request)
     {
         $data = $request->validate([
@@ -41,7 +50,7 @@ class DefenseRequirementController extends Controller
             }
         }
         $data['user_id'] = auth()->id();
-        $data['status'] = 'pending'; // <-- Ensure status is set
+        $data['status'] = 'pending'; 
 
         DefenseRequirement::create($data);
 

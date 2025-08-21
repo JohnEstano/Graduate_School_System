@@ -12,4 +12,9 @@ class DefenseRequirement extends Model
         'adviser', 'status', 'rec_endorsement', 'proof_of_payment', 'reference_no',
         'manuscript_proposal', 'similarity_index', 'defense_type'
     ];
+
+    public function user()
+    {
+        return $this->belongsTo(\App\Models\User::class, 'user_id');
+    }
 }

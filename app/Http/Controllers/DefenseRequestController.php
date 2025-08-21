@@ -80,9 +80,9 @@ class DefenseRequestController extends Controller
             'defensePanelist3' => 'nullable|string',
             'defensePanelist4' => 'nullable|string',
             'advisersEndorsement' => 'nullable|file',
-            'recEndorsement' => 'nullable|file',
-            'proofOfPayment' => 'nullable|file',
-            'referenceNo' => 'nullable|file',
+            'recEndorsement' => 'required|string',
+            'proofOfPayment' => 'required|string',
+            'referenceNo' => 'required|string',
         ]);
 
         foreach ([

@@ -93,6 +93,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // Defense Requirements routes
     Route::get('/defense-requirements', [DefenseRequirementController::class, 'index'])->name('defense-requirements.index');
     Route::post('/defense-requirements', [DefenseRequirementController::class, 'store'])->name('defense-requirements.store');
+    Route::get('/all-defense-requirements', [DefenseRequirementController::class, 'all'])
+        ->middleware(['auth', 'verified'])
+        ->name('defense-requirements.all');
 });
 
 require __DIR__ . '/settings.php';

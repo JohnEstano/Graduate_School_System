@@ -78,6 +78,8 @@ const assistantNavItems: MainNavItem[] = [
     { title: 'Student Records', href: '/student-records', icon: Users },
     { title: 'Panelists', href: '/panelists', icon: SquareUserRound },
     { title: 'Schedules', href: '/schedules', icon: CalendarFold },
+    { title: 'Defense Requirements', href: '/defense-requirements', icon: MessageSquareText },
+    { title: 'All Defense Requirements', href: '/all-defense-requirements', icon: FileText },
     { title: 'Messages', href: '/messages', icon: MessageSquareText },
 
 
