@@ -4,7 +4,7 @@ import { NavUser } from '@/components/nav-user';
 import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '@/components/ui/sidebar';
 import { MainNavItem, type NavItem } from '@/types';
 import { Link, usePage } from '@inertiajs/react';
-import { CalendarFold, CreditCard, DollarSign, FileText, LayoutGrid, MessageSquareText, ScrollText, Users } from 'lucide-react';
+import { CalendarFold, CreditCard, DollarSign, FileText, LayoutGrid, MessageSquareText, ScrollText, SquareUserRound, Users } from 'lucide-react';
 import AppLogo from './app-logo';
 import { useEffect, useState } from "react";
 
@@ -32,7 +32,7 @@ const studentNavItems: MainNavItem[] = [
         icon: FileText,
         subItems: [
             { title: 'Comprehensive Exam', href: '/comprehensive-exam' },
-            { title: 'Defense Requests', href: '/defense-request' },
+            { title: 'Defense Requirements', href: '/defense-requirements' }, 
         ],
     },
     {
@@ -44,14 +44,14 @@ const studentNavItems: MainNavItem[] = [
         title: 'Schedules',
         href: '/schedule',
         icon: CalendarFold,
-       
+
     },
-     {
+    {
         title: 'Messages',
         href: '/messages',
         icon: MessageSquareText,
     },
- 
+
 ];
 
 const assistantNavItems: MainNavItem[] = [
@@ -61,7 +61,7 @@ const assistantNavItems: MainNavItem[] = [
         href: '/requests',
         icon: ScrollText,
         subItems: [
-            { title: 'Defense Requests', href: '/defense-request' },
+            { title: 'Defense Request', href: '/defense-request' },
             { title: 'Comprehensive Exams', href: '/comprehensive-exam' },
             { title: 'Payment Receipt', href: '/payment-receipt' },
         ],
@@ -76,9 +76,11 @@ const assistantNavItems: MainNavItem[] = [
         ],
     },
     { title: 'Student Records', href: '/student-records', icon: Users },
+    { title: 'Panelists', href: '/panelists', icon: SquareUserRound },
     { title: 'Schedules', href: '/schedules', icon: CalendarFold },
     { title: 'Messages', href: '/messages', icon: MessageSquareText },
-     
+
+
 
 
 ];

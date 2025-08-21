@@ -3,7 +3,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import { startOfDay, endOfDay, isWithinInterval } from 'date-fns';
 import { Toaster, toast } from 'sonner';
-import React from "react";
 import * as ReactDOMClient from "react-dom/client";
 
 import { Button } from '@/components/ui/button';
