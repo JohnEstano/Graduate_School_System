@@ -10,9 +10,13 @@ class DefenseRequirementController extends Controller
     public function index(Request $request)
     {
         $requirements = DefenseRequirement::where('user_id', auth()->id())->get();
+        $defenseRequest = \App\Models\DefenseRequest::where('school_id', auth()->user()->school_id)
+            ->latest()
+            ->first();
 
         return inertia('student/submissions/defense-requirements/Index', [
             'defenseRequirements' => $requirements,
+            'defenseRequest' => $defenseRequest,
         ]);
     }
 
@@ -20,8 +24,12 @@ class DefenseRequirementController extends Controller
     {
         $requirements = DefenseRequirement::with('user')->get();
 
+        // Only get defense requests submitted by the current adviser
+        $requests = \App\Models\DefenseRequest::where('submitted_by', auth()->id())->get();
+
         return inertia('adviser/defense-requirements/Index', [
             'defenseRequirements' => $requirements,
+            'defenseRequests' => $requests,
         ]);
     }
 

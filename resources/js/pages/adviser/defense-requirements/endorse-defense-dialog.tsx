@@ -16,7 +16,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar } from '@/components/ui/calendar';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { format } from 'date-fns';
-import { Calendar as CalendarIcon, Check, ChevronsUpDown } from 'lucide-react';
+import { Calendar as CalendarIcon, Check, ChevronsUpDown, Plus } from 'lucide-react';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import axios from 'axios';
 
@@ -219,7 +219,7 @@ export default function EndorseDefenseDialog({ request, open, onOpenChange }: Pr
                                         disabled={panelists.length >= 4}
                                         aria-label="Add Panelist"
                                     >
-                                        <ChevronsUpDown className="w-4 h-4" />
+                                        <Plus className="w-4 h-4" />
                                     </Button>
                                 </div>
                                 <div className="space-y-2">

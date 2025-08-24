@@ -84,7 +84,8 @@ function UserAvatar({ name }: { name: string }) {
 
 export default function ShowAllDefenseRequirements({
     defenseRequirements = [],
-}: { defenseRequirements: DefenseRequirement[] }) {
+    defenseRequests = [],
+}: { defenseRequirements: DefenseRequirement[]; defenseRequests: any[] }) {
     const [openItems, setOpenItems] = useState<Record<number, boolean>>({});
     const [endorseDialogId, setEndorseDialogId] = useState<number | null>(null);
     const [search, setSearch] = useState(""); // Add search state
@@ -94,8 +95,14 @@ export default function ShowAllDefenseRequirements({
         setEndorseDialogId(null);
     }, [defenseRequirements]);
 
-    // Filter requirements by search
+    // Filter out requirements that have already been endorsed
+    const endorsedKeys = new Set(
+        defenseRequests.map(req => `${req.school_id}-${req.thesis_title}`.toLowerCase())
+    );
     const filteredRequirements = defenseRequirements.filter(req => {
+        const key = `${req.school_id}-${req.thesis_title}`.toLowerCase();
+        return !endorsedKeys.has(key);
+    }).filter(req => {
         const name = getDisplayName(req).toLowerCase();
         const thesis = req.thesis_title?.toLowerCase() || "";
         const q = search.toLowerCase();
@@ -109,11 +116,14 @@ export default function ShowAllDefenseRequirements({
                 <div className="flex flex-row items-center justify-between w-full p-3 border-b bg-white">
                     <div className="flex items-center gap-2">
                         <div className="h-10 w-10 flex items-center justify-center rounded-full bg-rose-500/10 border border-rose-500">
-                            <FileText className="h-5 w-5 text-rose-400" />
+                            <Paperclip className="h-5 w-5 text-rose-400" />
                         </div>
-                        <div>
+                        <div className=''>
                             <span className="text-base font-semibold">
                                 All Defense Requirements
+                            </span>
+                            <span className="block text-xs text-muted-foreground ">
+                                This section shows all defense requirements submitted by your students
                             </span>
                         </div>
                     </div>
@@ -131,7 +141,7 @@ export default function ShowAllDefenseRequirements({
                 </div>
                 {filteredRequirements.length === 0 ? (
                     <div className="p-6 text-center text-sm text-muted-foreground bg-white">
-                        No defense requirements found.
+                        No pending defense requirements found.
                     </div>
                 ) : (
                     filteredRequirements
@@ -181,7 +191,7 @@ export default function ShowAllDefenseRequirements({
                                             <div className="px-4 py-4 bg-white rounded-b">
                                                 {/* Thesis title and badge row */}
                                                 <div className="flex items-center gap-2 mb-2">
-                                                    <span className="text-xs text-muted-foreground font-semibold">Thesis:</span>
+                                                    <span className="text-xs text-muted-foreground font-semibold">Thesis title:</span>
                                                     <span className="text-sm font-bold">{req.thesis_title}</span>
                                                     <Badge variant="secondary" className="w-fit text-xs ml-2">
                                                         {req.defense_type}

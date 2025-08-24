@@ -33,15 +33,36 @@ Route::middleware(['auth', 'verified'])->group(function () {
         return Inertia::render('schedule/Index');
     })->name('schedule.index');
 
-    // Submissions pages
+    // Submissions pages (singular endpoints used by your UI)
     Route::get('/defense-request', [DefenseRequestController::class, 'index'])
         ->name('defense-request.index');
     Route::post('/defense-request', [DefenseRequestController::class, 'store'])
         ->name('defense-request.store');
-    Route::patch('/defense-requests/{defenseRequest}/status', [DefenseRequestController::class, 'updateStatus'])->name('defense-requests.update-status');
-    Route::patch('/defense-requests/{defenseRequest}/priority', [DefenseRequestController::class, 'updatePriority'])->name('defense-requests.update-priority');
-    Route::patch('/defense-requests/bulk-status', [DefenseRequestController::class, 'bulkUpdateStatus']);
-    Route::patch('/defense-requests/bulk-priority', [DefenseRequestController::class, 'bulkUpdatePriority']);
+
+    // Specific PATCH endpoints for resource actions (per-item)
+    Route::patch('/defense-requests/{defenseRequest}/status', [DefenseRequestController::class, 'updateStatus'])
+        ->name('defense-requests.update-status');
+    Route::patch('/defense-requests/{defenseRequest}/priority', [DefenseRequestController::class, 'updatePriority'])
+        ->name('defense-requests.update-priority');
+
+    // Bulk action endpoints (specific) - MUST come before the wildcard/resource
+    Route::patch('/defense-requests/bulk-status', [DefenseRequestController::class, 'bulkUpdateStatus'])
+        ->name('defense-requests.bulk-update-status');
+    Route::patch('/defense-requests/bulk-priority', [DefenseRequestController::class, 'bulkUpdatePriority'])
+        ->name('defense-requests.bulk-update-priority');
+
+    // Bulk delete (specific) - place BEFORE the resource/wildcard route
+    Route::delete('/defense-requests/bulk-remove', [DefenseRequestController::class, 'bulkDelete'])
+        ->middleware(['auth', 'verified'])
+        ->name('defense-requests.bulk-remove');
+
+    // Any other specific defense-requests routes that must not be treated as {defenseRequest}
+    Route::get('/defense-requests/calendar', [DefenseRequestController::class, 'calendar'])
+        ->name('defense-requests.calendar');
+
+    // Resource routes (creates the single-item delete /defense-requests/{defense_request})
+    // Keep this AFTER any specific routes above so they take precedence.
+    Route::resource('defense-requests', DefenseRequestController::class);
 
     Route::get('comprehensive-exam', function () {
         return Inertia::render('student/submissions/comprehensive-exam/Index');
@@ -59,8 +80,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('schedules', function () {
         return Inertia::render('coordinator/schedule/Index');
     })->name('schedules.index');
-
-    Route::get('/defense-requests/calendar', [DefenseRequestController::class, 'calendar']);
 
     // Messaging pages
     Route::prefix('messages')->name('messages.')->group(function () {

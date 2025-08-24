@@ -19,6 +19,8 @@ import {
 import SubmitDefenseRequirements from './submit-defense-requirements';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
+import { Progress } from "@/components/ui/progress";
+
 dayjs.extend(relativeTime);
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -39,6 +41,23 @@ type DefenseRequirement = {
     // add other fields as needed
 };
 
+type DefenseRequest = {
+    id: number;
+    thesis_title: string;
+    school_id: string;
+    status: string;
+    date_of_defense?: string;
+    mode_defense?: string;
+    chairperson?: string; // <-- add this
+    panel_members?: string[]; // <-- add this (array of names)
+    defense_chairperson?: string;
+    defense_panelist1?: string;
+    defense_panelist2?: string;
+    defense_panelist3?: string;
+    defense_panelist4?: string;
+    // ...other fields
+};
+
 type PageProps = {
     auth: {
         user: {
@@ -47,11 +66,12 @@ type PageProps = {
         };
     };
     defenseRequirements?: DefenseRequirement[];
+    defenseRequest?: DefenseRequest | null;
 };
 
 export default function DefenseRequestIndex() {
     const { props } = usePage<PageProps>();
-    const { defenseRequirements = [] } = props;
+    const { defenseRequirements = [], defenseRequest } = props;
 
     // Check if there is a pending request
     const hasPending = defenseRequirements.some(
@@ -103,7 +123,7 @@ export default function DefenseRequestIndex() {
             title: 'Approved',
             description:
                 'Your defense requirements have been approved. Please wait for further instructions regarding your defense schedule.',
-            color: 'text-green-600', 
+            color: 'text-green-600',
             icon: <Check className="h-4 w-4 text-green-600" />,
             bg: 'bg-green-50',
         },
@@ -116,6 +136,79 @@ export default function DefenseRequestIndex() {
             bg: 'bg-rose-50',
         },
     };
+
+    // Add this function to determine progress based on status
+    function getProgressAndDetails(req: DefenseRequirement) {
+        let progress = 0;
+        let title = "Pending Review";
+        let description =
+            "Your defense requirements have been submitted and are awaiting review by your <b>Adviser</b>.";
+        let color = "text-muted-foreground";
+        let icon = <Hourglass className="h-4 w-4 opacity-60" />;
+        let bg = "bg-secondary";
+        let progressColor = "bg-green-500";
+
+        // If there is a matching defenseRequest
+        if (
+            defenseRequest &&
+            defenseRequest.thesis_title === req.thesis_title &&
+            defenseRequest.school_id === props.auth.user.school_id
+        ) {
+            const status = defenseRequest.status?.toLowerCase();
+            if (status === "pending" || status === "needs-info") {
+                // Adviser endorsed, waiting for coordinator
+                progress = 50;
+                title = "Pending Review";
+                description =
+                    "Your requirements have been verified and are now being <b>endorsed by your Adviser</b>.The defense request is currently <b>awaiting review by the Coordinator</b>. You will be notified once the defense request is finally approved.";
+                color = "text-muted-foreground";
+                icon = <Hourglass className="h-4 w-4 opacity-60" />;
+                bg = "bg-zinc-50";
+                progressColor = "bg-green-500";
+            } else if (status === "approved") {
+                progress = 100;
+                title = "Approved";
+                // Read chairperson and panelists from defenseRequest
+                const chairperson = defenseRequest.defense_chairperson || "Chairperson not assigned";
+                const panelists = [
+                    defenseRequest.defense_panelist1,
+                    defenseRequest.defense_panelist2,
+                    defenseRequest.defense_panelist3,
+                    defenseRequest.defense_panelist4,
+                ].filter(Boolean); // Remove undefined/null
+
+                const panelistText = panelists.length
+                    ? panelists.map((name, idx) => `<br/>Panel Member ${idx + 1}: <b>${name}</b>`).join("")
+                    : "<br/>Panel members not assigned.";
+
+                description =
+                    `Your defense request has been <b>approved by the Coordinator</b>. ${
+                        defenseRequest.date_of_defense
+                            ? `Your defense is scheduled on <b>${dayjs(defenseRequest.date_of_defense).format("MMMM D, YYYY")}</b>`
+                            : "<b>Defense date will be announced soon.</b>"
+                    }. <br/>Chairperson: <b>${chairperson}</b>${panelistText} ${
+                        defenseRequest.mode_defense
+                            ? `<br/>Mode of defense: <b>${defenseRequest.mode_defense}</b>.`
+                            : ""
+                    }`;
+                color = "text-green-600";
+                icon = <Check className="h-4 w-4 text-green-600" />;
+                bg = "bg-green-50";
+                progressColor = "bg-green-500";
+            } else if (status === "rejected") {
+                progress = 100;
+                title = "Rejected";
+                description =
+                    "Your defense request has been <b>rejected</b>. Please review the <b>feedback</b> and <b>resubmit your documents</b>.";
+                color = "text-rose-600";
+                icon = <X className="h-4 w-4 text-rose-600" />;
+                bg = "bg-rose-50";
+                progressColor = "bg-rose-500";
+            }
+        }
+
+        return { progress, title, description, color, icon, bg, progressColor };
+    }
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
@@ -131,8 +224,8 @@ export default function DefenseRequestIndex() {
                                 <span className="text-base font-semibold">
                                     Defense Requirements
                                 </span>
-                                <p className="text-sm text-muted-foreground">
-                                    Below are your submitted defense requirements and their current status.
+                                <p className="block text-xs text-muted-foreground">
+                                    This sections shows all your submitted defense requirements and their current status.
                                 </p>
                             </div>
                         </div>
@@ -155,19 +248,17 @@ export default function DefenseRequestIndex() {
                         </div>
                     ) : (
                         defenseRequirements
-                            .slice() 
+                            .slice()
                             .sort((a, b) => {
-                               
+
                                 const aTime = a.created_at ? new Date(a.created_at).getTime() : 0;
                                 const bTime = b.created_at ? new Date(b.created_at).getTime() : 0;
                                 return bTime - aTime;
                             })
                             .map((req) => {
-                                const status = req.status?.toLowerCase() || 'pending';
-                                const details = statusDetails[status] || statusDetails['pending'];
-                                const isOpen = openItems[req.id] ?? false; // default closed
+                                const details = getProgressAndDetails(req);
+                                const isOpen = openItems[req.id] ?? false;
 
-                                // Format time submitted
                                 const timeSubmitted = req.created_at
                                     ? dayjs(req.created_at).fromNow()
                                     : 'Unknown';
@@ -182,16 +273,19 @@ export default function DefenseRequestIndex() {
                                         >
                                             <CollapsibleTrigger asChild>
                                                 <div className="flex items-center justify-between px-4 py-3 cursor-pointer bg-white">
-                                                    {/* Removed border-b from this div */}
                                                     <div className="flex items-center gap-2">
                                                         {details.icon}
                                                         <span className={`font-semibold text-xs ${details.color}`}>
                                                             {details.title}
                                                         </span>
                                                     </div>
-                                                    <div className="flex items-center gap-2">
-                                                        <span className="text-xs text-muted-foreground">
-                                                           Submitted {timeSubmitted}
+                                                    <div className="flex items-center gap-4">
+                                                        <Progress
+                                                            value={details.progress}
+                                                            className="h-2 w-64"
+                                                        />
+                                                        <span className="text-xs text-muted-foreground whitespace-nowrap">
+                                                            Submitted {timeSubmitted}
                                                         </span>
                                                         <ChevronDown
                                                             className={`transition-transform duration-200 h-4 w-4 text-muted-foreground ${isOpen ? 'rotate-180' : ''}`}
@@ -207,9 +301,10 @@ export default function DefenseRequestIndex() {
                                                                 {details.title}
                                                             </span>
                                                         </div>
-                                                        <div className="text-xs text-muted-foreground space-y-2">
-                                                            <div>{details.description}</div>
-                                                        </div>
+                                                        <div
+                                                            className="text-xs text-muted-foreground space-y-2"
+                                                            dangerouslySetInnerHTML={{ __html: details.description }}
+                                                        />
                                                     </div>
                                                 </div>
                                             </CollapsibleContent>

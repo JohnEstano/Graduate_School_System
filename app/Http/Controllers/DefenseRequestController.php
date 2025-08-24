@@ -116,6 +116,7 @@ class DefenseRequestController extends Controller
             'defense_panelist2' => $data['defensePanelist2'] ?? null,
             'defense_panelist3' => $data['defensePanelist3'] ?? null,
             'defense_panelist4' => $data['defensePanelist4'] ?? null,
+            'submitted_by' => auth()->id(),
         ]);
 
         $defenseRequest = DefenseRequest::latest()->first();
@@ -286,5 +287,32 @@ class DefenseRequestController extends Controller
     {
         return \App\Models\DefenseRequest::select('id', 'thesis_title', 'date_of_defense', 'status')
             ->get();
+    }
+
+    public function destroy(DefenseRequest $defenseRequest)
+    {
+        $defenseRequest->delete();
+        return response()->json(['success' => true]);
+    }
+
+    public function bulkDelete(Request $request)
+    {
+        $request->validate([
+            'ids' => 'required|array|min:1',
+            'ids.*' => 'integer',
+        ]);
+        DefenseRequest::whereIn('id', $request->ids)->delete();
+        return response()->json(['success' => true]);
+    }
+
+    public function all(Request $request)
+    {
+        $requirements = DefenseRequirement::with('user')->get();
+        $requests = \App\Models\DefenseRequest::where('defense_adviser', auth()->user()->name)->get();
+
+        return inertia('adviser/defense-requirements/Index', [
+            'defenseRequirements' => $requirements,
+            'defenseRequests' => $requests,
+        ]);
     }
 }

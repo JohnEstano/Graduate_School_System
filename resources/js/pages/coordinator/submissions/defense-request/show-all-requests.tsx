@@ -112,6 +112,7 @@ export default function ShowAllRequests({
         ids: [],
         action: null,
     });
+    const [confirmBulkDelete, setConfirmBulkDelete] = useState(false);
 
     const [openDropdownId, setOpenDropdownId] = useState<number | null>(null);
     const [datePopoverOpen, setDatePopoverOpen] = useState(false);
@@ -463,6 +464,32 @@ export default function ShowAllRequests({
         setConfirmDialog({ open: true, type: 'single', ids: [id], action });
     }
 
+   
+
+    async function handleBulkDelete(): Promise<void> {
+        if (selected.length === 0) return;
+        try {
+            const res = await fetch('/defense-requests/bulk-remove', { // <--- FIXED ENDPOINT
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': getCsrfToken(),
+                    'Accept': 'application/json',
+                },
+                body: JSON.stringify({ ids: selected }),
+            });
+            const data = await res.json();
+            if (res.ok) {
+                setDefenseRequests((requests) => requests.filter((r) => !selected.includes(r.id)));
+                setSelected([]);
+                toast.success('Selected defense requests deleted!', { position: 'bottom-right' });
+            } else {
+                toast.error(data?.error || 'Failed to delete selected defense requests', { position: 'bottom-right' });
+            }
+        } catch (e) {
+            toast.error('Error deleting selected defense requests', { position: 'bottom-right' });
+        }
+    }
     return (
         <div className="p-2 flex flex-col gap-2 min-h-screen bg-background">
             <Toaster richColors position="bottom-right" />
@@ -491,6 +518,32 @@ export default function ShowAllRequests({
                                 onClick={handleConfirmDialog}
                             >
                                 Confirm
+                            </Button>
+                        </div>
+                    </div>
+                </DialogContent>
+            </Dialog>
+            <Dialog open={confirmBulkDelete} onOpenChange={setConfirmBulkDelete}>
+                <DialogContent>
+                    <div className="space-y-2">
+                        <div className="text-lg font-semibold">
+                            Confirm Bulk Delete
+                        </div>
+                        <div className="text-sm text-muted-foreground">
+                            Are you sure you want to delete {selected.length} selected defense request(s)? This action cannot be undone.
+                        </div>
+                        <div className="flex justify-end gap-2 pt-2">
+                            <Button variant="ghost" onClick={() => setConfirmBulkDelete(false)}>
+                                Cancel
+                            </Button>
+                            <Button
+                                variant="destructive"
+                                onClick={async () => {
+                                    await handleBulkDelete();
+                                    setConfirmBulkDelete(false);
+                                }}
+                            >
+                                Delete
                             </Button>
                         </div>
                     </div>
@@ -686,7 +739,7 @@ export default function ShowAllRequests({
                                             <Button
                                                 variant="ghost"
                                                 size="icon"
-                                                className=" px-2 py-1 h-7 w-auto text-xs flex items-center gap-1"
+                                                className="px-2 py-1 h-7 w-auto text-xs flex items-center gap-1"
                                                 onClick={() => openConfirmBulk('reject')}
                                                 aria-label="Mark as Rejected"
                                             >
@@ -699,7 +752,7 @@ export default function ShowAllRequests({
                                         <Button
                                             variant="ghost"
                                             size="icon"
-                                            className=" px-2 py-1 h-7 w-auto text-xs flex items-center gap-1"
+                                            className="px-2 py-1 h-7 w-auto text-xs flex items-center gap-1"
                                             onClick={() => openConfirmBulk('retrieve')}
                                             aria-label="Mark as Pending"
                                         >
@@ -710,8 +763,8 @@ export default function ShowAllRequests({
                                     <Button
                                         variant="ghost"
                                         size="icon"
-                                        className=" px-2 py-1 h-7 w-auto text-xs flex items-center gap-1"
-                                        // onClick={...}
+                                        className="px-2 py-1 h-7 w-auto text-xs flex items-center gap-1"
+                                        onClick={() => setConfirmBulkDelete(true)}
                                         aria-label="Delete"
                                     >
                                         <Trash2 size={13} />
@@ -720,7 +773,7 @@ export default function ShowAllRequests({
                                     <Button
                                         variant="ghost"
                                         size="icon"
-                                        className=" px-1 py-1 h-7 w-auto text-xs flex items-center gap-1"
+                                        className="px-1 py-1 h-7 w-auto text-xs flex items-center gap-1"
                                         onClick={handleBulkPrint}
                                         aria-label="Print"
                                     >
@@ -730,7 +783,7 @@ export default function ShowAllRequests({
                                     <Button
                                         variant="ghost"
                                         size="icon"
-                                        className=" px-1 py-1 h-7 w-auto text-xs flex items-center"
+                                        className="px-1 py-1 h-7 w-auto text-xs flex items-center"
                                         onClick={() => setSelected([])}
                                         aria-label="Clear selection"
                                     >
