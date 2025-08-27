@@ -18,7 +18,9 @@ class DefenseRequestController extends Controller
         $props = [];
 
         if (in_array($user->role, ['Administrative Assistant', 'Coordinator', 'Dean'])) {
-            $defenseRequests = DefenseRequest::with('lastStatusUpdater')->get();
+            $defenseRequests = DefenseRequest::with('lastStatusUpdater')
+                ->orderBy('created_at', 'desc') // <-- Add this line
+                ->get();
 
             $defenseRequests->transform(function ($item) {
                 $item->last_status_updated_by = $item->lastStatusUpdater?->name;

@@ -84,9 +84,9 @@ export default function ShowAllRequests({
     const [defenseRequests, setDefenseRequests] = useState(initialRequests);
     const [search, setSearch] = useState('');
     const [pageByTab, setPageByTab] = useState<{ [key: string]: number }>({
-      pending: 1,
-      rejected: 1,
-      approved: 1,
+        pending: 1,
+        rejected: 1,
+        approved: 1,
     });
     const [selectedByTab, setSelectedByTab] = useState<{ [key: string]: number[] }>({
         pending: [],
@@ -126,10 +126,10 @@ export default function ShowAllRequests({
     }, [initialRequests]);
 
     useEffect(() => {
-      setPageByTab(prev => ({ ...prev, [tab]: 1 }));
-      setSelectedByTab((prev) => ({ ...prev, [tab]: [] }));
-      setSelectedRequest(null);
-      setSelectedIndex(0);
+        setPageByTab(prev => ({ ...prev, [tab]: 1 }));
+        setSelectedByTab((prev) => ({ ...prev, [tab]: [] }));
+        setSelectedRequest(null);
+        setSelectedIndex(0);
     }, [tab]);
 
     const filtered = useMemo(() => {
@@ -190,7 +190,7 @@ export default function ShowAllRequests({
     const approved = defenseRequests.filter(r => r.status === "Approved").length;
     const rejected = defenseRequests.filter(r => r.status === "Rejected").length;
 
-   
+
     const selected = selectedByTab[tab] || [];
     const setSelected = (arr: number[]) => setSelectedByTab((prev) => ({ ...prev, [tab]: arr }));
 
@@ -382,10 +382,10 @@ export default function ShowAllRequests({
     };
 
     function handleBulkPrint() {
-      const rows = defenseRequests.filter(r => selected.includes(r.id));
-      const printWindow = window.open('', '', 'height=900,width=1200');
-      if (printWindow) {
-        printWindow.document.write(`
+        const rows = defenseRequests.filter(r => selected.includes(r.id));
+        const printWindow = window.open('', '', 'height=900,width=1200');
+        if (printWindow) {
+            printWindow.document.write(`
           <html>
             <head>
               <title>Print Selected</title>
@@ -398,24 +398,24 @@ export default function ShowAllRequests({
             </body>
           </html>
         `);
-        printWindow.document.close();
+            printWindow.document.close();
 
-      
-        printWindow.onload = () => {
-          const printRoot = printWindow.document.getElementById('print-root');
-          if (printRoot) {
-            ReactDOMClient.createRoot(printRoot).render(
-              <PrintSelected rows={rows} />
-            );
-            setTimeout(() => {
-              printWindow.print();
-            }, 500);
-          } else {
-          
-            printWindow.document.body.innerHTML = "<p>Failed to load print content.</p>";
-          }
-        };
-      }
+
+            printWindow.onload = () => {
+                const printRoot = printWindow.document.getElementById('print-root');
+                if (printRoot) {
+                    ReactDOMClient.createRoot(printRoot).render(
+                        <PrintSelected rows={rows} />
+                    );
+                    setTimeout(() => {
+                        printWindow.print();
+                    }, 500);
+                } else {
+
+                    printWindow.document.body.innerHTML = "<p>Failed to load print content.</p>";
+                }
+            };
+        }
     }
 
     function formatLocalDateTime(dateString?: string) {
@@ -464,7 +464,7 @@ export default function ShowAllRequests({
         setConfirmDialog({ open: true, type: 'single', ids: [id], action });
     }
 
-   
+
 
     async function handleBulkDelete(): Promise<void> {
         if (selected.length === 0) return;
@@ -491,11 +491,11 @@ export default function ShowAllRequests({
         }
     }
     return (
-        <div className="p-2 flex flex-col gap-2 min-h-screen bg-background">
+        <div className="p-2 flex flex-col gap-2 min-h-screen bg-background dark:bg-background">
             <Toaster richColors position="bottom-right" />
             {/* Confirmation Dialog */}
             <Dialog open={confirmDialog.open} onOpenChange={open => setConfirmDialog(s => ({ ...s, open }))}>
-                <DialogContent>
+                <DialogContent className="dark:bg-background dark:text-muted-foreground">
                     <div className="space-y-2">
                         <div className="text-lg font-semibold">
                             Confirm Status Update
@@ -524,7 +524,7 @@ export default function ShowAllRequests({
                 </DialogContent>
             </Dialog>
             <Dialog open={confirmBulkDelete} onOpenChange={setConfirmBulkDelete}>
-                <DialogContent>
+                <DialogContent className="dark:bg-background dark:text-muted-foreground">
                     <div className="space-y-2">
                         <div className="text-lg font-semibold">
                             Confirm Bulk Delete
@@ -549,178 +549,32 @@ export default function ShowAllRequests({
                     </div>
                 </DialogContent>
             </Dialog>
-            <Card className="flex flex-col border-none shadow-none p-1 flex-1 min-h-0">
+            <Card className="flex flex-col border-none shadow-none p-1 flex-1 min-h-0 dark:bg-background dark:text-muted-foreground">
                 <div className="flex flex-wrap items-center justify-between ">
-                    <div className="flex flex-1 justify-between items-center flex-wrap gap-2 ">
-                        <div className="flex flex-1 items-center gap-2">
-                            <div className="relative">
-                                <Search className="absolute left-2 top-2 h-4 w-4 text-muted-foreground" />
-                                <Input
-                                    placeholder="Search..."
-                                    value={search}
-                                    startIcon={Search}
-                                    onChange={(e) => {
-                                        setSearch(e.currentTarget.value);
-                                        setPage(1);
-                                    }}
-                                    className="pl-8 h-8  text-sm w-[250px]"
-                                />
-                            </div>
-                            <div className="flex gap-2">
-                                <Popover>
-                                    <PopoverTrigger asChild>
-                                        <Button
-                                            variant="outline"
-                                            className="rounded-md border-dashed text-xs h-8 px-3 flex items-center gap-1"
-                                        >
-                                            <CirclePlus /> Priority
-                                            {priorityFilter.length > 0 && (
-                                                <Badge
-                                                    variant="secondary"
-                                                    className="ml-1 px-2 py-0.5 rounded-full text-xs bg-accent text-accent-foreground"
-                                                >
-                                                    {priorityFilter.length > 1
-                                                        ? `${priorityFilter.length} selected`
-                                                        : priorityFilter[0]}
-                                                </Badge>
-                                            )}
-                                        </Button>
-                                    </PopoverTrigger>
-                                    <PopoverContent className="w-44 p-1" side="bottom" align="start">
-                                        {['Low', 'Medium', 'High'].map((p) => (
-                                            <div
-                                                key={p}
-                                                onClick={() =>
-                                                    setPriorityFilter((fp) =>
-                                                        fp.includes(p) ? fp.filter((x) => x !== p) : [...fp, p]
-                                                    )
-                                                }
-                                                className="flex items-center gap-2 p-2 rounded hover:bg-muted cursor-pointer"
-                                            >
-                                                <Checkbox checked={priorityFilter.includes(p)} />
-                                                <span className="text-sm">
-                                                    {p.charAt(0).toUpperCase() + p.slice(1)}
-                                                </span>
-                                            </div>
-                                        ))}
-                                        <Separator className="my-2" />
-                                        <Button
-                                            size="sm"
-                                            variant="ghost"
-                                            className="w-full"
-                                            onClick={() => setPriorityFilter([])}
-                                        >
-                                            <X /> Clear Filters
-                                        </Button>
-                                    </PopoverContent>
-                                </Popover>
-                                <Popover>
-                                    <PopoverTrigger asChild>
-                                        <Button
-                                            variant="outline"
-                                            className="rounded-md border-dashed text-xs h-8 px-3 flex items-center gap-1"
-                                        >
-                                            <CirclePlus /> Type
-                                            {typeFilter.length > 0 && (
-                                                <Badge
-                                                    variant="secondary"
-                                                    className="ml-1 px-2 py-0.5 rounded-full text-xs bg-accent text-accent-foreground"
-                                                >
-                                                    {typeFilter.length > 1
-                                                        ? `${typeFilter.length} selected`
-                                                        : typeFilter[0]}
-                                                </Badge>
-                                            )}
-                                        </Button>
-                                    </PopoverTrigger>
-                                    <PopoverContent className="w-44 p-1" side="bottom" align="start">
-                                        {['Proposal', 'Prefinal', 'Final'].map(
-                                            (t) => (
-                                                <div
-                                                    key={t}
-                                                    onClick={() =>
-                                                        setTypeFilter((ft) =>
-                                                            ft.includes(t) ? ft.filter((x) => x !== t) : [...ft, t]
-                                                        )
-                                                    }
-                                                    className="flex items-center gap-2 p-2 rounded hover:bg-muted cursor-pointer"
-                                                >
-                                                    <Checkbox checked={typeFilter.includes(t)} />
-                                                    <span className="text-sm">{t}</span>
-                                                </div>
-                                            )
-                                        )}
-                                        <Separator className="my-2" />
-                                        <Button
-                                            size="sm"
-                                            variant="ghost"
-                                            className="w-full"
-                                            onClick={() => setTypeFilter([])}
-                                        >
-                                            <X /> Clear Filters
-                                        </Button>
-                                    </PopoverContent>
-                                </Popover>
-                                <Popover open={datePopoverOpen} onOpenChange={setDatePopoverOpen}>
-                                    <PopoverTrigger asChild>
-                                        <Button
-                                            variant="outline"
-                                            className="rounded-md border-dashed text-xs h-8 px-3 flex items-center gap-1"
-                                        >
-                                            <CalendarIcon size={14} />
-                                            Date
-                                            {dateRange?.from && dateRange?.to && (
-                                                <Badge
-                                                    variant="secondary"
-                                                    className="ml-1 px-2 py-0.5 rounded-full text-xs bg-accent text-accent-foreground"
-                                                >
-                                                    {`${format(dateRange.from, 'MMM dd, yyyy')} - ${format(dateRange.to, 'MMM dd, yyyy')}`}
-                                                </Badge>
-                                            )}
-                                        </Button>
-                                    </PopoverTrigger>
-                                    <PopoverContent className="w-auto p-2" side="bottom" align="start">
-                                        <Calendar
-                                            mode="range"
-                                            selected={dateRange}
-                                            onSelect={setDateRange}
-                                        />
-                                        <Button
-                                            size="sm"
-                                            variant="ghost"
-                                            className="w-full mt-2"
-                                            onClick={() => setDateRange(undefined)}
-                                        >
-                                            <span>Clear Dates</span>
-                                        </Button>
-                                    </PopoverContent>
-                                </Popover>
-                                {(priorityFilter.length > 0 || dateRange?.from || dateRange?.to || typeFilter.length > 0) && (
-                                    <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        className="h-8 px-3 flex items-center gap-1"
-                                        onClick={() => {
-                                            setTypeFilter([]);
-                                            setPriorityFilter([]);
-                                            setDateRange(undefined);
-                                        }}
-                                        aria-label="Reset all filters"
-                                    >
-                                        <X className="w-4 h-4 rose-500" />
-                                        Reset
-                                    </Button>
-                                )}
-                            </div>
-                        </div>
-                       
+                    <div className="flex flex-1 justify-between items-center flex-wrap gap-1">
+                        <Tabs value={tab} onValueChange={v => setTab(v as any)} className="">
+                            <TabsList>
+                                <TabsTrigger value="pending">
+                                    <Clock4 />  Pending <Badge className="ml-1 text-rose-500" variant="secondary" >{pending}</Badge>
+                                </TabsTrigger>
+                                <TabsTrigger value="rejected">
+                                    <XCircle />  Rejected <Badge className="ml-1" variant="secondary">{rejected}</Badge>
+                                </TabsTrigger>
+                                <TabsTrigger value="approved">
+                                    <CheckCircle />  Approved <Badge className="ml-1" variant="secondary">{approved}</Badge>
+                                </TabsTrigger>
+                            </TabsList>
+                        </Tabs>
+
+
                     </div>
                 </div>
-                <CardContent className="ps-0 pe-0 flex-1 flex flex-col min-h-0">
-                    <div className="bg-white w-full max-w-full flex-1 flex flex-col overflow-auto min-h-0 relative">
-                        {/* --- BULK BAR, filters, tabs, etc. --- */}
+                <CardContent className="ps-0 pe-0 flex-1 flex flex-col min-h-0 dark:bg-background dark:text-muted-foreground">
+                    <div className="bg-white w-full max-w-full flex-1 flex flex-col overflow-auto min-h-0 relative dark:bg-background dark:text-muted-foreground">
+
+                        {/* --- BUlk bars, and search, filters etc. --- */}
                         {selected.length > 0 && (tab === 'pending' || tab === 'rejected') && (
-                            <div className="fixed left-1/2 z-30 -translate-x-1/2 bottom-4 md:bottom-6 flex items-center gap-1 bg-white border border-border shadow-lg rounded-lg px-4 py-1 text-xs animate-in fade-in slide-in-from-bottom-2">
+                            <div className="fixed left-1/2 z-30 -translate-x-1/2 bottom-4 md:bottom-6 flex items-center gap-1 bg-white border border-border shadow-lg rounded-lg px-4 py-1 text-xs animate-in fade-in slide-in-from-bottom-2 dark:bg-muted dark:text-muted-foreground dark:border-border">
                                 <span className="font-semibold min-w-[70px] text-center">{selected.length} selected</span>
                                 <Separator orientation="vertical" className="h-5 mx-1" />
                                 <div className="flex gap-1">
@@ -792,21 +646,172 @@ export default function ShowAllRequests({
                                 </div>
                             </div>
                         )}
-                        <Separator className="mb-2" />
+
+                        <Separator className="mb-2 dark:bg-border" />
                         <div className="flex items-center justify-between mb-2">
-                            <Tabs value={tab} onValueChange={v => setTab(v as any)} className="">
-                                <TabsList>
-                                    <TabsTrigger value="pending">
-                                        <Clock4 />  Pending <Badge className="ml-1 text-rose-500" variant="secondary" >{pending}</Badge>
-                                    </TabsTrigger>
-                                    <TabsTrigger value="rejected">
-                                        <XCircle />  Rejected <Badge className="ml-1" variant="secondary">{rejected}</Badge>
-                                    </TabsTrigger>
-                                    <TabsTrigger value="approved">
-                                        <CheckCircle />  Approved <Badge className="ml-1" variant="secondary">{approved}</Badge>
-                                    </TabsTrigger>
-                                </TabsList>
-                            </Tabs>
+                            <div className="flex flex-1 items-center gap-2">
+
+                                <div className="relative ml-1">
+
+
+                                    <Input
+                                        placeholder="Search..."
+                                        value={search}
+                                        startIcon={Search}
+                                        onChange={(e) => {
+                                            setSearch(e.currentTarget.value);
+                                            setPage(1);
+                                        }}
+                                        className="pl-8 h-8  text-sm w-[230px]"
+                                    />
+                                </div>
+                                <div className="flex gap-2">
+                                    <Popover>
+                                        <PopoverTrigger asChild>
+                                            <Button
+                                                variant="outline"
+                                                className="rounded-md border-dashed text-xs h-8 px-3 flex items-center gap-1"
+                                            >
+                                                <CirclePlus /> Priority
+                                                {priorityFilter.length > 0 && (
+                                                    <Badge
+                                                        variant="secondary"
+                                                        className="ml-1 px-2 py-0.5 rounded-full text-xs bg-accent text-accent-foreground"
+                                                    >
+                                                        {priorityFilter.length > 1
+                                                            ? `${priorityFilter.length} selected`
+                                                            : priorityFilter[0]}
+                                                    </Badge>
+                                                )}
+                                            </Button>
+                                        </PopoverTrigger>
+                                        <PopoverContent className="w-44 p-1 dark:bg-background dark:text-muted-foreground" side="bottom" align="start">
+                                            {['Low', 'Medium', 'High'].map((p) => (
+                                                <div
+                                                    key={p}
+                                                    onClick={() =>
+                                                        setPriorityFilter((fp) =>
+                                                            fp.includes(p) ? fp.filter((x) => x !== p) : [...fp, p]
+                                                        )
+                                                    }
+                                                    className="flex items-center gap-2 p-2 rounded hover:bg-muted cursor-pointer"
+                                                >
+                                                    <Checkbox checked={priorityFilter.includes(p)} />
+                                                    <span className="text-sm">
+                                                        {p.charAt(0).toUpperCase() + p.slice(1)}
+                                                    </span>
+                                                </div>
+                                            ))}
+                                            <Separator className="my-2" />
+                                            <Button
+                                                size="sm"
+                                                variant="ghost"
+                                                className="w-full"
+                                                onClick={() => setPriorityFilter([])}
+                                            >
+                                                <X /> Clear Filters
+                                            </Button>
+                                        </PopoverContent>
+                                    </Popover>
+                                    <Popover>
+                                        <PopoverTrigger asChild>
+                                            <Button
+                                                variant="outline"
+                                                className="rounded-md border-dashed text-xs h-8 px-3 flex items-center gap-1"
+                                            >
+                                                <CirclePlus /> Type
+                                                {typeFilter.length > 0 && (
+                                                    <Badge
+                                                        variant="secondary"
+                                                        className="ml-1 px-2 py-0.5 rounded-full text-xs bg-accent text-accent-foreground"
+                                                    >
+                                                        {typeFilter.length > 1
+                                                            ? `${typeFilter.length} selected`
+                                                            : typeFilter[0]}
+                                                    </Badge>
+                                                )}
+                                            </Button>
+                                        </PopoverTrigger>
+                                        <PopoverContent className="w-44 p-1 dark:bg-background dark:text-muted-foreground" side="bottom" align="start">
+                                            {['Proposal', 'Prefinal', 'Final'].map(
+                                                (t) => (
+                                                    <div
+                                                        key={t}
+                                                        onClick={() =>
+                                                            setTypeFilter((ft) =>
+                                                                ft.includes(t) ? ft.filter((x) => x !== t) : [...ft, t]
+                                                            )
+                                                        }
+                                                        className="flex items-center gap-2 p-2 rounded hover:bg-muted cursor-pointer"
+                                                    >
+                                                        <Checkbox checked={typeFilter.includes(t)} />
+                                                        <span className="text-sm">{t}</span>
+                                                    </div>
+                                                )
+                                            )}
+                                            <Separator className="my-2" />
+                                            <Button
+                                                size="sm"
+                                                variant="ghost"
+                                                className="w-full"
+                                                onClick={() => setTypeFilter([])}
+                                            >
+                                                <X /> Clear Filters
+                                            </Button>
+                                        </PopoverContent>
+                                    </Popover>
+                                    <Popover open={datePopoverOpen} onOpenChange={setDatePopoverOpen}>
+                                        <PopoverTrigger asChild>
+                                            <Button
+                                                variant="outline"
+                                                className="rounded-md border-dashed text-xs h-8 px-3 flex items-center gap-1"
+                                            >
+                                                <CalendarIcon size={14} />
+                                                Date
+                                                {dateRange?.from && dateRange?.to && (
+                                                    <Badge
+                                                        variant="secondary"
+                                                        className="ml-1 px-2 py-0.5 rounded-full text-xs bg-accent text-accent-foreground"
+                                                    >
+                                                        {`${format(dateRange.from, 'MMM dd, yyyy')} - ${format(dateRange.to, 'MMM dd, yyyy')}`}
+                                                    </Badge>
+                                                )}
+                                            </Button>
+                                        </PopoverTrigger>
+                                        <PopoverContent className="w-auto p-2 dark:bg-background dark:text-muted-foreground" side="bottom" align="start">
+                                            <Calendar
+                                                mode="range"
+                                                selected={dateRange}
+                                                onSelect={setDateRange}
+                                            />
+                                            <Button
+                                                size="sm"
+                                                variant="ghost"
+                                                className="w-full mt-2"
+                                                onClick={() => setDateRange(undefined)}
+                                            >
+                                                <span>Clear Dates</span>
+                                            </Button>
+                                        </PopoverContent>
+                                    </Popover>
+                                    {(priorityFilter.length > 0 || dateRange?.from || dateRange?.to || typeFilter.length > 0) && (
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            className="h-8 px-3 flex items-center gap-1"
+                                            onClick={() => {
+                                                setTypeFilter([]);
+                                                setPriorityFilter([]);
+                                                setDateRange(undefined);
+                                            }}
+                                            aria-label="Reset all filters"
+                                        >
+                                            <X className="w-4 h-4 rose-500" />
+                                            Reset
+                                        </Button>
+                                    )}
+                                </div>
+                            </div>
                             <div>
                                 <Popover>
                                     <PopoverTrigger asChild>
@@ -817,7 +822,7 @@ export default function ShowAllRequests({
                                             <Settings2 />
                                         </Button>
                                     </PopoverTrigger>
-                                    <PopoverContent className="w-48 p-1" side="bottom" align="end">
+                                    <PopoverContent className="w-48 p-1 dark:bg-background dark:text-muted-foreground" side="bottom" align="end">
                                         {[
                                             { key: 'title', label: 'Title' },
                                             { key: 'presenter', label: 'Presenter' },
@@ -858,9 +863,9 @@ export default function ShowAllRequests({
                             </div>
                         </div>
                         <Tabs value={tab} onValueChange={v => setTab(v as any)} className="w-full flex-1 flex flex-col min-h-0">
-                            <TabsContent value="pending" className="flex-1 flex flex-col min-h-0">
-                                <Card className="border-none shadow-none p-1 flex-1 flex flex-col min-h-0">
-                                    <CardContent className="ps-0 pe-0 flex-1 flex flex-col min-h-0">
+                            <TabsContent value="pending" className="flex-1 flex flex-col min-h-0 dark:bg-background dark:text-muted-foreground">
+                                <Card className="border-none shadow-none p-1 flex-1 flex flex-col min-h-0 dark:bg-background dark:text-muted-foreground">
+                                    <CardContent className="ps-0 pe-0 flex-1 flex flex-col min-h-0 dark:bg-background dark:text-muted-foreground">
                                         <div className="flex-1 flex flex-col min-h-0 overflow-auto">
                                             <TableDefenseRequests
                                                 key="pending"
@@ -878,8 +883,8 @@ export default function ShowAllRequests({
                                                 selectedRequest={selectedRequest}
                                                 selectedIndex={selectedIndex}
                                                 onStatusChange={async (id, status) => {
-                                                  if (status === 'Approved') openConfirmSingle(id, 'approve');
-                                                  else if (status === 'Rejected') openConfirmSingle(id, 'reject');
+                                                    if (status === 'Approved') openConfirmSingle(id, 'approve');
+                                                    else if (status === 'Rejected') openConfirmSingle(id, 'reject');
                                                 }}
                                                 onPriorityChange={onPriorityChange}
                                                 formatLocalDateTime={formatLocalDateTime}
@@ -894,9 +899,9 @@ export default function ShowAllRequests({
                                     </CardContent>
                                 </Card>
                             </TabsContent>
-                            <TabsContent value="rejected" className="flex-1 flex flex-col min-h-0">
-                                <Card className="border-none shadow-none p-1 flex-1 flex flex-col min-h-0">
-                                    <CardContent className="ps-0 pe-0 flex-1 flex flex-col min-h-0">
+                            <TabsContent value="rejected" className="flex-1 flex flex-col min-h-0 dark:bg-background dark:text-muted-foreground">
+                                <Card className="border-none shadow-none p-1 flex-1 flex flex-col min-h-0 dark:bg-background dark:text-muted-foreground">
+                                    <CardContent className="ps-0 pe-0 flex-1 flex flex-col min-h-0 dark:bg-background dark:text-muted-foreground">
                                         <div className="flex-1 flex flex-col min-h-0 overflow-auto">
                                             <TableDefenseRequests
                                                 key="rejected"
@@ -929,10 +934,10 @@ export default function ShowAllRequests({
                                     </CardContent>
                                 </Card>
                             </TabsContent>
-                            <TabsContent value="approved" className="flex-1 flex flex-col min-h-0">
+                            <TabsContent value="approved" className="flex-1 flex flex-col min-h-0 dark:bg-background dark:text-muted-foreground">
                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 flex-1">
                                     {pagedRequests['approved'].map((r, i) => (
-                                        <Card key={r.id} className="border border-border shadow-none p-4 flex flex-col gap-2">
+                                        <Card key={r.id} className="border border-border shadow-none p-4 flex flex-col gap-2 dark:bg-muted dark:text-muted-foreground dark:border-border">
                                             <div className="font-semibold text-base truncate" title={r.thesis_title}>{r.thesis_title}</div>
                                             <div className="text-xs text-muted-foreground mb-1 truncate">
                                                 {r.first_name} {r.middle_name ? `${r.middle_name[0]}. ` : ''}{r.last_name}
@@ -941,7 +946,7 @@ export default function ShowAllRequests({
                                                 <Badge variant="outline" className="truncate max-w-[100px]" title={r.defense_type}>{r.defense_type}</Badge>
                                                 <Badge variant="outline" className="truncate max-w-[80px]" title={r.priority}>{r.priority}</Badge>
                                             </div>
-                                        
+
                                             <div className="flex flex-col gap-1 mt-2">
                                                 <span className="text-xs text-muted-foreground">Honorarium Status</span>
                                                 <Progress value={40} className="w-full h-2" />
@@ -952,8 +957,8 @@ export default function ShowAllRequests({
                                                     size="sm"
                                                     variant="outline"
                                                     onClick={() => {
-                                                      setSelectedRequest(r);
-                                                      setSelectedIndex(i);
+                                                        setSelectedRequest(r);
+                                                        setSelectedIndex(i);
                                                     }}
                                                 >
                                                     Details
@@ -962,32 +967,32 @@ export default function ShowAllRequests({
                                         </Card>
                                     ))}
                                     {pagedRequests['approved'].length === 0 && (
-                                        <div className="col-span-full text-center text-muted-foreground py-8">No approved requests.</div>
+                                        <div className="col-span-full text-center text-muted-foreground py-8 dark:text-muted-foreground">No approved requests.</div>
                                     )}
                                 </div>
-                            
+
                                 <Dialog open={!!selectedRequest} onOpenChange={open => { if (!open) setSelectedRequest(null); }}>
-                                  <DialogContent className="max-w-3xl min-w-260 w-full max-h-[90vh]">
-                                    <div className="max-h-[80vh] overflow-y-auto px-1">
-                                      {selectedRequest && (
-                                        <Details
-                                          request={selectedRequest as any}
-                                          onNavigate={dir => {
-                                            const arr = pagedRequests[tab];
-                                            const ni = dir === 'next' ? selectedIndex + 1 : selectedIndex - 1;
-                                            if (ni >= 0 && ni < arr.length) {
-                                              setSelectedRequest(arr[ni]);
-                                              setSelectedIndex(ni);
-                                            }
-                                          }}
-                                          disablePrev={selectedIndex === 0}
-                                          disableNext={selectedIndex === pagedRequests[tab].length - 1}
-                                          onStatusAction={handleRequestStatusAction}
-                                          onPriorityChange={onPriorityChange}
-                                        />
-                                      )}
-                                    </div>
-                                  </DialogContent>
+                                    <DialogContent className="max-w-3xl min-w-260 w-full max-h-[90vh] dark:bg-background dark:text-muted-foreground">
+                                        <div className="max-h-[80vh] overflow-y-auto px-1">
+                                            {selectedRequest && (
+                                                <Details
+                                                    request={selectedRequest as any}
+                                                    onNavigate={dir => {
+                                                        const arr = pagedRequests[tab];
+                                                        const ni = dir === 'next' ? selectedIndex + 1 : selectedIndex - 1;
+                                                        if (ni >= 0 && ni < arr.length) {
+                                                            setSelectedRequest(arr[ni]);
+                                                            setSelectedIndex(ni);
+                                                        }
+                                                    }}
+                                                    disablePrev={selectedIndex === 0}
+                                                    disableNext={selectedIndex === pagedRequests[tab].length - 1}
+                                                    onStatusAction={handleRequestStatusAction}
+                                                    onPriorityChange={onPriorityChange}
+                                                />
+                                            )}
+                                        </div>
+                                    </DialogContent>
                                 </Dialog>
                             </TabsContent>
                         </Tabs>

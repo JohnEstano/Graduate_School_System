@@ -4,7 +4,7 @@ import { NavUser } from '@/components/nav-user';
 import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '@/components/ui/sidebar';
 import { MainNavItem, type NavItem } from '@/types';
 import { Link, usePage } from '@inertiajs/react';
-import { CalendarFold, CreditCard, DollarSign, FileText, LayoutGrid, MessageSquareText, ScrollText, SquareUserRound, Users } from 'lucide-react';
+import { CalendarFold, CreditCard, DollarSign, FileText, GraduationCap, LayoutGrid, MessageSquareText, ScrollText, SquareUserRound, Users } from 'lucide-react';
 import AppLogo from './app-logo';
 import { useEffect, useState } from "react";
 
@@ -61,9 +61,18 @@ const assistantNavItems: MainNavItem[] = [
         href: '/requests',
         icon: ScrollText,
         subItems: [
-            { title: 'Defense Request', href: '/defense-request' },
             { title: 'Comprehensive Exams', href: '/comprehensive-exam' },
             { title: 'Payment Receipt', href: '/payment-receipt' },
+        ],
+    },
+    {
+        title: 'Thesis & Dissertations',
+        href: '/defense',
+        icon: GraduationCap,
+        subItems: [
+            { title: 'Defense Request', href: '/defense-request' },
+             { title: 'Defense Requirements', href: '/all-defense-requirements', icon: FileText },
+             { title: 'Panelists', href: '/panelists', icon: SquareUserRound },
         ],
     },
     {
@@ -76,10 +85,7 @@ const assistantNavItems: MainNavItem[] = [
         ],
     },
     { title: 'Student Records', href: '/student-records', icon: Users },
-    { title: 'Panelists', href: '/panelists', icon: SquareUserRound },
     { title: 'Schedules', href: '/schedules', icon: CalendarFold },
-    { title: 'Defense Requirements', href: '/defense-requirements', icon: MessageSquareText },
-    { title: 'All Defense Requirements', href: '/all-defense-requirements', icon: FileText },
     { title: 'Messages', href: '/messages', icon: MessageSquareText },
 
 
