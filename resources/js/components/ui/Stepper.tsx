@@ -1,7 +1,6 @@
 // components/ui/Stepper.tsx
 import { Fragment, ReactNode } from 'react';
 import { Button } from '@/components/ui/button';
-import { Check, Circle } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 
@@ -41,26 +40,39 @@ export function Stepper({
                   layout
                   transition={{ type: 'spring', stiffness: 300, damping: 30 }}
                   className={cn(
-                    'flex-shrink-0 flex items-center justify-center w-6 h-6 rounded-full border-2 text-xs',
-                    done || active
-                      ? 'bg-rose-500 border-rose-500 text-white'
-                      : 'bg-transparent border-gray-300 text-gray-600'
+                    'flex-shrink-0 flex items-center justify-center w-6 h-6 rounded-full border-2',
+                    active
+                      ? 'border-rose-500'
+                      : 'border-gray-300'
                   )}
+                  style={{
+                    background: active ? '#f43f5e' : '#fff',
+                    position: 'relative',
+                  }}
                 >
-                  {done ? (
-                    <Check size={12} />
-                  ) : (
-                    <Circle size={12} fill="currentColor" className="text-white-500" />
-                  )}
+                  <span
+                    className={cn(
+                      'block rounded-full',
+                      active
+                        ? 'bg-white'
+                        : 'bg-gray-400'
+                    )}
+                    style={{
+                      width: '12px',
+                      height: '12px',
+                      position: 'absolute',
+                      left: '50%',
+                      top: '50%',
+                      transform: 'translate(-50%, -50%)'
+                    }}
+                  />
                 </motion.div>
                 {i < steps.length - 1 && (
                   <motion.div
                     layout
                     transition={{ duration: 0.3 }}
-                    className={cn(
-                      'h-[2px] flex-1 min-w-[20px]',
-                      i < currentStep ? 'bg-rose-500' : 'bg-gray-300'
-                    )}
+                    className="h-0.5 flex-1 min-w-[40px] bg-gray-300"
+                    style={{ marginLeft: 4, marginRight: 4 }}
                   />
                 )}
               </Fragment>

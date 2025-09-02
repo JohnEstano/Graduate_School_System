@@ -15,6 +15,8 @@ return new class extends Migration
             $table->id();
             $table->string('name');
             $table->string('email')->unique();
+            $table->enum('status', ['Available', 'Not Available'])->default('Available');
+            $table->date('date_available')->nullable();
             $table->timestamps();
         });
     }
