@@ -512,7 +512,7 @@ export default function ShowAllRequests({
                             <Button
                                 variant={
                                     confirmDialog.action === 'reject'
-                                        ? 'destructive'
+                                        ? 'default'
                                         : 'default'
                                 }
                                 onClick={handleConfirmDialog}
@@ -935,65 +935,40 @@ export default function ShowAllRequests({
                                 </Card>
                             </TabsContent>
                             <TabsContent value="approved" className="flex-1 flex flex-col min-h-0 dark:bg-background dark:text-muted-foreground">
-                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 flex-1">
-                                    {pagedRequests['approved'].map((r, i) => (
-                                        <Card key={r.id} className="border border-border shadow-none p-4 flex flex-col gap-2 dark:bg-muted dark:text-muted-foreground dark:border-border">
-                                            <div className="font-semibold text-base truncate" title={r.thesis_title}>{r.thesis_title}</div>
-                                            <div className="text-xs text-muted-foreground mb-1 truncate">
-                                                {r.first_name} {r.middle_name ? `${r.middle_name[0]}. ` : ''}{r.last_name}
-                                            </div>
-                                            <div className="flex flex-nowrap gap-2 text-xs overflow-x-auto">
-                                                <Badge variant="outline" className="truncate max-w-[100px]" title={r.defense_type}>{r.defense_type}</Badge>
-                                                <Badge variant="outline" className="truncate max-w-[80px]" title={r.priority}>{r.priority}</Badge>
-                                            </div>
-
-                                            <div className="flex flex-col gap-1 mt-2">
-                                                <span className="text-xs text-muted-foreground">Honorarium Status</span>
-                                                <Progress value={40} className="w-full h-2" />
-                                                <span className="text-xs text-muted-foreground mt-1 block">Processing...</span>
-                                            </div>
-                                            <div className="flex gap-2 mt-2">
-                                                <Button
-                                                    size="sm"
-                                                    variant="outline"
-                                                    onClick={() => {
-                                                        setSelectedRequest(r);
-                                                        setSelectedIndex(i);
-                                                    }}
-                                                >
-                                                    Details
-                                                </Button>
-                                            </div>
-                                        </Card>
-                                    ))}
-                                    {pagedRequests['approved'].length === 0 && (
-                                        <div className="col-span-full text-center text-muted-foreground py-8 dark:text-muted-foreground">No approved requests.</div>
-                                    )}
-                                </div>
-
-                                <Dialog open={!!selectedRequest} onOpenChange={open => { if (!open) setSelectedRequest(null); }}>
-                                    <DialogContent className="max-w-3xl min-w-260 w-full max-h-[90vh] dark:bg-background dark:text-muted-foreground">
-                                        <div className="max-h-[80vh] overflow-y-auto px-1">
-                                            {selectedRequest && (
-                                                <Details
-                                                    request={selectedRequest as any}
-                                                    onNavigate={dir => {
-                                                        const arr = pagedRequests[tab];
-                                                        const ni = dir === 'next' ? selectedIndex + 1 : selectedIndex - 1;
-                                                        if (ni >= 0 && ni < arr.length) {
-                                                            setSelectedRequest(arr[ni]);
-                                                            setSelectedIndex(ni);
-                                                        }
-                                                    }}
-                                                    disablePrev={selectedIndex === 0}
-                                                    disableNext={selectedIndex === pagedRequests[tab].length - 1}
-                                                    onStatusAction={handleRequestStatusAction}
-                                                    onPriorityChange={onPriorityChange}
-                                                />
-                                            )}
+                                <Card className="border-none shadow-none p-1 flex-1 flex flex-col min-h-0 dark:bg-background dark:text-muted-foreground">
+                                    <CardContent className="ps-0 pe-0 flex-1 flex flex-col min-h-0 dark:bg-background dark:text-muted-foreground">
+                                        <div className="flex-1 flex flex-col min-h-0 overflow-auto">
+                                            <TableDefenseRequests
+                                                key="approved"
+                                                paged={pagedRequests['approved']}
+                                                columns={{
+                                                    ...columns,
+                                                    progress: true // Add progress column for approved tab
+                                                }}
+                                                selected={selected}
+                                                toggleSelectOne={toggleSelectOne}
+                                                headerChecked={headerChecked}
+                                                toggleSelectAll={toggleSelectAll}
+                                                toggleSort={toggleSort}
+                                                sortDir={sortDir}
+                                                setSelectedRequest={setSelectedRequest}
+                                                setSelectedIndex={setSelectedIndex}
+                                                sorted={pagedRequests['approved']}
+                                                selectedRequest={selectedRequest}
+                                                selectedIndex={selectedIndex}
+                                                onStatusChange={async () => {}}
+                                                onPriorityChange={onPriorityChange}
+                                                formatLocalDateTime={formatLocalDateTime}
+                                                openDropdownId={openDropdownId}
+                                                setOpenDropdownId={setOpenDropdownId}
+                                                tabType="approved"
+                                                onRowApprove={() => {}}
+                                                onRowReject={() => {}}
+                                                onRowRetrieve={() => {}}
+                                            />
                                         </div>
-                                    </DialogContent>
-                                </Dialog>
+                                    </CardContent>
+                                </Card>
                             </TabsContent>
                         </Tabs>
                         <PaginationBar page={page} totalPages={totalPages} onPageChange={setPage} />
