@@ -1,6 +1,5 @@
 import { usePage } from '@inertiajs/react';
 import { CircleEllipsis, Ellipsis, BellRing, Info } from 'lucide-react';
-import MessagingWidget from '@/components/messaging-widget';
 
 type PageProps = {
     auth: {
@@ -52,9 +51,7 @@ export default function StudentDashboard() {
                 </div>
             </div>
             <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-                <div className="border-sidebar-border/70 dark:border-sidebar-border relative overflow-hidden rounded-xl border md:col-span-1">
-                    <MessagingWidget />
-                </div>
+                {/* Messaging widget removed */}
 
                 <div className="border-sidebar-border/70 dark:border-sidebar-border relative flex min-h-[100vh] justify-between overflow-hidden rounded-xl border p-5 md:col-span-2">
                     <div className="flex-cols flex grid-cols-2 gap-2">
