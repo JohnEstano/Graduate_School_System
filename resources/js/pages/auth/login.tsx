@@ -57,7 +57,7 @@ export default function Login({ status, canResetPassword }: LoginProps) {
                             autoComplete="username"
                             value={data.identifier}
                             onChange={(e) => setData('identifier', e.target.value)}
-                            placeholder="email@uic.edu.ph or 240000000001"
+                            placeholder="Username"
                         />
                         <InputError message={errors.identifier} />
                     </div>
