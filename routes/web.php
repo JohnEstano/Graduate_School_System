@@ -5,12 +5,19 @@ use App\Http\Controllers\DefenseRequestController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\PanelistController;
 use App\Http\Controllers\DefenseRequirementController;
+use App\Http\Controllers\AcademicRecordController;
 use Illuminate\Support\Facades\Route;
-use Inertia\Inertia;
+use Inertia\Inertia; // still used elsewhere; keep import
+use App\Http\Controllers\Auth\GoogleController;
 
+// Landing page (public) with call-to-action
 Route::get('/', function () {
-    return Inertia::render('welcome');
+    return Inertia::render('landing/Index');
 })->name('home');
+
+// Google OAuth (domain restricted) routes
+Route::get('/auth/google/redirect', [GoogleController::class, 'redirect'])->name('google.redirect');
+Route::get('/auth/google/callback', [GoogleController::class, 'callback'])->name('google.callback');
 
 // All routes below require authentication and verification
 Route::middleware(['auth', 'verified'])->group(function () {
@@ -81,15 +88,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         return Inertia::render('coordinator/schedule/Index');
     })->name('schedules.index');
 
-    // Messaging pages
-    Route::prefix('messages')->name('messages.')->group(function () {
-        Route::get('/', [App\Http\Controllers\MessageController::class, 'index'])->name('index');
-        Route::get('/conversations/{conversation}/messages', [App\Http\Controllers\MessageController::class, 'getMessages'])->name('get-messages');
-        Route::post('/send', [App\Http\Controllers\MessageController::class, 'store'])->name('send');
-        Route::post('/conversations', [App\Http\Controllers\MessageController::class, 'createConversation'])->name('create-conversation');
-        Route::get('/unread-count', [App\Http\Controllers\MessageController::class, 'getUnreadCount'])->name('unread-count');
-        Route::get('/search-users', [App\Http\Controllers\MessageController::class, 'searchUsers'])->name('search-users');
-    });
+    // Messaging feature removed
 
     // System status page (for testing)
     Route::get('/system-status', function () {
@@ -115,6 +114,16 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/all-defense-requirements', [DefenseRequirementController::class, 'all'])
         ->middleware(['auth', 'verified'])
         ->name('defense-requirements.all');
+
+    // Legacy system linking
+    Route::get('/legacy/link', [\App\Http\Controllers\LegacyLinkController::class, 'form'])->name('legacy.link.form');
+    Route::post('/legacy/link', [\App\Http\Controllers\LegacyLinkController::class, 'link'])->name('legacy.link.submit');
+    Route::delete('/legacy/link', [\App\Http\Controllers\LegacyLinkController::class, 'unlink'])->name('legacy.link.unlink');
+
+    // Academic records (legacy) JSON endpoint
+    Route::get('/legacy/academic-records', [AcademicRecordController::class, 'index'])->name('legacy.academic-records.index');
+    // Inertia dashboard page
+    Route::get('/legacy/academic-records/dashboard', function () { return Inertia::render('legacy/AcademicRecordsDashboard'); })->name('legacy.academic-records.dashboard');
 });
 
 require __DIR__ . '/settings.php';

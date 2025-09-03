@@ -18,6 +18,7 @@ class User extends Authenticatable
      * @var list<string>
      */
     protected $fillable = [
+    'student_number',
         'first_name',
         'middle_name',
         'last_name',
@@ -58,24 +59,7 @@ class User extends Authenticatable
         ];
     }
 
-    /**
-     * Get all conversations for this user.
-     */
-    public function conversations()
-    {
-        return $this->belongsToMany(Conversation::class, 'message_participants')
-                    ->withPivot(['joined_at', 'last_read_at', 'is_admin'])
-                    ->withTimestamps()
-                    ->orderBy('last_message_at', 'desc');
-    }
-
-    /**
-     * Get all messages sent by this user.
-     */
-    public function messages()
-    {
-        return $this->hasMany(Message::class);
-    }
+    // Messaging relations removed
 
     /**
      * Get user's full name for display
