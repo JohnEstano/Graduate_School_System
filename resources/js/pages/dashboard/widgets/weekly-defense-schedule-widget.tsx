@@ -9,6 +9,7 @@ type DefenseRequest = {
     date_of_defense: string;
     first_name?: string;
     last_name?: string;
+    submitted_by?: number; // Add this if available
 };
 
 type Props = {
@@ -18,6 +19,7 @@ type Props = {
     approvedDefenses: DefenseRequest[];
     loading?: boolean;
     referenceDate: Date;
+    studentId?: number; // <-- Add this prop
 };
 
 function getDateOfWeek(dayOfWeek: number, refDate: Date) {
@@ -32,6 +34,7 @@ export default function WeeklyDefenseSchedulesWidget({
     approvedDefenses,
     loading = false,
     referenceDate,
+    studentId,
 }: Props) {
     const selectedDate = getDateOfWeek(selectedDay, referenceDate);
 
@@ -79,7 +82,7 @@ export default function WeeklyDefenseSchedulesWidget({
                     filteredDefenses.map(ev => (
                         <div
                             key={ev.id}
-                            className="flex items-center gap-2 px-2 py-2 rounded border bg-transparent max-w-full"
+                            className={`flex items-center gap-2 px-2 py-2 rounded border bg-transparent max-w-full ${studentId && ev.submitted_by === studentId ? 'border-rose-500 bg-rose-50 dark:bg-rose-950/30' : ''}`}
                             style={{ minWidth: 0 }}
                         >
                             <GraduationCap className="text-rose-400 mr-2 flex-shrink-0" size={18} />
@@ -88,6 +91,9 @@ export default function WeeklyDefenseSchedulesWidget({
                                 style={{ maxWidth: "180px" }}
                             >
                                 Thesis title: <span className="text-muted-foreground">{ev.thesis_title}</span>
+                                {studentId && ev.submitted_by === studentId && (
+                                    <span className="ml-2 px-2 py-0.5 rounded-full bg-rose-500 text-white text-[10px] font-semibold">You</span>
+                                )}
                             </span>
                         </div>
                     ))
