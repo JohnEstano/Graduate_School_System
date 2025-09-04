@@ -115,6 +115,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/all-defense-requirements', [DefenseRequirementController::class, 'all'])
         ->middleware(['auth', 'verified'])
         ->name('defense-requirements.all');
+
+    Route::get('/defense-requests/pending', [DefenseRequestController::class, 'pending']);
 });
 
 require __DIR__ . '/settings.php';

@@ -17,7 +17,7 @@ import {
 import { format } from 'date-fns';
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
-import { getProgramAbbr } from './Index'; // adjust path if needed
+import { getProgramAbbr } from './Index';
 import { toast } from 'sonner';
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 
@@ -53,8 +53,8 @@ type DetailsProps = {
   onNavigate?: (direction: 'next' | 'prev') => void;
   disablePrev?: boolean;
   disableNext?: boolean;
-  onStatusAction: (id: number, action: 'approve' | 'reject' | 'retrieve') => void;
-  onPriorityChange: (id: number, priority: string) => Promise<void>;
+  onStatusAction?: (id: number, action: 'approve' | 'reject' | 'retrieve') => void;
+  onPriorityChange?: (id: number, priority: string) => Promise<void>;
 };
 
 export default function Details({
@@ -63,6 +63,7 @@ export default function Details({
   disablePrev,
   disableNext,
   onStatusAction,
+  onPriorityChange,
 }: DetailsProps) {
   const [loading, setLoading] = useState<string | null>(null);
   const [localRequest, setLocalRequest] = useState<DefenseRequestFull>(request);
@@ -83,25 +84,44 @@ export default function Details({
   const lastStatusUpdatedBy = localRequest.last_status_updated_by ?? '';
   const lastStatusUpdatedAt = localRequest.last_status_updated_at ?? '';
 
-  const handleStatusUpdate = async (status: string) => {
-    setLoading(status);
-    await onStatusAction(localRequest.id, status as 'approve' | 'reject' | 'retrieve');
+  // Map dialog action to backend status
+  function mapActionToStatus(action: string) {
+    if (action === 'Approved') return 'Approved';
+    if (action === 'Rejected') return 'Rejected';
+    if (action === 'Pending') return 'Pending';
+    return action;
+  }
 
-    setLocalRequest((prev) => ({
-      ...prev,
-      status: status as DefenseRequestFull['status'],
-      last_status_updated_by: (window as any)?.currentUserName || 'You',
-      last_status_updated_at: new Date().toISOString(),
-    }));
-    setLoading(null);
-    toast.success(
-      `Request status has been successfully updated to ${status}.`,
-      {
-        description: undefined,
-        duration: 4000,
-        position: 'bottom-right',
+  // Directly call backend PATCH for status update
+  const handleStatusUpdate = async (action: string) => {
+    setLoading(action);
+    try {
+      const res = await fetch(`/defense-requests/${localRequest.id}/status`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRF-TOKEN': (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content || '',
+          'Accept': 'application/json',
+        },
+        body: JSON.stringify({ status: mapActionToStatus(action) }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setLocalRequest((prev) => ({
+          ...prev,
+          status: data.status,
+          last_status_updated_by: data.last_status_updated_by,
+          last_status_updated_at: data.last_status_updated_at,
+        }));
+        toast.success(`Request status updated to ${data.status}.`, { duration: 4000, position: 'bottom-right' });
+      } else {
+        toast.error('Failed to update status', { duration: 4000, position: 'bottom-right' });
       }
-    );
+    } catch (e) {
+      toast.error('Network error', { duration: 4000, position: 'bottom-right' });
+    }
+    setLoading(null);
+    setConfirm({ open: false, action: null });
   };
 
   return (
@@ -306,20 +326,22 @@ export default function Details({
       </ScrollArea>
 
       {/* Footer */}
-      <div className="w-full rounded-md justify-end flex gap-1 flex-wrap text-xs mt-2  mb-1 flex-shrink-0">
+      <div className="w-full rounded-md justify-end flex gap-1 flex-wrap text-xs mt-2 mb-1 flex-shrink-0">
         {localRequest.status === 'Pending' && (
           <>
             <Button
               variant="outline"
               className="px-3 py-2 rounded-md h-auto text-xs flex items-center gap-1"
-              onClick={() => onStatusAction(localRequest.id, 'approve')}
+              disabled={loading === 'Approved'}
+              onClick={() => setConfirm({ open: true, action: 'Approved' })}
             >
               <CheckCircle size={12} className="text-green-500" /> Approve
             </Button>
             <Button
               variant="outline"
               className="px-3 py-2 rounded-md h-auto text-xs flex items-center gap-1"
-              onClick={() => onStatusAction(localRequest.id, 'reject')}
+              disabled={loading === 'Rejected'}
+              onClick={() => setConfirm({ open: true, action: 'Rejected' })}
             >
               <CircleX size={12} className="text-red-500" /> Reject
             </Button>
@@ -329,7 +351,8 @@ export default function Details({
           <Button
             variant="outline"
             className="px-3 py-2 rounded-md h-auto text-xs flex items-center gap-1"
-            onClick={() => onStatusAction(localRequest.id, 'retrieve')}
+            disabled={loading === 'Pending'}
+            onClick={() => setConfirm({ open: true, action: 'Pending' })}
           >
             <Clock size={12} className="text-blue-500" /> Retrieve
           </Button>
@@ -339,14 +362,16 @@ export default function Details({
             <Button
               variant="outline"
               className="px-3 py-2 rounded-md h-auto text-xs flex items-center gap-1"
-              onClick={() => onStatusAction(localRequest.id, 'retrieve')}
+              disabled={loading === 'Pending'}
+              onClick={() => setConfirm({ open: true, action: 'Pending' })}
             >
               <Clock size={12} className="text-blue-500" /> Retrieve
             </Button>
             <Button
               variant="outline"
               className="px-3 py-2 rounded-md h-auto text-xs flex items-center gap-1"
-              onClick={() => onStatusAction(localRequest.id, 'reject')}
+              disabled={loading === 'Rejected'}
+              onClick={() => setConfirm({ open: true, action: 'Rejected' })}
             >
               <CircleX size={12} className="text-red-500" /> Reject
             </Button>
@@ -381,12 +406,10 @@ export default function Details({
                 </Button>
                 <Button
                   variant={confirm.action === 'Rejected' ? 'destructive' : 'default'}
-                  onClick={async () => {
-                    if (confirm.action) await handleStatusUpdate(confirm.action);
-                    setConfirm({ open: false, action: null });
-                  }}
+                  disabled={!!loading}
+                  onClick={() => handleStatusUpdate(confirm.action!)}
                 >
-                  Confirm
+                  {loading ? 'Updating...' : 'Confirm'}
                 </Button>
               </div>
             </div>

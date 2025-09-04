@@ -8,8 +8,6 @@ import { CalendarFold, CreditCard, DollarSign, FileText, GraduationCap, LayoutGr
 import AppLogo from './app-logo';
 import { useEffect, useState } from "react";
 
-
-
 type PageProps = {
     auth: {
         user: {
@@ -87,10 +85,6 @@ const assistantNavItems: MainNavItem[] = [
     { title: 'Student Records', href: '/student-records', icon: Users },
     { title: 'Schedules', href: '/schedules', icon: CalendarFold },
     { title: 'Messages', href: '/messages', icon: MessageSquareText },
-
-
-
-
 ];
 
 const footerNavItems: NavItem[] = [];
@@ -107,21 +101,25 @@ export function AppSidebar() {
     const [defenseRequestCount, setDefenseRequestCount] = useState<number>(0);
 
     useEffect(() => {
+        let isMounted = true;
         async function fetchCount() {
             try {
                 const res = await fetch('/api/defense-requests/count');
                 if (res.ok) {
                     const data = await res.json();
-                    setDefenseRequestCount(data.count);
+                    if (isMounted) setDefenseRequestCount(data.count);
                 }
             } catch {
-
-                //errrrroorror
+                // error handling
             }
         }
         fetchCount();
-        const interval = setInterval(fetchCount, 1000);
-        return () => clearInterval(interval);
+        // Poll every 60 seconds instead of every second
+        const interval = setInterval(fetchCount, 60000);
+        return () => {
+            isMounted = false;
+            clearInterval(interval);
+        };
     }, []);
 
     let navItems = items;
