@@ -107,21 +107,48 @@ export function AppSidebar() {
     const [defenseRequestCount, setDefenseRequestCount] = useState<number>(0);
 
     useEffect(() => {
-        async function fetchCount() {
+        let interval: number | undefined;
+        let backoff = 5000; // start at 5s
+        const maxBackoff = 60000; // cap at 60s
+        let abortController: AbortController | null = null;
+
+        async function fetchCount(immediate = false) {
+            if (document.hidden && !immediate) return; // skip when tab hidden
+            abortController?.abort();
+            abortController = new AbortController();
             try {
-                const res = await fetch('/api/defense-requests/count');
+                const res = await fetch('/api/defense-requests/count', { signal: abortController.signal });
                 if (res.ok) {
                     const data = await res.json();
                     setDefenseRequestCount(data.count);
+                    backoff = 5000; // reset backoff on success
+                } else {
+                    backoff = Math.min(backoff * 2, maxBackoff);
                 }
             } catch {
+                backoff = Math.min(backoff * 2, maxBackoff);
+            }
+            schedule();
+        }
 
-                //errrrroorror
+        function schedule() {
+            clearInterval(interval);
+            interval = window.setTimeout(() => fetchCount(), backoff);
+        }
+
+        function handleVisibility() {
+            if (!document.hidden) {
+                fetchCount(true);
             }
         }
-        fetchCount();
-        const interval = setInterval(fetchCount, 1000);
-        return () => clearInterval(interval);
+
+        document.addEventListener('visibilitychange', handleVisibility);
+        fetchCount(true);
+        return () => {
+            document.removeEventListener('visibilitychange', handleVisibility);
+            if (interval) clearTimeout(interval);
+            abortController?.abort();
+        };
     }, []);
 
     let navItems = items;
