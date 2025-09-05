@@ -18,6 +18,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::patch('defense-requests/{defenseRequest}/priority', [DefenseRequestController::class, 'updatePriority']);
     Route::patch('defense-requests/bulk-status', [DefenseRequestController::class, 'bulkUpdateStatus']);
     Route::patch('defense-requests/bulk-priority', [DefenseRequestController::class, 'bulkUpdatePriority']);
+    // Lightweight pending count (polled by sidebar) – keep cheap & cache at controller level if needed
+    Route::get('defense-requests/count', [DefenseRequestController::class, 'count']);
 
     // Notifications API
     // Route::get('notifications', [NotificationController::class, 'index']);

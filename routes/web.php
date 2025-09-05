@@ -18,6 +18,7 @@ Route::get('/', function () {
 // Google OAuth (domain restricted) routes
 Route::get('/auth/google/redirect', [GoogleController::class, 'redirect'])->name('google.redirect');
 Route::get('/auth/google/callback', [GoogleController::class, 'callback'])->name('google.callback');
+Route::get('/auth/status/google-verified', [\App\Http\Controllers\Auth\AuthStatusController::class, 'googleVerified'])->name('auth.status.google-verified');
 
 // All routes below require authentication and verification
 Route::middleware(['auth', 'verified'])->group(function () {
