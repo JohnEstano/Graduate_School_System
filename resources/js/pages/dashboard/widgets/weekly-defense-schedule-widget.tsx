@@ -71,13 +71,16 @@ export default function WeeklyDefenseSchedulesWidget({
             <div className="flex flex-col gap-2">
                 {loading ? (
                     <div>
-                       
                         {[...Array(3)].map((_, i) => (
                             <Skeleton key={i} className="h-7 w-full mb-2 bg-gray-100" />
                         ))}
                     </div>
                 ) : filteredDefenses.length === 0 ? (
-                    <span className="text-xs text-muted-foreground">No approved defenses scheduled.</span>
+                    <div className="flex items-center justify-center h-24">
+                        <span className="text-xs text-muted-foreground text-center">
+                            No events scheduled.
+                        </span>
+                    </div>
                 ) : (
                     filteredDefenses.map(ev => (
                         <div

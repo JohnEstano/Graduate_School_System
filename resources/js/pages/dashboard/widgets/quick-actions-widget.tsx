@@ -1,4 +1,4 @@
-import { CalendarDays, Users, Receipt, Settings } from "lucide-react";
+import { CalendarDays, Receipt, Settings } from "lucide-react";
 import { Link } from "@inertiajs/react";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip"; // Adjust import path as needed
 
@@ -10,14 +10,8 @@ const actions = [
         bg: "bg-rose-500",
     },
     {
-        label: "Student Records",
-        href: "/students",
-        icon: <Users className="size-5 text-white" size={20} />,
-        bg: "bg-rose-500",
-    },
-    {
-        label: "Honorarium Summary",
-        href: "/honorarium",
+        label: "Payments",
+        href: "/payments",
         icon: <Receipt className="size-5 text-white" size={20} />,
         bg: "bg-rose-500",
     },
