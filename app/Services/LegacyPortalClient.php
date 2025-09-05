@@ -73,6 +73,15 @@ class LegacyPortalClient
         ];
     }
 
+    /**
+     * Coordinator / staff login (same as student but kept separate for future divergence & logging).
+     */
+    public function loginCoordinator(string $username, string $password): array
+    {
+        // Currently identical to login(); can add role-specific verification later.
+        return $this->login($username, $password);
+    }
+
     public function fetchGrades(array $session, int $userId): array
     {
         // Placeholder fetch until endpoint clarified
@@ -491,5 +500,164 @@ class LegacyPortalClient
             'middle_name' => $middleNorm,
             'last_name' => $lastNorm,
         ];
+    }
+
+    /**
+     * Parse coordinator/staff role title from home page HTML.
+     * Looks for <span class="white-text">Academic Coordinator</span> etc.
+     */
+    public function extractCoordinatorRole(string $html): ?string
+    {
+        if (preg_match('/<span class="white-text">([^<]+Coordinator[^<]*)<\/span>/', $html, $m)) {
+            return trim(html_entity_decode($m[1]));
+        }
+        // Fallback search for common role words inside white-text spans.
+        if (preg_match('/<span class="white-text">([^<]*(Dean|Chair|Coordinator)[^<]*)<\/span>/i', $html, $m2)) {
+            return trim(html_entity_decode($m2[1]));
+        }
+        return null;
+    }
+
+    /**
+     * Extract any staff role (Coordinator, Faculty, Dean, Chair, etc.) from white-text span.
+     * Returns ['role' => canonical, 'title' => original].
+     */
+    public function extractStaffRole(string $html): ?array
+    {
+        if (!preg_match_all('/<span class="white-text">([^<]+)<\/span>/', $html, $matches)) {
+            return null;
+        }
+        $candidates = array_map(fn($t) => trim(html_entity_decode($t)), $matches[1]);
+        $priority = ['Coordinator' => 'Coordinator', 'Academic Coordinator' => 'Coordinator', 'Faculty' => 'Faculty', 'Dean' => 'Dean', 'Chair' => 'Chair'];
+        foreach ($candidates as $c) {
+            foreach ($priority as $needle => $canonical) {
+                if (stripos($c, $needle) !== false) {
+                    return ['role' => $canonical, 'title' => $c];
+                }
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Extract coordinator/staff full name parts from home page (different span class).
+     */
+    public function extractCoordinatorNameParts(string $html): ?array
+    {
+        if (!preg_match('/<span class="white-text name all-caps">([^<]+)<\/span>/', $html, $m)) {
+            return null;
+        }
+        $raw = trim(html_entity_decode($m[1]));
+        if (!str_contains($raw, ',')) return null;
+        [$last, $rest] = array_map('trim', explode(',', $raw, 2));
+        $tokens = preg_split('/\s+/', $rest);
+        $first = array_shift($tokens) ?? '';
+        $middle = $tokens ? implode(' ', $tokens) : null;
+        return [
+            'first_name' => ucwords(strtolower($first)),
+            'middle_name' => $middle ? ucwords(strtolower($middle)) : null,
+            'last_name' => ucwords(strtolower($last)),
+        ];
+    }
+
+    /**
+     * Fetch Enrollment Statistics page HTML (coordinator accessible menu) for background stats.
+     */
+    public function fetchEnrollmentStatisticsHtml(array $session): ?string
+    {
+        $config = config('legacy');
+        $base = $config['base_url'];
+        $cookieHeader = $session['cookie_header'] ?? $this->buildCookieHeader($session['cookies'] ?? []);
+        try {
+            $resp = Http::withHeaders([
+                'User-Agent' => $config['user_agent'],
+                'Accept' => 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                'Cookie' => $cookieHeader,
+            ])->withOptions([
+                'timeout' => $config['timeout'],
+                'allow_redirects' => true,
+            ])->get($base . '/index.cfm?fa=report.enrollment_statistics');
+            if ($resp->ok()) return $resp->body();
+        } catch (\Throwable $e) {
+            Log::debug('fetchEnrollmentStatisticsHtml error: '.$e->getMessage());
+        }
+        return null;
+    }
+
+    /**
+     * Naive parser to extract simple numeric aggregates from enrollment stats HTML.
+     */
+    public function parseEnrollmentStats(?string $html): array
+    {
+        if (!$html) return [];
+        $stats = [];
+        // Example: capture numbers inside <h5> or <td>
+        if (preg_match_all('/>([0-9]{2,})</', $html, $m)) {
+            $numbers = array_map('intval', $m[1]);
+            if ($numbers) {
+                $stats['numbers_sample'] = array_slice($numbers, 0, 10);
+                $stats['numbers_count'] = count($numbers);
+            }
+        }
+        $stats['html_length'] = strlen($html);
+        return $stats;
+    }
+
+    /**
+     * Extract employee_id from home page (staff) HTML.
+     * Looks for anchor: /index.cfm?fa=employee.employee_viewprofile&employee_id=44802
+     */
+    public function extractEmployeeIdFromHome(?string $html): ?int
+    {
+        if (!$html) return null;
+        if (preg_match('/employee\.employee_viewprofile&employee_id=(\d+)/', $html, $m)) {
+            return (int)$m[1];
+        }
+        return null;
+    }
+
+    /**
+     * Fetch employee profile page HTML (initial Angular template). Data values may be populated via XHR afterwards.
+     */
+    public function fetchEmployeeProfileHtml(array $session, int $employeeId): ?string
+    {
+        $config = config('legacy');
+        $base = $config['base_url'];
+        $cookieHeader = $session['cookie_header'] ?? $this->buildCookieHeader($session['cookies'] ?? []);
+        try {
+            $url = $base . '/index.cfm?fa=employee.employee_viewprofile&employee_id=' . $employeeId;
+            $resp = Http::withHeaders([
+                'User-Agent' => $config['user_agent'],
+                'Accept' => 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                'Cookie' => $cookieHeader,
+                'Referer' => $base . '/index.cfm?fa=home.index',
+            ])->withOptions([
+                'timeout' => $config['timeout'],
+                'allow_redirects' => true,
+            ])->get($url);
+            if ($resp->ok()) return $resp->body();
+        } catch (\Throwable $e) {
+            Log::debug('fetchEmployeeProfileHtml error: '.$e->getMessage());
+        }
+        return null;
+    }
+
+    /**
+     * Parse limited static metadata from employee profile HTML (department selected option, profile photo url).
+     * NOTE: Many actual field values are populated client-side via Angular and are not present in initial HTML.
+     */
+    public function parseEmployeeProfileMeta(?string $html): array
+    {
+        $meta = [];
+        if (!$html) return $meta;
+        // Department code (selected option in department_select)
+        if (preg_match('/<select[^>]*id="department_select"[\s\S]*?<option value="([A-Z0-9_]+)"selected>/i', $html, $m)) {
+            $meta['employee_department_code'] = trim($m[1]);
+        }
+        // Photo URL from side nav user view
+        if (preg_match('/<img class="circle" src="([^"]+)"/i', $html, $m2)) {
+            $meta['employee_photo_url'] = html_entity_decode($m2[1]);
+        }
+        return $meta;
     }
 }
