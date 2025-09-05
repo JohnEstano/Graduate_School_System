@@ -21,6 +21,10 @@ class AuthenticatedSessionController extends Controller
         return Inertia::render('auth/login', [
             'canResetPassword' => Route::has('password.request'),
             'status' => $request->session()->get('status'),
+            'googleJustVerified' => (bool)$request->session()->get('google_success'),
+            'googleSuccessMessage' => $request->session()->get('google_success'),
+            'googleVerifiedEmail' => $request->session()->get('google_verified_email'),
+            'googleSuggestedIdentifier' => $request->session()->get('google_suggested_identifier'),
         ]);
     }
 

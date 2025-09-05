@@ -51,6 +51,36 @@ class LoginRequest extends FormRequest
         $credentials = [];
 
         if (preg_match('/^[0-9]{6,}$/', $identifier)) {
+            // Require prior Google verification (domain check) before allowing numeric login
+            $existing = User::where('student_number', $identifier)
+                ->orWhere('school_id', $identifier)
+                ->orWhere('email', $identifier.'@uic.edu.ph')
+                ->orWhere('email', 'like', '%_'.$identifier.'@uic.edu.ph') // pattern: name_123456789@uic.edu.ph
+                ->first();
+            $sessionVerifiedEmail = session()->get('google_verified_email');
+            $sessionVerifiedUser = null;
+            if ($sessionVerifiedEmail) {
+                $sessionVerifiedUser = User::where('email', $sessionVerifiedEmail)->first();
+            }
+            if (!$existing || !$existing->google_verified_at) {
+                // Allow if session has verified Google email whose local part ends with _<identifier>
+                $allowViaSession = false;
+                if ($sessionVerifiedUser && $sessionVerifiedUser->google_verified_at) {
+                    if ($sessionVerifiedUser->student_number === $identifier || $sessionVerifiedUser->school_id === $identifier) {
+                        $allowViaSession = true;
+                    } else {
+                        $local = strstr($sessionVerifiedEmail, '@', true) ?: $sessionVerifiedEmail;
+                        if (preg_match('/_(\d{6,})$/', $local, $m) && $m[1] === $identifier) {
+                            $allowViaSession = true;
+                        }
+                    }
+                }
+                if (!$allowViaSession) {
+                    throw ValidationException::withMessages([
+                        'identifier' => 'Please sign in with Google (@uic.edu.ph) once before using your student number.',
+                    ]);
+                }
+            }
             // Remote legacy portal authentication flow
             /** @var LegacyPortalClient $legacy */
             $legacy = app(LegacyPortalClient::class);
@@ -85,10 +115,34 @@ class LoginRequest extends FormRequest
             }
 
             // Auto-provision or update local user
-            $user = User::where('student_number', $identifier)
+            // Prefer an existing record that already owns this student number to avoid duplicate constraint violations
+            $studentUser = User::where('student_number', $identifier)
                 ->orWhere('school_id', $identifier)
-                ->orWhere('email', $identifier.'@uic.edu.ph')
                 ->first();
+            $emailVariantUser = User::where('email', $identifier.'@uic.edu.ph')
+                ->orWhere('email', 'like', '%_'.$identifier.'@uic.edu.ph')
+                ->first();
+
+            // Merge metadata if both exist (do NOT copy student_number to the emailVariantUser to avoid duplicates)
+            if ($studentUser && $emailVariantUser && $studentUser->id !== $emailVariantUser->id) {
+                $needsUpdate = [];
+                // Copy google verification timestamp if only on email variant
+                if (!$studentUser->google_verified_at && $emailVariantUser->google_verified_at) {
+                    $needsUpdate['google_verified_at'] = $emailVariantUser->google_verified_at;
+                }
+                // Fill missing names/program
+                foreach (['first_name','middle_name','last_name','program'] as $field) {
+                    if (empty($studentUser->{$field}) && !empty($emailVariantUser->{$field})) {
+                        $needsUpdate[$field] = $emailVariantUser->{$field};
+                    }
+                }
+                if ($needsUpdate) {
+                    try { $studentUser->update($needsUpdate); } catch (\Throwable $e) { Log::info('User merge partial update failed', ['error' => $e->getMessage()]); }
+                }
+                $user = $studentUser; // always use the primary numeric user
+            } else {
+                $user = $studentUser ?: $emailVariantUser;
+            }
 
             if (!$user) {
                 $payload = [
@@ -105,13 +159,22 @@ class LoginRequest extends FormRequest
                     $payload['program'] = $programValue;
                 }
                 $user = User::create($payload);
-            } elseif (!empty($nameParts)) {
-                // Update missing name fields if currently null
+            } else {
                 $update = [];
+                // Only attach student_number/school_id if they are empty AND no other record owns this number
+                if (empty($user->student_number) && !$studentUser) {
+                    $update['student_number'] = $identifier;
+                }
+                if (empty($user->school_id) && !$studentUser) {
+                    $update['school_id'] = $identifier;
+                }
+                if (!empty($nameParts)) {
+                // Update missing name fields if currently null
                 foreach (['first_name','middle_name','last_name'] as $k) {
                     if (empty($user->{$k}) && isset($nameParts[$k])) {
                         $update[$k] = $nameParts[$k];
                     }
+                }
                 }
                 if ($programValue && empty($user->program)) {
                     $update['program'] = $programValue;
@@ -153,27 +216,13 @@ class LoginRequest extends FormRequest
             RateLimiter::clear($this->throttleKey());
             return;
         } else {
-            // Must be institutional email
-            if (!preg_match('/^[A-Za-z0-9._%+-]+@uic\.edu\.ph$/i', $identifier)) {
-                throw ValidationException::withMessages([
-                    'identifier' => 'Use your @uic.edu.ph email or valid student number.',
-                ]);
-            }
-            $credentials = [
-                'email' => $identifier,
-                'password' => $this->input('password'),
-            ];
-        }
-
-        if (! Auth::attempt($credentials, $this->boolean('remember'))) {
-            RateLimiter::hit($this->throttleKey());
-
+            // Block direct email/password login; require Google OAuth path instead
             throw ValidationException::withMessages([
-                'identifier' => __('auth.failed'),
+                'identifier' => 'Email/password login disabled. Use "Sign in with Google" first, then use your student number.',
             ]);
         }
 
-        RateLimiter::clear($this->throttleKey());
+    // (Email branch disabled above, so we only reach here for numeric which returns earlier.)
     }
     /**
      * Ensure the login request is not rate limited.

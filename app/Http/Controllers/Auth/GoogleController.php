@@ -61,8 +61,27 @@ class GoogleController extends Controller
             ]);
         }
 
-        Auth::login($user, true);
+    // Mark Google verification timestamp WITHOUT logging user in yet.
+    // Flow requirement: Return user to login screen with student number form now enabled.
+        $user->markGoogleVerified();
 
-        return redirect()->intended(route('dashboard'));
+        // Derive a suggested identifier (student number or faculty username) from email local part.
+        $local = strstr($email, '@', true) ?: $email; // part before @
+        $suggestedIdentifier = null;
+        // Pattern: name_230000001047 -> extract numeric segment after last underscore if 6+ digits
+        if (preg_match('/_(\d{6,})$/', $local, $m)) {
+            $suggestedIdentifier = $m[1];
+        } else {
+            // Fallback: use the entire local part (e.g., faculty username like gdiapana)
+            $suggestedIdentifier = $local;
+        }
+
+        // Store session flags for login page consumption.
+        session()->put('google_verified_email', $email);
+        session()->flash('google_success', 'Google verification successful. You may now sign in.');
+        session()->flash('google_suggested_identifier', $suggestedIdentifier);
+
+    // Do NOT Auth::login($user); user must still pass numeric legacy auth.
+    return redirect()->route('login');
     }
 }
