@@ -19,7 +19,7 @@ class DefenseRequestController extends Controller
 
         if (in_array($user->role, ['Administrative Assistant', 'Coordinator', 'Dean'])) {
             $defenseRequests = DefenseRequest::with('lastStatusUpdater')
-                ->orderBy('created_at', 'desc') // <-- Add this line
+                ->orderBy('created_at', 'desc')
                 ->get();
 
             $defenseRequests->transform(function ($item) {
@@ -36,6 +36,12 @@ class DefenseRequestController extends Controller
                 $defenseRequest->last_status_updated_by = $defenseRequest->lastStatusUpdater?->name;
             }
             $props['defenseRequest'] = $defenseRequest;
+        }
+
+        // THIS IS THE KEY PART:
+        if (request()->wantsJson()) {
+            // Always return ALL requests for the coordinator dashboard
+            return response()->json($props['defenseRequests'] ?? []);
         }
 
         $viewMap = [
@@ -316,5 +322,12 @@ class DefenseRequestController extends Controller
             'defenseRequirements' => $requirements,
             'defenseRequests' => $requests,
         ]);
+    }
+    public function pending()
+    {
+        return DefenseRequest::where('status', 'Pending')
+            ->select('id', 'thesis_title', 'date_of_defense', 'status', 'priority')
+            ->orderByDesc('created_at')
+            ->get();
     }
 }

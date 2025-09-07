@@ -9,20 +9,36 @@ class DashboardController extends Controller
 {
     public function index(Request $request)
     {
-        $user = $request->user();
+        $user = auth()->user();
 
-        return Inertia::render('dashboard/Index', [
-            'auth' => [
-                'user' => [
-                    'id' => $user->id,
-                    'name' => $user->name,
-                    'email' => $user->email,
-                    'avatar' => $user->avatar ?? null,
-                    'role' => $user->role,
-                    'created_at' => $user->created_at,
-                    'updated_at' => $user->updated_at,
-                ],
-            ],
+        // Get the latest defense requirement for the student
+        $latestRequirement = \App\Models\DefenseRequirement::where('user_id', $user->id)
+            ->orderByDesc('created_at')
+            ->first();
+
+        // Get ALL defense requests for this student using school_id and name
+        $defenseRequests = \App\Models\DefenseRequest::where('school_id', $user->school_id)
+            ->where('first_name', $user->first_name)
+            ->where('last_name', $user->last_name)
+            ->orderByDesc('date_of_defense')
+            ->get();
+
+        // Get the related defense request (if any)
+        $defenseRequest = null;
+        if ($latestRequirement) {
+            $defenseRequest = \App\Models\DefenseRequest::where('thesis_title', $latestRequirement->thesis_title)
+                ->where('school_id', $user->school_id)
+                ->where('first_name', $user->first_name)
+                ->where('last_name', $user->last_name)
+                ->latest()
+                ->first();
+        }
+
+        return inertia('dashboard/Index', [
+            'defenseRequirement' => $latestRequirement,
+            'defenseRequest' => $defenseRequest,
+            'defenseRequests' => $defenseRequests,
+            // ...other props...
         ]);
     }
 }
