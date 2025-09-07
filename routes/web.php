@@ -5,6 +5,11 @@ use App\Http\Controllers\DefenseRequestController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\PanelistController;
 use App\Http\Controllers\DefenseRequirementController;
+use App\Http\Controllers\ComprehensiveExamController;
+use App\Http\Controllers\PaymentSubmissionController;
+use App\Http\Controllers\CoordinatorDashboardController;
+use App\Http\Controllers\CoordinatorCompreExamController;
+use App\Http\Controllers\CoordinatorComprePaymentController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -23,10 +28,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
         return Inertia::render('notification/Index');
     })->name('notification.index');
 
-    // Payment page
-    Route::get('payment', function () {
-        return Inertia::render('payment/Index');
-    })->name('payment.index');
+    // REMOVE this duplicate closure route to /payment (it conflicts)
+//  Route::get('payment', function () {
+//      return Inertia::render('payment/Index');
+//  })->name('payment.index');
 
     // Schedule page
     Route::get('schedule', function () {
@@ -64,9 +69,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // Keep this AFTER any specific routes above so they take precedence.
     Route::resource('defense-requests', DefenseRequestController::class);
 
-    Route::get('comprehensive-exam', function () {
-        return Inertia::render('student/submissions/comprehensive-exam/Index');
-    })->name('comprehensive-exam.index');
+    // Comprehensive Exam (Student)
+    Route::middleware(['auth','verified'])->group(function () {
+        Route::get('/comprehensive-exam', [ComprehensiveExamController::class, 'index'])->name('comprehensive-exam.index');
+        Route::post('/comprehensive-exam', [ComprehensiveExamController::class, 'store'])->name('comprehensive-exam.store');
+    });
 
     // Honorarium pages
     Route::get('generate-report', function () {
@@ -103,11 +110,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/panelists', [PanelistController::class, 'view'])->name('panelists.view');
 
     // Panelists CRUD routes for Inertia/JS
-    Route::post('/panelists', [PanelistController::class, 'store'])->name('panelists.store');
     Route::put('/panelists/{panelist}', [PanelistController::class, 'update'])->name('panelists.update');
     Route::delete('/panelists/{panelist}', [PanelistController::class, 'destroy'])->name('panelists.destroy');
     Route::post('/panelists/bulk-delete', [PanelistController::class, 'bulkDelete'])->name('panelists.bulk-delete');
     Route::post('/panelists/bulk-status', [PanelistController::class, 'bulkUpdateStatus'])->name('panelists.bulk-status');
+    Route::post('/panelists', [PanelistController::class, 'store'])->name('panelists.store');
 
     // Defense Requirements routes
     Route::get('/defense-requirements', [DefenseRequirementController::class, 'index'])->name('defense-requirements.index');
@@ -115,6 +122,27 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/all-defense-requirements', [DefenseRequirementController::class, 'all'])
         ->middleware(['auth', 'verified'])
         ->name('defense-requirements.all');
+
+    // Payment routes (use singular names consistently)
+    Route::get('/payment', [PaymentSubmissionController::class, 'index'])->name('payment.index');
+    Route::post('/payment', [PaymentSubmissionController::class, 'store'])->name('payment.store');
+
+    // Coordinator Comprehensive Exam route
+    Route::get('/coordinator/compre-exam', [CoordinatorCompreExamController::class, 'index'])
+        ->name('coordinator.compre-exam.index');
+});
+
+// Coordinator routes (authentication only)
+Route::middleware(['auth'])->group(function () {
+    // Coordinator Comprehensive Payment route
+    Route::get('/coordinator/compre-payment', [CoordinatorComprePaymentController::class, 'index'])
+        ->name('coordinator.compre-payment.index');
+
+    Route::post('/coordinator/compre-payment/{id}/approve', [CoordinatorComprePaymentController::class, 'approve'])
+        ->name('coordinator.compre-payment.approve');
+
+    Route::post('/coordinator/compre-payment/{id}/reject', [CoordinatorComprePaymentController::class, 'reject'])
+        ->name('coordinator.compre-payment.reject');
 });
 
 require __DIR__ . '/settings.php';

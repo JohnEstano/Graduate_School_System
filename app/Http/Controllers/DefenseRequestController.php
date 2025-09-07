@@ -12,7 +12,7 @@ use Inertia\Inertia;
 
 class DefenseRequestController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
         $user = Auth::user();
         $props = [];

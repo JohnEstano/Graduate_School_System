@@ -84,4 +84,31 @@ class User extends Authenticatable
     {
         return $this->name;
     }
+
+    public function role()
+    {
+        return $this->belongsTo(\App\Models\Role::class);
+    }
+
+    public function coordinatorPrograms()
+    {
+        return $this->hasMany(\App\Models\CoordinatorProgram::class, 'coordinator_id');
+    }
+
+    public function isRole(string $name): bool
+    {
+        return strcasecmp($this->role->name ?? '', $name) === 0
+            || strcasecmp($this->attributes['role'] ?? '', $name) === 0; // legacy support
+    }
+
+    public function isCoordinator(): bool
+    {
+        return $this->isRole('Coordinator');
+    }
+
+    public function allowedProgramNames(): array
+    {
+        if (! $this->isCoordinator()) return [];
+        return $this->coordinatorPrograms()->pluck('program')->all();
+    }
 }
