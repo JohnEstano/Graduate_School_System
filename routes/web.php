@@ -7,7 +7,6 @@ use App\Http\Controllers\PanelistController;
 use App\Http\Controllers\DefenseRequirementController;
 use App\Http\Controllers\ComprehensiveExamController;
 use App\Http\Controllers\PaymentSubmissionController;
-use App\Http\Controllers\CoordinatorDashboardController;
 use App\Http\Controllers\CoordinatorCompreExamController;
 use App\Http\Controllers\CoordinatorComprePaymentController;
 use Illuminate\Support\Facades\Route;
@@ -28,10 +27,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
         return Inertia::render('notification/Index');
     })->name('notification.index');
 
-    // REMOVE this duplicate closure route to /payment (it conflicts)
-//  Route::get('payment', function () {
-//      return Inertia::render('payment/Index');
-//  })->name('payment.index');
+    // Payment routes (controller-based)
+    Route::get('/payment', [PaymentSubmissionController::class, 'index'])->name('payment.index');
+    Route::post('/payment', [PaymentSubmissionController::class, 'store'])->name('payment.store');
 
     // Schedule page
     Route::get('schedule', function () {
@@ -65,15 +63,16 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/defense-requests/calendar', [DefenseRequestController::class, 'calendar'])
         ->name('defense-requests.calendar');
 
+    // Pending defense requests (specific)
+    Route::get('/defense-requests/pending', [DefenseRequestController::class, 'pending']);
+
     // Resource routes (creates the single-item delete /defense-requests/{defense_request})
     // Keep this AFTER any specific routes above so they take precedence.
     Route::resource('defense-requests', DefenseRequestController::class);
 
-    // Comprehensive Exam (Student)
-    Route::middleware(['auth','verified'])->group(function () {
-        Route::get('/comprehensive-exam', [ComprehensiveExamController::class, 'index'])->name('comprehensive-exam.index');
-        Route::post('/comprehensive-exam', [ComprehensiveExamController::class, 'store'])->name('comprehensive-exam.store');
-    });
+    // Comprehensive Exam (Student) - controller
+    Route::get('/comprehensive-exam', [ComprehensiveExamController::class, 'index'])->name('comprehensive-exam.index');
+    Route::post('/comprehensive-exam', [ComprehensiveExamController::class, 'store'])->name('comprehensive-exam.store');
 
     // Honorarium pages
     Route::get('generate-report', function () {
@@ -110,11 +109,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/panelists', [PanelistController::class, 'view'])->name('panelists.view');
 
     // Panelists CRUD routes for Inertia/JS
+    Route::post('/panelists', [PanelistController::class, 'store'])->name('panelists.store');
     Route::put('/panelists/{panelist}', [PanelistController::class, 'update'])->name('panelists.update');
     Route::delete('/panelists/{panelist}', [PanelistController::class, 'destroy'])->name('panelists.destroy');
     Route::post('/panelists/bulk-delete', [PanelistController::class, 'bulkDelete'])->name('panelists.bulk-delete');
     Route::post('/panelists/bulk-status', [PanelistController::class, 'bulkUpdateStatus'])->name('panelists.bulk-status');
-    Route::post('/panelists', [PanelistController::class, 'store'])->name('panelists.store');
 
     // Defense Requirements routes
     Route::get('/defense-requirements', [DefenseRequirementController::class, 'index'])->name('defense-requirements.index');
@@ -123,14 +122,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->middleware(['auth', 'verified'])
         ->name('defense-requirements.all');
 
-    // Payment routes (use singular names consistently)
-    Route::get('/payment', [PaymentSubmissionController::class, 'index'])->name('payment.index');
-    Route::post('/payment', [PaymentSubmissionController::class, 'store'])->name('payment.store');
-
-    // Coordinator Comprehensive Exam route
+    // Coordinator Comprehensive Exam route (kept inside verified)
     Route::get('/coordinator/compre-exam', [CoordinatorCompreExamController::class, 'index'])
         ->name('coordinator.compre-exam.index');
-});
+}); // end auth,verified group
 
 // Coordinator routes (authentication only)
 Route::middleware(['auth'])->group(function () {
