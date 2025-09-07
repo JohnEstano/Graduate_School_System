@@ -67,6 +67,8 @@ export interface User {
 
 export interface DefenseRequest {
     id: number;
+    school_id: string;
+    submitted_by?: number;
     thesis_title: string;
     first_name: string;
     middle_name?: string | null;
@@ -79,6 +81,15 @@ export interface DefenseRequest {
     last_status_updated_by?: string;
     last_status_updated_at?: string;
 }
+export type Panelist = {
+    id: number;
+    name: string;
+    email: string;
+    status: 'Available' | 'Not Available';
+    date_available: string | null;
+    created_at: string;
+    updated_at: string;
+};
 
 export type DefenseRequestSummary = {
     id: number;

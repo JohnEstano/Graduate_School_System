@@ -3,6 +3,8 @@
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DefenseRequestController;
 use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\PanelistController;
+use App\Http\Controllers\DefenseRequirementController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -10,68 +12,76 @@ Route::get('/', function () {
     return Inertia::render('welcome');
 })->name('home');
 
-// The routes here means that to be rendered or accessed, you need to login or have prior authentication.
+// All routes below require authentication and verification
 Route::middleware(['auth', 'verified'])->group(function () {
     // Dashboard route
-
     Route::get('dashboard', [DashboardController::class, 'index'])
         ->name('dashboard');
 
-    // Notification route
+    // Notification page
     Route::get('notification', function () {
         return Inertia::render('notification/Index');
     })->name('notification.index');
 
-    // Payment route
+    // Payment page
     Route::get('payment', function () {
         return Inertia::render('payment/Index');
     })->name('payment.index');
 
-    // Schedule route
+    // Schedule page
     Route::get('schedule', function () {
         return Inertia::render('schedule/Index');
     })->name('schedule.index');
 
-    // Submissions routes
-    // Defense Request route
+    // Submissions pages (singular endpoints used by your UI)
     Route::get('/defense-request', [DefenseRequestController::class, 'index'])
         ->name('defense-request.index');
-
     Route::post('/defense-request', [DefenseRequestController::class, 'store'])
         ->name('defense-request.store');
 
-    Route::patch('/defense-requests/{defenseRequest}/status', [DefenseRequestController::class, 'updateStatus'])->name('defense-requests.update-status');
-    Route::patch('/defense-requests/{defenseRequest}/priority', [DefenseRequestController::class, 'updatePriority'])->name('defense-requests.update-priority');
-    Route::patch('/defense-requests/bulk-status', [DefenseRequestController::class, 'bulkUpdateStatus']);
-    Route::patch('/defense-requests/bulk-priority', [DefenseRequestController::class, 'bulkUpdatePriority']);
+    // Specific PATCH endpoints for resource actions (per-item)
+    Route::patch('/defense-requests/{defenseRequest}/status', [DefenseRequestController::class, 'updateStatus'])
+        ->name('defense-requests.update-status');
+    Route::patch('/defense-requests/{defenseRequest}/priority', [DefenseRequestController::class, 'updatePriority'])
+        ->name('defense-requests.update-priority');
 
+    // Bulk action endpoints (specific) - MUST come before the wildcard/resource
+    Route::patch('/defense-requests/bulk-status', [DefenseRequestController::class, 'bulkUpdateStatus'])
+        ->name('defense-requests.bulk-update-status');
+    Route::patch('/defense-requests/bulk-priority', [DefenseRequestController::class, 'bulkUpdatePriority'])
+        ->name('defense-requests.bulk-update-priority');
 
-    // Comprehensive Exam route
+    // Bulk delete (specific) - place BEFORE the resource/wildcard route
+    Route::delete('/defense-requests/bulk-remove', [DefenseRequestController::class, 'bulkDelete'])
+        ->middleware(['auth', 'verified'])
+        ->name('defense-requests.bulk-remove');
+
+    // Any other specific defense-requests routes that must not be treated as {defenseRequest}
+    Route::get('/defense-requests/calendar', [DefenseRequestController::class, 'calendar'])
+        ->name('defense-requests.calendar');
+
+    // Resource routes (creates the single-item delete /defense-requests/{defense_request})
+    // Keep this AFTER any specific routes above so they take precedence.
+    Route::resource('defense-requests', DefenseRequestController::class);
+
     Route::get('comprehensive-exam', function () {
         return Inertia::render('student/submissions/comprehensive-exam/Index');
     })->name('comprehensive-exam.index');
 
-    //Honorarium route
-    // generate-report route
+    // Honorarium pages
     Route::get('generate-report', function () {
         return Inertia::render('honorarium/generate-report/Index');
     })->name('generate-report.index');
-
-    // honorarium-summary route
     Route::get('honorarium-summary', function () {
         return Inertia::render('honorarium/honorarium-summary/Index');
     })->name('honorarium-summary.index');
 
-
-
-    //Schedules route
+    // Schedules page
     Route::get('schedules', function () {
         return Inertia::render('coordinator/schedule/Index');
     })->name('schedules.index');
 
-    Route::get('/defense-requests/calendar', [DefenseRequestController::class, 'calendar']);
-
-    // Messaging routes
+    // Messaging pages
     Route::prefix('messages')->name('messages.')->group(function () {
         Route::get('/', [App\Http\Controllers\MessageController::class, 'index'])->name('index');
         Route::get('/conversations/{conversation}/messages', [App\Http\Controllers\MessageController::class, 'getMessages'])->name('get-messages');
@@ -86,16 +96,28 @@ Route::middleware(['auth', 'verified'])->group(function () {
         return Inertia::render('system-status');
     })->name('system-status');
 
-//Notifications api route
+    // Notifications page (not API)
     Route::get('/notifications', [NotificationController::class, 'index']);
-    Route::post('/notifications/read/{notification}', [NotificationController::class, 'markAsRead'])->middleware(['auth']);
-    Route::post('/notifications/read-all', [NotificationController::class, 'markAllAsRead'])->middleware(['auth']);
+
+    // Panelists Inertia page route
+    Route::get('/panelists', [PanelistController::class, 'view'])->name('panelists.view');
+
+    // Panelists CRUD routes for Inertia/JS
+    Route::post('/panelists', [PanelistController::class, 'store'])->name('panelists.store');
+    Route::put('/panelists/{panelist}', [PanelistController::class, 'update'])->name('panelists.update');
+    Route::delete('/panelists/{panelist}', [PanelistController::class, 'destroy'])->name('panelists.destroy');
+    Route::post('/panelists/bulk-delete', [PanelistController::class, 'bulkDelete'])->name('panelists.bulk-delete');
+    Route::post('/panelists/bulk-status', [PanelistController::class, 'bulkUpdateStatus'])->name('panelists.bulk-status');
+
+    // Defense Requirements routes
+    Route::get('/defense-requirements', [DefenseRequirementController::class, 'index'])->name('defense-requirements.index');
+    Route::post('/defense-requirements', [DefenseRequirementController::class, 'store'])->name('defense-requirements.store');
+    Route::get('/all-defense-requirements', [DefenseRequirementController::class, 'all'])
+        ->middleware(['auth', 'verified'])
+        ->name('defense-requirements.all');
+
+    Route::get('/defense-requests/pending', [DefenseRequestController::class, 'pending']);
 });
-
-
-Route::get('/api/defense-requests/count', [DefenseRequestController::class, 'count']);
-
-
 
 require __DIR__ . '/settings.php';
 require __DIR__ . '/auth.php';

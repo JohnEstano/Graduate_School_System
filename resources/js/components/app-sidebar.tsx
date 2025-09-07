@@ -4,11 +4,9 @@ import { NavUser } from '@/components/nav-user';
 import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '@/components/ui/sidebar';
 import { MainNavItem, type NavItem } from '@/types';
 import { Link, usePage } from '@inertiajs/react';
-import { CalendarFold, CreditCard, DollarSign, FileText, LayoutGrid, MessageSquareText, ScrollText, Users } from 'lucide-react';
+import { CalendarFold, CreditCard, DollarSign, FileText, GraduationCap, LayoutGrid, MessageSquareText, ScrollText, SquareUserRound, Users } from 'lucide-react';
 import AppLogo from './app-logo';
 import { useEffect, useState } from "react";
-
-
 
 type PageProps = {
     auth: {
@@ -32,7 +30,7 @@ const studentNavItems: MainNavItem[] = [
         icon: FileText,
         subItems: [
             { title: 'Comprehensive Exam', href: '/comprehensive-exam' },
-            { title: 'Defense Requests', href: '/defense-request' },
+            { title: 'Defense Requirements', href: '/defense-requirements' }, 
         ],
     },
     {
@@ -44,14 +42,14 @@ const studentNavItems: MainNavItem[] = [
         title: 'Schedules',
         href: '/schedule',
         icon: CalendarFold,
-       
+
     },
-     {
+    {
         title: 'Messages',
         href: '/messages',
         icon: MessageSquareText,
     },
- 
+
 ];
 
 const assistantNavItems: MainNavItem[] = [
@@ -61,9 +59,18 @@ const assistantNavItems: MainNavItem[] = [
         href: '/requests',
         icon: ScrollText,
         subItems: [
-            { title: 'Defense Requests', href: '/defense-request' },
             { title: 'Comprehensive Exams', href: '/comprehensive-exam' },
             { title: 'Payment Receipt', href: '/payment-receipt' },
+        ],
+    },
+    {
+        title: 'Thesis & Dissertations',
+        href: '/defense',
+        icon: GraduationCap,
+        subItems: [
+            { title: 'Defense Request', href: '/defense-request' },
+             { title: 'Defense Requirements', href: '/all-defense-requirements', icon: FileText },
+             { title: 'Panelists', href: '/panelists', icon: SquareUserRound },
         ],
     },
     {
@@ -78,9 +85,6 @@ const assistantNavItems: MainNavItem[] = [
     { title: 'Student Records', href: '/student-records', icon: Users },
     { title: 'Schedules', href: '/schedules', icon: CalendarFold },
     { title: 'Messages', href: '/messages', icon: MessageSquareText },
-     
-
-
 ];
 
 const footerNavItems: NavItem[] = [];
@@ -97,21 +101,25 @@ export function AppSidebar() {
     const [defenseRequestCount, setDefenseRequestCount] = useState<number>(0);
 
     useEffect(() => {
+        let isMounted = true;
         async function fetchCount() {
             try {
                 const res = await fetch('/api/defense-requests/count');
                 if (res.ok) {
                     const data = await res.json();
-                    setDefenseRequestCount(data.count);
+                    if (isMounted) setDefenseRequestCount(data.count);
                 }
             } catch {
-
-                //errrrroorror
+                // error handling
             }
         }
         fetchCount();
-        const interval = setInterval(fetchCount, 1000);
-        return () => clearInterval(interval);
+        // Poll every 60 seconds instead of every second
+        const interval = setInterval(fetchCount, 60000);
+        return () => {
+            isMounted = false;
+            clearInterval(interval);
+        };
     }, []);
 
     let navItems = items;

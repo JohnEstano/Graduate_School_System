@@ -82,7 +82,7 @@ export default function DefenseRequestIndex() {
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Defense Requests" />
-            <div className="flex-1 flex flex-col gap-4 px-2 pt-4 w-full max-w-full min-h-[90vh]">
+            <div className="flex-1 flex flex-col gap-4 px-4 w-full max-w-full min-h-[90vh]">
                 <Tabs value={tab} onValueChange={setTab} className="flex-1 w-full max-w-full">
                     <TabsContent value="requests" className="flex-1 flex flex-col w-full max-w-full">
                         <div className="flex-1 flex flex-col w-full max-w-full overflow-auto min-h-0">

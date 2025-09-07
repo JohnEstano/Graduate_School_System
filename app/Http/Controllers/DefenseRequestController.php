@@ -18,7 +18,9 @@ class DefenseRequestController extends Controller
         $props = [];
 
         if (in_array($user->role, ['Administrative Assistant', 'Coordinator', 'Dean'])) {
-            $defenseRequests = DefenseRequest::with('lastStatusUpdater')->get();
+            $defenseRequests = DefenseRequest::with('lastStatusUpdater')
+                ->orderBy('created_at', 'desc')
+                ->get();
 
             $defenseRequests->transform(function ($item) {
                 $item->last_status_updated_by = $item->lastStatusUpdater?->name;
@@ -34,6 +36,12 @@ class DefenseRequestController extends Controller
                 $defenseRequest->last_status_updated_by = $defenseRequest->lastStatusUpdater?->name;
             }
             $props['defenseRequest'] = $defenseRequest;
+        }
+
+        // THIS IS THE KEY PART:
+        if (request()->wantsJson()) {
+            // Always return ALL requests for the coordinator dashboard
+            return response()->json($props['defenseRequests'] ?? []);
         }
 
         $viewMap = [
@@ -80,9 +88,9 @@ class DefenseRequestController extends Controller
             'defensePanelist3' => 'nullable|string',
             'defensePanelist4' => 'nullable|string',
             'advisersEndorsement' => 'nullable|file',
-            'recEndorsement' => 'nullable|file',
-            'proofOfPayment' => 'nullable|file',
-            'referenceNo' => 'nullable|file',
+            'recEndorsement' => 'required|string',
+            'proofOfPayment' => 'required|string',
+            'referenceNo' => 'required|string',
         ]);
 
         foreach ([
@@ -116,6 +124,7 @@ class DefenseRequestController extends Controller
             'defense_panelist2' => $data['defensePanelist2'] ?? null,
             'defense_panelist3' => $data['defensePanelist3'] ?? null,
             'defense_panelist4' => $data['defensePanelist4'] ?? null,
+            'submitted_by' => auth()->id(),
         ]);
 
         $defenseRequest = DefenseRequest::latest()->first();
@@ -285,6 +294,40 @@ class DefenseRequestController extends Controller
     public function calendar()
     {
         return \App\Models\DefenseRequest::select('id', 'thesis_title', 'date_of_defense', 'status')
+            ->get();
+    }
+
+    public function destroy(DefenseRequest $defenseRequest)
+    {
+        $defenseRequest->delete();
+        return response()->json(['success' => true]);
+    }
+
+    public function bulkDelete(Request $request)
+    {
+        $request->validate([
+            'ids' => 'required|array|min:1',
+            'ids.*' => 'integer',
+        ]);
+        DefenseRequest::whereIn('id', $request->ids)->delete();
+        return response()->json(['success' => true]);
+    }
+
+    public function all(Request $request)
+    {
+        $requirements = DefenseRequirement::with('user')->get();
+        $requests = \App\Models\DefenseRequest::where('defense_adviser', auth()->user()->name)->get();
+
+        return inertia('adviser/defense-requirements/Index', [
+            'defenseRequirements' => $requirements,
+            'defenseRequests' => $requests,
+        ]);
+    }
+    public function pending()
+    {
+        return DefenseRequest::where('status', 'Pending')
+            ->select('id', 'thesis_title', 'date_of_defense', 'status', 'priority')
+            ->orderByDesc('created_at')
             ->get();
     }
 }
