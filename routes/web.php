@@ -5,6 +5,10 @@ use App\Http\Controllers\DefenseRequestController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\PanelistController;
 use App\Http\Controllers\DefenseRequirementController;
+use App\Http\Controllers\ComprehensiveExamController;
+use App\Http\Controllers\PaymentSubmissionController;
+use App\Http\Controllers\CoordinatorCompreExamController;
+use App\Http\Controllers\CoordinatorComprePaymentController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -23,10 +27,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
         return Inertia::render('notification/Index');
     })->name('notification.index');
 
-    // Payment page
-    Route::get('payment', function () {
-        return Inertia::render('payment/Index');
-    })->name('payment.index');
+    // Payment routes (controller-based)
+    Route::get('/payment', [PaymentSubmissionController::class, 'index'])->name('payment.index');
+    Route::post('/payment', [PaymentSubmissionController::class, 'store'])->name('payment.store');
 
     // Schedule page
     Route::get('schedule', function () {
@@ -60,13 +63,16 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/defense-requests/calendar', [DefenseRequestController::class, 'calendar'])
         ->name('defense-requests.calendar');
 
+    // Pending defense requests (specific)
+    Route::get('/defense-requests/pending', [DefenseRequestController::class, 'pending']);
+
     // Resource routes (creates the single-item delete /defense-requests/{defense_request})
     // Keep this AFTER any specific routes above so they take precedence.
     Route::resource('defense-requests', DefenseRequestController::class);
 
-    Route::get('comprehensive-exam', function () {
-        return Inertia::render('student/submissions/comprehensive-exam/Index');
-    })->name('comprehensive-exam.index');
+    // Comprehensive Exam (Student) - controller
+    Route::get('/comprehensive-exam', [ComprehensiveExamController::class, 'index'])->name('comprehensive-exam.index');
+    Route::post('/comprehensive-exam', [ComprehensiveExamController::class, 'store'])->name('comprehensive-exam.store');
 
     // Honorarium pages
     Route::get('generate-report', function () {
@@ -116,7 +122,22 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->middleware(['auth', 'verified'])
         ->name('defense-requirements.all');
 
-    Route::get('/defense-requests/pending', [DefenseRequestController::class, 'pending']);
+    // Coordinator Comprehensive Exam route (kept inside verified)
+    Route::get('/coordinator/compre-exam', [CoordinatorCompreExamController::class, 'index'])
+        ->name('coordinator.compre-exam.index');
+}); // end auth,verified group
+
+// Coordinator routes (authentication only)
+Route::middleware(['auth'])->group(function () {
+    // Coordinator Comprehensive Payment route
+    Route::get('/coordinator/compre-payment', [CoordinatorComprePaymentController::class, 'index'])
+        ->name('coordinator.compre-payment.index');
+
+    Route::post('/coordinator/compre-payment/{id}/approve', [CoordinatorComprePaymentController::class, 'approve'])
+        ->name('coordinator.compre-payment.approve');
+
+    Route::post('/coordinator/compre-payment/{id}/reject', [CoordinatorComprePaymentController::class, 'reject'])
+        ->name('coordinator.compre-payment.reject');
 });
 
 require __DIR__ . '/settings.php';

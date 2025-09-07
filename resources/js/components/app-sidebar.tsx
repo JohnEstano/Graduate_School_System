@@ -59,8 +59,9 @@ const assistantNavItems: MainNavItem[] = [
         href: '/requests',
         icon: ScrollText,
         subItems: [
-            { title: 'Comprehensive Exams', href: '/comprehensive-exam' },
-            { title: 'Payment Receipt', href: '/payment-receipt' },
+            // FIX: staff/comms link should go to the coordinator page
+            { title: 'Comprehensive Exams', href: '/coordinator/compre-exam' },
+            { title: 'Payment Receipt', href: '/coordinator/compre-payment' },
         ],
     },
     {
@@ -69,8 +70,8 @@ const assistantNavItems: MainNavItem[] = [
         icon: GraduationCap,
         subItems: [
             { title: 'Defense Request', href: '/defense-request' },
-             { title: 'Defense Requirements', href: '/all-defense-requirements', icon: FileText },
-             { title: 'Panelists', href: '/panelists', icon: SquareUserRound },
+            { title: 'Defense Requirements', href: '/all-defense-requirements', icon: FileText },
+            { title: 'Panelists', href: '/panelists', icon: SquareUserRound },
         ],
     },
     {
@@ -123,14 +124,16 @@ export function AppSidebar() {
     }, []);
 
     let navItems = items;
+
     if (isStaff) {
+        // FIX: badge mapping should target "Thesis & Dissertations" (where Defense Request lives)
         navItems = assistantNavItems.map(item => {
-            if (item.title === 'Requests') {
+            if (item.title === 'Thesis & Dissertations') {
                 return {
                     ...item,
                     indicator: defenseRequestCount > 0,
                     subItems: item.subItems?.map(sub =>
-                        sub.title === 'Defense Requests'
+                        sub.title === 'Defense Request'
                             ? { ...sub, count: defenseRequestCount }
                             : sub
                     ),
