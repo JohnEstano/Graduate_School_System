@@ -2,8 +2,8 @@ import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
 import { Head, usePage } from '@inertiajs/react';
 import { Button } from '@/components/ui/button';
-import React, { useState } from 'react';
-import { ChevronDown, GraduationCap, Hourglass, Check, X } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { ChevronDown, GraduationCap, Hourglass, Check, X, Eye, CheckCircle, Users, Calendar } from 'lucide-react';
 import {
     Dialog,
     DialogContent,
@@ -46,6 +46,8 @@ type DefenseRequest = {
     thesis_title: string;
     school_id: string;
     status: string;
+    workflow_state: string;
+    workflow_state_display?: string;
     date_of_defense?: string;
     mode_defense?: string;
     chairperson?: string; // <-- add this
@@ -55,6 +57,16 @@ type DefenseRequest = {
     defense_panelist2?: string;
     defense_panelist3?: string;
     defense_panelist4?: string;
+    // New scheduling fields
+    scheduled_date?: string;
+    scheduled_time?: string;
+    scheduled_end_time?: string;
+    formatted_time_range?: string;
+    defense_venue?: string;
+    defense_mode?: string;
+    // Comments and feedback
+    adviser_comments?: string;
+    coordinator_comments?: string;
     // ...other fields
 };
 
@@ -71,7 +83,11 @@ type PageProps = {
 
 export default function DefenseRequestIndex() {
     const { props } = usePage<PageProps>();
-    const { defenseRequirements = [], defenseRequest } = props;
+    const { defenseRequirements = [], defenseRequest: initialDefenseRequest } = props;
+
+    // State for real-time updates
+    const [defenseRequest, setDefenseRequest] = useState<DefenseRequest | null>(initialDefenseRequest || null);
+    const [lastUpdateTime, setLastUpdateTime] = useState<string>(dayjs().format('h:mm A'));
 
     // Check if there is a pending request
     const hasPending = defenseRequirements.some(
@@ -80,6 +96,33 @@ export default function DefenseRequestIndex() {
 
     const [open, setOpen] = useState(false);
     const [showSuccessPanel, setShowSuccessPanel] = useState(false);
+
+    // Real-time polling for defense request updates
+    useEffect(() => {
+        if (!defenseRequest) return;
+
+        const pollInterval = setInterval(async () => {
+            try {
+                const response = await fetch(`/api/defense-request/${defenseRequest.id}`);
+                if (response.ok) {
+                    const updatedRequest = await response.json();
+                    
+                    // Check if workflow state changed
+                    if (updatedRequest.workflow_state !== defenseRequest.workflow_state) {
+                        setDefenseRequest(updatedRequest);
+                        setLastUpdateTime(dayjs().format('h:mm A'));
+                        
+                        // You could add a toast notification here
+                        console.log('Defense request status updated:', updatedRequest.workflow_state);
+                    }
+                }
+            } catch (error) {
+                console.error('Failed to poll defense request updates:', error);
+            }
+        }, 10000); // Poll every 10 seconds
+
+        return () => clearInterval(pollInterval);
+    }, [defenseRequest?.id, defenseRequest?.workflow_state]);
 
     function handleSuccess() {
         setShowSuccessPanel(true);
@@ -137,73 +180,149 @@ export default function DefenseRequestIndex() {
         },
     };
 
-    // Add this function to determine progress based on status
+    // Enhanced function to determine realistic progress based on workflow_state
     function getProgressAndDetails(req: DefenseRequirement) {
         let progress = 0;
-        let title = "Pending Review";
-        let description =
-            "Your defense requirements have been submitted and are awaiting review by your <b>Adviser</b>.";
+        let title = "Submitted";
+        let description = "Your defense requirements have been submitted and are awaiting review.";
         let color = "text-muted-foreground";
         let icon = <Hourglass className="h-4 w-4 opacity-60" />;
         let bg = "bg-secondary";
-        let progressColor = "bg-green-500";
+        let progressColor = "bg-blue-500";
 
-        // If there is a matching defenseRequest
+        // If there is a matching defenseRequest, use workflow_state for accurate tracking
         if (
             defenseRequest &&
             defenseRequest.thesis_title === req.thesis_title &&
             defenseRequest.school_id === props.auth.user.school_id
         ) {
-            const status = defenseRequest.status?.toLowerCase();
-            if (status === "pending" || status === "needs-info") {
-                // Adviser endorsed, waiting for coordinator
-                progress = 50;
-                title = "Pending Review";
-                description =
-                    "Your requirements have been verified and are now being <b>endorsed by your Adviser</b>.The defense request is currently <b>awaiting review by the Coordinator</b>. You will be notified once the defense request is finally approved.";
-                color = "text-muted-foreground";
-                icon = <Hourglass className="h-4 w-4 opacity-60" />;
-                bg = "bg-zinc-50";
-                progressColor = "bg-green-500";
-            } else if (status === "approved") {
-                progress = 100;
-                title = "Approved";
-                // Read chairperson and panelists from defenseRequest
-                const chairperson = defenseRequest.defense_chairperson || "Chairperson not assigned";
-                const panelists = [
-                    defenseRequest.defense_panelist1,
-                    defenseRequest.defense_panelist2,
-                    defenseRequest.defense_panelist3,
-                    defenseRequest.defense_panelist4,
-                ].filter(Boolean); // Remove undefined/null
+            const workflowState = defenseRequest.workflow_state;
+            
+            switch (workflowState) {
+                case 'submitted':
+                case 'adviser-review':
+                    progress = 20;
+                    title = "Under Adviser Review";
+                    description = "Your defense requirements are currently being <b>reviewed by your Adviser</b>. This may take 2-3 business days.";
+                    color = "text-blue-600";
+                    icon = <Eye className="h-4 w-4 text-blue-600" />;
+                    bg = "bg-blue-50";
+                    progressColor = "bg-blue-500";
+                    break;
+                    
+                case 'adviser-approved':
+                case 'coordinator-review':
+                    progress = 50;
+                    title = "Approved by Adviser - Under Coordinator Review";
+                    description = "Great! Your adviser has <b>approved</b> your defense requirements. The request is now being <b>reviewed by the Coordinator</b> for final approval and scheduling.";
+                    color = "text-orange-600";
+                    icon = <CheckCircle className="h-4 w-4 text-orange-600" />;
+                    bg = "bg-orange-50";
+                    progressColor = "bg-orange-500";
+                    break;
+                    
+                case 'coordinator-approved':
+                    progress = 75;
+                    title = "Approved - Panel Assignment in Progress";
+                    description = "Excellent! Your defense request has been <b>approved by the Coordinator</b>. Defense panel members are currently being assigned.";
+                    color = "text-green-600";
+                    icon = <Users className="h-4 w-4 text-green-600" />;
+                    bg = "bg-green-50";
+                    progressColor = "bg-green-500";
+                    break;
+                    
+                case 'scheduled':
+                    progress = 100;
+                    title = "Defense Scheduled";
+                    
+                    // Get panel information
+                    const chairperson = defenseRequest.defense_chairperson || "Chairperson not assigned";
+                    const panelists = [
+                        defenseRequest.defense_panelist1,
+                        defenseRequest.defense_panelist2,
+                        defenseRequest.defense_panelist3,
+                        defenseRequest.defense_panelist4,
+                    ].filter(Boolean);
 
-                const panelistText = panelists.length
-                    ? panelists.map((name, idx) => `<br/>Panel Member ${idx + 1}: <b>${name}</b>`).join("")
-                    : "<br/>Panel members not assigned.";
+                    const panelistText = panelists.length
+                        ? panelists.map((name, idx) => `<br/>• <b>${name}</b> (Panelist ${idx + 1})`).join("")
+                        : "<br/>• Panel members not yet assigned.";
 
-                description =
-                    `Your defense request has been <b>approved by the Coordinator</b>. ${
-                        defenseRequest.date_of_defense
-                            ? `Your defense is scheduled on <b>${dayjs(defenseRequest.date_of_defense).format("MMMM D, YYYY")}</b>`
-                            : "<b>Defense date will be announced soon.</b>"
-                    }. <br/>Chairperson: <b>${chairperson}</b>${panelistText} ${
-                        defenseRequest.mode_defense
-                            ? `<br/>Mode of defense: <b>${defenseRequest.mode_defense}</b>.`
-                            : ""
-                    }`;
-                color = "text-green-600";
-                icon = <Check className="h-4 w-4 text-green-600" />;
-                bg = "bg-green-50";
-                progressColor = "bg-green-500";
-            } else if (status === "rejected") {
-                progress = 100;
-                title = "Rejected";
-                description =
-                    "Your defense request has been <b>rejected</b>. Please review the <b>feedback</b> and <b>resubmit your documents</b>.";
-                color = "text-rose-600";
-                icon = <X className="h-4 w-4 text-rose-600" />;
-                bg = "bg-rose-50";
-                progressColor = "bg-rose-500";
+                    // Format schedule information
+                    let scheduleInfo = "";
+                    if (defenseRequest.scheduled_date && defenseRequest.formatted_time_range) {
+                        const scheduleDate = dayjs(defenseRequest.scheduled_date).format("MMMM D, YYYY");
+                        scheduleInfo = `<br/><br/><div class="mt-3 p-3 bg-blue-50 rounded-lg border-l-4 border-blue-400">
+                            <h4 class="font-semibold text-blue-800 mb-2">📅 Defense Schedule</h4>
+                            <p><b>Date:</b> ${scheduleDate}</p>
+                            <p><b>Time:</b> ${defenseRequest.formatted_time_range}</p>
+                            ${defenseRequest.defense_venue ? `<p><b>Venue:</b> ${defenseRequest.defense_venue}</p>` : ''}
+                            ${defenseRequest.defense_mode ? `<p><b>Mode:</b> ${defenseRequest.defense_mode}</p>` : ''}
+                        </div>`;
+                    } else if (defenseRequest.date_of_defense) {
+                        // Fallback to old date field
+                        const scheduleDate = dayjs(defenseRequest.date_of_defense).format("MMMM D, YYYY");
+                        scheduleInfo = `<br/><br/><div class="mt-3 p-3 bg-blue-50 rounded-lg border-l-4 border-blue-400">
+                            <h4 class="font-semibold text-blue-800 mb-2">📅 Defense Schedule</h4>
+                            <p><b>Date:</b> ${scheduleDate}</p>
+                            <p><em>Time and venue details will be announced soon.</em></p>
+                        </div>`;
+                    }
+
+                    description = `🎉 <b>Congratulations!</b> Your defense has been fully scheduled and approved. 
+                        <br/><br/><h4 class="font-semibold text-green-800 mb-2">👥 Defense Panel</h4>
+                        • <b>${chairperson}</b> (Chairperson)${panelistText}${scheduleInfo}
+                        <br/><br/><p class="text-sm text-gray-600 mt-3">💡 <b>Next Steps:</b> Prepare your defense presentation and materials. You will receive email notifications with additional details.</p>`;
+                    color = "text-green-600";
+                    icon = <Calendar className="h-4 w-4 text-green-600" />;
+                    bg = "bg-green-50";
+                    progressColor = "bg-green-500";
+                    break;
+                    
+                case 'adviser-rejected':
+                    progress = 100;
+                    title = "Rejected by Adviser";
+                    description = `Your defense request has been <b>rejected by your Adviser</b>. 
+                        ${defenseRequest.adviser_comments ? `<br/><br/><b>Feedback:</b> "${defenseRequest.adviser_comments}"` : ''}
+                        <br/><br/>Please address the feedback and resubmit your requirements.`;
+                    color = "text-red-600";
+                    icon = <X className="h-4 w-4 text-red-600" />;
+                    bg = "bg-red-50";
+                    progressColor = "bg-red-500";
+                    break;
+                    
+                case 'coordinator-rejected':
+                    progress = 100;
+                    title = "Rejected by Coordinator";
+                    description = `Your defense request has been <b>rejected by the Coordinator</b>. 
+                        ${defenseRequest.coordinator_comments ? `<br/><br/><b>Feedback:</b> "${defenseRequest.coordinator_comments}"` : ''}
+                        <br/><br/>Please address the feedback and resubmit your requirements.`;
+                    color = "text-red-600";
+                    icon = <X className="h-4 w-4 text-red-600" />;
+                    bg = "bg-red-50";
+                    progressColor = "bg-red-500";
+                    break;
+                    
+                case 'completed':
+                    progress = 100;
+                    title = "Defense Completed";
+                    description = "🎓 Congratulations! Your defense has been completed successfully.";
+                    color = "text-purple-600";
+                    icon = <GraduationCap className="h-4 w-4 text-purple-600" />;
+                    bg = "bg-purple-50";
+                    progressColor = "bg-purple-500";
+                    break;
+                    
+                default:
+                    // Handle any other states
+                    progress = 10;
+                    title = "Processing";
+                    description = "Your defense request is being processed. Current status: " + (defenseRequest.workflow_state_display || workflowState);
+                    color = "text-gray-600";
+                    icon = <Hourglass className="h-4 w-4 text-gray-600" />;
+                    bg = "bg-gray-50";
+                    progressColor = "bg-gray-500";
+                    break;
             }
         }
 
@@ -284,9 +403,16 @@ export default function DefenseRequestIndex() {
                                                             value={details.progress}
                                                             className="h-2 w-64"
                                                         />
-                                                        <span className="text-xs text-muted-foreground whitespace-nowrap">
-                                                            Submitted {timeSubmitted}
-                                                        </span>
+                                                        <div className="flex flex-col items-end">
+                                                            <span className="text-xs text-muted-foreground whitespace-nowrap">
+                                                                Submitted {timeSubmitted}
+                                                            </span>
+                                                            {defenseRequest && (
+                                                                <span className="text-xs text-green-600 whitespace-nowrap">
+                                                                    Last updated: {lastUpdateTime}
+                                                                </span>
+                                                            )}
+                                                        </div>
                                                         <ChevronDown
                                                             className={`transition-transform duration-200 h-4 w-4 text-muted-foreground ${isOpen ? 'rotate-180' : ''}`}
                                                         />

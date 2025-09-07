@@ -73,18 +73,64 @@ export default function SubmitDefenseRequirements({ onFinish, open, onOpenChange
     function handleFile(field: keyof typeof data) {
         return (e: React.ChangeEvent<HTMLInputElement>) => {
             if (e.target.files?.[0]) {
-                setData(field, e.target.files[0]);
+                const file = e.target.files[0];
+                
+                // Professional file validation
+                const maxSize = 200 * 1024 * 1024; // 200MB
+                const allowedTypes = [
+                    'application/pdf',
+                    'application/msword',
+                    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                    'image/jpeg',
+                    'image/png',
+                    'image/jpg'
+                ];
+
+                // Check file size
+                if (file.size > maxSize) {
+                    alert(`File size too large. Maximum allowed size is 200MB. Your file is ${(file.size / (1024 * 1024)).toFixed(2)}MB.`);
+                    e.target.value = '';
+                    return;
+                }
+
+                // Check file type
+                if (!allowedTypes.includes(file.type)) {
+                    alert(`File type not allowed. Please upload PDF, Word documents, or images (JPEG, PNG).`);
+                    e.target.value = '';
+                    return;
+                }
+
+                setData(field, file);
             }
         };
     }
 
     function handleSubmit() {
+        // Use the defense-requirements route since that's what exists and handles the consolidated table
         post(route('defense-requirements.store'), {
             forceFormData: true,
             onSuccess: () => {
                 setShowSuccessPanel(true);
                 if (onFinish) onFinish();
             },
+            onError: (errors) => {
+                console.error('Submission failed:', errors);
+                
+                // Handle specific file upload errors
+                if (errors.message && errors.message.includes('POST Content-Length')) {
+                    alert('File upload failed: Files are too large. Please ensure each file is under 200MB and try again.');
+                } else if (errors.message && errors.message.includes('PostTooLargeException')) {
+                    alert('Upload size limit exceeded. Please reduce file sizes and try again.');
+                } else {
+                    // Show validation errors
+                    const errorMessages = Object.values(errors).flat().join('\n');
+                    alert(`Submission failed:\n${errorMessages}`);
+                }
+            },
+            onProgress: (progress) => {
+                // You can add a progress bar here if needed
+                console.log('Upload progress:', progress);
+            }
         });
     }
 
