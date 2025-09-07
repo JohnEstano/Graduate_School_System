@@ -4,7 +4,7 @@ import { NavUser } from '@/components/nav-user';
 import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '@/components/ui/sidebar';
 import { MainNavItem, type NavItem } from '@/types';
 import { Link, usePage } from '@inertiajs/react';
-import { CalendarFold, Calendar, CreditCard, DollarSign, FileText, GraduationCap, LayoutGrid, MessageSquareText, ScrollText, SquareUserRound, Users } from 'lucide-react';
+import { CalendarFold, Calendar, CreditCard, DollarSign, FileText, GraduationCap, LayoutGrid, MessageSquareText, ScrollText, SquareUserRound, Users, Box, LibraryBig, Send } from 'lucide-react';
 import AppLogo from './app-logo';
 import { useEffect, useState } from "react";
 
@@ -27,11 +27,16 @@ const studentNavItems: MainNavItem[] = [
     {
         title: 'Submissions',
         href: '/submission',
-        icon: FileText,
+        icon: Send,
         subItems: [
             { title: 'Comprehensive Exam', href: '/comprehensive-exam' },
-            { title: 'Defense Requirements', href: '/defense-requirements' }, 
+            { title: 'Defense Requirements', href: '/defense-requirements' },
         ],
+    },
+    {
+        title: 'Academic Records',
+        href: '/academic-records',
+        icon: LibraryBig,
     },
     {
         title: 'Payments',
@@ -54,19 +59,15 @@ const studentNavItems: MainNavItem[] = [
 
 const assistantNavItems: MainNavItem[] = [
     { title: 'Dashboard', href: '/dashboard', icon: LayoutGrid },
-    {
-        title: 'Requests',
-        href: '/requests',
-        icon: ScrollText,
-        subItems: [
-            // FIX: staff/comms link should go to the coordinator page
-            { title: 'Comprehensive Exams (Nash)', href: '/coordinator/compre-exam' },
-            { title: 'Academic Records (Geoff)', href: '/comprehensive-exam' },
-            { title: 'Payment Receipt', href: '/coordinator/compre-payment' },
-        ],
-    },
-  
-  
+
+    { title: 'Comprehensive Exams', href: '/coordinator/compre-exam', icon: FileText },
+    { title: 'Payment Receipt', href: '/coordinator/compre-payment', icon: CreditCard },
+{
+    title: 'All Defense Requests',
+    href: '/coordinator/defense-requests/all',
+    icon: GraduationCap,
+},
+
     {
         title: 'Thesis & Dissertations',
         href: '/defense',
@@ -75,8 +76,6 @@ const assistantNavItems: MainNavItem[] = [
             { title: 'Defense Request', href: '/defense-request' },
 
             { title: 'Defense Management', href: '/coordinator/defense-management', icon: Calendar },
-
-            { title: 'Defense Requirements', href: '/all-defense-requirements', icon: FileText },
             { title: 'Panelists', href: '/panelists', icon: SquareUserRound },
         ],
     },
@@ -95,7 +94,9 @@ const assistantNavItems: MainNavItem[] = [
 ];
 
 const facultyNavItems: MainNavItem[] = [
-    { title: 'Dashboard', href: '/dashboard', icon: LayoutGrid },
+    /*
+        
+        { title: 'Dashboard', href: '/dashboard', icon: LayoutGrid },
     {
         title: 'Thesis & Dissertations',
         href: '/defense',
@@ -107,6 +108,14 @@ const facultyNavItems: MainNavItem[] = [
         ],
     },
     { title: 'Schedules', href: '/schedules', icon: CalendarFold },
+
+    */
+
+
+    { title: 'Dashboard', href: '/dashboard', icon: LayoutGrid },
+    { title: 'Defense Requirements', href: '/all-defense-requirements', icon: GraduationCap },
+    { title: 'Schedules', href: '/schedules', icon: CalendarFold },
+
 ];
 
 const footerNavItems: NavItem[] = [];

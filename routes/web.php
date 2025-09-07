@@ -162,6 +162,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // Coordinator Comprehensive Exam route (kept inside verified)
     Route::get('/coordinator/compre-exam', [CoordinatorCompreExamController::class, 'index'])
         ->name('coordinator.compre-exam.index');
+
+    // Academic Records page (student)
+    Route::get('/academic-records', function () {
+        return Inertia::render('student/academic-records/academic-records');
+    })->name('academic-records.index');
 }); // end auth,verified group
 
 // Coordinator routes (authentication only) - comprehensive payment actions
@@ -201,6 +206,10 @@ Route::prefix('coordinator')->name('coordinator.')->middleware(['auth', 'verifie
         ->name('schedule.check-conflicts');
     Route::get('/schedule/available-panelists', [\App\Http\Controllers\DefenseScheduleController::class, 'availablePanelists'])
         ->name('schedule.available-panelists');
+
+    // Show all defense requests (table view)
+    Route::get('/defense-requests/all', [App\Http\Controllers\DefenseRequestController::class, 'index'])
+        ->name('defense-requests.all');
 });
 
 // Legacy system linking and academic record endpoints
