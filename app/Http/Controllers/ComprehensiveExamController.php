@@ -77,16 +77,16 @@ class ComprehensiveExamController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'schoolYear'                  => ['required','string','max:20'],
-            'program'                     => ['required','string','max:255'],
-            'officeAddress'               => ['nullable','string','max:255'],
-            'mobileNo'                    => ['required','string','max:50'],
-            'telephoneNo'                 => ['nullable','string','max:50'],
-            'subjects'                    => ['required','array','min:1'],
-            'subjects.*.subject'          => ['required','string','max:255'],
-            'subjects.*.date'             => ['required','date'],
-            'subjects.*.startTime'        => ['required','date_format:H:i'],
-            'subjects.*.endTime'          => ['required','date_format:H:i','after:subjects.*.startTime'],
+            'schoolYear'            => ['required','string','max:20'],
+            'program'               => ['required','string','max:255'],
+            'officeAddress'         => ['nullable','string','max:255'],
+            'mobileNo'              => ['required','string','max:50'],
+            'telephoneNo'           => ['nullable','string','max:50'],
+            'subjects'              => ['required','array','min:1'],
+            'subjects.*.subject'    => ['required','string','max:255'],
+            'subjects.*.date'       => ['required','date'],
+            'subjects.*.startTime'  => ['required','date_format:H:i'],
+            'subjects.*.endTime'    => ['required','date_format:H:i','after:startTime'],
         ]);
 
         $user = $request->user();
@@ -95,24 +95,55 @@ class ComprehensiveExamController extends Controller
             return back()->withErrors(['student_id' => 'Your account has no student ID associated.']);
         }
 
-        // Enforce one application per student per school year
-        $application = ExamApplication::firstOrCreate(
-            ['student_id' => $studentId, 'school_year' => $validated['schoolYear']],
-            [
-                'permit_status'         => 'pending',
-                'final_approval_status' => 'pending',
+        // Look for an existing application for the same school year
+        $existing = ExamApplication::with('subjects')
+            ->where('student_id', $studentId)
+            ->where('school_year', $validated['schoolYear'])
+            ->latest('application_id')
+            ->first();
+
+        if ($existing) {
+            // If already approved, don’t allow another submission for the same school year
+            if (strtolower($existing->final_approval_status) === 'approved') {
+                return to_route('comprehensive-exam.index')
+                    ->with('info', 'You already have an approved application for this school year.');
+            }
+
+            // Treat as resubmission/update: reset statuses and overwrite details + subjects
+            $existing->fill([
                 'contact_number'        => $validated['mobileNo'],
                 'telephone_number'      => $validated['telephoneNo'] ?? null,
                 'office_address'        => $validated['officeAddress'] ?? null,
                 'program'               => $validated['program'],
-            ]
-        );
+                'permit_status'         => 'pending',
+                'final_approval_status' => 'pending',
+            ])->save();
 
-        // Only create subjects if this is a new application
-        if (!$application->wasRecentlyCreated) {
-            return to_route('comprehensive-exam.index')
-                ->with('info', 'You already have an application for this school year.');
+            // Replace subjects with the new set
+            $existing->subjects()->delete();
+            foreach ($validated['subjects'] as $s) {
+                $existing->subjects()->create([
+                    'subject_name' => $s['subject'],
+                    'exam_date'    => $s['date'],
+                    'start_time'   => $s['startTime'],
+                    'end_time'     => $s['endTime'],
+                ]);
+            }
+
+            return to_route('comprehensive-exam.index')->with('success', 'Application resubmitted.');
         }
+
+        // New application
+        $application = ExamApplication::create([
+            'student_id'            => $studentId,
+            'school_year'           => $validated['schoolYear'],
+            'permit_status'         => 'pending',
+            'final_approval_status' => 'pending',
+            'contact_number'        => $validated['mobileNo'],
+            'telephone_number'      => $validated['telephoneNo'] ?? null,
+            'office_address'        => $validated['officeAddress'] ?? null,
+            'program'               => $validated['program'],
+        ]);
 
         foreach ($validated['subjects'] as $s) {
             $application->subjects()->create([

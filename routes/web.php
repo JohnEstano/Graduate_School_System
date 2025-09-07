@@ -9,6 +9,7 @@ use App\Http\Controllers\ComprehensiveExamController;
 use App\Http\Controllers\PaymentSubmissionController;
 use App\Http\Controllers\CoordinatorCompreExamController;
 use App\Http\Controllers\CoordinatorComprePaymentController;
+use App\Http\Controllers\DeanCompreExamController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -145,6 +146,13 @@ Route::middleware(['auth'])->group(function () {
 
     Route::post('/coordinator/compre-payment/bulk-reject', [CoordinatorComprePaymentController::class, 'bulkReject'])
         ->name('coordinator.compre-payment.bulk-reject');
+
+    // Dean Comprehensive Exam routes
+    Route::get('/dean/compre-exam', [DeanCompreExamController::class, 'index'])->name('dean.compre-exam.index');
+    Route::post('/dean/compre-exam/{id}/approve', [DeanCompreExamController::class, 'approve'])->name('dean.compre-exam.approve');
+    Route::post('/dean/compre-exam/{id}/reject', [DeanCompreExamController::class, 'reject'])->name('dean.compre-exam.reject');
+    Route::post('/dean/compre-exam/bulk-approve', [DeanCompreExamController::class, 'bulkApprove'])->name('dean.compre-exam.bulk-approve');
+    Route::post('/dean/compre-exam/bulk-reject', [DeanCompreExamController::class, 'bulkReject'])->name('dean.compre-exam.bulk-reject');
 });
 
 require __DIR__ . '/settings.php';

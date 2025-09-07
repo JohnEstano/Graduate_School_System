@@ -88,6 +88,33 @@ const assistantNavItems: MainNavItem[] = [
     { title: 'Messages', href: '/messages', icon: MessageSquareText },
 ];
 
+// Dean-only nav (separate data source/route space)
+const deanNavItems: MainNavItem[] = [
+    { title: 'Dashboard', href: '/dashboard', icon: LayoutGrid },
+    {
+        title: 'Requests',
+        href: '/requests',
+        icon: ScrollText,
+        subItems: [
+            // Dean route
+            { title: 'Comprehensive Exams', href: '/dean/compre-exam' },
+        ],
+    },
+    {
+        title: 'Thesis & Dissertations',
+        href: '/defense',
+        icon: GraduationCap,
+        subItems: [
+            { title: 'Defense Request', href: '/defense-request' },
+            { title: 'Defense Requirements', href: '/all-defense-requirements', icon: FileText },
+            { title: 'Panelists', href: '/panelists', icon: SquareUserRound },
+        ],
+    },
+    { title: 'Student Records', href: '/student-records', icon: Users },
+    { title: 'Schedules', href: '/schedules', icon: CalendarFold },
+    { title: 'Messages', href: '/messages', icon: MessageSquareText },
+];
+
 const footerNavItems: NavItem[] = [];
 
 export function AppSidebar() {
@@ -95,9 +122,12 @@ export function AppSidebar() {
         auth: { user },
     } = usePage<PageProps>().props;
 
-    const staffRoles = ['Administrative Assistant', 'Coordinator', 'Dean'];
-    const isStaff = staffRoles.includes(user.role);
-    const items = isStaff ? assistantNavItems : studentNavItems;
+    // Roles
+    const isDean = user.role === 'Dean';
+    const isAssistantOrCoordinator = user.role === 'Administrative Assistant' || user.role === 'Coordinator';
+
+    // Pick nav set
+    const items = isDean ? deanNavItems : (isAssistantOrCoordinator ? assistantNavItems : studentNavItems);
 
     const [defenseRequestCount, setDefenseRequestCount] = useState<number>(0);
 
@@ -125,9 +155,8 @@ export function AppSidebar() {
 
     let navItems = items;
 
-    if (isStaff) {
-        // FIX: badge mapping should target "Thesis & Dissertations" (where Defense Request lives)
-        navItems = assistantNavItems.map(item => {
+    if (isDean || isAssistantOrCoordinator) {
+        navItems = items.map(item => {
             if (item.title === 'Thesis & Dissertations') {
                 return {
                     ...item,

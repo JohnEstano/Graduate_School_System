@@ -35,7 +35,7 @@ export const UIC_PROGRAMS: string[] = [
     "Doctor of Philosophy in Education major in Filipino",
     "Doctor of Philosophy in Education major in Counseling",
     "Doctor of Philosophy in Education major in Information Technology Integration",
-    "Doctor of Philosphy in Pharmacy",
+    "Doctor of Philosphy in Clinical Pharmacy",
 
     // Master’s Programs
     "Master of Arts in Religious Education",

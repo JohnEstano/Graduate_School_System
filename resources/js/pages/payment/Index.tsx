@@ -33,7 +33,7 @@ type PageProps = {
 const DEV_SIMULATE_PAYMENT = false;
 // Default simulation values (used when no URL params are provided)
 const SIM_DEFAULTS = {
-  canSubmit: true,   // pretend the comprehensive application is approved
+  canSubmit: false,   // pretend the comprehensive application is approved
   debugOpen: false,  // force-enable the button even if not allowed
 };
 
@@ -126,7 +126,11 @@ export default function Index() {
                 />
               </div>
             ) : (
-              <div className="p-6 text-center text-sm text-muted-foreground">No payment submitted yet.</div>
+              <div className="p-6 text-center text-sm text-muted-foreground">
+                {effectiveCanSubmit
+                  ? 'No payment submitted yet. Click “Submit payment” to upload your receipt.'
+                  : 'Submit your comprehensive exam application first to proceed with payment verification.'}
+              </div>
             )}
           </div>
         </div>

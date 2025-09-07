@@ -14,6 +14,8 @@ export default function Details({ payment }: { payment: ComprePaymentSummary }) 
   const money = (amt?: number | null) =>
     amt == null ? '—' : new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' }).format(amt);
 
+  const wasRejected = payment.status === 'approved' && !!payment.remarks;
+
   return (
     <div className="max-w-md w-full text-sm mx-auto">
       {/* Header */}
@@ -74,7 +76,9 @@ export default function Details({ payment }: { payment: ComprePaymentSummary }) 
           </div>
           {payment.remarks ? (
             <div className="md:col-span-2">
-              <div className="text-xs text-muted-foreground">Remarks</div>
+              <div className="text-xs text-muted-foreground">
+                Remarks{wasRejected ? ' (from previous rejection)' : ''}
+              </div>
               <div className="font-normal text-foreground">{payment.remarks}</div>
             </div>
           ) : null}
