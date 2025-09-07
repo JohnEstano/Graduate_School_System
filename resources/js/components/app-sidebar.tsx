@@ -4,7 +4,7 @@ import { NavUser } from '@/components/nav-user';
 import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '@/components/ui/sidebar';
 import { MainNavItem, type NavItem } from '@/types';
 import { Link, usePage } from '@inertiajs/react';
-import { CalendarFold, CreditCard, DollarSign, FileText, GraduationCap, LayoutGrid, MessageSquareText, ScrollText, SquareUserRound, Users } from 'lucide-react';
+import { CalendarFold, Calendar, CreditCard, DollarSign, FileText, GraduationCap, LayoutGrid, MessageSquareText, ScrollText, SquareUserRound, Users } from 'lucide-react';
 import AppLogo from './app-logo';
 import { useEffect, useState } from "react";
 
@@ -71,8 +71,9 @@ const assistantNavItems: MainNavItem[] = [
         icon: GraduationCap,
         subItems: [
             { title: 'Defense Request', href: '/defense-request' },
-             { title: 'Defense Requirements', href: '/all-defense-requirements', icon: FileText },
-             { title: 'Panelists', href: '/panelists', icon: SquareUserRound },
+            { title: 'Defense Management', href: '/coordinator/defense-management', icon: Calendar },
+            { title: 'Defense Requirements', href: '/all-defense-requirements', icon: FileText },
+            { title: 'Panelists', href: '/panelists', icon: SquareUserRound },
         ],
     },
     {
@@ -93,6 +94,21 @@ const assistantNavItems: MainNavItem[] = [
 
 ];
 
+const facultyNavItems: MainNavItem[] = [
+    { title: 'Dashboard', href: '/dashboard', icon: LayoutGrid },
+    {
+        title: 'Thesis & Dissertations',
+        href: '/defense',
+        icon: GraduationCap,
+        subItems: [
+            { title: 'Assigned Defense Requests', href: '/defense-request' },
+            { title: 'All Defense Requirements', href: '/all-defense-requirements' },
+            { title: 'Panelists', href: '/panelists', icon: SquareUserRound },
+        ],
+    },
+    { title: 'Schedules', href: '/schedules', icon: CalendarFold },
+];
+
 const footerNavItems: NavItem[] = [];
 
 export function AppSidebar() {
@@ -102,7 +118,8 @@ export function AppSidebar() {
 
     const staffRoles = ['Administrative Assistant', 'Coordinator', 'Dean'];
     const isStaff = staffRoles.includes(user.role);
-    const items = isStaff ? assistantNavItems : studentNavItems;
+    const isFaculty = user.role === 'Faculty' || user.role === 'Adviser';
+    const items = isStaff ? assistantNavItems : (isFaculty ? facultyNavItems : studentNavItems);
 
     const [defenseRequestCount, setDefenseRequestCount] = useState<number>(0);
 
