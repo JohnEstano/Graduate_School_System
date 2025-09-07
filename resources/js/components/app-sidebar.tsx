@@ -8,8 +8,6 @@ import { CalendarFold, Calendar, CreditCard, DollarSign, FileText, GraduationCap
 import AppLogo from './app-logo';
 import { useEffect, useState } from "react";
 
-
-
 type PageProps = {
     auth: {
         user: {
@@ -61,17 +59,23 @@ const assistantNavItems: MainNavItem[] = [
         href: '/requests',
         icon: ScrollText,
         subItems: [
-            { title: 'Comprehensive Exams', href: '/comprehensive-exam' },
-            { title: 'Payment Receipt', href: '/payment-receipt' },
+            // FIX: staff/comms link should go to the coordinator page
+            { title: 'Comprehensive Exams (Nash)', href: '/coordinator/compre-exam' },
+            { title: 'Academic Records (Geoff)', href: '/comprehensive-exam' },
+            { title: 'Payment Receipt', href: '/coordinator/compre-payment' },
         ],
     },
+  
+  
     {
         title: 'Thesis & Dissertations',
         href: '/defense',
         icon: GraduationCap,
         subItems: [
             { title: 'Defense Request', href: '/defense-request' },
+
             { title: 'Defense Management', href: '/coordinator/defense-management', icon: Calendar },
+
             { title: 'Defense Requirements', href: '/all-defense-requirements', icon: FileText },
             { title: 'Panelists', href: '/panelists', icon: SquareUserRound },
         ],
@@ -88,10 +92,6 @@ const assistantNavItems: MainNavItem[] = [
     { title: 'Student Records', href: '/student-records', icon: Users },
     { title: 'Schedules', href: '/schedules', icon: CalendarFold },
     { title: 'Messages', href: '/messages', icon: MessageSquareText },
-
-
-
-
 ];
 
 const facultyNavItems: MainNavItem[] = [
@@ -124,59 +124,40 @@ export function AppSidebar() {
     const [defenseRequestCount, setDefenseRequestCount] = useState<number>(0);
 
     useEffect(() => {
-        let interval: number | undefined;
-        let backoff = 5000; // start at 5s
-        const maxBackoff = 60000; // cap at 60s
-        let abortController: AbortController | null = null;
+        let isMounted = true;
 
-        async function fetchCount(immediate = false) {
-            if (document.hidden && !immediate) return; // skip when tab hidden
-            abortController?.abort();
-            abortController = new AbortController();
+        async function fetchCount() {
             try {
-                const res = await fetch('/api/defense-requests/count', { signal: abortController.signal });
+                const res = await fetch('/api/defense-requests/count');
                 if (res.ok) {
                     const data = await res.json();
-                    setDefenseRequestCount(data.count);
-                    backoff = 5000; // reset backoff on success
-                } else {
-                    backoff = Math.min(backoff * 2, maxBackoff);
+                    if (isMounted) setDefenseRequestCount(data.count);
                 }
             } catch {
-                backoff = Math.min(backoff * 2, maxBackoff);
-            }
-            schedule();
-        }
-
-        function schedule() {
-            clearInterval(interval);
-            interval = window.setTimeout(() => fetchCount(), backoff);
-        }
-
-        function handleVisibility() {
-            if (!document.hidden) {
-                fetchCount(true);
+                // error handling (ignore for now)
             }
         }
 
-        document.addEventListener('visibilitychange', handleVisibility);
-        fetchCount(true);
+        fetchCount();
+        // Poll every 60 seconds
+        const pollInterval = setInterval(fetchCount, 60000);
         return () => {
-            document.removeEventListener('visibilitychange', handleVisibility);
-            if (interval) clearTimeout(interval);
-            abortController?.abort();
+            isMounted = false;
+            clearInterval(pollInterval);
         };
     }, []);
 
     let navItems = items;
+
     if (isStaff) {
+        // FIX: badge mapping should target "Thesis & Dissertations" (where Defense Request lives)
         navItems = assistantNavItems.map(item => {
-            if (item.title === 'Requests') {
+            if (item.title === 'Thesis & Dissertations') {
                 return {
                     ...item,
                     indicator: defenseRequestCount > 0,
                     subItems: item.subItems?.map(sub =>
-                        sub.title === 'Defense Requests'
+                        sub.title === 'Defense Request'
                             ? { ...sub, count: defenseRequestCount }
                             : sub
                     ),

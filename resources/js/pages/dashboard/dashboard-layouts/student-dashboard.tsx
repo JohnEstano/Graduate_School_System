@@ -1,5 +1,21 @@
+import { useEffect, useState } from 'react';
 import { usePage } from '@inertiajs/react';
-import { CircleEllipsis, Ellipsis, BellRing, Info } from 'lucide-react';
+import { Sun, Moon } from 'lucide-react';
+import RemindersWidget from '../widgets/reminders-widget';
+import UpcomingSchedulesWidget from '../widgets/upcomming-schedules-widget';
+import PendingDefenseRequestsWidget from '../widgets/pending-defense-request-widget';
+import WeeklyDefenseSchedulesWidget from '../widgets/weekly-defense-schedule-widget';
+import QuickActionsWidget from '../widgets/quick-actions-widget';
+import DefenseStatusWidget from '../widgets/defense-status-widget';
+import type { DefenseRequest } from '@/types';
+
+type DefenseRequirement = {
+    id: number;
+    thesis_title: string;
+    status: string;
+    created_at?: string;
+    // ...other fields as needed
+};
 
 type PageProps = {
     auth: {
@@ -9,57 +25,147 @@ type PageProps = {
             role: string;
         } | null;
     };
+    defenseRequirement?: DefenseRequirement;
+    defenseRequest?: DefenseRequest;
+    defenseRequests?: DefenseRequest[];
+    // ...other props...
 };
 
+function getFormattedDate() {
+    const now = new Date();
+    return now.toLocaleDateString('en-US', {
+        weekday: 'long',
+        month: 'long',
+        day: 'numeric',
+    });
+}
+
+function isDaytime() {
+    const hour = new Date().getHours();
+    return hour >= 6 && hour < 18;
+}
+
 export default function StudentDashboard() {
-    const {
-        auth: { user },
-    } = usePage<PageProps>().props;
+    const page = usePage<PageProps>().props;
+    const { auth: { user }, defenseRequirement, defenseRequest } = page;
+    // server-provided list (optional) OR we'll use the locally fetched list
+    const serverDefenseRequests = page.defenseRequests ?? [];
+
+    const [allRequests, setAllRequests] = useState<DefenseRequest[]>([]);
+    const [pendingRequests, setPendingRequests] = useState<DefenseRequest[]>([]);
+    const [todayEvents, setTodayEvents] = useState<DefenseRequest[]>([]);
+    const [loading, setLoading] = useState(true);
+
+    const [selectedDay, setSelectedDay] = useState<number>(new Date().getDay());
+
+    const weekDays = [
+        { label: 'Sun', value: 0 },
+        { label: 'Mon', value: 1 },
+        { label: 'Tue', value: 2 },
+        { label: 'Wed', value: 3 },
+        { label: 'Thu', value: 4 },
+        { label: 'Fri', value: 5 },
+        { label: 'Sat', value: 6 },
+    ];
+
+    useEffect(() => {
+        // Fetch newest defense-requests if server didn't provide them
+        const fetchData = async () => {
+            try {
+                const res = await fetch('/defense-requests', { headers: { Accept: 'application/json' } });
+                const data = await res.json();
+                const requests = Array.isArray(data) ? data : data.defenseRequests ?? [];
+                // Only keep student's own requests on this page
+                const mine = requests.filter((r: DefenseRequest) => r.submitted_by === user?.id);
+                setAllRequests(mine);
+                setPendingRequests(mine.filter((r: DefenseRequest) => r.status === 'Pending'));
+                const today = new Date();
+                const closeEvents = mine.filter((dr: DefenseRequest) => {
+                    const eventDate = dr.date_of_defense ? new Date(dr.date_of_defense) : null;
+                    if (!eventDate || Number.isNaN(eventDate.getTime())) return false;
+                    const diff = (eventDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24);
+                    return diff >= 0 && diff < 3;
+                });
+                setTodayEvents(closeEvents);
+            } catch (e) {
+                setAllRequests([]);
+                setPendingRequests([]);
+                setTodayEvents([]);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        // If server already provided defenseRequests, use them instead of fetching
+        if (serverDefenseRequests && serverDefenseRequests.length > 0) {
+            const mine = serverDefenseRequests.filter((r: DefenseRequest) => r.submitted_by === user?.id);
+            setAllRequests(mine);
+            setPendingRequests(mine.filter((r: DefenseRequest) => r.status === 'Pending'));
+            const today = new Date();
+            const closeEvents = mine.filter((dr: DefenseRequest) => {
+                const eventDate = dr.date_of_defense ? new Date(dr.date_of_defense) : null;
+                if (!eventDate || Number.isNaN(eventDate.getTime())) return false;
+                const diff = (eventDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24);
+                return diff >= 0 && diff < 3;
+            });
+            setTodayEvents(closeEvents);
+            setLoading(false);
+        } else {
+            fetchData();
+        }
+    }, [serverDefenseRequests, user?.id]);
+
+    // prefer server-provided list; if not present, fall back to locally fetched allRequests
+    const approvedDefenses = (serverDefenseRequests && serverDefenseRequests.length > 0) ? serverDefenseRequests : allRequests;
 
     return (
-        <div className="flex h-full flex-1 flex-col gap-4 overflow-auto rounded-xl pt-5 pr-7 pb-5 pl-7">
-            <div className="flex flex-col gap-1">
-                <h1 className="text-3xl font-bold">{user?.name ?? 'Guest'}</h1>
-                <p className="text-sm text-gray-400">{user?.role ?? 'Student'}</p>
-            </div>
-
-            <div className="grid auto-rows-min gap-4 md:grid-cols-4">
-                <div className="border-sidebar-border/70 dark:border-sidebar-border relative aspect-video overflow-hidden rounded-xl border p-5">
-                    <div className="flex items-start justify-between">
-                        <h3 className="text-[13px] font-medium">Exam Eligibility:</h3>
-                        <Ellipsis className="size-4 text-zinc-700" />
-                    </div>
+        <div className="flex h-full flex-1 flex-col gap-4 overflow-auto rounded-xl pt-5">
+            {/* Header */}
+            <div className="mb-8 mt-3 flex flex-row justify-between items-center relative overflow-hidden" style={{ minHeight: '120px' }}>
+                <div className="flex flex-col pr-8 pl-7">
+                    <span className="flex items-center text-xs font-semibold text-gray-700 dark:text-gray-200 mb-1 relative z-10">
+                        {isDaytime() ? (
+                            <Sun className="mr-1 size-4 text-yellow-500" />
+                        ) : (
+                            <Moon className="mr-1 size-4 text-blue-500" />
+                        )}
+                        {getFormattedDate()}
+                    </span>
+                    <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white relative z-10">
+                        Hi, {user?.name}!
+                    </h1>
+                    <span className="text-xs text-gray-400 dark:text-gray-500 mt-1 relative z-10">
+                        {user?.role ?? 'Student'}
+                    </span>
                 </div>
-
-                <div className="border-sidebar-border/70 dark:border-sidebar-border relative aspect-video overflow-hidden rounded-xl border p-5">
-                    <div className="flex items-start justify-between">
-                        <h3 className="text-[13px] font-medium">Subjects Completed:</h3>
-                        <Ellipsis className="size-4 text-zinc-700" />
-                    </div>
-                </div>
-                <div className="border-sidebar-border/70 dark:border-sidebar-border relative aspect-video overflow-hidden rounded-xl border p-5">
-                    <div className="flex items-start justify-between">
-                        <h3 className="text-[13px] font-medium">Document Status:</h3>
-                        <Ellipsis className="size-4 text-zinc-700" />
-                    </div>
-                </div>
-                <div className="border-sidebar-border/70 dark:border-sidebar-border relative aspect-video overflow-hidden rounded-xl border p-5">
-                    <div className="flex items-start justify-between">
-                        <h3 className="text-[13px] font-medium">Application Deadline:</h3>
-                        <Ellipsis className="size-4 text-zinc-700" />
-                    </div>
+                <div className="flex items-center">
+                    <div className="h-12 w-px mx-4 bg-gray-300 dark:bg-gray-700 opacity-60" />
+                    <QuickActionsWidget />
                 </div>
             </div>
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-                {/* Messaging widget removed */}
 
-                <div className="border-sidebar-border/70 dark:border-sidebar-border relative flex min-h-[100vh] justify-between overflow-hidden rounded-xl border p-5 md:col-span-2">
-                    <div className="flex-cols flex grid-cols-2 gap-2">
-                        <BellRing className="size-5" />
-                        <h3 className="text-[14px] font-medium">Recent Notifications</h3>
-                    </div>
-                    <p className="text-[13px] text-pink-500">View All</p>
+            {/* Widgets Body */}
+            <div className="flex flex-col gap-6 bg-gray-100 ms-4 me-4 rounded-xl mt-2 mb-2 px-5 py-8">
+                <div className="w-full mb-2 flex flex-col md:flex-row gap-4">
+                    <DefenseStatusWidget
+                        defenseRequirement={defenseRequirement}
+                        defenseRequest={defenseRequest}
+                    />
+                    <WeeklyDefenseSchedulesWidget
+                        weekDays={weekDays}
+                        selectedDay={selectedDay}
+                        setSelectedDay={setSelectedDay}
+                        approvedDefenses={approvedDefenses as DefenseRequest[]}
+                        referenceDate={new Date()}
+                        loading={loading}
+                        studentId={user?.id}
+                    />
                 </div>
+                <div className="grid gap-4 md:grid-cols-2">
+                    <RemindersWidget />
+                    <UpcomingSchedulesWidget loading={loading} todayEvents={todayEvents} />
+                </div>
+                {/* You can add another widget here, e.g. RecentActivityWidget */}
             </div>
         </div>
     );

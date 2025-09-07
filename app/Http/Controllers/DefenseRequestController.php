@@ -16,11 +16,12 @@ use Inertia\Inertia;
 
 class DefenseRequestController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
         $user = Auth::user();
         $props = [];
 
+        // Student: show the latest defense request for the student's school
         if ($user->role === 'Student') {
             $latest = DefenseRequest::with('lastStatusUpdater')
                 ->where('school_id', $user->school_id)
@@ -33,39 +34,70 @@ class DefenseRequestController extends Controller
             return Inertia::render('student/submissions/defense-requirements/Index', $props);
         }
 
-        // Administrative Assistant / Dean pages not yet implemented -> fallback to coordinator view style
-        if (in_array($user->role, ['Administrative Assistant','Dean'])) {
+        // Administrative Assistant / Dean: show all requests (fallback to coordinator-style view)
+        if (in_array($user->role, ['Administrative Assistant', 'Dean'])) {
             $all = DefenseRequest::with(['lastStatusUpdater','adviserUser','assignedTo'])
                 ->orderByDesc('created_at')
                 ->get();
+
+            // add last_status_updated_by for frontend convenience
+            $all->transform(function ($item) {
+                $item->last_status_updated_by = $item->lastStatusUpdater?->name;
+                return $item;
+            });
+
             $props['defenseRequests'] = $all;
+
+            if ($request->wantsJson()) {
+                return response()->json($props['defenseRequests'] ?? []);
+            }
+
             return Inertia::render('coordinator/submissions/defense-request/Index', $props);
         }
 
+        // Coordinator: show pending/active requests for coordinator dashboard
         if ($user->role === 'Coordinator') {
             $pending = DefenseRequest::with(['adviserUser','assignedTo'])
                 ->whereIn('workflow_state', ['coordinator-review','approved','coordinator-rejected'])
                 ->orderByDesc('created_at')
                 ->get();
+
+            $pending->transform(function ($item) {
+                $item->last_status_updated_by = $item->lastStatusUpdater?->name;
+                return $item;
+            });
+
             $props['defenseRequests'] = $pending;
+
+            if ($request->wantsJson()) {
+                // Always return ALL requests for the coordinator dashboard when JSON requested
+                return response()->json($props['defenseRequests'] ?? []);
+            }
+
             return Inertia::render('coordinator/submissions/defense-request/Index', $props);
         }
 
         // Adviser / Faculty: ONLY show requests where this faculty is the mapped adviser OR currently assigned reviewer
-        if ($user->role === 'Faculty' || $user->role === 'Adviser') {
+        if (in_array($user->role, ['Faculty', 'Adviser'])) {
             $assigned = DefenseRequest::with(['adviserUser','assignedTo'])
                 ->where(function($q) use ($user){
-                    $q->where('adviser_user_id',$user->id)
-                      ->orWhere('assigned_to_user_id',$user->id);
+                    $q->where('adviser_user_id', $user->id)
+                      ->orWhere('assigned_to_user_id', $user->id);
                 })
                 ->orderByDesc('created_at')
                 ->get();
+
+            $assigned->transform(function ($item) {
+                $item->last_status_updated_by = $item->lastStatusUpdater?->name;
+                return $item;
+            });
+
             $props['defenseRequests'] = $assigned;
             return Inertia::render('faculty/submissions/defense-request/Index', $props);
         }
 
-        // Fallback
-    return Inertia::render('student/submissions/defense-requirements/Index', $props);
+        // Fallback — render student defense-requirements index (empty props if nothing set)
+        return Inertia::render('student/submissions/defense-requirements/Index', $props);
     }
 
     public function review(DefenseRequest $defenseRequest, Request $request)
@@ -136,31 +168,31 @@ class DefenseRequestController extends Controller
             DB::beginTransaction();
 
             $defenseRequest = DefenseRequest::create([
-            'first_name' => $data['firstName'],
-            'middle_name' => $data['middleName'],
-            'last_name' => $data['lastName'],
-            'school_id' => $data['schoolId'],
-            'program' => $data['program'],
-            'thesis_title' => $data['thesisTitle'],
-            'date_of_defense' => null, // Coordinator will set this later
-            'mode_defense' => null, // Coordinator will set this later
-            'defense_type' => $data['defenseType'],
-            'advisers_endorsement' => $data['advisersEndorsement'] ?? null,
-            'rec_endorsement' => $data['recEndorsement'] ?? null,
-            'proof_of_payment' => $data['proofOfPayment'] ?? null,
-            'reference_no' => $data['referenceNo'] ?? null,
-            'defense_adviser' => $data['defenseAdviser'],
-            // Committee members will be set by coordinator after approval
-            'defense_chairperson' => null,
-            'defense_panelist1' => null,
-            'defense_panelist2' => null,
-            'defense_panelist3' => null,
-            'defense_panelist4' => null,
-            'submitted_by' => Auth::id(),
+                'first_name' => $data['firstName'],
+                'middle_name' => $data['middleName'],
+                'last_name' => $data['lastName'],
+                'school_id' => $data['schoolId'],
+                'program' => $data['program'],
+                'thesis_title' => $data['thesisTitle'],
+                'date_of_defense' => null, // Coordinator will set this later
+                'mode_defense' => null, // Coordinator will set this later
+                'defense_type' => $data['defenseType'],
+                'advisers_endorsement' => $data['advisersEndorsement'] ?? null,
+                'rec_endorsement' => $data['recEndorsement'] ?? null,
+                'proof_of_payment' => $data['proofOfPayment'] ?? null,
+                'reference_no' => $data['referenceNo'] ?? null,
+                'defense_adviser' => $data['defenseAdviser'],
+                // Committee members will be set by coordinator after approval
+                'defense_chairperson' => null,
+                'defense_panelist1' => null,
+                'defense_panelist2' => null,
+                'defense_panelist3' => null,
+                'defense_panelist4' => null,
+                'submitted_by' => Auth::id(),
                 'status' => 'Pending', // ensure default even if DB default changes
                 'priority' => 'Medium',
-            // workflow defaults
-            'workflow_state' => 'adviser-review',
+                // workflow defaults
+                'workflow_state' => 'adviser-review',
             ]);
             Log::info('DefenseRequest created', ['id' => $defenseRequest->id, 'student_id' => Auth::id()]);
 
@@ -260,9 +292,8 @@ class DefenseRequestController extends Controller
             }
             return Redirect::back()->with('error', 'Failed to save defense request: ' . $e->getMessage());
         }
-        
 
-    return Redirect::back()->with('success', 'Your defense request has been submitted!');
+        return Redirect::back()->with('success', 'Your defense request has been submitted!');
     }
 
     /**
@@ -621,9 +652,9 @@ class DefenseRequestController extends Controller
 
     public function bulkUpdateStatus(Request $request)
     {
-    Log::info('Bulk status update request', $request->all());
+        Log::info('Bulk status update request', $request->all());
 
-    $validator = Validator::make($request->all(), [
+        $validator = Validator::make($request->all(), [
             'ids' => 'required|array|min:1',
             'ids.*' => 'integer',
             'status' => 'required|in:Pending,In progress,Approved,Rejected,Needs-info',
@@ -654,7 +685,6 @@ class DefenseRequestController extends Controller
                     if ($item->last_status_updated_at instanceof \Carbon\Carbon) {
                         $lastStatusUpdatedAt = $item->last_status_updated_at->setTimezone('Asia/Manila')->toISOString();
                     } else {
-
                         $lastStatusUpdatedAt = $item->last_status_updated_at;
                     }
                 }
@@ -740,7 +770,7 @@ class DefenseRequestController extends Controller
 
     public function all(Request $request)
     {
-    return abort(404);
+        return abort(404);
     }
 
     public function downloadAttachment(Request $request, $filename)
@@ -792,5 +822,13 @@ class DefenseRequestController extends Controller
         }
 
         return response()->file($filePath);
+    }
+
+    public function pending()
+    {
+        return DefenseRequest::where('status', 'Pending')
+            ->select('id', 'thesis_title', 'date_of_defense', 'status', 'priority')
+            ->orderByDesc('created_at')
+            ->get();
     }
 }

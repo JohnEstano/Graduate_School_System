@@ -67,6 +67,8 @@ export interface User {
 
 export interface DefenseRequest {
     id: number;
+    school_id: string;
+    submitted_by?: number;
     thesis_title: string;
     first_name: string;
     middle_name?: string | null;
