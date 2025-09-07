@@ -14,6 +14,9 @@ import {
   AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction
 } from '@/components/ui/alert-dialog';
 import Details from './details';
+import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
+import { UIC_PROGRAMS } from '@/constants/programs';
 
 type Columns = { student: boolean; program: boolean; date: boolean; status: boolean; actions: boolean };
 
@@ -40,14 +43,30 @@ export default function TableDeanCompreExam({ paged, columns, tabType, showStatu
 
   const [statusFilter, setStatusFilter] = useState<'all' | 'approved' | 'pending' | 'rejected'>('all');
   const [programFilter, setProgramFilter] = useState<string>('all');
+  const [programOpen, setProgramOpen] = useState(false);
+  const [showAllPrograms, setShowAllPrograms] = useState(false);
   const [sort, setSort] = useState<{ by: 'date' | null; dir: 'asc' | 'desc' }>({ by: 'date', dir: 'desc' });
 
-  const programs = useMemo(
-    () => (programOptions && programOptions.length
-      ? programOptions
-      : Array.from(new Set(paged.map(p => p.program).filter(Boolean) as string[])).sort()),
-    [programOptions, paged]
-  );
+  const { programsAvailable, programsAll } = useMemo(() => {
+    const normalize = (s: string) => s.trim().replace(/\s+/g, ' ');
+    const keepFirst = (names: (string | null | undefined)[]) => {
+      const map = new Map<string, string>();
+      for (const n of names) {
+        if (!n) continue;
+        const v = normalize(n);
+        const key = v.toLowerCase();
+        if (!map.has(key)) map.set(key, v);
+      }
+      return Array.from(map.values()).sort((a, b) => a.localeCompare(b));
+    };
+    const fromApplicants = keepFirst(paged.map(p => p.program));
+    const fromOptions = keepFirst(programOptions ?? []);
+    const fromCanonical = keepFirst(UIC_PROGRAMS);
+    const all = keepFirst([...fromApplicants, ...fromOptions, ...fromCanonical]);
+    return { programsAvailable: fromApplicants, programsAll: all };
+  }, [paged, programOptions]);
+
+  const programs = showAllPrograms ? programsAll : programsAvailable;
 
   const sorted = useMemo(() => {
     const out = [...paged];
@@ -141,26 +160,49 @@ export default function TableDeanCompreExam({ paged, columns, tabType, showStatu
   return (
     <div className="rounded-md overflow-x-auto border border-border bg-white dark:bg-background dark:border-border w-full max-w-full">
       <div className="flex items-center justify-between gap-2 px-3 py-2 border-b bg-muted/20 dark:bg-muted/10">
-        {/* Program filter (left) */}
+        {/* Program filter (left) – searchable combobox with capped height */}
         <div className="flex items-center gap-2">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
+          <Popover open={programOpen} onOpenChange={setProgramOpen}>
+            <PopoverTrigger asChild>
               <Button variant="outline" size="sm" className="h-8">
                 <GraduationCap className="mr-2 h-4 w-4" />
                 Program: {programFilter === 'all' ? 'All' : programFilter}
               </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent className="w-56">
-              <DropdownMenuItem onClick={() => setProgramFilter('all')} className="flex items-center justify-between">
-                All programs {programFilter === 'all' && <Check className="h-4 w-4" />}
-              </DropdownMenuItem>
-              {programs.map((p) => (
-                <DropdownMenuItem key={p} onClick={() => setProgramFilter(p)} className="flex items-center justify-between">
-                  {p} {programFilter === p && <Check className="h-4 w-4" />}
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
+            </PopoverTrigger>
+            <PopoverContent className="p-0 w-80" align="start">
+              <Command shouldFilter={true}>
+                <CommandInput placeholder="Search program…" />
+                <CommandEmpty>No program found.</CommandEmpty>
+                <CommandList className="max-h-64 overflow-y-auto">
+                  <CommandGroup heading="Scope">
+                    <CommandItem
+                      value={showAllPrograms ? 'available-only' : 'all-programs'}
+                      onSelect={() => setShowAllPrograms(v => !v)}
+                    >
+                      {showAllPrograms ? 'Show only current applicants' : 'Show all programs'}
+                    </CommandItem>
+                  </CommandGroup>
+                  <CommandGroup heading="Programs">
+                    <CommandItem
+                      value="all"
+                      onSelect={() => { setProgramFilter('all'); setProgramOpen(false); }}
+                    >
+                      All programs {programFilter === 'all' && <Check className="ml-auto h-4 w-4" />}
+                    </CommandItem>
+                    {programs.map((p) => (
+                      <CommandItem
+                        key={p}
+                        value={p}
+                        onSelect={() => { setProgramFilter(p); setProgramOpen(false); }}
+                      >
+                        {p} {programFilter === p && <Check className="ml-auto h-4 w-4" />}
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
+                </CommandList>
+              </Command>
+            </PopoverContent>
+          </Popover>
         </div>
 
         {shouldShowStatusFilter && (
