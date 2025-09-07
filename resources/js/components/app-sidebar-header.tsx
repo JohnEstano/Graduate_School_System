@@ -47,24 +47,20 @@ export function AppSidebarHeader({ breadcrumbs = [] }: { breadcrumbs?: Breadcrum
                 </div>
                 <div className="mr-5 relative">
                     <Sheet>
-                        <SheetTrigger>
-                            <div className="flex items-center gap-2">
-                                <div className="relative">
-                                    <Button
-                                        ref={bellBtnRef}
-                                        variant="ghost"
-                                        className="h-8 w-8 p-3 rounded-full hover:bg-accent hover:scale-110 transition-transform duration-150 dark:text-muted-foreground dark:hover:bg-muted"
-                                        aria-label="Show notifications"
-                                    >
-                                        <Bell className="size-5 stroke-[1.5]" />
-                                    </Button>
-                                    {unreadCount > 0 && (
-                                        <span className="absolute text-white top-0 right-0 px-1 min-w-4 translate-x-1/5 translate-y-1/9 origin-center flex items-center justify-center rounded-full text-[10px] bg-rose-500 text-destructive-foreground dark:bg-rose-900 dark:text-rose-200">
-                                            {unreadCount}
-                                        </span>
-                                    )}
-                                </div>
-                            </div>
+                        <SheetTrigger asChild>
+                            <Button
+                                ref={bellBtnRef}
+                                variant="ghost"
+                                className="h-8 w-8 p-3 rounded-full hover:bg-accent hover:scale-110 transition-transform duration-150 dark:text-muted-foreground dark:hover:bg-muted relative"
+                                aria-label="Show notifications"
+                            >
+                                <Bell className="size-5 stroke-[1.5]" />
+                                {unreadCount > 0 && (
+                                    <span className="absolute text-white top-0 right-0 px-1 min-w-4 translate-x-1/5 translate-y-1/9 origin-center flex items-center justify-center rounded-full text-[10px] bg-rose-500 text-destructive-foreground dark:bg-rose-900 dark:text-rose-200">
+                                        {unreadCount}
+                                    </span>
+                                )}
+                            </Button>
                         </SheetTrigger>
                         <SheetContent className='w-[100px] sm:w-[340px] dark:bg-background dark:text-muted-foreground'>
                             <SheetHeader>

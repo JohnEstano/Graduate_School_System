@@ -18,14 +18,21 @@ class User extends Authenticatable
      * @var list<string>
      */
     protected $fillable = [
+        'student_number',
         'first_name',
         'middle_name',
         'last_name',
         'email',
         'password',
-        'role',
+        'role', // legacy single role for backward compatibility
         'program',
         'school_id',
+    'employee_id',
+    'employee_department_code',
+    'employee_photo_url',
+    'employee_profile_fetched_at',
+        'google_verified_at',
+        'extra_role_title',
     ];
 
     /**
@@ -54,28 +61,59 @@ class User extends Authenticatable
     {
         return [
             'email_verified_at' => 'datetime',
+            'google_verified_at' => 'datetime',
+            'employee_profile_fetched_at' => 'datetime',
             'password' => 'hashed',
         ];
     }
 
-    /**
-     * Get all conversations for this user.
-     */
-    public function conversations()
+    public function markGoogleVerified(): void
     {
-        return $this->belongsToMany(Conversation::class, 'message_participants')
-                    ->withPivot(['joined_at', 'last_read_at', 'is_admin'])
-                    ->withTimestamps()
-                    ->orderBy('last_message_at', 'desc');
+        if (!$this->google_verified_at) {
+            $this->google_verified_at = now();
+            $this->save();
+        }
     }
 
     /**
-     * Get all messages sent by this user.
+     * Roles relationship (multi-role support).
      */
-    public function messages()
+    public function roles()
     {
-        return $this->hasMany(Message::class);
+        return $this->belongsToMany(Role::class);
     }
+
+    /**
+     * Attach a role if not already present.
+     */
+    public function addRole(string $name): void
+    {
+        $role = Role::firstOrCreate(['name' => $name]);
+        if (!$this->roles->contains($role->id)) {
+            $this->roles()->attach($role->id);
+        }
+    }
+
+    /**
+     * Determine if user has a given role name (multi-role or legacy column).
+     */
+    public function hasRole(string $name): bool
+    {
+        if (strcasecmp($this->role ?? '', $name) === 0) return true; // legacy
+        return $this->roles()->where('name', $name)->exists();
+    }
+
+    /**
+     * Get all role names (legacy + pivot) unique.
+     */
+    public function allRoleNames(): array
+    {
+        $names = $this->roles()->pluck('name')->all();
+        if ($this->role && !in_array($this->role, $names)) $names[] = $this->role;
+        return $names;
+    }
+
+    // Messaging relations removed
 
     /**
      * Get user's full name for display

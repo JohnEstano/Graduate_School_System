@@ -27,6 +27,7 @@ type PageProps = {
     };
     defenseRequirement?: DefenseRequirement;
     defenseRequest?: DefenseRequest;
+    defenseRequests?: DefenseRequest[];
     // ...other props...
 };
 
@@ -45,7 +46,10 @@ function isDaytime() {
 }
 
 export default function StudentDashboard() {
-    const { auth: { user }, defenseRequests } = usePage<PageProps>().props;
+    const page = usePage<PageProps>().props;
+    const { auth: { user }, defenseRequirement, defenseRequest } = page;
+    // server-provided list (optional) OR we'll use the locally fetched list
+    const serverDefenseRequests = page.defenseRequests ?? [];
 
     const [allRequests, setAllRequests] = useState<DefenseRequest[]>([]);
     const [pendingRequests, setPendingRequests] = useState<DefenseRequest[]>([]);
@@ -65,31 +69,54 @@ export default function StudentDashboard() {
     ];
 
     useEffect(() => {
-        fetch('/defense-requests', {
-            headers: {
-                'Accept': 'application/json'
-            }
-        })
-            .then(res => res.json())
-            .then((data) => {
+        // Fetch newest defense-requests if server didn't provide them
+        const fetchData = async () => {
+            try {
+                const res = await fetch('/defense-requests', { headers: { Accept: 'application/json' } });
+                const data = await res.json();
                 const requests = Array.isArray(data) ? data : data.defenseRequests ?? [];
-                // Only show student's own requests
-                setAllRequests(requests.filter((r: DefenseRequest) => r.submitted_by === user?.id));
-                setPendingRequests(requests.filter((r: DefenseRequest) => r.status === 'Pending' && r.submitted_by === user?.id));
+                // Only keep student's own requests on this page
+                const mine = requests.filter((r: DefenseRequest) => r.submitted_by === user?.id);
+                setAllRequests(mine);
+                setPendingRequests(mine.filter((r: DefenseRequest) => r.status === 'Pending'));
                 const today = new Date();
-                const closeEvents = requests.filter((dr: DefenseRequest) => {
-                    const eventDate = new Date(dr.date_of_defense);
+                const closeEvents = mine.filter((dr: DefenseRequest) => {
+                    const eventDate = dr.date_of_defense ? new Date(dr.date_of_defense) : null;
+                    if (!eventDate || Number.isNaN(eventDate.getTime())) return false;
                     const diff = (eventDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24);
                     return diff >= 0 && diff < 3;
                 });
                 setTodayEvents(closeEvents);
-            })
-            .catch(() => {
+            } catch (e) {
                 setAllRequests([]);
                 setPendingRequests([]);
-            })
-            .finally(() => setLoading(false));
-    }, []);
+                setTodayEvents([]);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        // If server already provided defenseRequests, use them instead of fetching
+        if (serverDefenseRequests && serverDefenseRequests.length > 0) {
+            const mine = serverDefenseRequests.filter((r: DefenseRequest) => r.submitted_by === user?.id);
+            setAllRequests(mine);
+            setPendingRequests(mine.filter((r: DefenseRequest) => r.status === 'Pending'));
+            const today = new Date();
+            const closeEvents = mine.filter((dr: DefenseRequest) => {
+                const eventDate = dr.date_of_defense ? new Date(dr.date_of_defense) : null;
+                if (!eventDate || Number.isNaN(eventDate.getTime())) return false;
+                const diff = (eventDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24);
+                return diff >= 0 && diff < 3;
+            });
+            setTodayEvents(closeEvents);
+            setLoading(false);
+        } else {
+            fetchData();
+        }
+    }, [serverDefenseRequests, user?.id]);
+
+    // prefer server-provided list; if not present, fall back to locally fetched allRequests
+    const approvedDefenses = (serverDefenseRequests && serverDefenseRequests.length > 0) ? serverDefenseRequests : allRequests;
 
     return (
         <div className="flex h-full flex-1 flex-col gap-4 overflow-auto rounded-xl pt-5">
@@ -121,14 +148,14 @@ export default function StudentDashboard() {
             <div className="flex flex-col gap-6 bg-gray-100 ms-4 me-4 rounded-xl mt-2 mb-2 px-5 py-8">
                 <div className="w-full mb-2 flex flex-col md:flex-row gap-4">
                     <DefenseStatusWidget
-                        defenseRequirement={usePage<PageProps>().props.defenseRequirement}
-                        defenseRequest={usePage<PageProps>().props.defenseRequest}
+                        defenseRequirement={defenseRequirement}
+                        defenseRequest={defenseRequest}
                     />
                     <WeeklyDefenseSchedulesWidget
                         weekDays={weekDays}
                         selectedDay={selectedDay}
                         setSelectedDay={setSelectedDay}
-                        approvedDefenses={defenseRequests as DefenseRequest[]} // <-- Fix here
+                        approvedDefenses={approvedDefenses as DefenseRequest[]}
                         referenceDate={new Date()}
                         loading={loading}
                         studentId={user?.id}

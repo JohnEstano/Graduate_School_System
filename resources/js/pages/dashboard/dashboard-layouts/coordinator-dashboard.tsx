@@ -110,18 +110,18 @@ export default function CoordinatorDashboard() {
 
             {/* Widgets Body */}
             <div className="flex flex-col gap-6 bg-gray-100 ms-4 me-4 rounded-xl mt-2 mb-2 px-5 py-8">
-                
                 <div className="w-full mb-2 flex flex-col md:flex-row gap-4">
                     <PendingDefenseRequestsWidget pendingRequests={pendingRequests} loading={loading} />
                     <WeeklyDefenseSchedulesWidget
                         weekDays={weekDays}
                         selectedDay={selectedDay}
                         setSelectedDay={setSelectedDay}
-                        approvedDefenses={  allRequests}
+                        approvedDefenses={allRequests}
                         referenceDate={new Date()}
                         loading={loading}
                     />
                 </div>
+
                 <div className="grid gap-4 md:grid-cols-2">
                     <RemindersWidget />
                     <UpcomingSchedulesWidget loading={loading} todayEvents={todayEvents} />

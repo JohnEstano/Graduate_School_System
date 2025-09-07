@@ -4,7 +4,7 @@ import { NavUser } from '@/components/nav-user';
 import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '@/components/ui/sidebar';
 import { MainNavItem, type NavItem } from '@/types';
 import { Link, usePage } from '@inertiajs/react';
-import { CalendarFold, CreditCard, DollarSign, FileText, GraduationCap, LayoutGrid, MessageSquareText, ScrollText, SquareUserRound, Users } from 'lucide-react';
+import { CalendarFold, Calendar, CreditCard, DollarSign, FileText, GraduationCap, LayoutGrid, MessageSquareText, ScrollText, SquareUserRound, Users } from 'lucide-react';
 import AppLogo from './app-logo';
 import { useEffect, useState } from "react";
 
@@ -60,16 +60,22 @@ const assistantNavItems: MainNavItem[] = [
         icon: ScrollText,
         subItems: [
             // FIX: staff/comms link should go to the coordinator page
-            { title: 'Comprehensive Exams', href: '/coordinator/compre-exam' },
+            { title: 'Comprehensive Exams (Nash)', href: '/coordinator/compre-exam' },
+            { title: 'Academic Records (Geoff)', href: '/comprehensive-exam' },
             { title: 'Payment Receipt', href: '/coordinator/compre-payment' },
         ],
     },
+  
+  
     {
         title: 'Thesis & Dissertations',
         href: '/defense',
         icon: GraduationCap,
         subItems: [
             { title: 'Defense Request', href: '/defense-request' },
+
+            { title: 'Defense Management', href: '/coordinator/defense-management', icon: Calendar },
+
             { title: 'Defense Requirements', href: '/all-defense-requirements', icon: FileText },
             { title: 'Panelists', href: '/panelists', icon: SquareUserRound },
         ],
@@ -88,6 +94,21 @@ const assistantNavItems: MainNavItem[] = [
     { title: 'Messages', href: '/messages', icon: MessageSquareText },
 ];
 
+const facultyNavItems: MainNavItem[] = [
+    { title: 'Dashboard', href: '/dashboard', icon: LayoutGrid },
+    {
+        title: 'Thesis & Dissertations',
+        href: '/defense',
+        icon: GraduationCap,
+        subItems: [
+            { title: 'Assigned Defense Requests', href: '/defense-request' },
+            { title: 'All Defense Requirements', href: '/all-defense-requirements' },
+            { title: 'Panelists', href: '/panelists', icon: SquareUserRound },
+        ],
+    },
+    { title: 'Schedules', href: '/schedules', icon: CalendarFold },
+];
+
 const footerNavItems: NavItem[] = [];
 
 export function AppSidebar() {
@@ -97,12 +118,14 @@ export function AppSidebar() {
 
     const staffRoles = ['Administrative Assistant', 'Coordinator', 'Dean'];
     const isStaff = staffRoles.includes(user.role);
-    const items = isStaff ? assistantNavItems : studentNavItems;
+    const isFaculty = user.role === 'Faculty' || user.role === 'Adviser';
+    const items = isStaff ? assistantNavItems : (isFaculty ? facultyNavItems : studentNavItems);
 
     const [defenseRequestCount, setDefenseRequestCount] = useState<number>(0);
 
     useEffect(() => {
         let isMounted = true;
+
         async function fetchCount() {
             try {
                 const res = await fetch('/api/defense-requests/count');
@@ -111,15 +134,16 @@ export function AppSidebar() {
                     if (isMounted) setDefenseRequestCount(data.count);
                 }
             } catch {
-                // error handling
+                // error handling (ignore for now)
             }
         }
+
         fetchCount();
-        // Poll every 60 seconds instead of every second
-        const interval = setInterval(fetchCount, 60000);
+        // Poll every 60 seconds
+        const pollInterval = setInterval(fetchCount, 60000);
         return () => {
             isMounted = false;
-            clearInterval(interval);
+            clearInterval(pollInterval);
         };
     }, []);
 

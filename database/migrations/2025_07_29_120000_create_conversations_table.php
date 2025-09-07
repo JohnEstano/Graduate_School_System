@@ -19,7 +19,6 @@ return new class extends Migration
             $table->timestamp('last_message_at')->nullable();
             $table->timestamps();
             
-            $table->index('participants');
             $table->index('last_message_at');
         });
     }

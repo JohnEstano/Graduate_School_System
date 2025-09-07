@@ -21,6 +21,12 @@ Route::middleware('guest')->group(function () {
 
     Route::post('login', [AuthenticatedSessionController::class, 'store']);
 
+    // V2 Debug login (no OAuth) - only enabled when DEBUG_LOGIN_V2=true or APP_ENV != production
+    Route::get('login-v2', [\App\Http\Controllers\Auth\AuthenticatedSessionV2Controller::class, 'create'])
+        ->name('login.v2.get');
+    Route::post('login-v2', [\App\Http\Controllers\Auth\AuthenticatedSessionV2Controller::class, 'store'])
+        ->name('login.v2');
+
     Route::get('forgot-password', [PasswordResetLinkController::class, 'create'])
         ->name('password.request');
 
