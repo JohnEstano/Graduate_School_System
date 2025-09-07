@@ -604,6 +604,307 @@ class LegacyPortalClient
     }
 
     /**
+     * Fetch instructor class list page HTML (faculty dashboard).
+     */
+    public function fetchInstructorClassListHtml(array $session): ?string
+    {
+        $config = config('legacy');
+        $base = $config['base_url'];
+        $cookieHeader = $session['cookie_header'] ?? $this->buildCookieHeader($session['cookies'] ?? []);
+        try {
+            $resp = Http::withHeaders([
+                'User-Agent' => $config['user_agent'],
+                'Accept' => 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                'Cookie' => $cookieHeader,
+                'Referer' => $base . '/index.cfm?fa=home.index',
+            ])->withOptions([
+                'timeout' => $config['timeout'],
+                'allow_redirects' => true,
+            ])->get($base . '/index.cfm?fa=class.class_list');
+            if ($resp->ok()) return $resp->body();
+        } catch (\Throwable $e) {
+            Log::debug('fetchInstructorClassListHtml error: '.$e->getMessage());
+        }
+        return null;
+    }
+
+    /**
+     * Parse instructor class list HTML into array of rows.
+     * Each row: number, course_code, course_title, type, size, load, section.
+     */
+    public function parseInstructorClassList(?string $html): array
+    {
+        if (!$html) return ['rows' => [], 'periods' => [], 'selected_period_id' => null, 'short_period_label' => null];
+        $rows = [];
+        $periods = [];
+        $selectedId = null;
+        try {
+            $dom = new \DOMDocument();
+            libxml_use_internal_errors(true);
+            $dom->loadHTML($html);
+            libxml_clear_errors();
+            $xpath = new \DOMXPath($dom);
+            // Period select options
+            $optNodes = $xpath->query('//select[@id="period_id"]/option');
+            foreach ($optNodes as $opt) {
+                if (!$opt instanceof \DOMElement) continue;
+                $val = $opt->getAttribute('value');
+                if ($val === '0') continue; // placeholder
+                $label = trim($opt->textContent);
+                $isSel = $opt->hasAttribute('selected');
+                if ($isSel) $selectedId = $val;
+                $periods[] = [
+                    'id' => $val,
+                    'label' => $label,
+                    'selected' => $isSel,
+                    'short_label' => $this->shortenPeriodLabel($label),
+                ];
+            }
+            // Target table header with "Instructor class list result"
+            $tableNodes = $xpath->query('//table[.//td[contains(normalize-space(.), "Instructor class list result")]]');
+            if ($tableNodes->length > 0) {
+                $table = $tableNodes->item(0);
+                $trNodes = $xpath->query('.//tr[td]', $table);
+                foreach ($trNodes as $tr) {
+                    $tds = $xpath->query('./td', $tr);
+                    if ($tds->length === 8) {
+                        $firstCell = trim($tds->item(0)->textContent);
+                        // Match patterns like "1.)" or "2.)" or plain numbers
+                        if (!preg_match('/^(\d+)/', $firstCell, $m)) continue; // skip header / info row
+                        $num = (int)$m[1];
+                        $actionsCell = $tds->item(7);
+                        $anchors = [];
+                        if ($actionsCell instanceof \DOMElement) {
+                            // Query only direct descendant anchors to avoid unrelated links
+                            $anchorNodeList = $xpath->query('.//a', $actionsCell);
+                            if ($anchorNodeList) {
+                                foreach ($anchorNodeList as $aNode) {
+                                    if ($aNode instanceof \DOMElement) $anchors[] = $aNode;
+                                }
+                            }
+                        }
+                        $classId = null; $printListUrl = null; $permitDuesUrl = null;
+                        if (!empty($anchors)) {
+                            foreach ($anchors as $a) {
+                                /** @var \DOMElement $a */
+                                $href = $a->getAttribute('href');
+                                if (preg_match('/class_id=(\d+)/', $href, $cm)) {
+                                    $classId = $classId ?? $cm[1];
+                                }
+                                if (strpos($href, 'instructor_class_list_report_show') !== false) {
+                                    $printListUrl = $href;
+                                } elseif (strpos($href, 'instructor_class_sfr_dues_report_show') !== false) {
+                                    $permitDuesUrl = $href;
+                                }
+                            }
+                        }
+                        $rows[] = [
+                            'number' => $num,
+                            'course_code' => trim($tds->item(1)->textContent),
+                            'course_title' => trim($tds->item(2)->textContent),
+                            'type' => trim($tds->item(3)->textContent),
+                            'size' => trim($tds->item(4)->textContent),
+                            'load' => trim($tds->item(5)->textContent),
+                            'section' => trim($tds->item(6)->textContent),
+                            'class_id' => $classId,
+                            'print_list_url' => $printListUrl,
+                            'print_permit_dues_url' => $permitDuesUrl,
+                        ];
+                    }
+                }
+            }
+        } catch (\Throwable $e) {
+            Log::debug('parseInstructorClassList error: '.$e->getMessage());
+        }
+        $short = null;
+        if ($selectedId) {
+            foreach ($periods as $p) {
+                if ($p['id'] === $selectedId) { $short = $p['short_label']; break; }
+            }
+        }
+        return [
+            'rows' => $rows,
+            'periods' => $periods,
+            'selected_period_id' => $selectedId,
+            'short_period_label' => $short,
+        ];
+    }
+
+    protected function shortenPeriodLabel(string $label): string
+    {
+        // Map verbose labels to short academic style; placeholder year logic.
+        if (stripos($label, 'First Semester') === 0) return '1st Year - First Sem ' . substr($label, -9);
+        if (stripos($label, 'Second Semester') === 0) return '1st Year - Second Sem ' . substr($label, -9);
+        if (stripos($label, 'Summer') === 0) return 'Summer Term ' . preg_replace('/^[^0-9]+/', '', $label);
+        return $label;
+    }
+
+    /**
+     * Fetch student class schedule page HTML.
+     */
+    public function fetchStudentClassScheduleHtml(array $session): ?string
+    {
+        $config = config('legacy');
+        $base = $config['base_url'];
+        $cookieHeader = $session['cookie_header'] ?? $this->buildCookieHeader($session['cookies'] ?? []);
+        try {
+            $resp = Http::withHeaders([
+                'User-Agent' => $config['user_agent'],
+                'Accept' => 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                'Cookie' => $cookieHeader,
+                'Referer' => $base . '/index.cfm?fa=home.index',
+            ])->withOptions([
+                'timeout' => $config['timeout'],
+                'allow_redirects' => true,
+            ])->get($base . '/index.cfm?fa=schedule.my_class_schedule_index');
+            if ($resp->ok()) return $resp->body();
+        } catch (\Throwable $e) {
+            Log::debug('fetchStudentClassScheduleHtml error: '.$e->getMessage());
+        }
+        return null;
+    }
+
+    /**
+     * Set student class schedule period (PERIOD_ID cookie) using secure endpoint similar to faculty.
+     */
+    public function setStudentClassSchedulePeriod(array &$session, string $periodId): bool
+    {
+        $config = config('legacy');
+        $base = $config['base_url'];
+        $cookieHeader = $session['cookie_header'] ?? $this->buildCookieHeader($session['cookies'] ?? []);
+        try {
+            $resp = Http::withHeaders([
+                'User-Agent' => $config['user_agent'],
+                'Accept' => 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                'Cookie' => $cookieHeader,
+                'Referer' => $base . '/index.cfm?fa=schedule.my_class_schedule_index',
+            ])->withOptions([
+                'timeout' => $config['timeout'],
+                'allow_redirects' => false,
+            ])->get($base . '/index.cfm?fa=secure.set_my_class_schedule_period_id&period_id=' . urlencode($periodId));
+            if (in_array($resp->status(), [302,301])) {
+                $this->mergeSetCookies($cookieHeader, $resp);
+                $session['cookie_header'] = $cookieHeader;
+                return true;
+            }
+        } catch (\Throwable $e) {
+            Log::debug('setStudentClassSchedulePeriod error: '.$e->getMessage());
+        }
+        return false;
+    }
+
+    /**
+     * Parse student class schedule to collect instructor names and period options.
+     * Returns ['instructors'=>[], 'periods'=>[], 'selected_period_id'=>?string]
+     */
+    public function parseStudentClassSchedule(?string $html): array
+    {
+        if (!$html) return ['instructors' => [], 'periods' => [], 'selected_period_id' => null];
+        $instructors = [];
+        $periods = [];
+        $selectedId = null;
+        try {
+            $dom = new \DOMDocument();
+            libxml_use_internal_errors(true);
+            $dom->loadHTML($html);
+            libxml_clear_errors();
+            $xpath = new \DOMXPath($dom);
+            // Period select
+            $opts = $xpath->query('//select[@id="period_id"]/option');
+            foreach ($opts as $opt) {
+                if (!$opt instanceof \DOMElement) continue;
+                $val = $opt->getAttribute('value');
+                if ($val === '0') continue;
+                $label = trim($opt->textContent);
+                $sel = $opt->hasAttribute('selected');
+                if ($sel) $selectedId = $val;
+                $periods[] = [
+                    'id' => $val,
+                    'label' => $label,
+                    'selected' => $sel,
+                ];
+            }
+            // Instructors table: look for header containing 'instructor'
+            $rows = $xpath->query('//table//tr');
+            foreach ($rows as $tr) {
+                $cells = $xpath->query('./td', $tr);
+                if ($cells->length >= 7) { // instructor column likely last
+                    $lastCell = trim($cells->item($cells->length - 1)->textContent);
+                    if ($lastCell && stripos($lastCell, 'No records') === false) {
+                        // Basic heuristic: names have a comma (LAST, FIRST) or space
+                        if (preg_match('/[A-Za-z]/', $lastCell)) {
+                            $instructors[] = preg_replace('/\s+/', ' ', $lastCell);
+                        }
+                    }
+                }
+            }
+            $instructors = array_values(array_unique($instructors));
+        } catch (\Throwable $e) {
+            Log::debug('parseStudentClassSchedule error: '.$e->getMessage());
+        }
+        return [
+            'instructors' => $instructors,
+            'periods' => $periods,
+            'selected_period_id' => $selectedId,
+        ];
+    }
+
+    /**
+     * Set class list period in legacy system (updates server session) then return updated HTML.
+     */
+    public function setInstructorClassListPeriod(array &$session, string $periodId): ?string
+    {
+        $config = config('legacy');
+        $base = $config['base_url'];
+        $cookieHeader = $session['cookie_header'] ?? $this->buildCookieHeader($session['cookies'] ?? []);
+        try {
+            // We disable redirects so we can capture the Set-Cookie (PERIOD_ID) on the 302 response.
+            $resp = Http::withHeaders([
+                'User-Agent' => $config['user_agent'],
+                'Accept' => 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                'Cookie' => $cookieHeader,
+                'Referer' => $base . '/index.cfm?fa=class.class_list',
+            ])->withOptions([
+                'timeout' => $config['timeout'],
+                'allow_redirects' => false,
+            ])->get($base . '/index.cfm?fa=secure.set_class_list_period&period_id=' . urlencode($periodId));
+
+            if (in_array($resp->status(), [302,301])) {
+                $this->mergeSetCookies($cookieHeader, $resp); // capture PERIOD_ID
+                $session['cookie_header'] = $cookieHeader;
+                // Manually follow location to update server-side context (optional, but ensures correctness)
+                $loc = $resp->header('Location');
+                if ($loc) {
+                    // Fetch redirected page (class.class_list) to validate period switch
+                    $follow = Http::withHeaders([
+                        'User-Agent' => $config['user_agent'],
+                        'Accept' => 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                        'Cookie' => $cookieHeader,
+                        'Referer' => $base . '/index.cfm?fa=class.class_list',
+                    ])->withOptions([
+                        'timeout' => $config['timeout'],
+                        'allow_redirects' => true,
+                    ])->get(str_starts_with($loc, 'http') ? $loc : $base . $loc);
+                    if ($follow->ok()) {
+                        return $follow->body();
+                    }
+                }
+                // Fallback: fetch fresh list
+                return $this->fetchInstructorClassListHtml($session);
+            }
+            // If server returned 200 directly (unexpected), still merge potential cookies.
+            if ($resp->ok()) {
+                $this->mergeSetCookies($cookieHeader, $resp);
+                $session['cookie_header'] = $cookieHeader;
+                return $this->fetchInstructorClassListHtml($session);
+            }
+        } catch (\Throwable $e) {
+            Log::debug('setInstructorClassListPeriod error: '.$e->getMessage());
+        }
+        return null;
+    }
+
+    /**
      * Extract employee_id from home page (staff) HTML.
      * Looks for anchor: /index.cfm?fa=employee.employee_viewprofile&employee_id=44802
      */
