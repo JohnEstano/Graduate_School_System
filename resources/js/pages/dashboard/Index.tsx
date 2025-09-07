@@ -27,14 +27,15 @@ export default function DashboardIndex() {
     } = usePage<PageProps>().props;
 
     let ComponentToRender: React.FC<{ user: { name: string; role: string } }>;
+    // Prefer effective_role (computed server-side) when available
+    const activeRole = (user as any)?.effective_role || user.role;
 
-    // Accept legacy single role or any canonical pivot role name
-    const normalizedRole = user.role;
-    switch (normalizedRole) {
+    switch (activeRole) {
         case 'Student':
             ComponentToRender = StudentDashboard;
             break;
         case 'Administrative Assistant':
+        case 'Assistant':
             ComponentToRender = AssistantDashboard;
             break;
         case 'Coordinator':
@@ -50,7 +51,7 @@ export default function DashboardIndex() {
             ComponentToRender = () => (
                 <div className="p-6 text-amber-600">
                     <p className="font-medium">Limited Access</p>
-                    <p className="text-sm text-gray-500">Your role "{user.role}" does not yet have a dedicated dashboard.</p>
+                    <p className="text-sm text-gray-500">Your role "{activeRole}" does not yet have a dedicated dashboard.</p>
                 </div>
             );
     }
