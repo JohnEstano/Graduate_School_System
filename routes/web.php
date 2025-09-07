@@ -143,6 +143,13 @@ Route::middleware(['auth'])->group(function () {
 
     Route::post('/coordinator/compre-payment/{id}/reject', [CoordinatorComprePaymentController::class, 'reject'])
         ->name('coordinator.compre-payment.reject');
+
+    // Bulk actions
+    Route::post('/coordinator/compre-payment/bulk-approve', [CoordinatorComprePaymentController::class, 'bulkApprove'])
+        ->name('coordinator.compre-payment.bulk-approve');
+
+    Route::post('/coordinator/compre-payment/bulk-reject', [CoordinatorComprePaymentController::class, 'bulkReject'])
+        ->name('coordinator.compre-payment.bulk-reject');
 });
 
 require __DIR__ . '/settings.php';

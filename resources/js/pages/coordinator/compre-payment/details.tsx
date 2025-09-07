@@ -15,7 +15,7 @@ export default function Details({ payment }: { payment: ComprePaymentSummary }) 
     amt == null ? '—' : new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' }).format(amt);
 
   return (
-    <div className="p-3 text-sm">
+    <div className="max-w-md w-full text-sm mx-auto">
       {/* Header */}
       <div className="flex items-center gap-2 mb-3">
         <div className="inline-flex h-8 w-8 items-center justify-center rounded-md bg-primary/10 text-primary">
