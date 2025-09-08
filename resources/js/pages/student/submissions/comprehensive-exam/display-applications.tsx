@@ -71,11 +71,15 @@ export default function DisplayApplication({ application, onResubmit }: Props) {
     if (isRejected) setExpanded(true);
   }, [isRejected]);
 
-  // Safely parse server timestamps (e.g., "YYYY-MM-DD HH:mm:ss") as UTC
+  // Safely parse server timestamps (treat MySQL timestamps as LOCAL, not UTC)
   function parseServerDate(dt?: string | null) {
     if (!dt) return null;
+    // If ISO with timezone/offset, let the browser handle it
     if (/T.+(Z|[+-]\d{2}:\d{2})$/.test(dt)) return new Date(dt);
-    return new Date(dt.replace(' ', 'T') + 'Z');
+    // MySQL "YYYY-MM-DD HH:mm:ss" (no tz) => interpret as local time
+    if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(dt)) return new Date(dt.replace(' ', 'T'));
+    // Fallback
+    return new Date(dt);
   }
 
   const subjects = application.subjects ?? [];
@@ -94,6 +98,8 @@ export default function DisplayApplication({ application, onResubmit }: Props) {
   }, [isApproved, isRejected]);
 
   const handleResubmit = () => {
+    // Guard: no resubmission unless rejected
+    if (!isRejected) return;
     if (onResubmit) return onResubmit();
     router.visit('/comprehensive-exam');
   };
@@ -135,13 +141,16 @@ export default function DisplayApplication({ application, onResubmit }: Props) {
     return <Badge variant="outline" className={cls}>{ok === true ? 'OK' : ok === false ? 'Needs attention' : 'Unknown'}</Badge>;
   };
 
+  // When formatting subject dates, ensure local date (avoid UTC shift on "YYYY-MM-DD")
+  const toLocalDateOnly = (d?: string) => (d ? new Date(d + (d.includes('T') ? '' : 'T00:00:00')) : null);
+
   return (
     <div className="w-full">
       {/* Status row (click to expand/collapse) */}
       <button
         type="button"
         onClick={() => setExpanded((v) => !v)}
-        className="group flex w-full items-center gap-3 rounded-md  px-3 py-3 text-left transition hover:bg-rose-50"
+        className="group flex w-full items-center gap-3 rounded-md px-3 py-3 text-left transition"
         aria-expanded={expanded}
       >
         {/* Left: status badge */}
@@ -183,7 +192,7 @@ export default function DisplayApplication({ application, onResubmit }: Props) {
 
       {/* Details panel */}
       {expanded && (
-        <div className="rounded-md p-4">
+        <div className="rounded-md p-4 m-2 border border-rose-200 bg-rose-50/20">
           {/* Header */}
           <div className="flex items-center gap-3">
             <div className="rounded-full bg-rose-50 border border-rose-200 p-2">
@@ -249,7 +258,9 @@ export default function DisplayApplication({ application, onResubmit }: Props) {
                     <button
                       type="button"
                       onClick={handleResubmit}
-                      className="inline-flex items-center justify-center rounded-md border border-rose-200 bg-rose-50 px-2.5 py-1.5 text-sm font-medium text-rose-700 hover:bg-rose-100"
+                      disabled={!isRejected}
+                      aria-disabled={!isRejected}
+                      className="inline-flex items-center justify-center rounded-md border border-rose-200 bg-rose-50 px-2.5 py-1.5 text-sm font-medium text-rose-700 hover:bg-rose-100 disabled:opacity-60 disabled:pointer-events-none"
                     >
                       Resubmit application
                     </button>
@@ -264,14 +275,11 @@ export default function DisplayApplication({ application, onResubmit }: Props) {
               {subjects.length ? (
                 <div className="space-y-2">
                   {subjects.map((s, i) => (
-                    <div
-                      key={i}
-                      className="flex w-full items-center justify-between rounded-lg border p-2 transition hover:bg-zinc-50"
-                    >
+                    <div key={i} className="flex w-full items-center justify-between rounded-lg border p-2 transition hover:bg-zinc-50">
                       <div className="min-w-0">
                         <div className="truncate text-sm font-medium">{s.subject}</div>
                         <div className="text-xs text-muted-foreground">
-                          {s.date ? format(new Date(s.date), 'PPP') : '—'} • {s.startTime || '—'} - {s.endTime || '—'}
+                          {s.date ? format(toLocalDateOnly(s.date)!, 'PPP') : '—'} • {s.startTime || '—'} - {s.endTime || '—'}
                         </div>
                       </div>
                     </div>
@@ -292,8 +300,9 @@ export default function DisplayApplication({ application, onResubmit }: Props) {
                 type="button"
                 className="inline-flex items-center gap-1 text-xs text-slate-600 hover:text-slate-900 disabled:opacity-60"
                 onClick={fetchEligibility}
-                disabled={elig.loading}
-                title="Refresh eligibility"
+                disabled={elig.loading || isApproved}
+                aria-disabled={elig.loading || isApproved}
+                title={isApproved ? 'Already approved' : 'Refresh eligibility'}
               >
                 <RefreshCcw className={`h-3.5 w-3.5 ${elig.loading ? 'animate-spin' : ''}`} /> Refresh
               </button>

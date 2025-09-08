@@ -2,9 +2,9 @@ import React, { useEffect, useMemo, useState, useDeferredValue } from 'react';
 import AppLayout from '@/layouts/app-layout';
 import { Head, usePage } from '@inertiajs/react';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
+import { Badge,  } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { Search } from 'lucide-react';
+import { Search, PaperclipIcon } from 'lucide-react';
 import TableComprePayment from './table-compre-payment';
 
 export type ComprePaymentSummary = {
@@ -76,26 +76,40 @@ export default function CoordinatorComprePaymentIndex() {
   return (
     <AppLayout>
       <Head title="Coordinator • Compre Payments" />
-
       <div className="px-7 pt-5 pb-6">
-        {/* Search + Tabs */}
-        <div className="mt-3 flex flex-wrap items-center gap-2 justify-end w-full">
-          <div className="relative w-full md:w-72">
-            <Input
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
-              placeholder="Search name, email, ID, program, OR…"
-              className="pl-8 h-9"
-              aria-label="Search payments"
-            />
-            <Search className="absolute left-2 top-2.5 h-4 w-4 text-slate-400" />
+        {/* Title + Search + Tabs (side-by-side) */}
+        <div className="flex flex-wrap items-center gap-3">
+          {/* Title (left) */}
+          <div className="flex items-center gap-2 min-w-0 flex-1">
+            <div className="h-10 w-10 flex items-center justify-center rounded-full bg-rose-500/10 border border-rose-500">
+              <PaperclipIcon className="h-5 w-5 text-rose-400" />
+            </div>
+            <div className="min-w-0">
+              <div className="text-sm font-semibold truncate">Comprehensive Exam Payments</div>
+              <div className="hidden md:block text-xs text-muted-foreground truncate">
+                Manage student payment submissions.
+              </div>
+            </div>
           </div>
-          <div className="flex-1" />
+          
+          {/* Search (middle) */}
+          <div className="relative w-full sm:w-72">
+             <Input
+               value={q}
+               onChange={(e) => setQ(e.target.value)}
+               placeholder="Search name, email, ID, program, OR…"
+               className="pl-8 h-9"
+               aria-label="Search payments"
+             />
+             <Search className="absolute left-2 top-2.5 h-4 w-4 text-slate-400" />
+           </div>
+
+          {/* Tabs (right) */}
           <div
-            className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white p-1 shadow dark:border-slate-800 dark:bg-slate-900"
-            role="tablist"
-            aria-label="Comprehensive Exam Filters"
-          >
+             className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white p-1 shadow dark:border-slate-800 dark:bg-slate-900"
+             role="tablist"
+             aria-label="Comprehensive Exam Filters"
+           >
             <Button
               role="tab"
               aria-selected={tab === 'pending'}
@@ -158,24 +172,13 @@ export default function CoordinatorComprePaymentIndex() {
                 {counts?.approved ?? approved.length}
               </span>
             </Button>
-          </div>
-        </div>
-
-        <div className="mt-3">
-          <TableComprePayment paged={paged} columns={columns} tabType={tab} showStatusFilter={false} />
-        </div>
-
-        {/* <div className="mt-6">
-          <div className="text-sm text-zinc-500 mb-1">You can manage payments for these programs:</div>
-          <div className="flex flex-wrap gap-2">
-            {programs.map((p, i) => (
-              <Badge key={i} variant="secondary">
-                {p}
-              </Badge>
-            ))}
-          </div>
-        </div> */}
-      </div>
+           </div>
+         </div>
+ 
+         <div className="mt-3">
+           <TableComprePayment paged={paged} columns={columns} tabType={tab} showStatusFilter={false} />
+         </div>
+       </div>
     </AppLayout>
   );
 }

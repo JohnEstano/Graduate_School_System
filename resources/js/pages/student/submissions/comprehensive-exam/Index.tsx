@@ -156,8 +156,10 @@ export default function ComprehensiveExamIndex() {
     );
   }, [elig]);
 
-  const examClosed = elig.examOpen === false; // NEW
-  const hasPending = application ? (application.final_approval_status?.toLowerCase() === 'pending') : false;
+  const examClosed = elig.examOpen === false;
+  const status = application?.final_approval_status?.toLowerCase() ?? null;
+  const hasPending = status === 'pending';
+  const hasApproved = status === 'approved';
 
   // Reasons to show when not eligible
   const blockers = useMemo(() => {
@@ -239,12 +241,14 @@ export default function ComprehensiveExamIndex() {
             <Button
               className="bg-rose-500 text-sm px-5 rounded-md"
               onClick={() => setOpen(true)}
-              disabled={!canApply || (!!application && hasPending)}
+              disabled={!canApply || (!!application && (hasPending || hasApproved))}
               title={
                 examClosed
                   ? 'Exam is closed'
                   : !canApply
                   ? 'You are not eligible yet'
+                  : hasApproved
+                  ? 'Application approved'
                   : hasPending
                   ? 'Application pending'
                   : 'Submit application'
@@ -313,7 +317,19 @@ export default function ComprehensiveExamIndex() {
 
           <DialogFooter className="mt-2">
             <Button variant="outline" onClick={() => setShowEligDialog(false)}>Close</Button>
-            <Button onClick={() => { setShowEligDialog(false); if (canApply && !hasPending) setOpen(true); }} disabled={!canApply || hasPending}>
+            <Button
+              onClick={() => {
+                setShowEligDialog(false);
+                if (canApply && !hasPending && !hasApproved) setOpen(true);
+              }}
+              disabled={!canApply || hasPending || hasApproved}
+              title={
+                !canApply ? 'You are not eligible yet'
+                : hasApproved ? 'Application approved'
+                : hasPending ? 'Application pending'
+                : 'Apply now'
+              }
+            >
               Apply Now
             </Button>
           </DialogFooter>

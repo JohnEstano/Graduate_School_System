@@ -26,6 +26,7 @@ type Props = {
   onResubmit?: () => void; // optional CTA when rejected
 };
 
+// Color-different status badge (sky/indigo for payment pending)
 function statusBadge(status?: string) {
   const s = (status || 'pending').toLowerCase();
   switch (s) {
@@ -43,7 +44,7 @@ function statusBadge(status?: string) {
       );
     default:
       return (
-        <Badge className="bg-amber-100 text-amber-700 border border-amber-200 gap-1">
+        <Badge className="bg-sky-100 text-sky-700 border border-sky-200 gap-1">
           <Clock size={14} /> Pending Review
         </Badge>
       );
@@ -72,29 +73,17 @@ export default function DisplayPayment({ payment, student, onResubmit }: Props) 
     ? `Submitted ${formatDistanceToNow(createdAt, { addSuffix: true })}`
     : '';
 
-  // Progress styling by status
+  // Progress styling by status (indigo/sky accent for payment)
   const prog = (() => {
     const s = (payment.status || 'pending').toLowerCase();
     if (s === 'approved') {
-      return {
-        wrap: 'bg-emerald-100 ring-1 ring-emerald-200/60',
-        fill: 'bg-emerald-500',
-        width: '100%',
-      };
+      return { wrap: 'bg-emerald-100 ring-1 ring-emerald-200/60', fill: 'bg-emerald-500', width: '100%' };
     }
     if (s === 'rejected') {
-      return {
-        wrap: 'bg-rose-100 ring-1 ring-rose-200/60',
-        fill: 'bg-rose-400',
-        width: '24%',
-      };
+      return { wrap: 'bg-rose-100 ring-1 ring-rose-200/60', fill: 'bg-rose-500', width: '24%' };
     }
     // pending
-    return {
-      wrap: 'bg-amber-100 ring-1 ring-amber-200/60',
-      fill: 'bg-amber-300',
-      width: '66%',
-    };
+    return { wrap: 'bg-sky-100 ring-1 ring-sky-200/60', fill: 'bg-sky-400', width: '66%' };
   })();
 
   const amountPH = useMemo(() => {
@@ -162,11 +151,11 @@ export default function DisplayPayment({ payment, student, onResubmit }: Props) 
 
       {/* Details panel */}
       {expanded && (
-        <div id={detailsId} className="mt-3 rounded-md p-2">
+        <div id={detailsId} className="mt-3 rounded-md p-3 border border-indigo-200 bg-indigo-50/20">
           {/* Header strip */}
           <div className="flex items-center gap-3">
-            <div className="rounded-full bg-rose-50 border border-rose-200 p-2">
-              <HandCoinsIcon className="h-5 w-5 text-rose-500" />
+            <div className="rounded-full bg-indigo-50 border border-indigo-200 p-2">
+              <HandCoinsIcon className="h-5 w-5 text-indigo-600" />
             </div>
             <div className="min-w-0">
               <div className="text-xs text-zinc-600">Student</div>
@@ -224,7 +213,7 @@ export default function DisplayPayment({ payment, student, onResubmit }: Props) 
                   <div>
                     <button
                       type="button"
-                      className="mt-2 inline-flex items-center justify-center rounded-md border border-rose-200 bg-rose-50 px-2.5 py-1.5 text-sm font-medium text-rose-700 hover:bg-rose-100"
+                      className="mt-2 inline-flex items-center justify-center rounded-md border border-indigo-200 bg-indigo-50 px-2.5 py-1.5 text-sm font-medium text-indigo-700 hover:bg-indigo-100"
                       onClick={onResubmit}
                     >
                       Resubmit payment

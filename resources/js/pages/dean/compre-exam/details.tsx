@@ -84,7 +84,7 @@ export default function Details({ application }: { application: CompreExamApplic
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <div className="flex items-center gap-2 text-[15px] font-medium">
-              <User2 className="h-4 w-4 text-muted-foreground" />
+              <User2 className="h-5 w-5 text-muted-foreground" />
               <span className="text-base md:text-[17px] font-semibold">
                 {application.last_name}, {application.first_name} {application.middle_name ? `${application.middle_name[0]}.` : ''}
               </span>
@@ -99,9 +99,11 @@ export default function Details({ application }: { application: CompreExamApplic
           </div>
 
           <div>
-            <div className="flex items-center gap-2 text-[15px]">
-              <GraduationCap className="h-4 w-4 text-muted-foreground" />
-              <span className="text-foreground">{application.program || '—'}</span>
+            <div className="flex items-start gap-2 text-[15px] min-w-0">
+              <GraduationCap className="h-5 w-4 shrink-0 text-muted-foreground" />
+              <span className="text-foreground leading-tight break-words whitespace-normal min-w-0">
+                {application.program || '—'}
+              </span>
             </div>
             <div className="mt-2 flex flex-wrap items-center gap-2">
               <Badge variant="outline" className={`rounded-full ${statusCls}`}>

@@ -76,6 +76,27 @@ class ComprehensiveExamController extends Controller
 
     public function store(Request $request)
     {
+        $user = $request->user();
+
+        // Server-side guard (redundant with middleware, but keeps it robust even if middleware isn't attached)
+        $latest = DB::table('exam_application')
+            ->where(function ($q) use ($user) {
+                $q->where('student_id', $user->id);
+                if (!empty($user->school_id)) {
+                    $q->orWhere('student_id', $user->school_id);
+                }
+            })
+            ->orderByDesc('created_at')
+            ->first();
+
+        $status = strtolower($latest->final_approval_status ?? '') ?: null;
+
+        if ($latest && in_array($status, ['pending', 'approved'], true)) {
+            return back()->withErrors([
+                'application' => 'You already have a ' . $status . ' comprehensive exam application.',
+            ]);
+        }
+
         $validated = $request->validate([
             'schoolYear'            => ['required','string','max:20'],
             'program'               => ['required','string','max:255'],
@@ -89,7 +110,6 @@ class ComprehensiveExamController extends Controller
             'subjects.*.endTime'    => ['required','date_format:H:i','after:startTime'],
         ]);
 
-        $user = $request->user();
         $studentId = $user->student_id ?? $user->school_id ?? $user->id;
         if (!$studentId) {
             return back()->withErrors(['student_id' => 'Your account has no student ID associated.']);

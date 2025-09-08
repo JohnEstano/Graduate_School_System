@@ -30,7 +30,7 @@ export default function Details({ payment }: { payment: ComprePaymentSummary }) 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <div className="flex items-center gap-2 text-[15px] font-medium">
-              <User2 className="h-4 w-4 text-muted-foreground" />
+              <User2 className="h-5 w-5 text-muted-foreground" />
               <span className="text-base md:text-[17px] font-semibold">
                 {payment.last_name}, {payment.first_name} {payment.middle_name ? `${payment.middle_name[0]}.` : ''}
               </span>
@@ -47,9 +47,11 @@ export default function Details({ payment }: { payment: ComprePaymentSummary }) 
           </div>
 
           <div>
-            <div className="flex items-center gap-2 text-[15px]">
-              <GraduationCap className="h-4 w-4 text-muted-foreground" />
-              <span className="text-foreground">{payment.program || '—'}</span>
+            <div className="flex items-start gap-2 text-[15px] min-w-0">
+              <GraduationCap className="h-5 w-5 shrink-0 text-muted-foreground" />
+              <span className="text-foreground leading-tight break-words whitespace-normal min-w-0">
+                {payment.program || '—'}
+              </span>
             </div>
             <div className="mt-2 flex flex-wrap items-center gap-2">
               <Badge variant="outline" className={`rounded-full ${statusCls}`}>

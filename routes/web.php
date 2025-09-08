@@ -23,6 +23,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('dashboard', [DashboardController::class, 'index'])
         ->name('dashboard');
 
+    //No duplicate applications
+    Route::post('/student/compre-exam', [ComprehensiveExamController::class, 'store'])
+    ->middleware('no-duplicate-compre')
+    ->name('student.compre.store');
+
     // Notification page
     Route::get('notification', function () {
         return Inertia::render('notification/Index');
@@ -73,7 +78,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     // Comprehensive Exam (Student) - controller
     Route::get('/comprehensive-exam', [ComprehensiveExamController::class, 'index'])->name('comprehensive-exam.index');
-    Route::post('/comprehensive-exam', [ComprehensiveExamController::class, 'store'])->name('comprehensive-exam.store');
 
     // Honorarium pages
     Route::get('generate-report', function () {
@@ -154,6 +158,13 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/dean/compre-exam/bulk-approve', [DeanCompreExamController::class, 'bulkApprove'])->name('dean.compre-exam.bulk-approve');
     Route::post('/dean/compre-exam/bulk-reject', [DeanCompreExamController::class, 'bulkReject'])->name('dean.compre-exam.bulk-reject');
 });
+
+// Ensure the POST (submit) route is protected. Adjust the URI/name to your actual route.
+Route::middleware(['auth', 'no-duplicate-compre'])->group(function () {
+    Route::post('/comprehensive-exam', [ComprehensiveExamController::class, 'store'])->name('comprehensive-exam.store');
+});
+// If you have another submit endpoint (e.g., /comprehensive-exam/submit), protect it too:
+// Route::post('/comprehensive-exam/submit', [ComprehensiveExamController::class, 'store'])->middleware('no-duplicate-compre')->name('comprehensive-exam.submit');
 
 require __DIR__ . '/settings.php';
 require __DIR__ . '/auth.php';
