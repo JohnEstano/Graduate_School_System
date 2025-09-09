@@ -22,7 +22,7 @@ class CoordinatorDefenseController extends Controller
     public function index(Request $request)
     {
         $user = Auth::user();
-        
+
         // Ensure user is authorized (Coordinator, Administrative Assistant, or Dean)
         $coordinatorRoles = ['Coordinator', 'Administrative Assistant', 'Dean'];
         if (!in_array($user->role, $coordinatorRoles)) {
@@ -31,48 +31,51 @@ class CoordinatorDefenseController extends Controller
 
         // Get approved defense requests that need scheduling
         $defenseRequests = DefenseRequest::with([
-            'user', 'adviserUser', 'panelsAssignedBy', 'scheduleSetBy'
+            'user',
+            'adviserUser',
+            'panelsAssignedBy',
+            'scheduleSetBy'
         ])
-        ->whereIn('workflow_state', ['adviser-approved', 'coordinator-review', 'coordinator-approved', 'scheduled'])
-        ->orderBy('adviser_reviewed_at', 'desc')
-        ->orderBy('created_at', 'desc')
-        ->get()
-        ->map(function ($request) {
-            return [
-                'id' => $request->id,
-                'student_name' => $request->first_name . ' ' . $request->last_name,
-                'school_id' => $request->school_id,
-                'program' => $request->program,
-                'thesis_title' => $request->thesis_title,
-                'defense_type' => $request->defense_type,
-                'adviser' => $request->defense_adviser,
-                'workflow_state' => $request->workflow_state,
-                'workflow_state_display' => $request->workflow_state_display,
-                'scheduling_status' => $request->scheduling_status,
-                'formatted_schedule' => $request->formatted_schedule,
-                'panels_list' => $request->panels_list,
-                'defense_chairperson' => $request->defense_chairperson,
-                'defense_panelist1' => $request->defense_panelist1,
-                'defense_panelist2' => $request->defense_panelist2,
-                'defense_panelist3' => $request->defense_panelist3,
-                'defense_panelist4' => $request->defense_panelist4,
-                'scheduled_date' => $request->scheduled_date?->format('Y-m-d'),
-                'scheduled_time' => $request->scheduled_time?->format('H:i'),
-                'scheduled_end_time' => $request->scheduled_end_time?->format('H:i'),
-                'defense_duration_minutes' => $request->defense_duration_minutes,
-                'formatted_time_range' => $request->formatted_time_range,
-                'defense_mode' => $request->defense_mode,
-                'defense_venue' => $request->defense_venue,
-                'scheduling_notes' => $request->scheduling_notes,
-                'panels_assigned_at' => $request->panels_assigned_at?->format('M d, Y g:i A'),
-                'schedule_set_at' => $request->schedule_set_at?->format('M d, Y g:i A'),
-                'adviser_notified_at' => $request->adviser_notified_at?->format('M d, Y g:i A'),
-                'student_notified_at' => $request->student_notified_at?->format('M d, Y g:i A'),
-                'panels_notified_at' => $request->panels_notified_at?->format('M d, Y g:i A'),
-                'submitted_at' => $request->submitted_at?->format('M d, Y g:i A'),
-                'adviser_reviewed_at' => $request->adviser_reviewed_at?->format('M d, Y g:i A'),
-            ];
-        });
+            ->whereIn('workflow_state', ['adviser-approved', 'coordinator-review', 'coordinator-approved', 'scheduled'])
+            ->orderBy('adviser_reviewed_at', 'desc')
+            ->orderBy('created_at', 'desc')
+            ->get()
+            ->map(function ($request) {
+                return [
+                    'id' => $request->id,
+                    'student_name' => $request->first_name . ' ' . $request->last_name,
+                    'school_id' => $request->school_id,
+                    'program' => $request->program,
+                    'thesis_title' => $request->thesis_title,
+                    'defense_type' => $request->defense_type,
+                    'adviser' => $request->defense_adviser,
+                    'workflow_state' => $request->workflow_state,
+                    'workflow_state_display' => $request->workflow_state_display,
+                    'scheduling_status' => $request->scheduling_status,
+                    'formatted_schedule' => $request->formatted_schedule,
+                    'panels_list' => $request->panels_list,
+                    'defense_chairperson' => $request->defense_chairperson,
+                    'defense_panelist1' => $request->defense_panelist1,
+                    'defense_panelist2' => $request->defense_panelist2,
+                    'defense_panelist3' => $request->defense_panelist3,
+                    'defense_panelist4' => $request->defense_panelist4,
+                    'scheduled_date' => $request->scheduled_date?->format('Y-m-d'),
+                    'scheduled_time' => $request->scheduled_time?->format('H:i'),
+                    'scheduled_end_time' => $request->scheduled_end_time?->format('H:i'),
+                    'defense_duration_minutes' => $request->defense_duration_minutes,
+                    'formatted_time_range' => $request->formatted_time_range,
+                    'defense_mode' => $request->defense_mode,
+                    'defense_venue' => $request->defense_venue,
+                    'scheduling_notes' => $request->scheduling_notes,
+                    'panels_assigned_at' => $request->panels_assigned_at?->format('M d, Y g:i A'),
+                    'schedule_set_at' => $request->schedule_set_at?->format('M d, Y g:i A'),
+                    'adviser_notified_at' => $request->adviser_notified_at?->format('M d, Y g:i A'),
+                    'student_notified_at' => $request->student_notified_at?->format('M d, Y g:i A'),
+                    'panels_notified_at' => $request->panels_notified_at?->format('M d, Y g:i A'),
+                    'submitted_at' => $request->submitted_at?->format('M d, Y g:i A'),
+                    'adviser_reviewed_at' => $request->adviser_reviewed_at?->format('M d, Y g:i A'),
+                ];
+            });
 
         // Get available faculty for panel assignment
         $facultyMembers = User::where('role', 'Faculty')
@@ -223,7 +226,7 @@ class CoordinatorDefenseController extends Controller
                 'defense_panelist3' => $defenseRequest->defense_panelist3,
                 'defense_panelist4' => $defenseRequest->defense_panelist4,
             ];
-            
+
             $conflicts = $conflictService->findPanelSchedulingConflicts(
                 $defenseRequest,
                 $panels,
@@ -231,12 +234,12 @@ class CoordinatorDefenseController extends Controller
                 $validated['scheduled_time'] ?? null,
                 $validated['scheduled_end_time'] ?? null
             );
-            
+
             if (!empty($conflicts)) {
                 $startTime = Carbon::parse($validated['scheduled_time']);
                 $endTime = Carbon::parse($validated['scheduled_end_time']);
                 $timeRange = $startTime->format('g:i A') . ' - ' . $endTime->format('g:i A');
-                
+
                 // Create detailed conflict messages
                 $conflictMessages = [];
                 foreach ($conflicts as $conflict) {
@@ -249,32 +252,34 @@ class CoordinatorDefenseController extends Controller
                         $conflict['time_range']
                     );
                 }
-                
-                $message = "⚠️ **Scheduling Conflict Detected**\n\n" . 
-                          "The requested time slot **{$timeRange}** conflicts with existing defense schedules:\n\n" .
-                          "• " . implode("\n• ", $conflictMessages) . "\n\n" .
-                          "Please select a different time slot or reassign panel members to resolve this conflict.";
-                
+
+                $message = "⚠️ **Scheduling Conflict Detected**\n\n" .
+                    "The requested time slot **{$timeRange}** conflicts with existing defense schedules:\n\n" .
+                    "• " . implode("\n• ", $conflictMessages) . "\n\n" .
+                    "Please select a different time slot or reassign panel members to resolve this conflict.";
+
                 return back()->withErrors(['scheduled_time' => $message])->withInput();
             }
 
             // Venue conflict with time range
-            if ($conflictService->hasVenueConflict(
-                $defenseRequest, 
-                $validated['defense_venue'], 
-                $validated['scheduled_date'], 
-                $validated['scheduled_time'],
-                $validated['scheduled_end_time']
-            )) {
+            if (
+                $conflictService->hasVenueConflict(
+                    $defenseRequest,
+                    $validated['defense_venue'],
+                    $validated['scheduled_date'],
+                    $validated['scheduled_time'],
+                    $validated['scheduled_end_time']
+                )
+            ) {
                 $startTime = Carbon::parse($validated['scheduled_time']);
                 $endTime = Carbon::parse($validated['scheduled_end_time']);
                 $timeRange = $startTime->format('g:i A') . ' - ' . $endTime->format('g:i A');
                 $date = Carbon::parse($validated['scheduled_date'])->format('M d, Y');
-                
+
                 $message = "🏛️ **Venue Conflict Detected**\n\n" .
-                          "The venue **{$validated['defense_venue']}** is already reserved for another defense on **{$date}** during **{$timeRange}**.\n\n" .
-                          "Please select a different venue or time slot to resolve this conflict.";
-                
+                    "The venue **{$validated['defense_venue']}** is already reserved for another defense on **{$date}** during **{$timeRange}**.\n\n" .
+                    "Please select a different venue or time slot to resolve this conflict.";
+
                 return back()->withErrors([
                     'defense_venue' => $message
                 ])->withInput();
@@ -302,10 +307,10 @@ class CoordinatorDefenseController extends Controller
             $startTime = Carbon::parse($validated['scheduled_time']);
             $endTime = Carbon::parse($validated['scheduled_end_time']);
             $timeRange = $startTime->format('g:i A') . ' - ' . $endTime->format('g:i A');
-            
+
             // Create notifications for student and panel members
             $this->createSchedulingNotifications($defenseRequest, $scheduleDate, $timeRange, $validated);
-            
+
             return back()->with([
                 'success' => "Defense scheduled successfully for {$scheduleDate} from {$timeRange}",
                 'scheduling_completed' => true
@@ -335,7 +340,7 @@ class CoordinatorDefenseController extends Controller
         try {
             $notificationService = new DefenseNotificationService();
             $notifiedParties = $notificationService->sendSchedulingNotifications(
-                $defenseRequest, 
+                $defenseRequest,
                 $validated['notify_parties']
             );
 
@@ -382,7 +387,7 @@ class CoordinatorDefenseController extends Controller
         try {
             DB::transaction(function () use ($defenseRequest, $validated) {
                 $changes = [];
-                
+
                 foreach ($validated as $field => $value) {
                     if ($defenseRequest->$field !== $value) {
                         $changes[$field] = [
@@ -394,8 +399,8 @@ class CoordinatorDefenseController extends Controller
 
                 if (!empty($changes)) {
                     $defenseRequest->update($validated);
-                    
-                    $changeDescription = 'Defense details updated: ' . 
+
+                    $changeDescription = 'Defense details updated: ' .
                         implode(', ', array_map(function ($field, $change) {
                             return "{$field}: {$change['from']} → {$change['to']}";
                         }, array_keys($changes), $changes));
@@ -464,9 +469,9 @@ class CoordinatorDefenseController extends Controller
                 'type' => 'defense-request',
                 'title' => '🎉 Your Defense Has Been Scheduled!',
                 'message' => "Great news! Your {$defenseRequest->defense_type} defense has been scheduled for {$scheduleDate} from {$timeRange}. " .
-                           "Venue: {$validated['defense_venue']}. " . 
-                           "Chairperson: {$defenseRequest->defense_chairperson}. " .
-                           "Please prepare your presentation materials.",
+                    "Venue: {$validated['defense_venue']}. " .
+                    "Chairperson: {$defenseRequest->defense_chairperson}. " .
+                    "Please prepare your presentation materials.",
                 'link' => '/defense-requirements',
             ]);
         }
@@ -482,14 +487,14 @@ class CoordinatorDefenseController extends Controller
 
         foreach ($panelMembers as $panelMemberName) {
             // Find user by name (this is a simple approach; in production you might want a more robust mapping)
-            $panelUser = User::where(function($query) use ($panelMemberName) {
+            $panelUser = User::where(function ($query) use ($panelMemberName) {
                 $nameParts = explode(' ', trim($panelMemberName));
                 if (count($nameParts) >= 2) {
                     $query->where('first_name', 'LIKE', '%' . $nameParts[0] . '%')
-                          ->where('last_name', 'LIKE', '%' . end($nameParts) . '%');
+                        ->where('last_name', 'LIKE', '%' . end($nameParts) . '%');
                 } else {
                     $query->where('first_name', 'LIKE', '%' . $panelMemberName . '%')
-                          ->orWhere('last_name', 'LIKE', '%' . $panelMemberName . '%');
+                        ->orWhere('last_name', 'LIKE', '%' . $panelMemberName . '%');
                 }
             })->first();
 
@@ -515,4 +520,128 @@ class CoordinatorDefenseController extends Controller
             ]);
         }
     }
+
+    /**
+     * Get defense requests for approval in the React interface
+     */
+    public function getRequestsForApproval(Request $request)
+    {
+        $user = Auth::user();
+
+        // Ensure user is authorized
+        $coordinatorRoles = ['Coordinator', 'Administrative Assistant', 'Dean'];
+        if (!in_array($user->role, $coordinatorRoles)) {
+            abort(403, 'Unauthorized access to coordinator dashboard');
+        }
+
+        // Get defense requests with necessary data for approval
+        $defenseRequests = DefenseRequest::with(['user', 'adviserUser'])
+            ->orderBy('created_at', 'desc')
+            ->get()
+            ->map(function ($request) {
+                return [
+                    'id' => $request->id,
+                    'first_name' => $request->first_name,
+                    'middle_name' => $request->middle_name,
+                    'last_name' => $request->last_name,
+                    'program' => $request->program,
+                    'thesis_title' => $request->thesis_title,
+                    'date_of_defense' => $request->scheduled_date?->format('Y-m-d H:i:s'),
+                    'defense_type' => $request->defense_type,
+                    'mode_defense' => $request->defense_mode,
+                    'status' => $this->mapToReactStatus($request->workflow_state),
+                    'priority' => $request->priority ?? 'Medium',
+                    'last_status_updated_by' => $request->lastStatusUpdatedBy?->name,
+                    'last_status_updated_at' => $request->last_status_updated_at?->format('Y-m-d H:i:s'),
+                ];
+            });
+
+        return response()->json($defenseRequests);
+    }
+
+    /**
+     * Map backend workflow state to React status
+     */
+    private function mapToReactStatus($workflowState)
+    {
+        $mapping = [
+            'adviser-approved' => 'Pending',
+            'coordinator-review' => 'Pending',
+            'coordinator-approved' => 'Approved',
+            'scheduled' => 'Approved',
+            'rejected' => 'Rejected',
+            // Add other mappings as needed
+        ];
+
+        return $mapping[$workflowState] ?? 'Pending';
+    }
+    /**
+ * Update the status of a defense request
+ */
+public function updateStatus(Request $request, DefenseRequest $defenseRequest)
+{
+    $user = Auth::user();
+    
+    // Authorization check
+    $coordinatorRoles = ['Coordinator', 'Administrative Assistant', 'Dean'];
+    if (!in_array($user->role, $coordinatorRoles)) {
+        abort(403, 'Unauthorized action.');
+    }
+
+    $validated = $request->validate([
+        'status' => 'required|in:Pending,Approved,Rejected,Needs-info',
+    ]);
+
+    try {
+        // Map React status to backend workflow state
+        $workflowState = $this->mapToWorkflowState($validated['status']);
+        
+        $defenseRequest->workflow_state = $workflowState;
+        $defenseRequest->last_status_updated_by = $user->id;
+        $defenseRequest->last_status_updated_at = now();
+        $defenseRequest->save();
+
+        // Add to workflow history
+        $defenseRequest->addWorkflowEntry(
+            'status-updated', 
+            "Status changed to: {$validated['status']}", 
+            $user->id
+        );
+
+        Log::info('Defense request status updated', [
+            'defense_request_id' => $defenseRequest->id,
+            'status' => $validated['status'],
+            'coordinator_id' => $user->id,
+        ]);
+
+        return response()->json([
+            'status' => $validated['status'],
+            'last_status_updated_by' => $user->name,
+            'last_status_updated_at' => $defenseRequest->last_status_updated_at,
+        ]);
+
+    } catch (\Exception $e) {
+        Log::error('Failed to update defense request status', [
+            'defense_request_id' => $defenseRequest->id,
+            'error' => $e->getMessage(),
+        ]);
+
+        return response()->json(['error' => 'Failed to update status'], 500);
+    }
+}
+
+/**
+ * Map React status to backend workflow state
+ */
+private function mapToWorkflowState($status)
+{
+    $mapping = [
+        'Pending' => 'coordinator-review',
+        'Approved' => 'coordinator-approved',
+        'Rejected' => 'rejected',
+        'Needs-info' => 'needs-info',
+    ];
+    
+    return $mapping[$status] ?? 'coordinator-review';
+}
 }

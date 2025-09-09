@@ -490,6 +490,26 @@ export default function ShowAllRequests({
             toast.error('Error deleting selected defense requests', { position: 'bottom-right' });
         }
     }
+
+    // Add this useEffect to fetch data
+    useEffect(() => {
+      const fetchDefenseRequests = async () => {
+        try {
+          const response = await fetch('/coordinator/defense-requests/approval');
+          if (response.ok) {
+            const data = await response.json();
+            setDefenseRequests(data);
+          } else {
+            toast.error('Failed to fetch defense requests');
+          }
+        } catch (error) {
+          toast.error('Error fetching defense requests');
+        }
+      };
+
+      fetchDefenseRequests();
+    }, []);
+
     return (
         <div className="p-2 flex flex-col gap-2 min-h-screen bg-background dark:bg-background">
             <Toaster richColors position="bottom-right" />
