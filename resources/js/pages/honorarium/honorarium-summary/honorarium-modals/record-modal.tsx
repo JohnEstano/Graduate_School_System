@@ -26,6 +26,7 @@ import {
   Pencil,
   Trash2,
   Plus,
+  Download
 } from "lucide-react";
 import {
   AnimatePresence,
@@ -49,89 +50,35 @@ interface IndividualRecordModalProps {
   record: ProgramRecord | null;
 }
 
-// This mock data should ideally come from an API based on the program.
 const programDetails: { [key: string]: any[] } = {
-  'MIT': [{
-    id: 1,
-    panelistName: 'Dr. Evelyn Cruz',
-    role: 'Chair',
-    defenseType: 'Final',
-    receivedDate: 'May 12, 2025',
-    amount: 450.00
-  }, {
-    id: 2,
-    panelistName: 'Prof. Marco Reyes',
-    role: 'Member',
-    defenseType: 'Proposal',
-    receivedDate: 'June 4, 2025',
-    amount: 450.00
-  }, {
-    id: 3,
-    panelistName: 'Dr. Lilia Santos',
-    role: 'Chair',
-    defenseType: 'Pre-final',
-    receivedDate: 'June 4, 2025',
-    amount: 450.00
-  }, {
-    id: 4,
-    panelistName: 'Dr. Alan Turing',
-    role: 'Member',
-    defenseType: 'Final',
-    receivedDate: 'July 1, 2025',
-    amount: 450.00
-  }, {
-    id: 5,
-    panelistName: 'Ms. Ada Lovelace',
-    role: 'Member',
-    defenseType: 'Final',
-    receivedDate: 'July 1, 2025',
-    amount: 450.00
-  }, {
-    id: 6,
-    panelistName: 'Dr. Grace Hopper',
-    role: 'Chair',
-    defenseType: 'Final',
-    receivedDate: 'July 2, 2025',
-    amount: 450.00
-  }, {
-    id: 7,
-    panelistName: 'Prof. John Dewey',
-    role: 'Chair',
-    defenseType: 'Proposal',
-    receivedDate: 'July 15, 2025',
-    amount: 450.00
-  }, ],
-  'DBM': [{
-    id: 8,
-    panelistName: 'Dr. Peter Drucker',
-    role: 'Chair',
-    defenseType: 'Final',
-    receivedDate: 'June 20, 2025',
-    amount: 550.00
-  }, ],
-  'PHDED-EL': [{
-    id: 9,
-    panelistName: 'Dr. Maria Montessori',
-    role: 'Member',
-    defenseType: 'Final',
-    receivedDate: 'July 1, 2025',
-    amount: 550.00
-  }, {
-    id: 10,
-    panelistName: 'Dr. John Hattie',
-    role: 'Member',
-    defenseType: 'Final',
-    receivedDate: 'July 1, 2025',
-    amount: 550.00
-  }, ],
-  'MAED-ENG': [{
-    id: 12,
-    panelistName: 'Prof. William Strunk Jr.',
-    role: 'Chair',
-    defenseType: 'Proposal',
-    receivedDate: 'July 15, 2025',
-    amount: 450.00
-  }, ],
+  MIT: [
+    {
+      id: 1,
+      panelistName: 'Dr. Evelyn Cruz',
+      role: 'Chair',
+      defenseType: 'Final',
+      receivedDate: 'May 12, 2025',
+      amount: 450.0,
+    },
+    {
+      id: 2,
+      panelistName: 'Prof. Marco Reyes',
+      role: 'Member',
+      defenseType: 'Proposal',
+      receivedDate: 'June 4, 2025',
+      amount: 450.0,
+    },
+  ],
+  DBM: [
+    {
+      id: 8,
+      panelistName: 'Dr. Peter Drucker',
+      role: 'Chair',
+      defenseType: 'Final',
+      receivedDate: 'June 20, 2025',
+      amount: 550.0,
+    },
+  ],
 };
 
 const PAGE_SIZE = 5;
@@ -139,10 +86,10 @@ const PAGE_SIZE = 5;
 export default function IndividualRecordModal({
   show,
   onClose,
-  record
+  record,
 }: IndividualRecordModalProps) {
   const [isEditing, setIsEditing] = useState(false);
-  const [panelists, setPanelists] = useState < any[] > ([]);
+  const [panelists, setPanelists] = useState<any[]>([]);
   const [showAddModal, setShowAddModal] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
 
@@ -163,7 +110,7 @@ export default function IndividualRecordModal({
   const paginatedPanelists = panelists.slice(startIndex, endIndex);
 
   const handleRemovePanelist = (id: number) => {
-    const updatedPanelists = panelists.filter(panelist => panelist.id !== id);
+    const updatedPanelists = panelists.filter((panelist) => panelist.id !== id);
     setPanelists(updatedPanelists);
     if (paginatedPanelists.length === 1 && currentPage > 1) {
       setCurrentPage(currentPage - 1);
@@ -171,11 +118,15 @@ export default function IndividualRecordModal({
   };
 
   const handleAddPanelist = (newPanelistData: {
-    panelistName: string;role: string;defenseType: string;receivedDate: string;amount: number;
+    panelistName: string;
+    role: string;
+    defenseType: string;
+    receivedDate: string;
+    amount: number;
   }) => {
     const newPanelist = {
       ...newPanelistData,
-      id: panelists.length > 0 ? Math.max(...panelists.map(p => p.id)) + 1 : 1,
+      id: panelists.length > 0 ? Math.max(...panelists.map((p) => p.id)) + 1 : 1,
       amount: parseFloat(newPanelistData.amount.toString()),
     };
     const updatedPanelists = [...panelists, newPanelist];
@@ -184,26 +135,86 @@ export default function IndividualRecordModal({
     setCurrentPage(Math.ceil(updatedPanelists.length / PAGE_SIZE));
   };
 
+  // 🔹 NEW: Handle CSV Download
+const handleDownload = () => {
+  if (!record) return;
+  const filename = `${record.name}_panelists.csv`;
+
+  // ✅ Use record.name for full program name instead of record.program
+  const programInfo = [
+    [`Program: ${record.name}`],
+    [`Date Edited: ${record.date_edited}`],
+    [""], // empty row before panelists
+  ];
+
+  // Table headers
+  const header = ["Panelist", "Role", "Defense Type", "Received Date", "Amount"];
+
+  // Table rows
+  const rows = panelists.map((p) => [
+    p.panelistName,
+    p.role,
+    p.defenseType,
+    p.receivedDate,
+    p.amount,
+  ]);
+
+  // Combine everything
+  let csvContent =
+    "data:text/csv;charset=utf-8," +
+    [...programInfo, header, ...rows].map((e) => e.join(",")).join("\n");
+
+  // Trigger download
+  const encodedUri = encodeURI(csvContent);
+  const link = document.createElement("a");
+  link.setAttribute("href", encodedUri);
+  link.setAttribute("download", filename);
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+};
+
   return (
     <>
       <Dialog open={show} onOpenChange={onClose}>
-        {/* MODIFIED: Applied dialog sizing conventions */}
         <DialogContent className="max-w-3xl min-w-260 min-h-90 w-full max-h-[90vh]">
           <DialogHeader className="mb-2">
-            <DialogTitle className="text-2xl font-bold">{record.name}</DialogTitle>
+            <DialogTitle className="text-2xl font-bold">
+              {record.name}
+            </DialogTitle>
             <DialogDescription>
-              Honorarium summary for the {record.program} program. Last updated on {record.dateEdited}.
+              Honorarium summary for the {record.program} program. Last updated
+              on {record.date_edited}.
             </DialogDescription>
             <div className="flex justify-end space-x-2 pt-2">
-              {/* MODIFIED: Applied button styling conventions */}
-              <Button onClick={() => setIsEditing(!isEditing)} variant="outline" className="rounded-md px-3 py-2 h-auto text-xs flex items-center gap-1">
+              {/* 🔹 NEW Download button */}
+              <Button
+                onClick={handleDownload}
+                variant="outline"
+                className="rounded-md px-3 py-2 h-auto text-xs flex items-center gap-1"
+
+                //rounded-md px-3 py-2 h-auto text-xs flex items-center gap-1
+              >
+                <Download size={16} />
+                Download
+              </Button>
+
+              <Button
+                onClick={() => setIsEditing(!isEditing)}
+                variant="outline"
+                className="rounded-md px-3 py-2 h-auto text-xs flex items-center gap-1"
+              >
                 <Pencil size={16} />
                 {isEditing ? "Done" : "Edit Panelists"}
               </Button>
               {isEditing && (
-                <Button onClick={() => setShowAddModal(true)} variant="outline" className="rounded-md px-3 py-2 h-auto text-xs flex items-center gap-1 text-green-500 hover:text-green-600">
+                <Button
+                  onClick={() => setShowAddModal(true)}
+                  variant="outline"
+                  className="rounded-md px-3 py-2 h-auto text-xs flex items-center gap-1 text-green-500 hover:text-green-600"
+                >
                   <Plus size={16} />
-                   Add Panelist
+                  Add Panelist
                 </Button>
               )}
             </div>

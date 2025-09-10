@@ -2,6 +2,8 @@
 
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DefenseRequestController;
+use App\Http\Controllers\HonorariumSummaryController;
+use App\Http\Controllers\StudentRecordController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -51,18 +53,17 @@ Route::middleware(['auth', 'verified'])->group(function () {
     })->name('comprehensive-exam.index');
 
     //Honorarium route
-    // generate-report route
-    Route::get('generate-report', function () {
-        return Inertia::render('honorarium/generate-report/Index');
-    })->name('generate-report.index');
-
     // honorarium-summary route
-    Route::get('honorarium-summary', function () {
-        return Inertia::render('honorarium/honorarium-summary/Index');
-    })->name('honorarium-summary.index');
-
+    Route::get('/honorarium-summary', [HonorariumSummaryController::class, 'Index'])
+    ->name('honorarium-summary.index');
+    Route::get('/honorarium-summary/{record}/download', [HonorariumSummaryController::class, 'download'])
+    ->name('honorarium-summary.download');
+    //student-records route
+    Route::get('/student-records', [StudentRecordController::class, 'index'])->name('student-records.index');
+    Route::put('/student-records/{studentRecord}', [StudentRecordController::class, 'update'])->name('student-records.update');
+    Route::delete('/student-records/{studentRecord}', [StudentRecordController::class, 'destroy'])->name('student-records.destroy');
     
-
+    
     //Schedules route
     Route::get('schedules', function () {
         return Inertia::render('coordinator/schedule/Index');

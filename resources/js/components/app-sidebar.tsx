@@ -67,12 +67,9 @@ const assistantNavItems: MainNavItem[] = [
     },
     {
         title: 'Honorarium',
-        href: '/honorarium',
+        href: '/honorarium-summary',
         icon: DollarSign,
-        subItems: [
-            { title: 'Honorarium Summary', href: '/honorarium-summary' },
-            { title: 'Generate Report', href: '/generate-report' },
-        ],
+        
     },
     { title: 'Student Records', href: '/student-records', icon: Users },
     { title: 'Schedules', href: '/schedules', icon: CalendarFold },
