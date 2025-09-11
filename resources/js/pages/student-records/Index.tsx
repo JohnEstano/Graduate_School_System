@@ -250,7 +250,7 @@ export default function Index({ records, filters }: IndexProps) {
                 <TableHead className="w-[15%] px-1 py-2 text-center">Program</TableHead>
                 <TableHead className="w-[15%] px-1 py-2 text-center">OR Number</TableHead>
                 <TableHead className="w-[15%] px-1 py-2 text-center">Payment Date</TableHead>
-                <TableHead className="w-[10%] px-1 py-2 text-center">Records</TableHead>
+                <TableHead className="w-[8%] px-1 py-2 text-center">Records</TableHead>
                 <TableHead className="w-[15%] px-1 py-2 text-center">Actions</TableHead>
               </TableRow>
             </TableHeader>

@@ -1,6 +1,17 @@
 import React, { useState, useEffect } from "react";
 import SuccessPrompt from "./success-prompt";
 import { useForm } from "@inertiajs/react";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 interface Payment {
   id: number;
@@ -77,109 +88,81 @@ const EditStudentModal: React.FC<EditStudentModalProps> = ({
 
   return (
     <>
-      <div className="fixed inset-0 flex items-center justify-center bg-black/40 z-40">
-        <div className="bg-white p-6 rounded-lg shadow-md w-full max-w-md">
-          <h2 className="text-xl font-semibold mb-4 text-center text-gray-800">
-            Edit Student Record
-          </h2>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {/* First Name */}
-            <input
-              type="text"
-              name="first_name"
-              value={data.first_name}
-              onChange={(e) => setData("first_name", e.target.value)}
-              className="w-full border rounded px-3 py-2"
-              placeholder="First Name"
-            />
-            {errors.first_name && (
-              <div className="text-red-500 text-xs">{errors.first_name}</div>
-            )}
-
-            {/* Middle Name */}
-            <input
-              type="text"
-              name="middle_name"
-              value={data.middle_name}
-              onChange={(e) => setData("middle_name", e.target.value)}
-              className="w-full border rounded px-3 py-2"
-              placeholder="Middle Name"
-            />
-            {errors.middle_name && (
-              <div className="text-red-500 text-xs">{errors.middle_name}</div>
-            )}
-
-            {/* Last Name */}
-            <input
-              type="text"
-              name="last_name"
-              value={data.last_name}
-              onChange={(e) => setData("last_name", e.target.value)}
-              className="w-full border rounded px-3 py-2"
-              placeholder="Last Name"
-            />
-            {errors.last_name && (
-              <div className="text-red-500 text-xs">{errors.last_name}</div>
-            )}
-
-            {/* Program */}
-            <input
-              type="text"
-              name="program"
-              value={data.program}
-              onChange={(e) => setData("program", e.target.value)}
-              className="w-full border rounded px-3 py-2"
-              placeholder="Program"
-            />
-            {errors.program && (
-              <div className="text-red-500 text-xs">{errors.program}</div>
-            )}
-
-            {/* O.R. Number */}
-            <input
-              type="text"
-              name="or_number"
-              value={data.or_number}
-              onChange={(e) => setData("or_number", e.target.value)}
-              className="w-full border rounded px-3 py-2"
-              placeholder="O.R. Number"
-            />
-            {errors.or_number && (
-              <div className="text-red-500 text-xs">{errors.or_number}</div>
-            )}
-
-            {/* Payment Date */}
-            <input
-              type="date"
-              name="payment_date"
-              value={data.payment_date}
-              onChange={(e) => setData("payment_date", e.target.value)}
-              className="w-full border rounded px-3 py-2"
-            />
-            {errors.payment_date && (
-              <div className="text-red-500 text-xs">{errors.payment_date}</div>
-            )}
-
-            {/* Buttons */}
-            <div className="flex justify-end space-x-2">
-              <button
-                type="button"
-                onClick={onClose}
-                className="bg-gray-300 px-4 py-2 rounded hover:bg-gray-400"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                disabled={processing}
-                className="bg-pink-600 text-white px-4 py-2 rounded hover:bg-pink-700 disabled:bg-pink-300"
-              >
-                {processing ? "Saving..." : "Save"}
-              </button>
+      <Dialog open={isOpen} onOpenChange={onClose}>
+        <DialogContent className="max-w-3xl min-w-100 w-full overflow-auto max-h-[90vh]">
+          <DialogHeader>
+            <DialogTitle>Edit Student Record</DialogTitle>
+            <DialogDescription>
+              Make changes to the student's record here. Click save when you're done.
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleSubmit} id="edit-student-form" className="space-y-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="first_name">First Name</Label>
+              <Input
+                id="first_name"
+                value={data.first_name}
+                onChange={(e) => setData("first_name", e.target.value)}
+              />
+              {errors.first_name && <p className="text-xs text-red-500">{errors.first_name}</p>}
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="middle_name">Middle Name</Label>
+              <Input
+                id="middle_name"
+                value={data.middle_name}
+                onChange={(e) => setData("middle_name", e.target.value)}
+              />
+              {errors.middle_name && <p className="text-xs text-red-500">{errors.middle_name}</p>}
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="last_name">Last Name</Label>
+              <Input
+                id="last_name"
+                value={data.last_name}
+                onChange={(e) => setData("last_name", e.target.value)}
+              />
+              {errors.last_name && <p className="text-xs text-red-500">{errors.last_name}</p>}
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="program">Program</Label>
+              <Input
+                id="program"
+                value={data.program}
+                onChange={(e) => setData("program", e.target.value)}
+              />
+              {errors.program && <p className="text-xs text-red-500">{errors.program}</p>}
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="or_number">O.R. Number</Label>
+              <Input
+                id="or_number"
+                value={data.or_number}
+                onChange={(e) => setData("or_number", e.target.value)}
+              />
+              {errors.or_number && <p className="text-xs text-red-500">{errors.or_number}</p>}
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="payment_date">Payment Date</Label>
+              <Input
+                id="payment_date"
+                type="date"
+                value={data.payment_date}
+                onChange={(e) => setData("payment_date", e.target.value)}
+              />
+              {errors.payment_date && <p className="text-xs text-red-500">{errors.payment_date}</p>}
             </div>
           </form>
-        </div>
-      </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={onClose}>
+              Cancel
+            </Button>
+            <Button type="submit" form="edit-student-form" disabled={processing}>
+              {processing ? "Saving..." : "Save"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Success Prompt */}
       {showPrompt && wasSuccessful && (
