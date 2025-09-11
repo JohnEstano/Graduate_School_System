@@ -26,6 +26,14 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
 import { SearchInput } from '@/components/ui/search-input';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '@/components/ui/dialog';
 
 interface StudentRecord {
   id: number;
@@ -332,21 +340,17 @@ export default function Index({ records, filters }: IndexProps) {
         )}
 
         {/* Modals */}
-        {showIndividualRecord && selectedRecord && (
-          <div className="fixed inset-0 z-50 flex justify-center items-center bg-black/80">
-            <div className="bg-white dark:bg-gray-800 w-1/2 max-h-[80vh] min-h-[40vh] rounded-lg shadow-lg overflow-auto p-2">
-              <IndividualRecord record={selectedRecord} />
-              <div className="text-right">
-                <Button
-                  onClick={() => setShowIndividualRecord(false)}
-                  className="bg-rose-500 hover:bg-rose-600 text-white px-6 py-2 rounded"
-                >
-                  Close
-                </Button>
-              </div>
-            </div>
-          </div>
-        )}
+        <Dialog open={showIndividualRecord} onOpenChange={setShowIndividualRecord}>
+          <DialogContent className="max-w-3xl min-w-190 w-full max-h-[90vh]">
+            <DialogHeader>
+              <DialogTitle>Student Record</DialogTitle>
+              <DialogDescription>
+                Detailed information about the student.
+              </DialogDescription>
+            </DialogHeader>
+            {selectedRecord && <IndividualRecord record={selectedRecord} />}
+          </DialogContent>
+        </Dialog>
 
 {isEditModalOpen && selectedRecord && (
   <EditStudentModal
