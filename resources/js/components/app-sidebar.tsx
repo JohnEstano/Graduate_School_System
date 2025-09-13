@@ -60,13 +60,18 @@ const studentNavItems: MainNavItem[] = [
 const assistantNavItems: MainNavItem[] = [
     { title: 'Dashboard', href: '/dashboard', icon: LayoutGrid },
 
-    { title: 'Comprehensive Exams', href: '/coordinator/compre-exam', icon: FileText },
-    { title: 'Payment Receipt', href: '/coordinator/compre-payment', icon: CreditCard },
-{
-    title: 'All Defense Requests',
-    href: '/coordinator/defense-requests/all',
-    icon: GraduationCap,
-},
+
+     {
+        title: 'Applications',
+        href: '/defense',
+        icon: FileText,
+        subItems: [
+        { title: 'Comprehensive Exams', href: '/coordinator/compre-exam' },
+         { title: 'Payment Receipt', href: '/coordinator/compre-payment'},
+
+        ],
+    },
+   
 
     {
         title: 'Thesis & Dissertations',
