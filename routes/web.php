@@ -14,6 +14,9 @@ use App\Http\Controllers\Auth\GoogleController;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
+use App\Models\User;
+use App\Models\DefenseRequest;
+use App\Http\Controllers\CoordinatorDefenseController;
 
 /*
 |--------------------------------------------------------------------------
@@ -37,9 +40,9 @@ Route::get('/test-upload-limits', function () {
     ]);
 });
 
-// Landing page (public) with call-to-action
+// 
 Route::get('/', function () {
-    return Inertia::render('landing/Index');
+    return redirect('/login');
 })->name('home');
 
 // Google OAuth (domain restricted) routes
@@ -160,6 +163,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // Defense Requirements
     Route::get('/defense-requirements', [DefenseRequirementController::class, 'index'])->name('defense-requirements.index');
     Route::post('/defense-requirements', [DefenseRequirementController::class, 'store'])->name('defense-requirements.store');
+    Route::post('/defense-requirements/{id}/unsubmit', [DefenseRequirementController::class, 'unsubmit'])->middleware('auth');
 
     // All Defense Requirements (adviser/coordinator overview)
     Route::get('/all-defense-requirements', [DefenseRequirementController::class, 'all'])
@@ -270,6 +274,62 @@ Route::prefix('coordinator')->name('coordinator.')->middleware(['auth', 'verifie
         ]);
     })->name('defense-requests.all');
 
+    Route::get('/coordinator/defense-requests/all', [CoordinatorDefenseController::class, 'allDefenseRequests'])
+        ->name('coordinator.defense-requests.all');
+
+    Route::get('/defense-requests/all-defense-requests', [\App\Http\Controllers\CoordinatorDefenseController::class, 'allDefenseRequests'])
+        ->name('coordinator.defense-requests.all-defense-requests');
+
+    // Details page
+    Route::get('/defense-requests/{defenseRequest}/details', function(DefenseRequest $defenseRequest) {
+        $user = Auth::user();
+        $roles = ['Coordinator','Administrative Assistant','Dean'];
+        if (!$user || !in_array($user->role,$roles)) abort(403);
+
+        $mapped = [
+            'id' => $defenseRequest->id,
+            'first_name' => $defenseRequest->first_name,
+            'middle_name' => $defenseRequest->middle_name,
+            'last_name' => $defenseRequest->last_name,
+            'school_id' => $defenseRequest->school_id,
+            'program' => $defenseRequest->program,
+            'thesis_title' => $defenseRequest->thesis_title,
+            'defense_type' => $defenseRequest->defense_type,
+            'status' => $defenseRequest->status,
+            'priority' => $defenseRequest->priority,
+            'workflow_state' => $defenseRequest->workflow_state,
+            'defense_adviser' => $defenseRequest->defense_adviser,
+            'defense_chairperson' => $defenseRequest->defense_chairperson,
+            'defense_panelist1' => $defenseRequest->defense_panelist1,
+            'defense_panelist2' => $defenseRequest->defense_panelist2,
+            'defense_panelist3' => $defenseRequest->defense_panelist3,
+            'defense_panelist4' => $defenseRequest->defense_panelist4,
+            'scheduled_date' => $defenseRequest->scheduled_date?->format('Y-m-d'),
+            'scheduled_time' => $defenseRequest->scheduled_time?->format('H:i'),
+            'scheduled_end_time' => $defenseRequest->scheduled_end_time?->format('H:i'),
+            'defense_mode' => $defenseRequest->defense_mode,
+            'defense_venue' => $defenseRequest->defense_venue,
+            'scheduling_notes' => $defenseRequest->scheduling_notes,
+            'advisers_endorsement' => $defenseRequest->advisers_endorsement,
+            'rec_endorsement' => $defenseRequest->rec_endorsement,
+            'proof_of_payment' => $defenseRequest->proof_of_payment,
+            'reference_no' => $defenseRequest->reference_no,
+            'last_status_updated_by' => $defenseRequest->last_status_updated_by,
+            'last_status_updated_at' => $defenseRequest->last_status_updated_at,
+            'workflow_history' => $defenseRequest->workflow_history ?? [],
+        ];
+
+        return Inertia::render('coordinator/submissions/defense-request/details', [
+            'defenseRequest' => $mapped,
+            'userRole' => $user->role
+        ]);
+    })->name('defense-requests.details');
+
+    // JSON endpoints
+    Route::post('/defense-requests/{defenseRequest}/assign-panels-json', [CoordinatorDefenseController::class,'assignPanelsJson'])
+        ->name('defense-requests.assign-panels-json');
+    Route::post('/defense-requests/{defenseRequest}/schedule-json', [CoordinatorDefenseController::class,'scheduleDefenseJson'])
+        ->name('defense-requests.schedule-json');
 }); // end coordinator group
 
 
@@ -293,3 +353,122 @@ Route::get('/legacy/faculty/class-list', [\App\Http\Controllers\InstructorClassL
 // Additional route files
 require __DIR__ . '/settings.php';
 require __DIR__ . '/auth.php';
+
+
+Route::get('/api/faculty-search', function (\Illuminate\Http\Request $request) {
+    $q = $request->input('q', '');
+    return User::where(function($query) use ($q) {
+        $query->where('first_name', 'like', "%$q%")
+              ->orWhere('last_name', 'like', "%$q%");
+    })
+    ->where(function($query) {
+        $query->where('role', 'Faculty')
+              ->orWhereHas('roles', fn($q) => $q->where('name', 'Faculty'));
+    })
+    ->limit(10)
+    ->get(['id', 'first_name', 'middle_name', 'last_name']);
+});
+
+// Additional API route for coordinator defense requests
+Route::get('/api/coordinator/defense-requests', function () {
+    $user = Auth::user();
+    $coordinatorRoles = ['Coordinator', 'Administrative Assistant', 'Dean'];
+    if (! in_array($user->role, $coordinatorRoles)) {
+        abort(403, 'Unauthorized');
+    }
+
+    $defenseRequests = \App\Models\DefenseRequest::with([
+            'user', 'adviserUser', 'lastStatusUpdater'
+        ])
+        ->whereIn('workflow_state', ['adviser-approved', 'coordinator-review', 'coordinator-approved', 'scheduled'])
+        ->orderBy('adviser_reviewed_at', 'desc')
+        ->orderBy('created_at', 'desc')
+        ->get()
+        ->map(function ($request) {
+            return [
+                'id' => $request->id,
+                'first_name' => $request->first_name,
+                'middle_name' => $request->middle_name,
+                'last_name' => $request->last_name,
+                'program' => $request->program,
+                'thesis_title' => $request->thesis_title,
+                'date_of_defense' => $request->scheduled_date ? $request->scheduled_date->format('Y-m-d') : '',
+                'mode_defense' => $request->defense_mode ?? '',
+                'defense_type' => $request->defense_type,
+                'status' => $request->status,
+                'priority' => $request->priority,
+                'last_status_updated_by' => $request->lastStatusUpdater?->name,
+                'last_status_updated_at' => $request->last_status_updated_at,
+            ];
+        });
+
+    return response()->json($defenseRequests->values());
+});
+
+// Find a coordinator group / add near other defense routes:
+
+Route::middleware(['auth'])->group(function () {
+    // Panel members JSON for combobox
+    Route::get(
+        '/coordinator/defense/available-panel-members-json',
+        [CoordinatorDefenseController::class,'availablePanelMembersJson']
+    )->name('coordinator.defense.available-panel-members-json');
+});
+
+// Add after other coordinator routes (ensure auth middleware)
+Route::middleware(['auth','verified'])->get(
+    '/coordinator/defense/panel-members-all',
+    [\App\Http\Controllers\CoordinatorDefenseController::class,'panelMembersAll']
+)->name('coordinator.defense.panel-members-all');
+
+// Add (place near other routes):
+Route::middleware(['auth'])->get('/api/panel-members', [PanelistController::class,'allCombined'])->name('api.panel-members');
+
+Route::post('/coordinator/defense-requests/{defenseRequest}/approve',[CoordinatorDefenseController::class,'approve'])
+    ->middleware('auth');
+
+// Adviser / Coordinator decisions
+Route::middleware(['auth','verified'])->group(function () {
+
+    // Adviser / Coordinator decisions (HTML form posts)
+    Route::post('/defense-requests/{defenseRequest}/adviser-decision', [DefenseRequestController::class,'adviserDecision'])
+        ->name('defense-requests.adviser-decision');
+
+    Route::post('/defense-requests/{defenseRequest}/coordinator-decision',
+        [DefenseRequestController::class,'coordinatorDecision'])->name('defense-requests.coordinator-decision');
+
+    // Coordinator JSON endpoints (used by JS)
+    Route::post('/coordinator/defense-requests/{defenseRequest}/panels',
+        [\App\Http\Controllers\CoordinatorDefenseController::class,'assignPanelsJson'])
+        ->name('coordinator.defense.panels');
+
+    Route::post('/coordinator/defense-requests/{defenseRequest}/schedule',
+        [\App\Http\Controllers\CoordinatorDefenseController::class,'scheduleDefenseJson'])
+        ->name('coordinator.defense.schedule');
+
+    Route::get('/coordinator/defense-requests/all',
+        [\App\Http\Controllers\CoordinatorDefenseController::class,'allDefenseRequests'])
+        ->name('coordinator.defense.all');
+
+    Route::get('/coordinator/panel-members',
+        [\App\Http\Controllers\CoordinatorDefenseController::class,'panelMembersAll'])
+        ->name('coordinator.defense.panelMembers');
+});
+
+// Coordinator / main index
+Route::get('/defense-request', [DefenseRequestController::class,'index'])->name('defense-request.index');
+
+// Adviser / faculty consolidated list
+Route::get('/all-defense-requirements', [DefenseRequirementController::class,'all'])
+    ->name('defense-requirements.all');
+
+// Create (student)
+Route::post('/defense-request', [DefenseRequestController::class,'store'])->name('defense-request.store');
+
+// Adviser decision
+Route::post('/defense-requests/{defenseRequest}/adviser-decision',
+    [DefenseRequestController::class,'adviserDecision'])->name('defense-requests.adviser-decision');
+
+// Coordinator decision
+Route::post('/defense-requests/{defenseRequest}/coordinator-decision',
+    [DefenseRequestController::class,'coordinatorDecision'])->name('defense-requests.coordinator-decision');

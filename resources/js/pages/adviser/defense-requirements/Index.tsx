@@ -24,9 +24,15 @@ export default function Index({
     defenseRequests: any[];
 }) {
     // Filter requests by workflow state
-    const pendingRequests = defenseRequests.filter(r => r.workflow_state === 'adviser-review');
-    const approvedRequests = defenseRequests.filter(r => r.workflow_state === 'coordinator-review' || r.workflow_state === 'approved');
-    const rejectedRequests = defenseRequests.filter(r => r.workflow_state === 'adviser-rejected');
+    const pendingRequests = (defenseRequests || []).filter(
+        (r:any) => ['submitted','adviser-review'].includes(r.workflow_state)
+    );
+    const approvedRequests = (defenseRequests || []).filter(
+        (r:any) => r.workflow_state === 'adviser-approved'
+    );
+    const disapprovedRequests = (defenseRequests || []).filter(
+        (r:any) => r.workflow_state === 'adviser-rejected'
+    );
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
@@ -56,7 +62,7 @@ export default function Index({
                     </TabsContent>
                     <TabsContent value="disapproved" className="flex-1">
                         <ShowAllDefenseRequests 
-                            defenseRequests={rejectedRequests} 
+                            defenseRequests={disapprovedRequests} 
                             showActions={false}
                             title="Disapproved Requirements"
                             description="Defense requests you have rejected"

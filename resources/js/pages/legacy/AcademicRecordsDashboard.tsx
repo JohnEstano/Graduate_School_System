@@ -1,5 +1,9 @@
-import React, { useEffect, useState } from 'react';
-import { router } from '@inertiajs/react';
+import React, { useEffect, useState, useRef } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
+import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
+import { Skeleton } from "@/components/ui/skeleton";
+import { RefreshCw, Printer } from "lucide-react";
 
 interface SemesterOption { id: string; label: string; selected: boolean }
 interface RecordRow { code: string|null; title: string|null; units: number|string|null; course_type: string|null; prelim: string|null; midterm: string|null; finals: string|null; average: string|number|null; average_var: string|number|null; units_earned: number|string|null; section: string|null; current_balance: number|string|null; rating_show: any }
@@ -18,6 +22,10 @@ const AcademicRecordsDashboard: React.FC = () => {
 
   const [semesterId, setSemesterId] = useState<string|undefined>(undefined);
 
+  // For select width
+  const selectRef = useRef<HTMLDivElement>(null);
+  const [selectWidth, setSelectWidth] = useState<number>(180);
+
   const load = () => {
     setLoading(true);
     setError(null);
@@ -35,96 +43,216 @@ const AcademicRecordsDashboard: React.FC = () => {
   useEffect(() => { load(); }, []);
   useEffect(() => { if (semesterId) load(); }, [semesterId]);
 
+  // Print handler for the table
+  const handlePrint = () => {
+    const table = document.getElementById('academic-records-table');
+    if (!table) return;
+    const printWindow = window.open('', '', 'width=900,height=600');
+    if (!printWindow) return;
+    printWindow.document.write('<html><head><title>Print Academic Records</title>');
+    printWindow.document.write('<style>table{width:100%;border-collapse:collapse;}th,td{border:1px solid #ccc;padding:6px;text-align:center;}th{text-align:center;}body{font-family:sans-serif;}</style>');
+    printWindow.document.write('</head><body>');
+    printWindow.document.write(table.outerHTML);
+    printWindow.document.write('</body></html>');
+    printWindow.document.close();
+    printWindow.focus();
+    printWindow.print();
+  };
+
+  // Dynamically set select width based on content
+  useEffect(() => {
+    if (selectRef.current && data?.semesters) {
+      // Find the longest label
+      const longest = data.semesters.reduce((a, b) => a.label.length > b.label.length ? a : b, {label: ""});
+      // Create a temporary span to measure width
+      const span = document.createElement('span');
+      span.style.visibility = 'hidden';
+      span.style.position = 'absolute';
+      span.style.fontSize = '16px';
+      span.style.fontWeight = '400';
+      span.style.padding = '8px';
+      span.innerText = longest.label || "Select semester";
+      document.body.appendChild(span);
+      setSelectWidth(span.offsetWidth + 40); // Add padding for icon
+      document.body.removeChild(span);
+    }
+  }, [data?.semesters]);
+
   return (
     <div className="max-w-5xl mx-auto p-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">Academic Records (Legacy)</h1>
-        <button onClick={load} className="px-3 py-1 text-sm bg-blue-600 text-white rounded disabled:opacity-50" disabled={loading}>Reload</button>
+      {/* Top Buttons */}
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex gap-2">
+          <button
+            onClick={load}
+            className="px-3 py-2 rounded border flex items-center gap-2 disabled:opacity-50"
+            disabled={loading}
+            title="Reload"
+          >
+            <RefreshCw size={18} className={loading ? "animate-spin" : ""} />
+          </button>
+          <button
+            onClick={handlePrint}
+            className="px-3 py-2 rounded border flex items-center gap-2"
+            title="Print Table"
+            disabled={loading}
+          >
+            <Printer size={18} />
+          </button>
+        </div>
       </div>
 
-      {loading && <div className="p-4 border rounded animate-pulse">Loading academic records...</div>}
-      {error && (
-        <div className="p-4 border rounded bg-red-50 text-red-700">
-          Failed to load: {error} — try logging out/in if session expired.
-        </div>
+      {/* Skeleton Loading */}
+      {loading && (
+        <>
+          <Card className="rounded-xl border mb-4 shadow-none w-full">
+            <CardHeader>
+              <CardTitle>
+                <Skeleton className="h-6 w-1/3 bg-gray-200" />
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-4 w-full">
+              <div>
+                <Skeleton className="h-4 w-24 mb-2 bg-gray-200" />
+                <Skeleton className="h-4 w-32 mb-2 bg-gray-200" />
+                <Skeleton className="h-4 w-40 mb-2 bg-gray-200" />
+                <Skeleton className="h-4 w-28 mb-2 bg-gray-200" />
+                <Skeleton className="h-4 w-20 mt-2 bg-gray-200" />
+              </div>
+              <div className="md:col-span-2">
+                <Skeleton className="h-4 w-24 mb-2 bg-gray-200" />
+                <Skeleton className="h-10 bg-gray-200" style={{ width: selectWidth }} />
+                <Skeleton className="h-3 w-32 mt-2 bg-gray-200" />
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="rounded-xl border shadow-none w-full">
+            <CardHeader>
+              <CardTitle>
+                <Skeleton className="h-6 w-1/4 bg-gray-200" />
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="w-full">
+              <div className="flex items-center justify-between mb-3 w-full">
+                <Skeleton className="h-5 w-24 bg-gray-200" />
+                <Skeleton className="h-4 w-12 bg-gray-200" />
+              </div>
+              <div className="overflow-x-auto w-full">
+                <div className="min-w-[700px] w-full">
+                  {/* Table skeleton: 3 rows, full width */}
+                  {[...Array(3)].map((_, i) => (
+                    <Skeleton key={i} className="h-8 w-full mb-2 bg-gray-200" />
+                  ))}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </>
       )}
-      {!loading && !error && data && (
-        <div className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="p-4 border rounded bg-white">
-              <h2 className="text-sm font-medium text-gray-500 mb-2">Student</h2>
-              <p className="text-sm"><span className="font-semibold">Number:</span> {data.student.student_number || '—'}</p>
-              <p className="text-sm"><span className="font-semibold">Name:</span> {data.student.name || '—'}</p>
-              <p className="text-sm"><span className="font-semibold">Program:</span> {data.student.program || '—'}</p>
-              {data.gwa && <p className="mt-2 text-sm"><span className="font-semibold">GWA:</span> {data.gwa}</p>}
-            </div>
-            <div className="p-4 border rounded bg-white md:col-span-2">
-              <h2 className="text-sm font-medium text-gray-500 mb-2">Semesters</h2>
-              <div className="flex flex-wrap gap-2 max-h-40 overflow-auto">
-                {data.semesters.map(s => {
-                  const active = (semesterId ?? data.current_semester_id) === s.id;
-                  return (
-                    <button
-                      key={s.id}
-                      onClick={() => setSemesterId(s.id)}
-                      className={`px-2 py-1 text-xs rounded border transition ${active ? 'bg-blue-600 text-white' : 'bg-gray-100 hover:bg-gray-200'}`}
-                    >{s.label}</button>
-                  );
-                })}
-              </div>
-              <p className="text-xs text-gray-500 mt-2">Click a semester to reload real grades.</p>
-            </div>
-          </div>
 
-          <div className="p-4 border rounded bg-white">
-            <div className="flex items-center justify-between mb-3">
-              <h2 className="text-lg font-semibold">Courses</h2>
-              <span className="text-xs text-gray-500">{data.records.length} rows</span>
-            </div>
-            {data.records.length === 0 && (
-              <div className="text-sm text-gray-500">No records returned for this semester.</div>
-            )}
-            {data.records.length > 0 && (
-              <div className="overflow-x-auto">
-                <table className="min-w-full text-sm border">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="px-2 py-1 border text-left">Code</th>
-                      <th className="px-2 py-1 border text-left">Title</th>
-                      <th className="px-2 py-1 border">Units</th>
-                      <th className="px-2 py-1 border">Type</th>
-                      <th className="px-2 py-1 border">Prelim</th>
-                      <th className="px-2 py-1 border">Midterm</th>
-                      <th className="px-2 py-1 border">Finals</th>
-                      <th className="px-2 py-1 border">Average</th>
-                      <th className="px-2 py-1 border">Units Earned</th>
-                      <th className="px-2 py-1 border">Section</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {data.records.map((r,i) => {
-                      const avg = r.average || r.average_var || '';
-                      return (
-                        <tr key={i} className="hover:bg-gray-50">
-                          <td className="px-2 py-1 border">{r.code}</td>
-                          <td className="px-2 py-1 border">{r.title}</td>
-                          <td className="px-2 py-1 border text-center">{r.units}</td>
-                          <td className="px-2 py-1 border text-center">{r.course_type}</td>
-                          <td className="px-2 py-1 border text-center">{r.prelim}</td>
-                          <td className="px-2 py-1 border text-center">{r.midterm}</td>
-                          <td className="px-2 py-1 border text-center">{r.finals}</td>
-                          <td className="px-2 py-1 border text-center">{avg}{avg && r.units_earned !== null ? ` / ${r.units_earned}` : ''}</td>
-                          <td className="px-2 py-1 border text-center">{r.units_earned}</td>
-                          <td className="px-2 py-1 border text-center">{r.section}</td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
+      {/* Error */}
+      {error && (
+        <Card className="rounded-xl border mb-4 shadow-none">
+          <CardContent className="bg-red-50 text-red-700">
+            Failed to load: {error} — try logging out/in if session expired.
+          </CardContent>
+        </Card>
+      )}
+
+   
+      {!loading && !error && data && (
+        <>
+          <Card className="rounded-xl border mb-4 shadow-none w-full">
+            <CardHeader>
+              <CardTitle>Student Information & Semester</CardTitle>
+            </CardHeader>
+            <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-4 w-full">
+              <div>
+                <h2 className="text-sm font-medium text-gray-500 mb-2">Student</h2>
+                <p className="text-sm"><span className="font-semibold">School ID:</span> {data.student.student_number || '—'}</p>
+                <p className="text-sm"><span className="font-semibold">Name:</span> {data.student.name || '—'}</p>
+                <p className="text-sm"><span className="font-semibold">Program:</span> {data.student.program || '—'}</p>
+                {data.gwa && <p className="mt-2 text-sm"><span className="font-semibold">GWA:</span> {data.gwa}</p>}
               </div>
-            )}
-          </div>
-        </div>
+              <div className="md:col-span-2">
+                <h2 className="text-sm font-medium text-gray-500 mb-2">Semester</h2>
+                <div ref={selectRef} style={{ width: selectWidth }}>
+                  <Select
+                    value={semesterId ?? data.current_semester_id ?? ""}
+                    onValueChange={val => setSemesterId(val)}
+                  >
+                    <SelectTrigger className="w-full bg-gray-100 border rounded" style={{ width: selectWidth }}>
+                      <SelectValue placeholder="Select semester" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {data.semesters.map(s => (
+                        <SelectItem key={s.id} value={s.id}>
+                          {s.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <p className="text-xs text-gray-500 mt-2">Select a semester to reload real grades.</p>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="rounded-xl border shadow-none w-full">
+            <CardHeader>
+              <CardTitle>Courses</CardTitle>
+            </CardHeader>
+            <CardContent className="w-full">
+              <div className="flex items-center justify-between mb-3 w-full">
+                <span className="text-lg font-semibold">Courses</span>
+                <span className="text-xs text-gray-500">{data.records.length} rows</span>
+              </div>
+              {data.records.length === 0 ? (
+                <div className="text-sm text-gray-500">No records returned for this semester.</div>
+              ) : (
+                <div className="overflow-x-auto w-full">
+                  <Table id="academic-records-table">
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Code</TableHead>
+                        <TableHead>Title</TableHead>
+                        <TableHead>Units</TableHead>
+                        <TableHead>Type</TableHead>
+                        <TableHead>Prelim</TableHead>
+                        <TableHead>Midterm</TableHead>
+                        <TableHead>Finals</TableHead>
+                        <TableHead>Average</TableHead>
+                        <TableHead>Units Earned</TableHead>
+                        <TableHead>Section</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {data.records.map((r, i) => {
+                        const avg = r.average || r.average_var || '';
+                        return (
+                          <TableRow key={i} className="hover:bg-gray-50">
+                            <TableCell>{r.code}</TableCell>
+                            <TableCell>{r.title}</TableCell>
+                            <TableCell className="text-center">{r.units}</TableCell>
+                            <TableCell className="text-center">{r.course_type}</TableCell>
+                            <TableCell className="text-center">{r.prelim}</TableCell>
+                            <TableCell className="text-center">{r.midterm}</TableCell>
+                            <TableCell className="text-center">{r.finals}</TableCell>
+                            <TableCell className="text-center">
+                              {avg}{avg && r.units_earned !== null ? ` / ${r.units_earned}` : ''}
+                            </TableCell>
+                            <TableCell className="text-center">{r.units_earned}</TableCell>
+                            <TableCell className="text-center">{r.section}</TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </>
       )}
     </div>
   );

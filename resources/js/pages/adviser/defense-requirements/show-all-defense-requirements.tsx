@@ -86,23 +86,22 @@ export default function ShowAllDefenseRequirements({
     defenseRequirements = [],
     defenseRequests = [],
 }: { defenseRequirements: DefenseRequirement[]; defenseRequests: any[] }) {
+    // Use defenseRequirements if provided, else fallback to defenseRequests
+    const source = (defenseRequirements && defenseRequirements.length > 0)
+        ? defenseRequirements
+        : defenseRequests;
+
     const [openItems, setOpenItems] = useState<Record<number, boolean>>({});
     const [endorseDialogId, setEndorseDialogId] = useState<number | null>(null);
-    const [search, setSearch] = useState(""); // Add search state
+    const [search, setSearch] = useState("");
 
     useEffect(() => {
         setOpenItems({});
         setEndorseDialogId(null);
-    }, [defenseRequirements]);
+    }, [source]);
 
-    // Filter out requirements that have already been endorsed
-    const endorsedKeys = new Set(
-        defenseRequests.map(req => `${req.school_id}-${req.thesis_title}`.toLowerCase())
-    );
-    const filteredRequirements = defenseRequirements.filter(req => {
-        const key = `${req.school_id}-${req.thesis_title}`.toLowerCase();
-        return !endorsedKeys.has(key);
-    }).filter(req => {
+    // ONLY search & sort – removed "already endorsed" exclusion to prevent hiding all rows
+    const filteredRequirements = source.filter(req => {
         const name = getDisplayName(req).toLowerCase();
         const thesis = req.thesis_title?.toLowerCase() || "";
         const q = search.toLowerCase();
@@ -240,4 +239,24 @@ export default function ShowAllDefenseRequirements({
             </div>
         </div>
     );
+}
+
+// Ensure <meta name="csrf-token" content="{{ csrf_token() }}"> is in your layout.
+async function adviserApprove(id: number, comment: string) {
+  const csrf = (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content || '';
+  const res = await fetch(`/defense-requests/${id}/adviser-decision`, {
+    method: 'POST',
+    headers: {
+      'Content-Type':'application/json',
+      'X-CSRF-TOKEN': csrf,
+      'Accept':'application/json'
+    },
+    body: JSON.stringify({ decision: 'approve', comment: comment || '' })
+  });
+  if (!res.ok) {
+    let msg = `HTTP ${res.status}`;
+    try { const j = await res.json(); msg = j.error || msg; } catch {}
+    throw new Error(msg);
+  }
+  return res.json();
 }

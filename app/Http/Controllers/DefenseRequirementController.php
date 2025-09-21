@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\DefenseRequest;
+use App\Models\DefenseRequestCancellation;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
@@ -28,50 +29,84 @@ class DefenseRequirementController extends Controller
         $user = Auth::user();
         if (!$user) abort(401);
 
-        // Define role-based access
-        $coordinatorRoles = ['Coordinator', 'Administrative Assistant', 'Dean'];
-        $isCoordinator = in_array($user->role, $coordinatorRoles);
-        $isFaculty = $user->role === 'Faculty';
+        $coordinatorRoles = ['Coordinator','Administrative Assistant','Dean'];
+        if (in_array($user->role, $coordinatorRoles)) {
+            // Coordinator: ONLY post‑adviser
+            $requests = DefenseRequest::whereIn('workflow_state', [
+                'adviser-approved','coordinator-review','coordinator-approved',
+                'coordinator-rejected','panels-assigned','scheduled','completed'
+            ])->orderByDesc('created_at')->get();
 
-        if ($isCoordinator) {
-            // Coordinators can only see requests that have been approved by advisers
-            $requirements = DefenseRequest::with(['user' => function($query) {
-                $query->select('id', 'first_name', 'last_name', 'school_id', 'program');
-            }])
-            ->whereIn('workflow_state', ['adviser-approved', 'coordinator-review', 'coordinator-approved', 'coordinator-rejected', 'scheduled', 'completed'])
-            ->get();
-            
-            $requests = DefenseRequest::with(['adviserUser', 'assignedTo', 'adviserReviewer'])
-                ->whereIn('workflow_state', ['adviser-approved', 'coordinator-review', 'coordinator-approved', 'coordinator-rejected', 'scheduled', 'completed'])
-                ->orderByDesc('created_at')
-                ->get();
-                
-        } elseif ($isFaculty) {
-            // Faculty/Advisers: only see requests assigned to them
-            $requirements = DefenseRequest::with(['user' => function($query) {
-                $query->select('id', 'first_name', 'last_name', 'school_id', 'program');
-            }])
-                ->where(function($q) use ($user){
-                    $q->where('adviser_user_id', $user->id)
-                      ->orWhere('assigned_to_user_id', $user->id);
-                })
-                ->get();
-
-            $requests = DefenseRequest::with(['adviserUser', 'assignedTo', 'adviserReviewer'])
-                ->where(function($q) use ($user){
-                    $q->where('adviser_user_id', $user->id)
-                      ->orWhere('assigned_to_user_id', $user->id);
-                })
-                ->orderByDesc('created_at')
-                ->get();
-        } else {
-            // Other roles have no access
-            $requirements = collect();
-            $requests = collect();
+            return inertia('adviser/defense-requirements/Index', [
+                'defenseRequirements' => [],
+                'defenseRequests' => $requests,
+            ]);
         }
 
+        if (!in_array($user->role, ['Faculty','Adviser'])) {
+            return inertia('adviser/defense-requirements/Index', [
+                'defenseRequirements' => [],
+                'defenseRequests' => [],
+            ]);
+        }
+
+        $norm = fn(string $v) => preg_replace('/\s+/',' ', trim(strtolower($v)));
+        $first = $norm($user->first_name);
+        $last  = $norm($user->last_name);
+
+        // Fetch anything tied by IDs OR textual adviser match, limited to early/adviser states
+        $requests = DefenseRequest::where(function($q) use ($user,$first,$last) {
+                $q->where('adviser_user_id', $user->id)
+                  ->orWhere('assigned_to_user_id', $user->id)
+                  ->orWhere(function($sub) use ($first,$last) {
+                      $sub->whereNull('adviser_user_id')
+                          ->whereNull('assigned_to_user_id')
+                          ->whereNotNull('defense_adviser')
+                          ->whereRaw('LOWER(defense_adviser) LIKE ?', ["%$first%"])
+                          ->whereRaw('LOWER(defense_adviser) LIKE ?', ["%$last%"]);
+                  });
+            })
+            ->whereIn('workflow_state', [
+                'submitted','adviser-review','adviser-approved','adviser-rejected'
+            ])
+            ->orderByDesc('created_at')
+            ->get();
+
+        // Retro-map ONLY if unassigned & textual match
+        foreach ($requests as $r) {
+            if (!$r->adviser_user_id && !$r->assigned_to_user_id) {
+                $name = $norm($r->defense_adviser ?? '');
+                if ($name && str_contains($name,$first) && str_contains($name,$last)) {
+                    $r->forceFill([
+                        'adviser_user_id' => $user->id,
+                        'assigned_to_user_id' => $user->id,
+                        // Keep 'submitted' unless already touched
+                        'workflow_state' => in_array($r->workflow_state, [null,'']) ? 'submitted' : $r->workflow_state,
+                    ])->save();
+                }
+            }
+        }
+
+        // Re-query after possible mapping
+        $requests = DefenseRequest::where(function($q) use ($user,$first,$last) {
+                $q->where('adviser_user_id', $user->id)
+                  ->orWhere('assigned_to_user_id', $user->id)
+                  ->orWhere(function($sub) use ($first,$last) {
+                      $sub->whereNull('adviser_user_id')
+                          ->whereNull('assigned_to_user_id')
+                          ->whereNotNull('defense_adviser')
+                          ->whereRaw('LOWER(defense_adviser) LIKE ?', ["%$first%"])
+                          ->whereRaw('LOWER(defense_adviser) LIKE ?', ["%$last%"]);
+                  });
+            })
+            ->whereIn('workflow_state', [
+                'submitted','adviser-review','adviser-approved','adviser-rejected'
+            ])
+            ->orderByDesc('created_at')
+            ->get();
+
         return inertia('adviser/defense-requirements/Index', [
-            'defenseRequirements' => $requirements,
+            'defenseRequirements' => [],
             'defenseRequests' => $requests,
         ]);
     }
@@ -180,31 +215,32 @@ class DefenseRequirementController extends Controller
             // Try to map adviser name to user ID
             if ($defenseRequestData['defense_adviser']) {
                 $adviserName = trim($defenseRequestData['defense_adviser']);
-                $adviserUser = \App\Models\User::where(function($query) use ($adviserName) {
-                    $query->whereRaw('CONCAT(first_name, " ", last_name) = ?', [$adviserName])
-                          ->orWhereRaw('CONCAT(last_name, ", ", first_name) = ?', [$adviserName]);
-                    
-                    $nameParts = preg_split('/\s+/', $adviserName);
-                    if (count($nameParts) >= 2) {
-                        $firstName = $nameParts[0];
-                        $lastName = end($nameParts);
-                        
-                        $query->orWhere(function($q) use ($firstName, $lastName) {
-                            $q->where('first_name', 'LIKE', '%' . $firstName . '%')
-                              ->where('last_name', 'LIKE', '%' . $lastName . '%');
-                        });
-                    }
-                })
-                ->where('role', 'Faculty')
-                ->first();
-                
-                if ($adviserUser) {
-                    $defenseRequestData['adviser_user_id'] = $adviserUser->id;
-                    $defenseRequestData['assigned_to_user_id'] = $adviserUser->id;
-                    $defenseRequestData['workflow_state'] = 'adviser-review'; // Automatically route to adviser
+                $normalized = preg_replace('/\s+/',' ', strtolower($adviserName));
+
+                $userMatch = \App\Models\User::whereIn('role',['Faculty','Adviser'])
+                    ->get()
+                    ->first(function($u) use ($normalized) {
+                        $combo1 = strtolower($u->first_name.' '.$u->last_name);
+                        $combo2 = strtolower($u->last_name.', '.$u->first_name);
+                        return str_contains($normalized,$combo1) || str_contains($normalized,$combo2);
+                    });
+
+                if ($userMatch) {
+                    $defenseRequestData['adviser_user_id'] = $userMatch->id;
+                    $defenseRequestData['assigned_to_user_id'] = $userMatch->id;
+                    $defenseRequestData['workflow_state'] = 'adviser-review';
                 }
             }
 
+            // Ensure initial workflow_state is 'submitted' only.
+            $defenseRequestData['workflow_state'] = 'submitted';
+
+            // If adviser matched earlier code may have set adviser_user_id; DO NOT escalate visibility.
+            // Remove any accidental adviser-approved / coordinator-* states.
+            unset($defenseRequestData['status']); // optional: let it default (or set $defenseRequestData['status'] = 'pending';)
+            $defenseRequestData['status'] = $defenseRequestData['status'] ?? 'pending';
+
+            // Now create
             $defenseRequest = DefenseRequest::create($defenseRequestData);
             
             // Add workflow history entry
@@ -220,5 +256,41 @@ class DefenseRequirementController extends Controller
         }
 
         return redirect()->back()->with('success', 'Defense requirements submitted successfully!');
+    }
+
+    public function unsubmit(Request $request, $id)
+    {
+        $defenseRequest = DefenseRequest::findOrFail($id);
+
+        if ($defenseRequest->submitted_by !== Auth::id()) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
+        }
+
+        $allowedStates = ['pending', 'submitted', 'adviser-review'];
+        $currentState = strtolower($defenseRequest->workflow_state ?? '');
+        $currentStatus = strtolower($defenseRequest->status ?? '');
+
+        if (!in_array($currentState, $allowedStates) && $currentStatus !== 'pending') {
+            return response()->json([
+                'success' => false,
+                'message' => 'You can only unsubmit requirements that are still pending or under adviser review.'
+            ], 403);
+        }
+
+        $reason = $request->input('reason');
+
+        // Create cancellation record
+        DefenseRequestCancellation::create([
+            'defense_request_id' => $defenseRequest->id,
+            'cancelled_by' => Auth::id(),
+            'reason' => $reason,
+        ]); 
+
+        // Update the defense request status
+        $defenseRequest->status = 'Cancelled';
+        $defenseRequest->workflow_state = 'cancelled';
+        $defenseRequest->save();
+
+        return response()->json(['success' => true]);
     }
 }

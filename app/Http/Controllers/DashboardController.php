@@ -80,6 +80,7 @@ class DashboardController extends Controller
                     'avatar' => $user->avatar ?? null,
                     'role' => $user->role, // legacy column (may be null)
                     'effective_role' => $effective,
+                    'school_id' => $user->school_id, // <-- add this line
                     'created_at' => $user->created_at ?? null,
                     'updated_at' => $user->updated_at ?? null,
                 ],

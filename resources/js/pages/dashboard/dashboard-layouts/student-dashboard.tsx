@@ -23,6 +23,7 @@ type PageProps = {
             id: number;
             name: string;
             role: string;
+            school_id?: string;
         } | null;
     };
     defenseRequirement?: DefenseRequirement;
@@ -121,7 +122,7 @@ export default function StudentDashboard() {
     return (
         <div className="flex h-full flex-1 flex-col gap-4 overflow-auto rounded-xl pt-5">
             {/* Header */}
-            <div className="mb-8 mt-3 flex flex-row justify-between items-center relative overflow-hidden" style={{ minHeight: '120px' }}>
+            <div className="mb-4 mt-3 flex flex-row justify-between items-center relative overflow-hidden" style={{ minHeight: '120px' }}>
                 <div className="flex flex-col pr-8 pl-7">
                     <span className="flex items-center text-xs font-semibold text-gray-700 dark:text-gray-200 mb-1 relative z-10">
                         {isDaytime() ? (
@@ -136,6 +137,12 @@ export default function StudentDashboard() {
                     </h1>
                     <span className="text-xs text-gray-400 dark:text-gray-500 mt-1 relative z-10">
                         {user?.role ?? 'Student'}
+                        {user?.school_id && (
+                            <>
+                                <span className="mx-1">/</span>
+                                <span className="text-rose-500 font-bold">{user.school_id}</span>
+                            </>
+                        )}
                     </span>
                 </div>
                 <div className="flex items-center">
@@ -145,7 +152,7 @@ export default function StudentDashboard() {
             </div>
 
             {/* Widgets Body */}
-            <div className="flex flex-col gap-6 bg-gray-100 ms-4 me-4 rounded-xl mt-2 mb-2 px-5 py-8">
+            <div className="flex flex-col gap-6 bg-gray-100 ms-4 me-4 rounded-xl mt-2  px-5 py-8">
                 <div className="w-full mb-2 flex flex-col md:flex-row gap-4">
                     <DefenseStatusWidget
                         defenseRequirement={defenseRequirement}

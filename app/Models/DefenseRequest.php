@@ -4,255 +4,155 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
+use App\Models\User;
 
 class DefenseRequest extends Model
 {
     protected $fillable = [
-        'first_name', 'middle_name', 'last_name',
-        'school_id', 'program', 'thesis_title', 'date_of_defense',
-        'mode_defense', 'defense_type',
-        'advisers_endorsement', 'rec_endorsement', 'proof_of_payment', 'reference_no',
-        'defense_adviser', 'defense_chairperson',
-        'defense_panelist1', 'defense_panelist2', 'defense_panelist3', 'defense_panelist4',
-        'status', 'priority', 'last_status_updated_at', 'last_status_updated_by',
-        'submitted_by', 'submitted_at',
-        'adviser_user_id', 'assigned_to_user_id', 'workflow_state',
-        'adviser_comments', 'adviser_reviewed_at', 'adviser_reviewed_by',
-        'coordinator_comments', 'coordinator_reviewed_at', 'coordinator_reviewed_by',
-        'workflow_history',
-        'manuscript_proposal', 'similarity_index',
-        // Professional Defense Scheduling Fields
-        'scheduled_date', 'scheduled_time', 'scheduled_end_time', 'defense_duration_minutes', 
-        'formatted_time_range', 'defense_mode', 'defense_venue', 'scheduling_notes',
-        'panels_assigned_at', 'panels_assigned_by', 'schedule_set_at', 'schedule_set_by',
-        'adviser_notified_at', 'student_notified_at', 'panels_notified_at', 'scheduling_status',
+        'first_name','middle_name','last_name','school_id','program','thesis_title',
+        'defense_type','defense_adviser','advisers_endorsement','rec_endorsement',
+        'proof_of_payment','reference_no','defense_chairperson','defense_panelist1',
+        'defense_panelist2','defense_panelist3','defense_panelist4','submitted_by',
+        'status','priority','workflow_state','workflow_history','adviser_comments',
+        'coordinator_comments','adviser_user_id','assigned_to_user_id','panels_assigned_by',
+        'schedule_set_by','last_status_updated_by','scheduled_date','scheduled_time',
+        'scheduled_end_time','defense_mode','defense_venue','adviser_reviewed_at',
+        'adviser_reviewed_by','coordinator_reviewed_at','coordinator_reviewed_by',
+        'panels_assigned_at','submitted_at','schedule_set_at','last_status_updated_at'
     ];
 
     protected $casts = [
-        'workflow_history' => 'array',
-        'adviser_reviewed_at' => 'datetime',
+        'workflow_history'        => 'array',
+        'submitted_at'            => 'datetime',
+        'adviser_reviewed_at'     => 'datetime',
         'coordinator_reviewed_at' => 'datetime',
-        'submitted_at' => 'datetime',
-        'last_status_updated_at' => 'datetime',
-        // Professional Scheduling Casts
-        'scheduled_date' => 'datetime',
-        'scheduled_time' => 'datetime',
-        'scheduled_end_time' => 'datetime',
-        'panels_assigned_at' => 'datetime',
-        'schedule_set_at' => 'datetime',
-        'adviser_notified_at' => 'datetime',
-        'student_notified_at' => 'datetime',
-        'panels_notified_at' => 'datetime',
+        'panels_assigned_at'      => 'datetime',
+        'schedule_set_at'         => 'datetime',
+        'last_status_updated_at'  => 'datetime',
+        'scheduled_date'          => 'datetime',
+        'scheduled_time'          => 'datetime',
+        'scheduled_end_time'      => 'datetime',
+        'created_at'              => 'datetime',
+        'updated_at'              => 'datetime',
     ];
 
-    public function lastStatusUpdater()
+    /* ================= Relationships ================= */
+    public function user()                { return $this->belongsTo(User::class,'submitted_by'); }
+    public function adviserUser()         { return $this->belongsTo(User::class,'adviser_user_id'); }
+    public function assignedTo()          { return $this->belongsTo(User::class,'assigned_to_user_id'); }
+    public function panelsAssignedBy()    { return $this->belongsTo(User::class,'panels_assigned_by'); }
+    public function scheduleSetBy()       { return $this->belongsTo(User::class,'schedule_set_by'); }
+    public function lastStatusUpdater()   { return $this->belongsTo(User::class,'last_status_updated_by'); }
+    public function adviserReviewer()     { return $this->belongsTo(User::class,'adviser_reviewed_by'); }
+    public function coordinatorReviewer() { return $this->belongsTo(User::class,'coordinator_reviewed_by'); }
+
+    /* ================= Helpers ================= */
+    public function scopeForAdviser($q, User $user)
     {
-        return $this->belongsTo(\App\Models\User::class, 'last_status_updated_by');
+        $lname = strtolower($user->last_name);
+        $fname = strtolower($user->first_name);
+        return $q->where(function($qq) use ($user,$lname,$fname) {
+            $qq->where('adviser_user_id',$user->id)
+               ->orWhere('assigned_to_user_id',$user->id)
+               ->orWhereRaw('LOWER(defense_adviser) LIKE ?', ["%{$lname}%"])
+               ->orWhereRaw('LOWER(defense_adviser) LIKE ?', ["%{$fname}%"]);
+        });
     }
 
-    public function adviserUser()
+    public function getWorkflowStateDisplayAttribute()
     {
-        return $this->belongsTo(User::class, 'adviser_user_id');
+        return match($this->workflow_state) {
+            'submitted','adviser-review'    => 'Submitted',
+            'adviser-approved'              => 'Adviser Approved',
+            'adviser-rejected'              => 'Adviser Rejected',
+            'coordinator-approved'          => 'Coordinator Approved',
+            'coordinator-rejected'          => 'Coordinator Rejected',
+            'panels-assigned'               => 'Panels Assigned',
+            'scheduled'                     => 'Scheduled',
+            'completed'                     => 'Completed',
+            default                         => ucfirst($this->workflow_state ?? 'Unknown'),
+        };
     }
 
-    public function assignedTo()
+    public function ensureSubmittedHistory()
     {
-        return $this->belongsTo(User::class, 'assigned_to_user_id');
+        if (!$this->submitted_at) {
+            $this->submitted_at = $this->created_at ?: now();
+        }
+        $hist = $this->workflow_history ?? [];
+        $hasSubmitted = collect($hist)->contains(fn($h)=>($h['action']??'')==='submitted');
+        if (!$hasSubmitted) {
+            $hist[] = [
+                'action'=>'submitted',
+                'timestamp'=>($this->submitted_at ?: now())->toISOString(),
+                'user_id'=>$this->submitted_by,
+                'user_name'=>null,
+                'from_state'=>null,
+                'to_state'=>'submitted'
+            ];
+            $this->workflow_history = $hist;
+        }
+        return $this;
     }
 
-    public function user()
-    {
-        return $this->belongsTo(User::class, 'submitted_by');
-    }
-
-    public function adviserReviewer()
-    {
-        return $this->belongsTo(User::class, 'adviser_reviewed_by');
-    }
-
-    public function coordinatorReviewer()
-    {
-        return $this->belongsTo(User::class, 'coordinator_reviewed_by');
-    }
-
-    public function panelsAssignedBy()
-    {
-        return $this->belongsTo(User::class, 'panels_assigned_by');
-    }
-
-    public function scheduleSetBy()
-    {
-        return $this->belongsTo(User::class, 'schedule_set_by');
-    }
-
-    /**
-     * Add an entry to the workflow history
-     */
-    public function addWorkflowEntry($action, $comment = null, $userId = null)
+    public function addWorkflowEntry($action,$comment=null,$userId=null,$from=null,$to=null)
     {
         $history = $this->workflow_history ?? [];
-        $currentUser = Auth::user();
-        
+        $u = $userId ? User::find($userId) : Auth::user();
         $history[] = [
-            'action' => $action,
-            'comment' => $comment,
-            'user_id' => $userId ?? ($currentUser ? $currentUser->id : null),
-            'user_name' => $userId ? User::find($userId)?->first_name . ' ' . User::find($userId)?->last_name : ($currentUser ? $currentUser->first_name . ' ' . $currentUser->last_name : 'System'),
-            'timestamp' => now()->toISOString(),
+            'action'=>$action,
+            'comment'=>$comment,
+            'user_id'=>$u?->id,
+            'user_name'=>$u?->first_name.' '.$u?->last_name,
+            'timestamp'=>now()->toISOString(),
+            'from_state'=>$from,
+            'to_state'=>$to ?? $action
         ];
-        
         $this->workflow_history = $history;
         return $this;
     }
 
-    /**
-     * Get the current workflow state display name
-     */
-    public function getWorkflowStateDisplayAttribute()
+    public function approveByCoordinator(?string $comment=null, ?int $userId=null)
     {
-        return match($this->workflow_state) {
-            'submitted' => 'Submitted to Adviser',
-            'adviser-review' => 'Under Adviser Review',
-            'adviser-approved' => 'Approved by Adviser',
-            'adviser-rejected' => 'Rejected by Adviser',
-            'coordinator-review' => 'Under Coordinator Review',
-            'coordinator-approved' => 'Approved by Coordinator',
-            'coordinator-rejected' => 'Rejected by Coordinator',
-            'scheduled' => 'Defense Scheduled',
-            'completed' => 'Defense Completed',
-            default => ucfirst(str_replace('-', ' ', $this->workflow_state))
-        };
-    }
+        $uid = $userId ?? Auth::id();
+        $this->coordinator_comments = $comment;
+        $this->coordinator_reviewed_at = now();
+        $this->coordinator_reviewed_by = $uid;
+        $this->workflow_state = 'coordinator-approved';
+        $this->status = 'Approved';
+        $this->last_status_updated_at = now();
+        $this->last_status_updated_by = $uid;
 
-    /**
-     * Professional method to assign panels to a defense request
-     */
-    public function assignPanels($chairperson, $panelist1, $panelist2 = null, $panelist3 = null, $panelist4 = null, $assignedBy = null)
-    {
-        $this->update([
-            'defense_chairperson' => $chairperson,
-            'defense_panelist1' => $panelist1,
-            'defense_panelist2' => $panelist2,
-            'defense_panelist3' => $panelist3,
-            'defense_panelist4' => $panelist4,
-            'panels_assigned_at' => now(),
-            'panels_assigned_by' => $assignedBy ?? Auth::id(),
-            'scheduling_status' => 'panels-assigned',
-        ]);
+        $this->ensureSubmittedHistory();
+        $hist = $this->workflow_history ?? [];
+        $hasAdv = collect($hist)->contains(fn($h)=>($h['action']??'')==='adviser-approved');
+        if ($this->adviser_reviewed_at && !$hasAdv) {
+            $hist[] = [
+                'action'=>'adviser-approved',
+                'timestamp'=>$this->adviser_reviewed_at->toISOString(),
+                'user_id'=>$this->adviser_reviewed_by,
+                'user_name'=>optional($this->adviserReviewer)->first_name.' '.optional($this->adviserReviewer)->last_name,
+                'from_state'=>'submitted',
+                'to_state'=>'adviser-approved'
+            ];
+        }
+        $hasCoord = collect($hist)->contains(fn($h)=>($h['action']??'')==='coordinator-approved');
+        if (!$hasCoord) {
+            $hist[] = [
+                'action'=>'coordinator-approved',
+                'timestamp'=>$this->coordinator_reviewed_at->toISOString(),
+                'user_id'=>$uid,
+                'user_name'=>Auth::user()?->first_name.' '.Auth::user()?->last_name,
+                'from_state'=>'adviser-approved',
+                'to_state'=>'coordinator-approved',
+                'comment'=>$comment
+            ];
+        }
+        usort($hist, fn($a,$b)=>strcmp($a['timestamp'],$b['timestamp']));
+        $this->workflow_history = $hist;
 
-        $this->addWorkflowEntry('panels-assigned', "Panels assigned: Chairperson: {$chairperson}, Panelists: {$panelist1}" . 
-            ($panelist2 ? ", {$panelist2}" : '') . 
-            ($panelist3 ? ", {$panelist3}" : '') . 
-            ($panelist4 ? ", {$panelist4}" : ''), $assignedBy);
-
+        $this->save();
         return $this;
-    }
-
-    /**
-     * Professional method to schedule a defense with time range
-     */
-    public function scheduleDefense($date, $startTime, $endTime, $mode, $venue, $notes = null, $scheduledBy = null)
-    {
-        // Calculate duration in minutes from start and end times
-        $startDateTime = $date->copy()->setTimeFromTimeString($startTime->format('H:i:s'));
-        $endDateTime = $date->copy()->setTimeFromTimeString($endTime->format('H:i:s'));
-        $duration = $endDateTime->diffInMinutes($startDateTime);
-        
-        // Format time range for display (e.g., "12:00 PM - 2:00 PM")
-        $timeRange = $startDateTime->format('g:i A') . ' - ' . $endDateTime->format('g:i A');
-        
-        $this->update([
-            'scheduled_date' => $date,
-            'scheduled_time' => $startTime,
-            'scheduled_end_time' => $endTime->format('H:i:s'),
-            'defense_duration_minutes' => $duration,
-            'formatted_time_range' => $timeRange,
-            'defense_mode' => $mode,
-            'defense_venue' => $venue,
-            'scheduling_notes' => $notes,
-            'schedule_set_at' => now(),
-            'schedule_set_by' => $scheduledBy ?? Auth::id(),
-            'scheduling_status' => 'scheduled',
-            'workflow_state' => 'scheduled',
-        ]);
-
-        $this->addWorkflowEntry('defense-scheduled', 
-            "Defense scheduled for {$date->format('M d, Y')} from {$timeRange} ({$mode})" . 
-            ($venue ? " at {$venue}" : '') . 
-            ($notes ? ". Notes: {$notes}" : ''), $scheduledBy);
-
-        return $this;
-    }
-
-    /**
-     * Professional method to notify relevant parties
-     */
-    public function notifyParties($parties = ['adviser', 'student', 'panels'])
-    {
-        $notified = [];
-        
-        if (in_array('adviser', $parties)) {
-            $this->update(['adviser_notified_at' => now()]);
-            $notified[] = 'adviser';
-        }
-        
-        if (in_array('student', $parties)) {
-            $this->update(['student_notified_at' => now()]);
-            $notified[] = 'student';
-        }
-        
-        if (in_array('panels', $parties)) {
-            $this->update(['panels_notified_at' => now()]);
-            $notified[] = 'panels';
-        }
-
-        $this->addWorkflowEntry('notifications-sent', 
-            "Notifications sent to: " . implode(', ', $notified));
-
-        return $this;
-    }
-
-    /**
-     * Get formatted defense schedule
-     */
-    public function getFormattedScheduleAttribute()
-    {
-        if (!$this->scheduled_date || !$this->scheduled_time) {
-            return 'Not scheduled';
-        }
-
-        return $this->scheduled_date->format('M d, Y') . ' at ' . 
-               $this->scheduled_time->format('g:i A') . 
-               ' (' . ucfirst($this->defense_mode) . ')';
-    }
-
-    /**
-     * Get panels list as array
-     */
-    public function getPanelsListAttribute()
-    {
-        $panels = [];
-        
-        if ($this->defense_chairperson) {
-            $panels[] = ['role' => 'Chairperson', 'name' => $this->defense_chairperson];
-        }
-        
-        if ($this->defense_panelist1) {
-            $panels[] = ['role' => 'Panelist 1', 'name' => $this->defense_panelist1];
-        }
-        
-        if ($this->defense_panelist2) {
-            $panels[] = ['role' => 'Panelist 2', 'name' => $this->defense_panelist2];
-        }
-        
-        if ($this->defense_panelist3) {
-            $panels[] = ['role' => 'Panelist 3', 'name' => $this->defense_panelist3];
-        }
-        
-        if ($this->defense_panelist4) {
-            $panels[] = ['role' => 'Panelist 4', 'name' => $this->defense_panelist4];
-        }
-
-        return $panels;
     }
 }

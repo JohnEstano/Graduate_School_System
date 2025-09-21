@@ -10,7 +10,7 @@ type DefenseRequest = {
 type Props = {
     loading: boolean;
     todayEvents: DefenseRequest[];
-    studentDefense?: DefenseRequest; // <-- Add this prop
+    studentDefense?: DefenseRequest; 
 };
 
 function isThisWeek(dateStr: string) {

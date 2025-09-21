@@ -48,7 +48,7 @@ export default function WeeklyDefenseSchedulesWidget({
     return (
         <div className="w-full md:w-[340px] border  rounded-xl p-5 bg-white dark:bg-zinc-900 flex flex-col">
             <div className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                This Week’s Schedules
+                This Week's Event's
             </div>
             <div className="flex gap-1 mb-3 flex-wrap max-w-full">
                 {weekDays
@@ -56,7 +56,7 @@ export default function WeeklyDefenseSchedulesWidget({
                     .map(day => (
                         <button
                             key={day.value}
-                            className={`px-3 py-1 rounded-full text-xs font-semibold transition
+                            className={`px-3 py-1 rounded-full text-xs font-semibold transition cursor-pointer
                                 ${selectedDay === day.value
                                     ? 'bg-rose-500 text-white'
                                     : 'bg-gray-100 dark:bg-zinc-800 text-gray-500 dark:text-gray-400'}
@@ -66,7 +66,7 @@ export default function WeeklyDefenseSchedulesWidget({
                         >
                             {day.label}
                         </button>
-                    ))}
+                    ))} 
             </div>
             <div className="flex flex-col gap-2">
                 {loading ? (

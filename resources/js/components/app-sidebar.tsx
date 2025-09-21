@@ -49,11 +49,7 @@ const studentNavItems: MainNavItem[] = [
         icon: CalendarFold,
 
     },
-    {
-        title: 'Messages',
-        href: '/messages',
-        icon: MessageSquareText,
-    },
+    
 
 ];
 
@@ -95,7 +91,7 @@ const assistantNavItems: MainNavItem[] = [
     },
     { title: 'Student Records', href: '/student-records', icon: Users },
     { title: 'Schedules', href: '/schedules', icon: CalendarFold },
-    { title: 'Messages', href: '/messages', icon: MessageSquareText },
+    //{ title: 'Messages', href: '/messages', icon: MessageSquareText },
 ];
 
 const facultyNavItems: MainNavItem[] = [

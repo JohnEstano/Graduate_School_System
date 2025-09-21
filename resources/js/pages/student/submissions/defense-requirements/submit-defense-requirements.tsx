@@ -1,7 +1,8 @@
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Paperclip, Check, Plus } from 'lucide-react';
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+
 import React, { useRef, useState } from 'react';
 import { useForm } from '@inertiajs/react';
 import { Stepper } from '@/components/ui/Stepper';
@@ -14,8 +15,116 @@ import {
     DialogTrigger,
 } from '@/components/ui/dialog';
 import { usePage } from '@inertiajs/react';
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import clsx from "clsx";
+import { Check, Paperclip } from 'lucide-react';
+
+
+type FacultyUser = {
+    id: number;
+    first_name: string;
+    middle_name: string | null;
+    last_name: string;
+};
+
+type AdviserSearchInputProps = {
+    value: string;
+    onChange: (val: string) => void;
+};
+
+function AdviserSearchInput({ value, onChange }: AdviserSearchInputProps) {
+    const [open, setOpen] = useState(false);
+    const [query, setQuery] = useState(value);
+    const [results, setResults] = useState<FacultyUser[]>([]);
+    const [loading, setLoading] = useState(false);
+    const inputRef = useRef<HTMLInputElement>(null);
+
+    // Keep query in sync with parent value
+    React.useEffect(() => {
+        setQuery(value);
+    }, [value]);
+
+    // Fetch faculty when query changes
+    React.useEffect(() => {
+        if (query.length < 4) {
+            setResults([]);
+            setOpen(false);
+            return;
+        }
+        setLoading(true);
+        fetch(`/api/faculty-search?q=${encodeURIComponent(query)}`)
+            .then(res => res.json())
+            .then((data: FacultyUser[]) => {
+                setResults(data);
+                setOpen(true);
+            })
+            .catch(() => setResults([]))
+            .finally(() => setLoading(false));
+    }, [query]);
+
+    // Handle input change
+    function handleInputChange(e: React.ChangeEvent<HTMLInputElement>) {
+        const val: string = e.target.value;
+        setQuery(val);
+        onChange(val);
+        if (val.length >= 4) setOpen(true);
+        else setOpen(false);
+    }
+
+    // Handle selection from dropdown
+    function handleSelect(user: FacultyUser) {
+        const fullName = `${user.first_name} ${user.middle_name ? user.middle_name + " " : ""}${user.last_name}`;
+        onChange(fullName);
+        setQuery(fullName);
+        setOpen(false);
+        inputRef.current?.blur();
+    }
+
+    // Close dropdown if clicked outside
+    function handleBlur() {
+        setTimeout(() => setOpen(false), 100);
+    }
+
+    return (
+        <div style={{ position: "relative" }}>
+            <Input
+                ref={inputRef}
+                value={query}
+                onChange={handleInputChange}
+                placeholder="Your adviser's name"
+                className="h-8 text-sm"
+                autoComplete="off"
+                onFocus={() => { if (query.length >= 4) setOpen(true); }}
+                onBlur={handleBlur}
+            />
+            {open && (
+                <div
+                    className="absolute z-10 mt-1 w-full bg-white border border-gray-200 rounded shadow"
+                    style={{ maxHeight: 200, overflowY: "auto" }}
+                >
+                    {loading && (
+                        <div className="px-2 py-1 text-xs text-muted-foreground">Searching...</div>
+                    )}
+                    {!loading && results.length === 0 && query.length >= 4 && (
+                        <div className="px-2 py-1 text-xs text-muted-foreground">No faculty found.</div>
+                    )}
+                    <ul>
+                        {results.map(user => {
+                            const fullName = `${user.first_name} ${user.middle_name ? user.middle_name + " " : ""}${user.last_name}`;
+                            return (
+                                <li
+                                    key={user.id}
+                                    className="px-2 py-2 cursor-pointer hover:bg-rose-100 text-sm"
+                                    onMouseDown={() => handleSelect(user)}
+                                >
+                                    {fullName}
+                                </li>
+                            );
+                        })}
+                    </ul>
+                </div>
+            )}
+        </div>
+    );
+}
 
 type Props = {
     onFinish?: () => void;
@@ -43,7 +152,7 @@ export default function SubmitDefenseRequirements({ onFinish, open, onOpenChange
         thesis_title: string;
         adviser: string;
         status: string;
-        defense_type: string; // <-- added
+        defense_type: string;
         rec_endorsement: File | null;
         proof_of_payment: File | null;
         reference_no: string;
@@ -58,7 +167,7 @@ export default function SubmitDefenseRequirements({ onFinish, open, onOpenChange
         thesis_title: '',
         adviser: '',
         status: 'pending',
-        defense_type: '', // <-- added
+        defense_type: '',
         rec_endorsement: null,
         proof_of_payment: null,
         reference_no: '',
@@ -106,7 +215,6 @@ export default function SubmitDefenseRequirements({ onFinish, open, onOpenChange
     }
 
     function handleSubmit() {
-        // Use the defense-requirements route since that's what exists and handles the consolidated table
         post(route('defense-requirements.store'), {
             forceFormData: true,
             onSuccess: () => {
@@ -116,19 +224,16 @@ export default function SubmitDefenseRequirements({ onFinish, open, onOpenChange
             onError: (errors) => {
                 console.error('Submission failed:', errors);
                 
-                // Handle specific file upload errors
                 if (errors.message && errors.message.includes('POST Content-Length')) {
                     alert('File upload failed: Files are too large. Please ensure each file is under 200MB and try again.');
                 } else if (errors.message && errors.message.includes('PostTooLargeException')) {
                     alert('Upload size limit exceeded. Please reduce file sizes and try again.');
                 } else {
-                    // Show validation errors
                     const errorMessages = Object.values(errors).flat().join('\n');
                     alert(`Submission failed:\n${errorMessages}`);
                 }
             },
             onProgress: (progress) => {
-                // You can add a progress bar here if needed
                 console.log('Upload progress:', progress);
             }
         });
@@ -254,11 +359,9 @@ export default function SubmitDefenseRequirements({ onFinish, open, onOpenChange
                     </div>
                     <div>
                         <Label className="text-xs">Adviser</Label>
-                        <Input
+                        <AdviserSearchInput
                             value={data.adviser}
-                            onChange={e => setData('adviser', e.target.value)}
-                            placeholder="Adviser"
-                            className="h-8 text-sm"
+                            onChange={(val: string) => setData('adviser', val)}
                         />
                     </div>
                 </div>
@@ -379,7 +482,7 @@ export default function SubmitDefenseRequirements({ onFinish, open, onOpenChange
 
     return (
         <Dialog open={open} onOpenChange={handleDialogChange}>
-            <DialogContent className="flex h-[95vh] w-full max-w-3xl flex-col"> {/* wider dialog */}
+            <DialogContent className="flex h-[95vh] w-full max-w-3xl flex-col">
                 <DialogHeader>
                     <DialogTitle>Submit Defense Requirements</DialogTitle>
                     <DialogDescription>Fill up all necessary information</DialogDescription>

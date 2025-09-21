@@ -3,6 +3,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\User;
 use App\Models\Panelist;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -84,5 +85,31 @@ class PanelistController extends Controller
         return Inertia::render('coordinator/panelists/index', [
             'panelists' => $panelists,
         ]);
+    }
+
+    public function allCombined()
+    {
+        // (Optional) auth()->check() guard; keep simple
+        $faculty = User::whereIn('role',['Faculty','Adviser'])
+            ->orderBy('last_name')
+            ->orderBy('first_name')
+            ->get()
+            ->map(fn($f)=>[
+                'id' => 'faculty-'.$f->id,
+                'name' => trim($f->first_name.' '.($f->middle_name? $f->middle_name.' ':'').$f->last_name),
+                'email'=> $f->email,
+                'type' => 'Faculty'
+            ]);
+
+        $panelists = Panelist::orderBy('name')
+            ->get()
+            ->map(fn($p)=>[
+                'id' => 'panelist-'.$p->id,
+                'name' => $p->name,
+                'email'=> $p->email,
+                'type' => 'Panelist'
+            ]);
+
+        return response()->json($faculty->concat($panelists)->values());
     }
 }
