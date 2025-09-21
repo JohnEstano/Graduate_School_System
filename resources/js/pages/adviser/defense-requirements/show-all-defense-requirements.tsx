@@ -2,20 +2,21 @@
 
 import { useState, useEffect } from 'react';
 import { Badge } from "@/components/ui/badge";
-import { ChevronDown, FileText, Hourglass, Check, X, Paperclip, CircleArrowRight, Search } from "lucide-react";
+import { ChevronDown, Hourglass, Check, X, Paperclip, CircleArrowRight, Search } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
 import { Button } from "@/components/ui/button";
-import EndorseDefenseDialog from './endorse-defense-dialog'; // Add this import
+import EndorseDefenseDialog from './endorse-defense-dialog';
 import { Input } from "@/components/ui/input";
+import { toast } from 'sonner';  // Sonner toast
 
 dayjs.extend(relativeTime);
 
 type DefenseRequirement = {
     id: number;
     first_name: string;
-    middle_name?: string;
+    middle_name?: string; 
     last_name: string;
     thesis_title: string;
     defense_type: string;
@@ -27,24 +28,13 @@ type DefenseRequirement = {
     created_at?: string;
     program: string;
     school_id: string;
-    defense_adviser: string; // <-- Add this line
+    defense_adviser: string;
 };
 
-const statusDetails: Record<
-    string,
-    {
-        icon: React.ReactNode;
-    }
-> = {
-    pending: {
-        icon: <Hourglass className="h-4 w-4 opacity-60" />,
-    },
-    approved: {
-        icon: <Check className="h-4 w-4 text-green-600" />,
-    },
-    rejected: {
-        icon: <X className="h-4 w-4 text-rose-600" />,
-    },
+const statusDetails: Record<string,{icon: React.ReactNode;}> = {
+    pending: { icon: <Hourglass className="h-4 w-4 opacity-60" /> },
+    approved: { icon: <Check className="h-4 w-4 text-green-600" /> },
+    rejected: { icon: <X className="h-4 w-4 text-rose-600" /> },
 };
 
 function getDisplayName(req: DefenseRequirement) {
@@ -86,7 +76,7 @@ export default function ShowAllDefenseRequirements({
     defenseRequirements = [],
     defenseRequests = [],
 }: { defenseRequirements: DefenseRequirement[]; defenseRequests: any[] }) {
-    // Use defenseRequirements if provided, else fallback to defenseRequests
+
     const source = (defenseRequirements && defenseRequirements.length > 0)
         ? defenseRequirements
         : defenseRequests;
@@ -94,13 +84,13 @@ export default function ShowAllDefenseRequirements({
     const [openItems, setOpenItems] = useState<Record<number, boolean>>({});
     const [endorseDialogId, setEndorseDialogId] = useState<number | null>(null);
     const [search, setSearch] = useState("");
+    const [commentDraft, setCommentDraft] = useState<Record<number,string>>({});
 
     useEffect(() => {
         setOpenItems({});
         setEndorseDialogId(null);
     }, [source]);
 
-    // ONLY search & sort – removed "already endorsed" exclusion to prevent hiding all rows
     const filteredRequirements = source.filter(req => {
         const name = getDisplayName(req).toLowerCase();
         const thesis = req.thesis_title?.toLowerCase() || "";
@@ -111,13 +101,12 @@ export default function ShowAllDefenseRequirements({
     return (
         <div className="flex flex-col pb-5 w-full">
             <div className="w-full bg-white border border-zinc-200 rounded-lg overflow-hidden">
-                {/* Header row */}
                 <div className="flex flex-row items-center justify-between w-full p-3 border-b bg-white">
                     <div className="flex items-center gap-2">
                         <div className="h-10 w-10 flex items-center justify-center rounded-full bg-rose-500/10 border border-rose-500">
                             <Paperclip className="h-5 w-5 text-rose-400" />
                         </div>
-                        <div className=''>
+                        <div>
                             <span className="text-base font-semibold">
                                 All Defense Requirements
                             </span>
@@ -127,7 +116,7 @@ export default function ShowAllDefenseRequirements({
                         </div>
                     </div>
                 </div>
-                {/* Search bar row */}
+
                 <div className="flex items-center px-4 py-3 border-b bg-white">
                     <Input
                         type="text"
@@ -138,6 +127,7 @@ export default function ShowAllDefenseRequirements({
                         className="max-w-xs text-sm py-1 h-8"
                     />
                 </div>
+
                 {filteredRequirements.length === 0 ? (
                     <div className="p-6 text-center text-sm text-muted-foreground bg-white">
                         No pending defense requirements found.
@@ -168,7 +158,6 @@ export default function ShowAllDefenseRequirements({
                                             <div className="flex items-center justify-between px-4 py-3 cursor-pointer bg-white hover:bg-zinc-50 transition">
                                                 <div className="flex items-center gap-4">
                                                     {details.icon}
-                                                    {/* Group avatar and name closely */}
                                                     <div className="flex items-center">
                                                         <UserAvatar name={req.first_name} />
                                                         <span className="text-xs text-muted-foreground font-medium">
@@ -188,7 +177,6 @@ export default function ShowAllDefenseRequirements({
                                         </CollapsibleTrigger>
                                         <CollapsibleContent>
                                             <div className="px-4 py-4 bg-white rounded-b">
-                                                {/* Thesis title and badge row */}
                                                 <div className="flex items-center gap-2 mb-2">
                                                     <span className="text-xs text-muted-foreground font-semibold">Thesis title:</span>
                                                     <span className="text-sm font-bold">{req.thesis_title}</span>
@@ -196,16 +184,35 @@ export default function ShowAllDefenseRequirements({
                                                         {req.defense_type}
                                                     </Badge>
                                                 </div>
-                                                {/* File attachments */}
                                                 <div className="flex flex-wrap gap-2 mb-2">
                                                     <FileAttachment file={req.rec_endorsement} label="REC Endorsement" />
                                                     <FileAttachment file={req.proof_of_payment} label="Proof of Payment" />
                                                     <FileAttachment file={req.manuscript_proposal} label="Manuscript Proposal" />
                                                     <FileAttachment file={req.similarity_index} label="Similarity Index" />
                                                 </div>
-                                                {/* Action buttons */}
+                                                <textarea
+                                                  placeholder="Optional comment..."
+                                                  value={commentDraft[req.id] || ''}
+                                                  onChange={e => setCommentDraft(c => ({ ...c, [req.id]: e.target.value }))}
+                                                  className="w-full border rounded p-2 text-xs mb-2"
+                                                />
                                                 <div className="flex justify-end gap-2 mt-2">
-                                                    <Button size="sm" variant="outline" className="text-xs" onClick={() => {/* handle reject */ }}>
+                                                    <Button
+                                                        size="sm"
+                                                        variant="outline"
+                                                        className="text-xs"
+                                                        onClick={async () => {
+                                                            try {
+                                                                await adviserDecisionRequest(req.id,'reject', commentDraft[req.id] || '');
+                                                                (req as any).workflow_state = 'adviser-rejected';
+                                                                (req as any).status = 'Rejected';
+                                                                toast.success('Request rejected.');
+                                                                setOpenItems(prev => ({ ...prev, [req.id]: false }));
+                                                            } catch(e:any) {
+                                                                toast.error(e.message || 'Error rejecting');
+                                                            }
+                                                        }}
+                                                    >
                                                         <X className="w-4 h-4 mr-1 text-rose-600" />
                                                         Reject
                                                     </Button>
@@ -213,19 +220,26 @@ export default function ShowAllDefenseRequirements({
                                                         size="sm"
                                                         variant="outline"
                                                         className="text-xs"
-                                                        onClick={() => setEndorseDialogId(req.id)}
+                                                        onClick={async () => {
+                                                            try {
+                                                                await adviserDecisionRequest(req.id,'approve', commentDraft[req.id] || '');
+                                                                (req as any).workflow_state = 'adviser-approved';
+                                                                (req as any).status = 'Pending';
+                                                                toast.success('Request approved.');
+                                                                setOpenItems(prev => ({ ...prev, [req.id]: false }));
+                                                            } catch(e:any) {
+                                                                toast.error(e.message || 'Error approving');
+                                                            }
+                                                        }}
                                                     >
                                                         <CircleArrowRight className="w-4 h-4 mr-1 text-green-600" />
-                                                        Proceed Endorsement
+                                                        Approve
                                                     </Button>
-                                                    {/* Endorse Defense Dialog */}
                                                     {endorseDialogId === req.id && (
                                                         <EndorseDefenseDialog
                                                             request={req}
                                                             open={endorseDialogId === req.id}
-                                                            onOpenChange={(open: boolean) => {
-                                                                if (!open) setEndorseDialogId(null);
-                                                            }}
+                                                            onOpenChange={(open: boolean) => !open && setEndorseDialogId(null)}
                                                         />
                                                     )}
                                                 </div>
@@ -241,22 +255,20 @@ export default function ShowAllDefenseRequirements({
     );
 }
 
-// Ensure <meta name="csrf-token" content="{{ csrf_token() }}"> is in your layout.
-async function adviserApprove(id: number, comment: string) {
-  const csrf = (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content || '';
-  const res = await fetch(`/defense-requests/${id}/adviser-decision`, {
-    method: 'POST',
-    headers: {
-      'Content-Type':'application/json',
-      'X-CSRF-TOKEN': csrf,
-      'Accept':'application/json'
-    },
-    body: JSON.stringify({ decision: 'approve', comment: comment || '' })
-  });
-  if (!res.ok) {
-    let msg = `HTTP ${res.status}`;
-    try { const j = await res.json(); msg = j.error || msg; } catch {}
-    throw new Error(msg);
-  }
-  return res.json();
+// Sonner request helper
+async function adviserDecisionRequest(id: number, decision: 'approve'|'reject', comment: string) {
+    const csrf = (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content || '';
+    const res = await fetch(`/defense-requests/${id}/adviser-decision`, {
+        method: 'POST',
+        headers: {
+            'Content-Type':'application/json',
+            'X-CSRF-TOKEN': csrf,
+            'Accept':'application/json'
+        },
+        body: JSON.stringify({ decision, comment })
+    });
+    let json: any = {};
+    try { json = await res.json(); } catch {}
+    if (!res.ok) throw new Error(json.error || `HTTP ${res.status}`);
+    return json;
 }

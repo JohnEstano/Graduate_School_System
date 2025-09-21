@@ -352,18 +352,32 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
     setSavingPanels(true);
     try {
       const res = await fetch(
-        `/coordinator/defense-requests/${request.id}/assign-panels-json`,
+        `/coordinator/defense-requests/${request.id}/panels`,
         {
           method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'X-CSRF-TOKEN': csrf()
-            },
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': csrf(),
+            'Accept': 'application/json'
+          },
           body: JSON.stringify(panels)
         }
       );
-      const data = await res.json();
-      if (res.ok) {
+
+      const contentType = res.headers.get('content-type') || '';
+      let data: any = {};
+      try {
+        if (contentType.includes('application/json')) {
+          data = await res.json();
+        } else {
+          const txt = await res.text();
+          data = { error: txt };
+        }
+      } catch {
+        data = { error: 'Invalid response' };
+      }
+
+      if (res.ok && data.ok) {
         setRequest(r => ({ ...r, ...data.request }));
         toast.success('Panels saved', {
           id: toastId,
@@ -373,12 +387,10 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
             panels.defense_panelist2,
             panels.defense_panelist3,
             panels.defense_panelist4
-          ]
-            .filter(Boolean)
-            .join(', ')
+          ].filter(Boolean).join(', ')
         });
       } else {
-        toast.error(data.error || 'Failed to save panels', { id: toastId });
+        toast.error(data.error || `Failed (${res.status})`, { id: toastId });
       }
     } catch {
       toast.error('Network error saving panels', { id: toastId });

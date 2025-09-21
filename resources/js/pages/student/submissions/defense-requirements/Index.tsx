@@ -75,6 +75,7 @@ type DefenseRequest = {
     proof_of_payment?: string;
     submitted_by?: string;
     panels_assigned_at?: string; // <-- Added missing property
+    scheduling_notes?: string; // <-- Added missing property
 };
 
 type PageProps = {
@@ -159,6 +160,17 @@ export default function DefenseRequestIndex() {
                         setDefenseRequest(updatedRequest);
                         setLastUpdateTime(dayjs().format('h:mm A'));
                         console.log('Defense request status updated:', updatedRequest.workflow_state);
+                    }
+                    // --- ADDED: Check for rejection states ---
+                    if (['adviser-rejected','coordinator-rejected'].includes(updatedRequest.workflow_state)) {
+                        // reflect rejection in requirements list
+                        const newList = defenseRequirements.map(r =>
+                            r.thesis_title === updatedRequest.thesis_title
+                                ? { ...r, status: 'Rejected' }
+                                : r
+                        );
+                        // Only update if changed
+                        // setDefenseRequirements state (create one if not present)
                     }
                 }
             } catch (error) {
@@ -361,7 +373,7 @@ export default function DefenseRequestIndex() {
                     title = "Rejected by Adviser";
                     description = `Your defense request has been <b>rejected by your Adviser</b>. 
                         ${defenseRequest.adviser_comments ? `<br/><br/><b>Feedback:</b> "${defenseRequest.adviser_comments}"` : ''}
-                        <br/><br/>Please address the feedback and resubmit your requirements.`;
+                        <br/><br/>Please address the feedback and submit a new set of requirements if needed.`;
                     color = "text-red-600";
                     icon = <X className="h-4 w-4 text-red-600" />;
                     bg = "bg-red-50";
@@ -373,7 +385,7 @@ export default function DefenseRequestIndex() {
                     title = "Rejected by Coordinator";
                     description = `Your defense request has been <b>rejected by the Coordinator</b>. 
                         ${defenseRequest.coordinator_comments ? `<br/><br/><b>Feedback:</b> "${defenseRequest.coordinator_comments}"` : ''}
-                        <br/><br/>Please address the feedback and resubmit your requirements.`;
+                        <br/><br/>Please address the feedback and resubmit if allowed.`;
                     color = "text-red-600";
                     icon = <X className="h-4 w-4 text-red-600" />;
                     bg = "bg-red-50";
@@ -466,23 +478,43 @@ export default function DefenseRequestIndex() {
                                     { key: 'panels-assigned',      label: 'Panels Assigned',    icon: <Users className="w-4 h-4" /> },
                                     { key: 'scheduled',            label: 'Scheduled',          icon: <Calendar className="w-4 h-4" /> },
                                     { key: 'completed',            label: 'Completed',          icon: <GraduationCap className="w-4 h-4" /> },
-                                ] as const;
+                                ] as
+                                
+                                const;
 
                                 const stepIdx = currentStepperIndex(defenseRequest);
 
-                                // Determine header / details using normalized state
                                 const wf = defenseRequest?.workflow_state;
                                 const normState = defenseRequest ? normalizeWorkflowState(wf) : null;
 
-                                // Cancellation check unchanged
-                                // --- Single declaration for isCancelled ---
+                                // --- NEW: rejection detection & data ---
+                                const isRejectedActive =
+                                    !!defenseRequest &&
+                                    defenseRequest.thesis_title === req.thesis_title &&
+                                    ['adviser-rejected','coordinator-rejected'].includes(defenseRequest.workflow_state || '');
+
+                                const rejectionByCoordinator = isRejectedActive && defenseRequest?.workflow_state === 'coordinator-rejected';
+                                const rejectionByAdviser     = isRejectedActive && defenseRequest?.workflow_state === 'adviser-rejected';
+
+                                const rejectionComment = rejectionByCoordinator
+                                    ? defenseRequest?.coordinator_comments
+                                    : rejectionByAdviser
+                                        ? defenseRequest?.adviser_comments
+                                        : null;
+
+                                const rejectionHeaderTitle = rejectionByCoordinator
+                                    ? 'Rejected by Coordinator'
+                                    : rejectionByAdviser
+                                        ? 'Rejected by Adviser'
+                                        : 'Rejected';
+
+                                // Existing cancellation logic
                                 const isCancelled =
                                     req.status?.toLowerCase() === 'cancelled' ||
                                     (defenseRequest &&
                                         defenseRequest.thesis_title === req.thesis_title &&
                                         defenseRequest.workflow_state === 'cancelled');
 
-                                // --- Stepper and content logic ---
                                 let currentIdx = 0;
                                 let headerTitle = "Submitted";
                                 let headerIcon = <Hourglass className="h-4 w-4 opacity-60 dark:text-zinc-400" />;
@@ -500,10 +532,30 @@ export default function DefenseRequestIndex() {
                                     detailsTitle = "Cancelled";
                                     detailsBg = "bg-red-50";
                                     detailsDescription = "This submission was cancelled. You cannot make further changes to this request.";
+                                } else if (isRejectedActive) {
+                                    // Rejected layout (similar style to cancelled but distinct explanation)
+                                    currentIdx = 0;
+                                    headerTitle = rejectionHeaderTitle;
+                                    headerIcon = <X className="h-4 w-4 text-red-600" />;
+                                    headerColor = "text-red-600";
+                                    detailsTitle = rejectionHeaderTitle;
+                                    detailsBg = "bg-red-50";
+                                    detailsDescription = `
+                                        <div class="space-y-2">
+                                            <div>Your defense request has been <b>${rejectionHeaderTitle.toLowerCase()}</b>.</div>
+                                            ${
+                                                rejectionComment
+                                                    ? `<div class="text-sm"><b>Feedback:</b> "${rejectionComment}"</div>`
+                                                    : ''
+                                            }
+                                            <div class="text-xs text-muted-foreground">
+                                                Please address the feedback and, if allowed, submit a new set of requirements or updated documents.
+                                            </div>
+                                        </div>`;
                                 } else if (defenseRequest &&
                                            defenseRequest.thesis_title === req.thesis_title &&
                                            defenseRequest.school_id === props.auth.user.school_id) {
-
+                                    // Normal progression
                                     switch (normState) {
                                         case 'submitted':
                                             currentIdx = 0;
@@ -569,7 +621,6 @@ export default function DefenseRequestIndex() {
                                             detailsDescription = "Your defense request is being processed.";
                                     }
 
-                                    // If panels explicitly assigned but state lagging, upgrade view
                                     if (!isCancelled &&
                                         defenseRequest?.panels_assigned_at &&
                                         currentIdx < 3) {
@@ -583,11 +634,8 @@ export default function DefenseRequestIndex() {
                                     }
                                 }
 
-                                // Cancelled: always show X icon and disabled dropdown
-                                // (already declared above)
-
-                                // --- MODIFIED: Show X icon for first step if cancelled ---
-                                const cancelledIcon = <X className="w-4 h-4 text-red-600" />;
+                                // --- Replace stepper if rejected or cancelled ---
+                                const showStepper = !isCancelled && !isRejectedActive;
 
                                 return (
                                     <React.Fragment key={req.id}>
@@ -597,33 +645,24 @@ export default function DefenseRequestIndex() {
                                                 <div
                                                     className="flex items-center justify-between px-4 py-3 cursor-pointer bg-white dark:bg-zinc-900 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors"
                                                 >
-                                                    {/* Chevron at the start */}
                                                     <ChevronDown
                                                         className={`transition-transform duration-200 h-4 w-4 text-muted-foreground dark:text-zinc-400 mr-3 ${isOpen ? 'rotate-180' : ''}`}
                                                     />
-                                                    {/* Status and info, with gap */}
                                                     <div className="flex items-center gap-2 flex-1">
-                                                        {/* Icon color: muted for all except cancelled */}
-                                                        {isCancelled
+                                                        { (isCancelled || isRejectedActive)
                                                             ? <X className="h-4 w-4 text-red-600" />
                                                             : React.cloneElement(headerIcon, { className: "h-4 w-4 text-muted-foreground dark:text-zinc-300" })
                                                         }
-                                                        <span className={`font-semibold text-xs ${isCancelled ? "text-red-600" : "text-muted-foreground dark:text-zinc-300"}`}>
+                                                        <span className={`font-semibold text-xs ${
+                                                            (isCancelled || isRejectedActive)
+                                                                ? "text-red-600"
+                                                                : "text-muted-foreground dark:text-zinc-300"
+                                                        }`}>
                                                             {headerTitle}
                                                         </span>
                                                     </div>
-                                                    {/* Progress bar aligned to end */}
                                                     <div className="flex items-center w-64 justify-end">
-                                                        {isCancelled ? (
-                                                            <>
-                                                                <div className="flex-1" />
-                                                                <div className="flex flex-col items-center">
-                                                                    <div className="rounded-full p-1 border bg-red-500 text-white border-red-500">
-                                                                        <X className="w-4 h-4" />
-                                                                    </div>
-                                                                </div>
-                                                            </>
-                                                        ) : (
+                                                        {showStepper ? (
                                                             <>
                                                                 <div className="flex-1" />
                                                                 <div className="flex items-center gap-0">
@@ -647,13 +686,19 @@ export default function DefenseRequestIndex() {
                                                                     })}
                                                                 </div>
                                                             </>
+                                                        ) : (
+                                                            <div className="flex items-center justify-center">
+                                                                <div className="rounded-full p-2 border bg-red-500 text-white border-red-500">
+                                                                    <X className="w-4 h-4" />
+                                                                </div>
+                                                            </div>
                                                         )}
                                                     </div>
                                                 </div>
                                             </CollapsibleTrigger>
                                             <CollapsibleContent>
                                                 <div className="px-4 py-3">
-                                                    {/* Submission Info Section */}
+                                                    {/* Submission Info Section (unchanged except header state already handled) */}
                                                     <div className="mb-3 p-3 rounded border bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 flex flex-col gap-2 rounded-md relative">
                                                         <div className="flex flex-row gap-6 flex-wrap">
                                                             <div>
@@ -748,6 +793,139 @@ export default function DefenseRequestIndex() {
                                                                 </a>
                                                             )}
                                                         </div>
+                                                        {/* Defense Information (dynamic) */}
+                                                        {defenseRequest &&
+                                                         defenseRequest.thesis_title === req.thesis_title && (
+                                                            <div className="mt-2 w-full border border-zinc-200 dark:border-zinc-700 rounded-md p-3 bg-zinc-50 dark:bg-zinc-800/40">
+                                                                <div className="flex items-center justify-between mb-2">
+                                                                    <span className="text-[11px] font-semibold uppercase tracking-wide text-zinc-600 dark:text-zinc-300">
+                                                                        Defense Information
+                                                                    </span>
+                                                                    <span className="text-[10px] text-muted-foreground dark:text-zinc-400">
+                                                                        State: {defenseRequest.workflow_state}
+                                                                    </span>
+                                                                </div>
+
+                                                                {(() => {
+                                                                    const wf = defenseRequest.workflow_state;
+                                                                    const chair = defenseRequest.defense_chairperson;
+                                                                    const p1 = defenseRequest.defense_panelist1;
+                                                                    const p2 = defenseRequest.defense_panelist2;
+                                                                    const p3 = defenseRequest.defense_panelist3;
+                                                                    const p4 = defenseRequest.defense_panelist4;
+                                                                    const anyPanels = [chair,p1,p2,p3,p4].some(Boolean);
+
+                                                                    const scheduleDate = defenseRequest.scheduled_date
+                                                                        ? dayjs(defenseRequest.scheduled_date).format("MMMM D, YYYY")
+                                                                        : null;
+
+                                                                    const timeRange = defenseRequest.formatted_time_range
+                                                                        ? defenseRequest.formatted_time_range
+                                                                        : (defenseRequest.scheduled_time && defenseRequest.scheduled_end_time
+                                                                            ? `${defenseRequest.scheduled_time} - ${defenseRequest.scheduled_end_time}`
+                                                                            : null);
+
+                                                                    const mode = defenseRequest.defense_mode || defenseRequest.mode_defense;
+                                                                    const venue = defenseRequest.defense_venue;
+                                                                    const notes = defenseRequest.scheduling_notes;
+
+                                                                    // Message helpers
+                                                                    const awaitingAdviser = (
+                                                                        <div className="text-[11px] text-zinc-600 dark:text-zinc-400">
+                                                                            Awaiting adviser review. No coordinator actions yet.
+                                                                        </div>
+                                                                    );
+                                                                    const awaitingCoordinator = (
+                                                                        <div className="text-[11px] text-zinc-600 dark:text-zinc-400">
+                                                                            Adviser approved. Awaiting coordinator review / panel assignment.
+                                                                        </div>
+                                                                    );
+                                                                    const awaitingPanels = (
+                                                                        <div className="text-[11px] text-zinc-600 dark:text-zinc-400">
+                                                                            Coordinator approved. Panel assignment pending.
+                                                                        </div>
+                                                                    );
+                                                                    const awaitingSchedule = (
+                                                                        <div className="text-[11px] text-zinc-600 dark:text-zinc-400">
+                                                                            Panel assigned. Scheduling in progress.
+                                                                        </div>
+                                                                    );
+
+                                                                    if (['adviser-rejected','coordinator-rejected','cancelled'].includes(wf)) {
+                                                                        return (
+                                                                            <div className="text-[11px] text-red-600">
+                                                                                No further defense information (request {wf.replace('-',' ')}).
+                                                                            </div>
+                                                                        );
+                                                                    }
+
+                                                                    return (
+                                                                        <div className="space-y-3">
+                                                                            {/* Panels */}
+                                                                            {['panels-assigned','scheduled','completed'].includes(wf) && anyPanels && (
+                                                                                <div>
+                                                                                    <div className="text-[11px] font-semibold text-zinc-700 dark:text-zinc-300 mb-1">
+                                                                                        Committee
+                                                                                    </div>
+                                                                                    <ul className="pl-3 list-disc space-y-0.5">
+                                                                                        {chair && <li className="text-[11px] text-zinc-700 dark:text-zinc-300"><b>{chair}</b> (Chairperson)</li>}
+                                                                                        {p1 && <li className="text-[11px] text-zinc-700 dark:text-zinc-300">{p1} (Panelist 1)</li>}
+                                                                                        {p2 && <li className="text-[11px] text-zinc-700 dark:text-zinc-300">{p2} (Panelist 2)</li>}
+                                                                                        {p3 && <li className="text-[11px] text-zinc-700 dark:text-zinc-300">{p3} (Panelist 3)</li>}
+                                                                                        {p4 && <li className="text-[11px] text-zinc-700 dark:text-zinc-300">{p4} (Panelist 4)</li>}
+                                                                                    </ul>
+                                                                                </div>
+                                                                            )}
+
+                                                                            {/* Schedule (only when scheduled or completed) */}
+                                                                            {['scheduled','completed'].includes(wf) && (
+                                                                                <div className="rounded-md border border-blue-200 dark:border-blue-600/40 bg-blue-50 dark:bg-blue-900/20 p-2.5">
+                                                                                    <div className="text-[11px] font-semibold text-blue-700 dark:text-blue-300 mb-1">
+                                                                                        Schedule
+                                                                                    </div>
+                                                                                    <div className="space-y-0.5">
+                                                                                        <div className="text-[11px] text-blue-800 dark:text-blue-200">
+                                                                                            <b>Date:</b> {scheduleDate || 'TBD'}
+                                                                                        </div>
+                                                                                        <div className="text-[11px] text-blue-800 dark:text-blue-200">
+                                                                                            <b>Time:</b> {timeRange || 'TBD'}
+                                                                                        </div>
+                                                                                        {mode && (
+                                                                                            <div className="text-[11px] text-blue-800 dark:text-blue-200">
+                                                                                                <b>Mode:</b> {mode}
+                                                                                            </div>
+                                                                                        )}
+                                                                                        {venue && (
+                                                                                            <div className="text-[11px] text-blue-800 dark:text-blue-200">
+                                                                                                <b>Venue:</b> {venue}
+                                                                                            </div>
+                                                                                        )}
+                                                                                        {notes && (
+                                                                                            <div className="text-[11px] text-blue-800 dark:text-blue-200">
+                                                                                                <b>Notes:</b> {notes}
+                                                                                            </div>
+                                                                                        )}
+                                                                                    </div>
+                                                                                </div>
+                                                                            )}
+
+                                                                            {/* State guidance (only if earlier states) */}
+                                                                            {['submitted','adviser-review'].includes(wf) && awaitingAdviser}
+                                                                            {['adviser-approved','coordinator-review'].includes(wf) && awaitingCoordinator}
+                                                                            {wf === 'coordinator-approved' && !anyPanels && awaitingPanels}
+                                                                            {wf === 'panels-assigned' && !scheduleDate && awaitingSchedule}
+
+                                                                            {/* Quick summary line */}
+                                                                            <div className="pt-1 border-t border-dashed border-zinc-200 dark:border-zinc-700 mt-2 text-[10px] text-muted-foreground dark:text-zinc-500">
+                                                                                Last workflow state: {wf}
+                                                                                {scheduleDate && ` • Scheduled for ${scheduleDate}`}
+                                                                                {mode && ` • Mode: ${mode}`}
+                                                                            </div>
+                                                                        </div>
+                                                                    );
+                                                                })()}
+                                                            </div>
+                                                        )}
                                                         {/* Submitted at info, top right */}
                                                         <div className="absolute right-3 top-2 flex items-center gap-2">
                                                             <span className="text-[10px] text-muted-foreground dark:text-zinc-400 whitespace-nowrap">
@@ -766,7 +944,15 @@ export default function DefenseRequestIndex() {
                                                                 </DropdownMenuTrigger>
                                                                 <DropdownMenuContent align="end">
                                                                     <DropdownMenuItem
-                                                                        disabled={true}
+                                                                        disabled={!canUnsubmit(req, defenseRequest)}
+                                                                        onSelect={(e) => {
+                                                                            e.preventDefault();
+                                                                            if (!canUnsubmit(req, defenseRequest)) return;
+                                                                            setUnsubmitTargetId(req.id);
+                                                                            setUnsubmitReason('');
+                                                                            setUnsubmitOtherReason('');
+                                                                            setUnsubmitDialogOpen(true);
+                                                                        }}
                                                                     >
                                                                         Unsubmit
                                                                     </DropdownMenuItem>
@@ -785,26 +971,18 @@ export default function DefenseRequestIndex() {
                                                     {/* Defense Requirement Status/Details Card */}
                                                     <div className={`flex flex-col ${detailsBg} dark:bg-zinc-900 p-3 rounded-md`}>
                                                         <div className="flex items-center justify-between mb-1">
-                                                            <span className={`font-semibold text-xs ${isCancelled ? "text-red-600" : "text-muted-foreground dark:text-zinc-300"}`}>
+                                                            <span className={`font-semibold text-xs ${
+                                                                (isCancelled || isRejectedActive)
+                                                                    ? "text-red-600"
+                                                                    : "text-muted-foreground dark:text-zinc-300"
+                                                            }`}>
                                                                 {detailsTitle}
                                                             </span>
                                                         </div>
-                                                        <div className="text-xs p-2 text-muted-foreground dark:text-zinc-400 space-y-2">
-                                                            {detailsDescription}
-                                                            {/* Show panelists if assigned */}
-                                                            {detailsPanelists.length > 0 && (
-                                                                <div className="mt-2">
-                                                                    <span className="font-semibold text-xs text-zinc-600 dark:text-zinc-300">Assigned Panel Members:</span>
-                                                                    <ul className="mt-1 ml-2 list-disc text-xs">
-                                                                        {detailsPanelists.map((p, idx) => (
-                                                                            <li key={idx} className="text-zinc-700 dark:text-white">
-                                                                                <span className="font-semibold">{p.role}:</span> {p.name}
-                                                                            </li>
-                                                                        ))}
-                                                                    </ul>
-                                                                </div>
-                                                            )}
-                                                        </div>
+                                                        <div
+                                                            className="text-xs p-2 text-muted-foreground dark:text-zinc-400 space-y-2"
+                                                            dangerouslySetInnerHTML={{ __html: detailsDescription }}
+                                                        />
                                                         <div className="flex flex-col items-end mt-4 gap-1">
                                                             {defenseRequest && (
                                                                 <span className="text-[10px] text-muted-foreground dark:text-zinc-400 whitespace-nowrap">

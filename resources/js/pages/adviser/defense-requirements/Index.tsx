@@ -30,8 +30,8 @@ export default function Index({
     const approvedRequests = (defenseRequests || []).filter(
         (r:any) => r.workflow_state === 'adviser-approved'
     );
-    const disapprovedRequests = (defenseRequests || []).filter(
-        (r:any) => r.workflow_state === 'adviser-rejected'
+    const rejectedRequests = (defenseRequests || []).filter(
+        (r:any) => ['adviser-rejected','coordinator-rejected'].includes(r.workflow_state)
     );
 
     return (
@@ -40,9 +40,9 @@ export default function Index({
             <div className="flex h-full flex-1 flex-col gap-4 overflow-auto rounded-xl pt-5 pr-7 pl-7">
                 <Tabs defaultValue="pending" className="w-full">
                     <TabsList className="mb-4 dark:bg-muted dark:text-muted-foreground">
-                        <TabsTrigger value="pending">Defense Requirements sent by your students</TabsTrigger>
-                        <TabsTrigger value="approved">Approved Defense Requirements</TabsTrigger>
-                        <TabsTrigger value="disapproved">Disapproved Requirements</TabsTrigger>
+                        <TabsTrigger value="pending">Pending</TabsTrigger>
+                        <TabsTrigger value="approved">Approved</TabsTrigger>
+                        <TabsTrigger value="rejected">Rejected</TabsTrigger>
                     </TabsList>
                     <TabsContent value="pending" className="flex-1">
                         <ShowAllDefenseRequests 
@@ -60,12 +60,12 @@ export default function Index({
                             description="Defense requests you have approved and forwarded to coordinator"
                         />
                     </TabsContent>
-                    <TabsContent value="disapproved" className="flex-1">
+                    <TabsContent value="rejected" className="flex-1">
                         <ShowAllDefenseRequests 
-                            defenseRequests={disapprovedRequests} 
+                            defenseRequests={rejectedRequests}
                             showActions={false}
-                            title="Disapproved Requirements"
-                            description="Defense requests you have rejected"
+                            title="Rejected Defense Requirements"
+                            description="Requests rejected by you or the coordinator"
                         />
                     </TabsContent>
                 </Tabs>

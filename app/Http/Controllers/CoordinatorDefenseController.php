@@ -126,21 +126,28 @@ class CoordinatorDefenseController extends Controller
 
     public function assignPanels(Request $request, DefenseRequest $defenseRequest)
     {
+        $this->authorizeRole();
+
         $validated = $request->validate([
             'defense_chairperson' => 'required|string|max:255',
-            'defense_panelist1' => 'required|string|max:255',
-            'defense_panelist2' => 'nullable|string|max:255',
-            'defense_panelist3' => 'nullable|string|max:255',
-            'defense_panelist4' => 'nullable|string|max:255',
+            'defense_panelist1'   => 'required|string|max:255',
+            'defense_panelist2'   => 'nullable|string|max:255',
+            'defense_panelist3'   => 'nullable|string|max:255',
+            'defense_panelist4'   => 'nullable|string|max:255',
         ]);
 
-        try {
-            $conflictService = new DefenseConflictService();
-            $basicErrors = $conflictService->validateAssignmentBasic($defenseRequest,$validated);
-            if ($basicErrors) {
-                return back()->withErrors($basicErrors)->withInput();
+        // Only allow from adviser-approved / coordinator-approved / panels-assigned
+        if (!in_array($defenseRequest->workflow_state, [
+            'adviser-approved','coordinator-approved','panels-assigned'
+        ])) {
+            $msg = "Cannot assign panels from state '{$defenseRequest->workflow_state}'";
+            if ($request->expectsJson()) {
+                return response()->json(['error'=>$msg],422);
             }
+            return back()->withErrors(['error'=>$msg]);
+        }
 
+        try {
             DB::transaction(function () use ($defenseRequest,$validated) {
                 $defenseRequest->assignPanels(
                     $validated['defense_chairperson'],
@@ -152,23 +159,27 @@ class CoordinatorDefenseController extends Controller
                 );
             });
 
-            Log::info('Panels assigned',[
-                'defense_request_id'=>$defenseRequest->id,
-                'coordinator_id'=>Auth::id(),
-                'panels'=>$validated
-            ]);
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'ok'=>true,
+                    'workflow_state'=>$defenseRequest->workflow_state
+                ]);
+            }
 
             return back()->with([
-                'success'=>'Defense panel assigned successfully! Please set the defense schedule.',
-                'move_to_scheduling'=>true,
+                'success'=>'Defense panel assigned. Proceed to scheduling.',
                 'assigned_request_id'=>$defenseRequest->id
             ]);
         } catch (\Throwable $e) {
-            Log::error('Failed to assign panels',[
-                'defense_request_id'=>$defenseRequest->id,
+            Log::error('assignPanels failure',[
+
+                'id'=>$defenseRequest->id,
                 'error'=>$e->getMessage()
             ]);
-            return back()->withErrors(['error'=>'Failed to assign defense panel.'])->withInput();
+            if ($request->expectsJson()) {
+                return response()->json(['error'=>'Assign panels failed'],500);
+            }
+            return back()->withErrors(['error'=>'Failed to assign defense panel.']);
         }
     }
 
@@ -800,7 +811,7 @@ class CoordinatorDefenseController extends Controller
             'status'=>$r->status,
             'priority'=>$r->priority,
             'workflow_history'=>$r->workflow_history,
-            'last_status_updated_at'=>$r->last_status_updated_at?->toISOString(),
+            'last_status_updated_at'=>$r->last_status_updated_at?->toIso8601String(),
             'last_status_updated_by'=>$r->last_status_updated_by
         ];
     }

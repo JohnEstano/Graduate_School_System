@@ -151,15 +151,15 @@ export default function ShowAllDefenseRequests({
                 throw new Error('CSRF token not found');
             }
 
+            const body = { decision, comment: comments || '' };
             const res = await fetch(`/defense-requests/${id}/adviser-decision`, {
                 method: 'POST',
                 headers: {
-                    'X-Requested-With': 'XMLHttpRequest',
                     'Content-Type': 'application/json',
-                    'Accept': 'application/json',
-                    'X-CSRF-TOKEN': csrfToken
+                    'X-CSRF-TOKEN': csrfToken,
+                    'Accept': 'application/json'
                 },
-                body: JSON.stringify({ decision, comments }),
+                body: JSON.stringify(body),
                 credentials: 'same-origin'
             });
             

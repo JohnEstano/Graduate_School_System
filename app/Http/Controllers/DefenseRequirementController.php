@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Models\DefenseRequest;
-use App\Models\DefenseRequestCancellation;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
@@ -12,11 +11,8 @@ class DefenseRequirementController extends Controller
 {
     public function index(Request $request)
     {
-        // Get all defense requests for the current user
-        $requirements = DefenseRequest::where('submitted_by', Auth::id())->get();
-        $defenseRequest = DefenseRequest::where('school_id', Auth::user()->school_id)
-            ->latest()
-            ->first();
+        $requirements = DefenseRequest::where('submitted_by', Auth::id())->orderByDesc('created_at')->get();
+        $defenseRequest = DefenseRequest::where('school_id', Auth::user()->school_id)->latest()->first();
 
         return inertia('student/submissions/defense-requirements/Index', [
             'defenseRequirements' => $requirements,
@@ -31,7 +27,6 @@ class DefenseRequirementController extends Controller
 
         $coordinatorRoles = ['Coordinator','Administrative Assistant','Dean'];
         if (in_array($user->role, $coordinatorRoles)) {
-            // Coordinator: ONLY post‑adviser
             $requests = DefenseRequest::whereIn('workflow_state', [
                 'adviser-approved','coordinator-review','coordinator-approved',
                 'coordinator-rejected','panels-assigned','scheduled','completed'
@@ -54,8 +49,7 @@ class DefenseRequirementController extends Controller
         $first = $norm($user->first_name);
         $last  = $norm($user->last_name);
 
-        // Fetch anything tied by IDs OR textual adviser match, limited to early/adviser states
-        $requests = DefenseRequest::where(function($q) use ($user,$first,$last) {
+        $baseQuery = DefenseRequest::where(function($q) use ($user,$first,$last) {
                 $q->where('adviser_user_id', $user->id)
                   ->orWhere('assigned_to_user_id', $user->id)
                   ->orWhere(function($sub) use ($first,$last) {
@@ -68,11 +62,10 @@ class DefenseRequirementController extends Controller
             })
             ->whereIn('workflow_state', [
                 'submitted','adviser-review','adviser-approved','adviser-rejected'
-            ])
-            ->orderByDesc('created_at')
-            ->get();
+            ]);
 
-        // Retro-map ONLY if unassigned & textual match
+        $requests = $baseQuery->clone()->orderByDesc('created_at')->get();
+
         foreach ($requests as $r) {
             if (!$r->adviser_user_id && !$r->assigned_to_user_id) {
                 $name = $norm($r->defense_adviser ?? '');
@@ -80,30 +73,16 @@ class DefenseRequirementController extends Controller
                     $r->forceFill([
                         'adviser_user_id' => $user->id,
                         'assigned_to_user_id' => $user->id,
-                        // Keep 'submitted' unless already touched
-                        'workflow_state' => in_array($r->workflow_state, [null,'']) ? 'submitted' : $r->workflow_state,
+                        // Preserve existing state; if blank set adviser-review (so adviser can proceed)
+                        'workflow_state' => in_array($r->workflow_state, [null,'','submitted'])
+                            ? 'adviser-review'
+                            : $r->workflow_state,
                     ])->save();
                 }
             }
         }
 
-        // Re-query after possible mapping
-        $requests = DefenseRequest::where(function($q) use ($user,$first,$last) {
-                $q->where('adviser_user_id', $user->id)
-                  ->orWhere('assigned_to_user_id', $user->id)
-                  ->orWhere(function($sub) use ($first,$last) {
-                      $sub->whereNull('adviser_user_id')
-                          ->whereNull('assigned_to_user_id')
-                          ->whereNotNull('defense_adviser')
-                          ->whereRaw('LOWER(defense_adviser) LIKE ?', ["%$first%"])
-                          ->whereRaw('LOWER(defense_adviser) LIKE ?', ["%$last%"]);
-                  });
-            })
-            ->whereIn('workflow_state', [
-                'submitted','adviser-review','adviser-approved','adviser-rejected'
-            ])
-            ->orderByDesc('created_at')
-            ->get();
+        $requests = $baseQuery->orderByDesc('created_at')->get();
 
         return inertia('adviser/defense-requirements/Index', [
             'defenseRequirements' => [],
@@ -113,33 +92,20 @@ class DefenseRequirementController extends Controller
 
     public function store(Request $request)
     {
-        // Check for upload errors before validation
-        if ($request->hasAny(['rec_endorsement', 'proof_of_payment', 'manuscript_proposal', 'similarity_index'])) {
-            foreach (['rec_endorsement', 'proof_of_payment', 'manuscript_proposal', 'similarity_index'] as $fileField) {
-                if ($request->hasFile($fileField)) {
-                    $file = $request->file($fileField);
-                    $uploadError = $file->getError();
-                    
-                    if ($uploadError !== UPLOAD_ERR_OK) {
-                        $errorMessages = [
-                            UPLOAD_ERR_INI_SIZE => 'The uploaded file exceeds the server upload limit.',
-                            UPLOAD_ERR_FORM_SIZE => 'The uploaded file exceeds the form upload limit.',
-                            UPLOAD_ERR_PARTIAL => 'The file was only partially uploaded. Please try again.',
-                            UPLOAD_ERR_NO_FILE => 'No file was uploaded.',
-                            UPLOAD_ERR_NO_TMP_DIR => 'Server error: Missing temporary folder.',
-                            UPLOAD_ERR_CANT_WRITE => 'Server error: Failed to write file to disk.',
-                            UPLOAD_ERR_EXTENSION => 'Server error: File upload stopped by extension.',
-                        ];
-                        
-                        $message = $errorMessages[$uploadError] ?? 'Unknown upload error occurred.';
-                        return back()->withErrors([$fileField => $message])->withInput();
-                    }
+        // Early upload error interception
+        foreach (['rec_endorsement','proof_of_payment','manuscript_proposal','similarity_index'] as $fileField) {
+            if ($request->hasFile($fileField)) {
+                $err = $request->file($fileField)->getError();
+                if ($err !== UPLOAD_ERR_OK) {
+                    return back()->withErrors([
+                        $fileField => 'File upload failed (code '.$err.'). Please retry.'
+                    ])->withInput();
                 }
             }
         }
 
-        $maxFileSize = config('upload.max_file_size_kb', 204800); // Default to 200MB if config not found
-        $allowedMimes = implode(',', config('upload.allowed_extensions', ['pdf', 'doc', 'docx', 'jpg', 'jpeg', 'png']));
+        $maxFileSize = config('upload.max_file_size_kb', 204800);
+        $allowedMimes = implode(',', config('upload.allowed_extensions', ['pdf','doc','docx','jpg','jpeg','png']));
 
         $data = $request->validate([
             'first_name' => 'required|string',
@@ -149,47 +115,32 @@ class DefenseRequirementController extends Controller
             'program' => 'required|string',
             'thesis_title' => 'required|string',
             'adviser' => 'required|string',
-            'defense_type' => 'required|string', 
-            // Professional file validation for academic documents using config values
+            'defense_type' => 'required|string',
             'rec_endorsement' => "nullable|file|mimes:{$allowedMimes}|max:{$maxFileSize}",
             'proof_of_payment' => "nullable|file|mimes:{$allowedMimes}|max:{$maxFileSize}",
-            'reference_no' => 'nullable|string',
-            'manuscript_proposal' => "nullable|file|mimes:pdf,doc,docx|max:{$maxFileSize}", // Manuscripts only accept documents
+            'reference_no' => 'nullable|string|max:150',
+            'manuscript_proposal' => "nullable|file|mimes:pdf,doc,docx|max:{$maxFileSize}",
             'similarity_index' => "nullable|file|mimes:{$allowedMimes}|max:{$maxFileSize}",
         ]);
 
-        // Handle file uploads with professional error handling
-        foreach (['rec_endorsement', 'proof_of_payment', 'manuscript_proposal', 'similarity_index'] as $file) {
-            if ($request->hasFile($file)) {
+        foreach (['rec_endorsement','proof_of_payment','manuscript_proposal','similarity_index'] as $f) {
+            if ($request->hasFile($f)) {
                 try {
-                    $uploadedFile = $request->file($file);
-                    
-                    // Log file upload attempt for monitoring
-                    Log::info("Academic file upload attempt", [
-                        'file_field' => $file,
-                        'original_name' => $uploadedFile->getClientOriginalName(),
-                        'size_mb' => round($uploadedFile->getSize() / 1024 / 1024, 2),
-                        'mime_type' => $uploadedFile->getMimeType(),
-                        'user_id' => Auth::id(),
+                    $uploaded = $request->file($f);
+                    Log::info('File upload attempt', [
+                        'field'=>$f,
+                        'name'=>$uploaded->getClientOriginalName(),
+                        'size'=>$uploaded->getSize(),
+                        'user'=>Auth::id()
                     ]);
-                    
-                    $data[$file] = $uploadedFile->store('defense_requirements', 'public');
-                    
-                } catch (\Exception $e) {
-                    Log::error("File upload failed", [
-                        'file_field' => $file,
-                        'error' => $e->getMessage(),
-                        'user_id' => Auth::id(),
-                    ]);
-                    
-                    return back()->withErrors([
-                        $file => "Failed to upload {$file}. Please ensure the file is under 200MB and try again."
-                    ])->withInput();
+                    $data[$f] = $uploaded->store('defense_requirements','public');
+                } catch (\Throwable $e) {
+                    Log::error('Upload failed', ['field'=>$f,'err'=>$e->getMessage()]);
+                    return back()->withErrors([$f=>'Failed to store file. Try again.'])->withInput();
                 }
             }
         }
 
-        // Save to the consolidated defense_requests table
         try {
             $defenseRequestData = [
                 'first_name' => $data['first_name'],
@@ -209,88 +160,76 @@ class DefenseRequirementController extends Controller
                 'submitted_at' => now(),
                 'status' => 'Pending',
                 'priority' => 'Medium',
-                'workflow_state' => 'submitted', // New workflow: submitted → adviser-review
+                'workflow_state' => 'submitted',
             ];
 
-            // Try to map adviser name to user ID
+            // Adviser auto-map
             if ($defenseRequestData['defense_adviser']) {
-                $adviserName = trim($defenseRequestData['defense_adviser']);
-                $normalized = preg_replace('/\s+/',' ', strtolower($adviserName));
-
-                $userMatch = \App\Models\User::whereIn('role',['Faculty','Adviser'])
+                $normalized = preg_replace('/\s+/',' ', strtolower($defenseRequestData['defense_adviser']));
+                $match = \App\Models\User::whereIn('role',['Faculty','Adviser'])
                     ->get()
                     ->first(function($u) use ($normalized) {
                         $combo1 = strtolower($u->first_name.' '.$u->last_name);
                         $combo2 = strtolower($u->last_name.', '.$u->first_name);
                         return str_contains($normalized,$combo1) || str_contains($normalized,$combo2);
                     });
-
-                if ($userMatch) {
-                    $defenseRequestData['adviser_user_id'] = $userMatch->id;
-                    $defenseRequestData['assigned_to_user_id'] = $userMatch->id;
+                if ($match) {
+                    $defenseRequestData['adviser_user_id'] = $match->id;
+                    $defenseRequestData['assigned_to_user_id'] = $match->id;
                     $defenseRequestData['workflow_state'] = 'adviser-review';
                 }
             }
 
-            // Ensure initial workflow_state is 'submitted' only.
-            $defenseRequestData['workflow_state'] = 'submitted';
-
-            // If adviser matched earlier code may have set adviser_user_id; DO NOT escalate visibility.
-            // Remove any accidental adviser-approved / coordinator-* states.
-            unset($defenseRequestData['status']); // optional: let it default (or set $defenseRequestData['status'] = 'pending';)
-            $defenseRequestData['status'] = $defenseRequestData['status'] ?? 'pending';
-
-            // Now create
-            $defenseRequest = DefenseRequest::create($defenseRequestData);
-            
-            // Add workflow history entry
-            $defenseRequest->addWorkflowEntry(
+            $dr = DefenseRequest::create($defenseRequestData);
+            $dr->addWorkflowEntry(
                 'submitted',
                 'Defense request submitted by student',
-                Auth::id()
+                Auth::id(),
+                null,
+                'submitted'
             )->save();
-            
-        } catch (\Exception $e) {
-            Log::error('Failed to create defense request: ' . $e->getMessage());
-            return redirect()->back()->with('error', 'Failed to submit defense requirements. Please try again.');
+
+        } catch (\Throwable $e) {
+            Log::error('Defense request create failed', ['err'=>$e->getMessage()]);
+            return back()->with('error','Failed to submit defense requirements.');
         }
 
-        return redirect()->back()->with('success', 'Defense requirements submitted successfully!');
+        return back()->with('success','Defense requirements submitted.');
     }
 
     public function unsubmit(Request $request, $id)
     {
-        $defenseRequest = DefenseRequest::findOrFail($id);
-
-        if ($defenseRequest->submitted_by !== Auth::id()) {
-            return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
+        $dr = DefenseRequest::findOrFail($id);
+        if ($dr->submitted_by !== Auth::id()) {
+            return response()->json(['success'=>false,'message'=>'Unauthorized'],403);
         }
 
-        $allowedStates = ['pending', 'submitted', 'adviser-review'];
-        $currentState = strtolower($defenseRequest->workflow_state ?? '');
-        $currentStatus = strtolower($defenseRequest->status ?? '');
+        $allowedWorkflow = ['submitted','adviser-review'];
+        $wf = strtolower($dr->workflow_state ?? '');
+        $status = strtolower($dr->status ?? '');
 
-        if (!in_array($currentState, $allowedStates) && $currentStatus !== 'pending') {
+        if (!($status === 'pending' || in_array($wf,$allowedWorkflow))) {
             return response()->json([
-                'success' => false,
-                'message' => 'You can only unsubmit requirements that are still pending or under adviser review.'
-            ], 403);
+                'success'=>false,
+                'message'=>'You can only unsubmit while pending or under adviser review.'
+            ],403);
         }
 
-        $reason = $request->input('reason');
+        $reason = trim($request->input('reason','(no reason provided)'));
 
-        // Create cancellation record
-        DefenseRequestCancellation::create([
-            'defense_request_id' => $defenseRequest->id,
-            'cancelled_by' => Auth::id(),
-            'reason' => $reason,
-        ]); 
+        $from = $dr->workflow_state;
+        $dr->status = 'Cancelled';
+        $dr->workflow_state = 'cancelled';
+        $dr->last_status_updated_at = now();
+        $dr->last_status_updated_by = Auth::id();
+        $dr->addWorkflowEntry(
+            'cancelled',
+            'Student unsubmitted: '.$reason,
+            Auth::id(),
+            $from,
+            'cancelled'
+        )->save();
 
-        // Update the defense request status
-        $defenseRequest->status = 'Cancelled';
-        $defenseRequest->workflow_state = 'cancelled';
-        $defenseRequest->save();
-
-        return response()->json(['success' => true]);
+        return response()->json(['success'=>true]);
     }
 }
