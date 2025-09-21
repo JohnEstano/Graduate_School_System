@@ -23,82 +23,27 @@ class DefenseRequestController extends Controller
         $user = Auth::user();
         if (!$user) abort(401);
 
-        $coordinatorRoles = ['Coordinator','Administrative Assistant','Dean'];
-        if (in_array($user->role,$coordinatorRoles)) {
-            $visibleStates = [
-                'adviser-approved','coordinator-review','coordinator-approved',
-                'panels-assigned','scheduled','completed','adviser-rejected','coordinator-rejected'
-            ];
+        // Always pull ONLY this student's submissions
+        $requirements = DefenseRequest::where('submitted_by', $user->id)
+            ->orderByDesc('created_at')
+            ->get();
 
-            $requests = DefenseRequest::with([
-                'user','adviserUser','panelsAssignedBy','scheduleSetBy','lastStatusUpdater'
-            ])
-            ->whereIn('workflow_state',$visibleStates)
-            ->orderBy('adviser_reviewed_at','desc')
-            ->orderBy('created_at','desc')
-            ->get()
-            ->map(function($r){
-                $status = $this->normalizeStatusForCoordinator($r);
-                $lastUpdated = $r->last_status_updated_at instanceof Carbon
-                    ? $r->last_status_updated_at->format('Y-m-d H:i:s')
-                    : ($r->last_status_updated_at ?? '');
-                $scheduledDate = $r->scheduled_date instanceof Carbon
-                    ? $r->scheduled_date->format('Y-m-d')
-                    : '';
-                return [
-                    'id' => $r->id,
-                    'first_name' => $r->first_name,
-                    'middle_name' => $r->middle_name,
-                    'last_name' => $r->last_name,
-                    'program' => $r->program,
-                    'thesis_title' => $r->thesis_title,
-                    'date_of_defense' => $scheduledDate,
-                    'mode_defense' => $r->defense_mode ?? '',
-                    'defense_type' => $r->defense_type,
-                    'status' => $status,
-                    'workflow_state' => $r->workflow_state,
-                    'priority' => $r->priority ?? 'Medium',
-                    'last_status_updated_by' => $r->lastStatusUpdater?->name,
-                    'last_status_updated_at' => $lastUpdated,
-                ];
-            });
-
-            return Inertia::render('coordinator/submissions/defense-request/Index', [
-                'defenseRequests' => $requests->values(),
-                'auth' => [
-                    'user' => [
-                        'role' => $user->role,
-                        'school_id' => $user->school_id,
-                    ]
-                ]
-            ]);
+        // Lazy auto-complete for each (handles old scheduled -> completed)
+        foreach ($requirements as $r) {
+            try { $r->attemptAutoComplete(); } catch (\Throwable $e) {}
         }
 
-        if ($user->role === 'Student') {
-            $latest = DefenseRequest::with('lastStatusUpdater')
-                ->where('submitted_by',$user->id)
-                ->latest()->first();
-            if ($latest) {
-                $latest->last_status_updated_by = $latest->lastStatusUpdater?->name;
-            }
-            return Inertia::render('student/submissions/defense-requirements/Index', [
-                'defenseRequest' => $latest
-            ]);
-        }
+        // Pick an active (non-terminal) request; if none, fallback to the most recent record
+        $terminal = ['cancelled','adviser-rejected','coordinator-rejected','completed'];
+        $active = $requirements->first(function($r) use ($terminal) {
+            return !in_array($r->workflow_state, $terminal);
+        });
+        $defenseRequest = $active ?: $requirements->first();
 
-        if (in_array($user->role,['Faculty','Adviser'])) {
-            $assigned = DefenseRequest::with(['adviserUser','assignedTo','lastStatusUpdater'])
-                ->forAdviser($user)
-                ->orderByDesc('created_at')
-                ->get()
-                ->each->ensureSubmittedHistory();
-
-            return Inertia::render('adviser/defense-requirements/show-all-defense-requirements', [
-                'defenseRequirements' => $assigned
-            ]);
-        }
-
-        return redirect()->route('dashboard');
+        return inertia('student/submissions/defense-requirements/Index', [
+            'defenseRequirements' => $requirements,
+            'defenseRequest' => $defenseRequest,
+        ]);
     }
 
     public function store(Request $request)
@@ -364,6 +309,9 @@ class DefenseRequestController extends Controller
         $user = Auth::user();
         if (!$user) abort(401);
 
+        // Lazy auto-complete
+        $defenseRequest->attemptAutoComplete();
+
         return response()->json([
             'id' => $defenseRequest->id,
             'thesis_title' => $defenseRequest->thesis_title,
@@ -592,6 +540,64 @@ class DefenseRequestController extends Controller
             'ok'=>true,
             'priority'=>$data['priority'],
             'updated_ids'=>$data['ids']
+        ]);
+    }
+
+    /** Queue for coordinator: show adviser-approved & later states */
+    public function coordinatorQueue(Request $request)
+    {
+        $user = $request->user();
+        if (!$user || !in_array($user->role,['Coordinator','Administrative Assistant','Dean'])) {
+            abort(403);
+        }
+
+        $query = DefenseRequest::query()
+            ->whereIn('workflow_state', [
+                'adviser-approved',
+                'coordinator-review',
+                'coordinator-approved',
+                'coordinator-rejected',
+                'panels-assigned',
+                'scheduled',
+                'completed'
+            ]);
+
+        if ($s = $request->input('search')) {
+            $query->where(function($q) use ($s){
+                $q->where('thesis_title','like',"%$s%")
+                  ->orWhere('first_name','like',"%$s%")
+                  ->orWhere('last_name','like',"%$s%")
+                  ->orWhere('school_id','like',"%$s%");
+            });
+        }
+
+        $rows = $query
+            ->orderByRaw("FIELD(workflow_state,'adviser-approved','coordinator-review','coordinator-approved','panels-assigned','scheduled','completed','coordinator-rejected')")
+            ->orderBy('adviser_reviewed_at','desc')
+            ->limit(300)
+            ->get([
+                'id','first_name','middle_name','last_name','school_id','program',
+                'thesis_title','defense_type','status','priority','workflow_state',
+                'scheduled_date','defense_mode','defense_venue','panels_assigned_at'
+            ])->map(function($r){
+                return [
+                    'id'=>$r->id,
+                    'first_name'=>$r->first_name,
+                    'last_name'=>$r->last_name,
+                    'program'=>$r->program,
+                    'thesis_title'=>$r->thesis_title,
+                    'defense_type'=>$r->defense_type,
+                    'priority'=>$r->priority,
+                    'workflow_state'=>$r->workflow_state,
+                    'status'=>$r->status, // may be Pending – ignore for tab logic
+                    'scheduled_date'=>$r->scheduled_date?->format('Y-m-d'),
+                    'defense_mode'=>$r->defense_mode,
+                ];
+            });
+
+        return response()->json([
+            'ok'=>true,
+            'items'=>$rows
         ]);
     }
 

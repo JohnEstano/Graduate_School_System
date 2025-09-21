@@ -786,6 +786,7 @@ class CoordinatorDefenseController extends Controller
 
     private function mapForDetails(DefenseRequest $r): array
     {
+        $r->attemptAutoComplete(); // lazy auto-complete for coordinator view
         return [
             'id'=>$r->id,
             'first_name'=>$r->first_name,

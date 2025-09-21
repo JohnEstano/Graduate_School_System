@@ -41,8 +41,19 @@ type DefenseRequirement = {
     status: string;
     reference_no: string;
     program: string;
-    created_at?: string; 
-    // add other fields as needed
+    created_at?: string;
+    workflow_state?: string;           // <-- added
+    defense_chairperson?: string;      // optional (for row-only display)
+    defense_panelist1?: string;
+    defense_panelist2?: string;
+    defense_panelist3?: string;
+    defense_panelist4?: string;
+    scheduled_date?: string;
+    scheduled_time?: string;
+    scheduled_end_time?: string;
+    formatted_time_range?: string;
+    defense_venue?: string;
+    defense_mode?: string;
 };
 
 type DefenseRequest = {
@@ -96,9 +107,20 @@ export default function DefenseRequestIndex() {
     const [defenseRequest, setDefenseRequest] = useState<DefenseRequest | null>(initialDefenseRequest || null);
     const [lastUpdateTime, setLastUpdateTime] = useState<string>(dayjs().format('h:mm A'));
 
-    const hasPending = defenseRequirements.some(
-        (req) => req.status?.toLowerCase() === 'pending'
-    );
+    // Terminal workflow states where student may start a new submission
+    const TERMINAL_WORKFLOW_STATES = new Set([
+        'cancelled',
+        'adviser-rejected',
+        'coordinator-rejected',
+        'completed'
+    ]);
+
+    // Active workflow exists if we have a defenseRequest and it is NOT terminal
+    const hasActiveWorkflow =
+        !!defenseRequest &&
+        !TERMINAL_WORKFLOW_STATES.has(
+            (defenseRequest.workflow_state || '').toLowerCase()
+        );
 
     const [open, setOpen] = useState(false);
     const [showSuccessPanel, setShowSuccessPanel] = useState(false);
@@ -251,23 +273,46 @@ export default function DefenseRequestIndex() {
     };
 
     function getProgressAndDetails(req: DefenseRequirement) {
-        // Cancelled logic
-        if (
-            req.status?.toLowerCase() === 'cancelled' ||
-            (defenseRequest &&
-                defenseRequest.thesis_title === req.thesis_title &&
-                defenseRequest.workflow_state === 'cancelled')
-        ) {
+        // If global defenseRequest does not correspond to this row, but row itself has terminal/completed state,
+        // use the row's own workflow_state to render status.
+        const rowState = (req.workflow_state || '').toLowerCase();
+
+        // Row-level completed (when not the active defenseRequest object)
+        if ((!defenseRequest || defenseRequest.thesis_title !== req.thesis_title) && rowState === 'completed') {
             return {
-                progress: 0,
-                title: statusDetails.cancelled.title,
-                description: `
-                <div class="mb-2">This submission was cancelled. You cannot make further changes to this request.</div>
-                <div class="text-xs text-muted-foreground">If you wish to submit new requirements, please start a new submission.</div>`,
-                color: statusDetails.cancelled.color,
-                icon: statusDetails.cancelled.icon,
-                bg: statusDetails.cancelled.bg,
-                progressColor: "bg-red-500",
+                progress: 100,
+                title: 'Defense Completed',
+                description: '🎓 Congratulations! Your defense has been completed successfully.',
+                color: 'text-green-600',
+                icon: <GraduationCap className="h-4 w-4 text-green-600" />,
+                bg: 'bg-green-50',
+                progressColor: 'bg-green-500'
+            };
+        }
+
+        // Row-level scheduled (fallback display if not active object)
+        if ((!defenseRequest || defenseRequest.thesis_title !== req.thesis_title) && rowState === 'scheduled') {
+            return {
+                progress: 100,
+                title: 'Defense Scheduled',
+                description: 'Your defense has been scheduled. Prepare your presentation.',
+                color: 'text-green-600',
+                icon: <Calendar className="h-4 w-4 text-green-600" />,
+                bg: 'bg-green-50',
+                progressColor: 'bg-green-500'
+            };
+        }
+
+        // Row-level adviser/coordinator rejection fallback
+        if ((!defenseRequest || defenseRequest.thesis_title !== req.thesis_title) && ['adviser-rejected','coordinator-rejected'].includes(rowState)) {
+            return {
+                progress: 100,
+                title: rowState === 'adviser-rejected' ? 'Rejected by Adviser' : 'Rejected by Coordinator',
+                description: 'This defense request was rejected. You may submit a new one after addressing feedback.',
+                color: 'text-red-600',
+                icon: <X className="h-4 w-4 text-red-600" />,
+                bg: 'bg-red-50',
+                progressColor: 'bg-red-500'
             };
         }
 
@@ -396,10 +441,10 @@ export default function DefenseRequestIndex() {
                     progress = 100;
                     title = "Defense Completed";
                     description = "🎓 Congratulations! Your defense has been completed successfully.";
-                    color = "text-purple-600";
-                    icon = <GraduationCap className="h-4 w-4 text-purple-600" />;
-                    bg = "bg-purple-50";
-                    progressColor = "bg-purple-500";
+                    color = "text-green-600";
+                    icon = <GraduationCap className="h-4 w-4 text-green-600" />;
+                    bg = "bg-green-50";
+                    progressColor = "bg-green-500";
                     break;
                     
                 default:
@@ -439,9 +484,14 @@ export default function DefenseRequestIndex() {
                             </div>
                         </div>
                         <Button
-                            className="bg-rose-500 text-sm px-5 rounded-md dark:bg-rose-600"
+                            className="bg-rose-500 text-sm px-5 rounded-md dark:bg-rose-600 disabled:opacity-60"
                             onClick={() => setOpen(true)}
-                            disabled={hasPending}
+                            disabled={hasActiveWorkflow}
+                            title={
+                                hasActiveWorkflow
+                                    ? 'You already have an active defense workflow. Finish (or reach a terminal state) before submitting another.'
+                                    : 'Submit new defense requirements'
+                            }
                         >
                             Submit requirements
                         </Button>
@@ -482,7 +532,12 @@ export default function DefenseRequestIndex() {
                                 
                                 const;
 
-                                const stepIdx = currentStepperIndex(defenseRequest);
+                                const activeObjForRow =
+                                    defenseRequest && defenseRequest.thesis_title === req.thesis_title
+                                        ? defenseRequest
+                                        : (req.workflow_state ? { workflow_state: req.workflow_state } as any : defenseRequest);
+
+                                const stepIdx = currentStepperIndex(activeObjForRow as any);
 
                                 const wf = defenseRequest?.workflow_state;
                                 const normState = defenseRequest ? normalizeWorkflowState(wf) : null;
@@ -515,6 +570,14 @@ export default function DefenseRequestIndex() {
                                         defenseRequest.thesis_title === req.thesis_title &&
                                         defenseRequest.workflow_state === 'cancelled');
 
+                                // Completed (active or row-level)
+                                const rowStateRaw = (req.workflow_state || '').toLowerCase();
+                                const isCompletedRow =
+                                    (defenseRequest &&
+                                      defenseRequest.thesis_title === req.thesis_title &&
+                                      defenseRequest.workflow_state === 'completed') ||
+                                    rowStateRaw === 'completed';
+
                                 let currentIdx = 0;
                                 let headerTitle = "Submitted";
                                 let headerIcon = <Hourglass className="h-4 w-4 opacity-60 dark:text-zinc-400" />;
@@ -523,6 +586,75 @@ export default function DefenseRequestIndex() {
                                 let detailsDescription = "Your defense requirements have been submitted and are awaiting review.";
                                 let detailsBg = "bg-secondary";
                                 let detailsPanelists: { role: string, name: string }[] = [];
+
+                                // Row-level (non-active) state fallback so old completed/scheduled requests show correct header
+                                const isActiveRow =
+                                    defenseRequest &&
+                                    defenseRequest.thesis_title === req.thesis_title &&
+                                    defenseRequest.school_id === props.auth.user.school_id;
+
+                                const rowState = (req.workflow_state || '').toLowerCase();
+
+                                if (!isActiveRow && rowState) {
+                                    switch (rowState) {
+                                        case 'completed':
+                                            currentIdx = workflowSteps.length - 1;
+                                            headerTitle = "Defense Completed";
+                                            headerIcon = <GraduationCap className="h-4 w-4 text-green-600" />;
+                                            headerColor = "text-green-600";
+                                            detailsTitle = "Defense Completed";
+                                            detailsBg = "bg-green-50";
+                                            detailsDescription = "🎓 Congratulations! Your defense has been completed successfully.";
+                                            break;
+                                        case 'scheduled':
+                                            currentIdx = workflowSteps.findIndex(s => s.key === 'scheduled');
+                                            headerTitle = "Defense Scheduled";
+                                            headerIcon = <Calendar className="h-4 w-4 text-green-600" />;
+                                            headerColor = "text-green-600";
+                                            detailsTitle = "Defense Scheduled";
+                                            detailsBg = "bg-green-50";
+                                            detailsDescription = "Your defense has been scheduled. Prepare your presentation.";
+                                            break;
+                                        case 'panels-assigned':
+                                            currentIdx = workflowSteps.findIndex(s => s.key === 'panels-assigned');
+                                            headerTitle = "Panels Assigned";
+                                            headerIcon = <Users className="h-4 w-4 text-orange-600" />;
+                                            headerColor = "text-orange-600";
+                                            detailsTitle = "Panels Assigned";
+                                            detailsBg = "bg-orange-50";
+                                            detailsDescription = "Panel members have been assigned. Awaiting scheduling.";
+                                            break;
+                                        case 'coordinator-approved':
+                                            currentIdx = workflowSteps.findIndex(s => s.key === 'coordinator-approved');
+                                            headerTitle = "Coordinator Approved";
+                                            headerIcon = <CheckCircle className="h-4 w-4 text-green-600" />;
+                                            headerColor = "text-green-600";
+                                            detailsTitle = "Coordinator Approved";
+                                            detailsBg = "bg-green-50";
+                                            detailsDescription = "Approved by Coordinator. Panel assignment in progress.";
+                                            break;
+                                        case 'adviser-approved':
+                                            currentIdx = workflowSteps.findIndex(s => s.key === 'adviser-approved');
+                                            headerTitle = "Adviser Approved";
+                                            headerIcon = <CheckCircle className="h-4 w-4 text-orange-600" />;
+                                            headerColor = "text-orange-600";
+                                            detailsTitle = "Adviser Approved";
+                                            detailsBg = "bg-orange-50";
+                                            detailsDescription = "Approved by Adviser. Awaiting Coordinator review.";
+                                            break;
+                                        case 'adviser-rejected':
+                                        case 'coordinator-rejected':
+                                            currentIdx = 0;
+                                            headerTitle = rowState === 'adviser-rejected' ? "Rejected by Adviser" : "Rejected by Coordinator";
+                                            headerIcon = <X className="h-4 w-4 text-red-600" />;
+                                            headerColor = "text-red-600";
+                                            detailsTitle = headerTitle;
+                                            detailsBg = "bg-red-50";
+                                            detailsDescription = "This defense request was rejected. You may submit a new one after addressing feedback.";
+                                            break;
+                                        // submitted or anything else leave defaults
+                                    }
+                                }
 
                                 if (isCancelled) {
                                     currentIdx = 0;
@@ -605,11 +737,11 @@ export default function DefenseRequestIndex() {
                                         case 'completed':
                                             currentIdx = 5;
                                             headerTitle = "Defense Completed";
-                                            headerIcon = <GraduationCap className="h-4 w-4 text-purple-600" />;
-                                            headerColor = "text-purple-600";
+                                            headerIcon = <GraduationCap className="h-4 w-4 text-green-600" />;
+                                            headerColor = "text-green-600";
                                             detailsTitle = "Defense Completed";
-                                            detailsBg = "bg-purple-50";
-                                            detailsDescription = "Congratulations! Your defense is completed.";
+                                            detailsBg = "bg-green-50";
+                                            detailsDescription = "🎓 Congratulations! Your defense has been completed successfully.";
                                             break;
                                         default:
                                             currentIdx = 0;
@@ -635,7 +767,7 @@ export default function DefenseRequestIndex() {
                                 }
 
                                 // --- Replace stepper if rejected or cancelled ---
-                                const showStepper = !isCancelled && !isRejectedActive;
+                                const showStepper = !isCancelled && !isRejectedActive && !isCompletedRow;
 
                                 return (
                                     <React.Fragment key={req.id}>
@@ -651,15 +783,19 @@ export default function DefenseRequestIndex() {
                                                     <div className="flex items-center gap-2 flex-1">
                                                         { (isCancelled || isRejectedActive)
                                                             ? <X className="h-4 w-4 text-red-600" />
-                                                            : React.cloneElement(headerIcon, { className: "h-4 w-4 text-muted-foreground dark:text-zinc-300" })
+                                                            : isCompletedRow
+                                                                ? <CheckCircle className="h-4 w-4 text-green-600" />
+                                                                : React.cloneElement(headerIcon, { className: "h-4 w-4 text-muted-foreground dark:text-zinc-300" })
                                                         }
-                                                        <span className={`font-semibold text-xs ${
+                                                         <span className={`font-semibold text-xs ${
                                                             (isCancelled || isRejectedActive)
                                                                 ? "text-red-600"
-                                                                : "text-muted-foreground dark:text-zinc-300"
-                                                        }`}>
-                                                            {headerTitle}
-                                                        </span>
+                                                                : isCompletedRow
+                                                                    ? "text-green-600"
+                                                                    : "text-muted-foreground dark:text-zinc-300"
+                                                         }`}>
+                                                             {headerTitle}
+                                                         </span>
                                                     </div>
                                                     <div className="flex items-center w-64 justify-end">
                                                         {showStepper ? (
@@ -688,9 +824,15 @@ export default function DefenseRequestIndex() {
                                                             </>
                                                         ) : (
                                                             <div className="flex items-center justify-center">
-                                                                <div className="rounded-full p-2 border bg-red-500 text-white border-red-500">
-                                                                    <X className="w-4 h-4" />
-                                                                </div>
+                                                                {isCompletedRow ? (
+                                                                    <div className="rounded-full p-2 border bg-green-500 text-white border-green-500">
+                                                                        <Check className="w-4 h-4" />
+                                                                    </div>
+                                                                ) : (
+                                                                    <div className="rounded-full p-2 border bg-red-500 text-white border-red-500">
+                                                                        <X className="w-4 h-4" />
+                                                                    </div>
+                                                                )}
                                                             </div>
                                                         )}
                                                     </div>

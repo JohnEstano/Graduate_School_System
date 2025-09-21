@@ -21,23 +21,37 @@ use App\Models\DefenseRequest;
 
 /*
 |--------------------------------------------------------------------------
-| Web Routes (CLEAN)
+| Public / Guest
 |--------------------------------------------------------------------------
-| All duplicates removed. Adviser decision route defined exactly once.
-| Coordinator defense management isolated under /coordinator.
-| Order: specific routes before resource('defense-requests', ...).
 */
+Route::get('/', function () {
+    return Auth::check()
+        ? redirect()->route('dashboard')
+        : redirect()->route('login');
+})->name('home');
 
-// Simple root redirect
-Route::get('/', fn() => redirect('/login'))->name('home');
+Route::middleware('guest')->group(function () {
+    // BASIC login page (adjust Inertia component path to what you actually have)
+    Route::get('/login', fn() => Inertia::render('auth/Login'))->name('login');
+    // Uncomment if you allow registration
+    // Route::get('/register', fn() => Inertia::render('auth/Register'))->name('register');
+});
 
-// Google OAuth
+/*
+|--------------------------------------------------------------------------
+| Google OAuth
+|--------------------------------------------------------------------------
+*/
 Route::get('/auth/google/redirect', [GoogleController::class, 'redirect'])->name('google.redirect');
 Route::get('/auth/google/callback', [GoogleController::class, 'callback'])->name('google.callback');
 Route::get('/auth/status/google-verified', [\App\Http\Controllers\Auth\AuthStatusController::class, 'googleVerified'])
     ->name('auth.status.google-verified');
 
-// Public diagnostic (optional – keep or remove)
+/*
+|--------------------------------------------------------------------------
+| Debug / Diagnostics (optional)
+|--------------------------------------------------------------------------
+*/
 Route::get('/test-upload-limits', function () {
     return response()->json([
         'upload_max_filesize' => ini_get('upload_max_filesize'),
@@ -49,54 +63,61 @@ Route::get('/test-upload-limits', function () {
     ]);
 });
 
-/* =========================================================
+/*
+|--------------------------------------------------------------------------
 | Authenticated + Verified
-========================================================= */
+|--------------------------------------------------------------------------
+*/
 Route::middleware(['auth','verified'])->group(function () {
 
-    // Dashboard
     Route::get('/dashboard', [DashboardController::class,'index'])->name('dashboard');
 
-    // Notifications (page)
+    // Logout
+    Route::post('/logout', function(\Illuminate\Http\Request $r){
+        Auth::logout();
+        $r->session()->invalidate();
+        $r->session()->regenerateToken();
+        return redirect()->route('login');
+    })->name('logout');
+
+    /* Notifications */
     Route::get('/notification', fn() => Inertia::render('notification/Index'))->name('notification.index');
     Route::get('/notifications', [NotificationController::class,'index'])->name('notifications.index');
 
-    // Payment submission (student)
+    /* Payments */
     Route::get('/payment', [PaymentSubmissionController::class,'index'])->name('payment.index');
     Route::post('/payment', [PaymentSubmissionController::class,'store'])->name('payment.store');
 
-    // Student schedule page
+    /* Student schedule page */
     Route::get('/schedule', fn() => Inertia::render('schedule/Index'))->name('schedule.index');
 
-    /* ---------------- Student Defense Requirements / Request --------------- */
-    // Student defense requirements (upload form & list)
+    /* Defense Requirements (student submit) */
     Route::get('/defense-requirements', [DefenseRequirementController::class,'index'])->name('defense-requirements.index');
     Route::post('/defense-requirements', [DefenseRequirementController::class,'store'])->name('defense-requirements.store');
     Route::post('/defense-requirements/{id}/unsubmit', [DefenseRequirementController::class,'unsubmit'])
         ->name('defense-requirements.unsubmit');
 
-    // Adviser / faculty consolidated view of student submissions
+    /* Adviser view of all student submissions */
     Route::get('/all-defense-requirements', [DefenseRequirementController::class,'all'])
         ->name('defense-requirements.all');
 
-    // Student defense request (separate form)
+    /* Defense Request (main workflow) */
     Route::get('/defense-request', [DefenseRequestController::class,'index'])->name('defense-request.index');
     Route::post('/defense-request', [DefenseRequestController::class,'store'])->name('defense-request.store');
 
-    /* ---------------- Defense Requests Custom Actions ---------------- */
+    /* Workflow actions */
     Route::post('/defense-requests/{defenseRequest}/adviser-decision',
         [DefenseRequestController::class,'adviserDecision'])->name('defense-requests.adviser-decision');
-
     Route::post('/defense-requests/{defenseRequest}/coordinator-decision',
         [DefenseRequestController::class,'coordinatorDecision'])->name('defense-requests.coordinator-decision');
 
-    // Status / priority single updates
+    /* Status / priority */
     Route::patch('/defense-requests/{defenseRequest}/status',
         [DefenseRequestController::class,'updateStatus'])->name('defense-requests.update-status');
     Route::patch('/defense-requests/{defenseRequest}/priority',
         [DefenseRequestController::class,'updatePriority'])->name('defense-requests.update-priority');
 
-    // Bulk updates
+    /* Bulk */
     Route::patch('/defense-requests/bulk-status',
         [DefenseRequestController::class,'bulkUpdateStatus'])->name('defense-requests.bulk-update-status');
     Route::patch('/defense-requests/bulk-priority',
@@ -104,32 +125,27 @@ Route::middleware(['auth','verified'])->group(function () {
     Route::delete('/defense-requests/bulk-remove',
         [DefenseRequestController::class,'bulkDelete'])->name('defense-requests.bulk-remove');
 
-    // Adviser helper endpoints
+    /* Adviser helpers */
     Route::get('/defense-requests/adviser-suggestion',
         [DefenseRequestController::class,'adviserSuggestion'])->name('defense-requests.adviser-suggestion');
     Route::get('/defense-requests/adviser-candidates',
         [DefenseRequestController::class,'adviserCandidates'])->name('defense-requests.adviser-candidates');
 
-    // Calendar & counts / lightweight API
-    Route::get('/defense-requests/calendar',
-        [DefenseRequestController::class,'calendar'])->name('defense-requests.calendar');
-    Route::get('/defense-requests/pending',
-        [DefenseRequestController::class,'pending'])->name('defense-requests.pending');
-    Route::get('/api/defense-requests/count',
-        [DefenseRequestController::class,'count'])->name('api.defense-requests.count');
-    Route::get('/api/defense-request/{defenseRequest}',
-        [DefenseRequestController::class,'apiShow'])->name('api.defense-request.show');
+    /* Lightweight APIs */
+    Route::get('/defense-requests/calendar', [DefenseRequestController::class,'calendar'])->name('defense-requests.calendar');
+    Route::get('/defense-requests/pending', [DefenseRequestController::class,'pending'])->name('defense-requests.pending');
+    Route::get('/api/defense-requests/count', [DefenseRequestController::class,'count'])->name('api.defense-requests.count');
+    Route::get('/api/defense-request/{defenseRequest}', [DefenseRequestController::class,'apiShow'])->name('api.defense-request.show');
 
-    // Secure download (if implemented)
+    /* Attachments download */
     Route::get('/storage/defense-attachments/{filename}',
         [DefenseRequestController::class,'downloadAttachment'])->name('defense-attachments.download');
 
-    // Place specific routes BEFORE resource to avoid conflicts
-    Route::resource('defense-requests', DefenseRequestController::class)->except([
-        // Exclude create/edit if you are using Inertia custom pages else remove except
-    ]);
+    /* Resource (keep after specific routes) */
+    Route::resource('defense-requests', DefenseRequestController::class)
+        ->except(['index','create','edit']);
 
-    /* ---------------- Panelists CRUD ---------------- */
+    /* Panelists CRUD */
     Route::get('/panelists', [PanelistController::class,'view'])->name('panelists.view');
     Route::post('/panelists', [PanelistController::class,'store'])->name('panelists.store');
     Route::put('/panelists/{panelist}', [PanelistController::class,'update'])->name('panelists.update');
@@ -137,11 +153,11 @@ Route::middleware(['auth','verified'])->group(function () {
     Route::post('/panelists/bulk-delete', [PanelistController::class,'bulkDelete'])->name('panelists.bulk-delete');
     Route::post('/panelists/bulk-status', [PanelistController::class,'bulkUpdateStatus'])->name('panelists.bulk-status');
 
-    /* ---------------- Comprehensive Exam (Student) ---------------- */
+    /* Comprehensive Exam (student) */
     Route::get('/comprehensive-exam', [ComprehensiveExamController::class,'index'])->name('comprehensive-exam.index');
     Route::post('/comprehensive-exam', [ComprehensiveExamController::class,'store'])->name('comprehensive-exam.store');
 
-    /* ---------------- Coordinator Comprehensive Exam ---------------- */
+    /* Coordinator Comprehensive Exam */
     Route::get('/coordinator/compre-exam', [CoordinatorCompreExamController::class,'index'])
         ->name('coordinator.compre-exam.index');
     Route::get('/coordinator/compre-payment', [CoordinatorComprePaymentController::class,'index'])
@@ -151,29 +167,24 @@ Route::middleware(['auth','verified'])->group(function () {
     Route::post('/coordinator/compre-payment/{id}/reject', [CoordinatorComprePaymentController::class,'reject'])
         ->name('coordinator.compre-payment.reject');
 
-    /* ---------------- Honorarium / Reports (Inertia pages) ---------------- */
+    /* Honorarium / Reports */
     Route::get('/generate-report', fn() => Inertia::render('honorarium/generate-report/Index'))
         ->name('generate-report.index');
     Route::get('/honorarium-summary', fn() => Inertia::render('honorarium/honorarium-summary/Index'))
         ->name('honorarium-summary.index');
 
-    /* ---------------- Academic Records (Student) ---------------- */
+    /* Academic Records */
     Route::get('/academic-records', fn() => Inertia::render('student/academic-records/academic-records'))
         ->name('academic-records.index');
 
-    /* ---------------- System Status Page ---------------- */
+    /* System Status */
     Route::get('/system-status', fn() => Inertia::render('system-status'))->name('system-status');
 
-    /* ---------------- Coordinator Defense Management (Prefix) ---------------- */
+    /* Coordinator Defense Management */
     Route::prefix('coordinator')->name('coordinator.')->group(function () {
+        Route::get('/defense-management', [CoordinatorDefenseController::class,'index'])->name('defense.index');
 
-        // Dashboard / index
-        Route::get('/defense-management', [CoordinatorDefenseController::class,'index'])
-            ->name('defense.index');
-
-        // Details & actions
-        Route::get('/defense/{defenseRequest}', [CoordinatorDefenseController::class,'show'])
-            ->name('defense.show');
+        Route::get('/defense/{defenseRequest}', [CoordinatorDefenseController::class,'show'])->name('defense.show');
         Route::post('/defense/{defenseRequest}/assign-panels', [CoordinatorDefenseController::class,'assignPanels'])
             ->name('defense.assign-panels');
         Route::post('/defense/{defenseRequest}/schedule', [CoordinatorDefenseController::class,'scheduleDefense'])
@@ -183,11 +194,9 @@ Route::middleware(['auth','verified'])->group(function () {
         Route::put('/defense/{defenseRequest}', [CoordinatorDefenseController::class,'updateDefense'])
             ->name('defense.update');
 
-        // Approval listing
         Route::get('/defense-requests/approval', [CoordinatorDefenseController::class,'getRequestsForApproval'])
             ->name('defense-requests.approval');
 
-        // Calendar & panelist utilities
         Route::get('/schedule', [\App\Http\Controllers\DefenseScheduleController::class,'index'])
             ->name('schedule.index');
         Route::get('/schedule/calendar', [\App\Http\Controllers\DefenseScheduleController::class,'calendar'])
@@ -197,17 +206,16 @@ Route::middleware(['auth','verified'])->group(function () {
         Route::get('/schedule/available-panelists', [\App\Http\Controllers\DefenseScheduleController::class,'availablePanelists'])
             ->name('schedule.available-panelists');
 
-        // Table view of all
         Route::get('/defense-requests/all', [CoordinatorDefenseController::class,'allDefenseRequests'])
             ->name('defense-requests.all');
 
-        // JSON/aux endpoints
         Route::post('/defense-requests/{defenseRequest}/panels', [CoordinatorDefenseController::class,'assignPanelsJson'])
             ->name('defense.panels.json');
         Route::post('/defense-requests/{defenseRequest}/schedule-json', [CoordinatorDefenseController::class,'scheduleDefenseJson'])
             ->name('defense.schedule.json');
         Route::get('/panel-members', [CoordinatorDefenseController::class,'panelMembersAll'])
             ->name('defense.panel-members');
+
         Route::get('/defense-requests/{defenseRequest}/details', function(DefenseRequest $defenseRequest) {
             $user = Auth::user();
             $roles = ['Coordinator','Administrative Assistant','Dean'];
@@ -251,21 +259,27 @@ Route::middleware(['auth','verified'])->group(function () {
             ]);
         })->name('defense-requests.details');
     });
+
+    /* Profile */
+    Route::get('/profile', function () {
+        return Inertia::render('profile/Edit');
+    })->name('profile.edit');
 });
 
-/* =========================================================
+/*
+|--------------------------------------------------------------------------
 | Auth (NOT necessarily verified) utility API
-========================================================= */
+|--------------------------------------------------------------------------
+*/
 Route::middleware(['auth'])->group(function () {
-    // Panel members combined API (if used outside verified)
     Route::get('/api/panel-members', [PanelistController::class,'allCombined'])->name('api.panel-members');
 });
 
-/* =========================================================
-| Public / Shared API endpoints
-========================================================= */
-
-// Faculty search API (limit)
+/*
+|--------------------------------------------------------------------------
+| Public / Shared API
+|--------------------------------------------------------------------------
+*/
 Route::get('/api/faculty-search', function (\Illuminate\Http\Request $request) {
     $q = $request->input('q','');
     return User::where(function($query) use ($q) {
@@ -280,48 +294,54 @@ Route::get('/api/faculty-search', function (\Illuminate\Http\Request $request) {
         ->get(['id','first_name','middle_name','last_name']);
 })->name('api.faculty-search');
 
-// Coordinator defense requests JSON list
 Route::get('/api/coordinator/defense-requests', function () {
     $user = Auth::user();
     $roles = ['Coordinator','Administrative Assistant','Dean'];
     if (!$user || !in_array($user->role,$roles)) abort(403);
 
-    $records = \App\Models\DefenseRequest::query()
+    $records = DefenseRequest::query()
         ->whereIn('workflow_state',[
-
             'adviser-approved',
             'coordinator-review',
             'coordinator-approved',
-            'coordinator-rejected',  // only coordinator rejections
+            'coordinator-rejected',
             'panels-assigned',
             'scheduled'
         ])
         ->orderBy('adviser_reviewed_at','desc')
         ->get();
 
-    return $records->map(function($r){
-        return [
-            'id'=>$r->id,
-            'thesis_title'=>$r->thesis_title,
-            'workflow_state'=>$r->workflow_state,
-            'status'=>$r->status, // still 'Pending' for adviser-rejected rows (so they won't be in this list)
-        ];
-    });
+    return $records->map(fn($r)=>[
+        'id'=>$r->id,
+        'thesis_title'=>$r->thesis_title,
+        'workflow_state'=>$r->workflow_state,
+        'status'=>$r->status,
+    ]);
 })->name('api.coordinator.defense-requests');
 
-// Legacy academic records (keep if needed)
+/*
+|--------------------------------------------------------------------------
+| Legacy / Extra
+|--------------------------------------------------------------------------
+*/
 Route::get('/legacy/academic-records', [AcademicRecordController::class,'index'])
     ->name('legacy.academic-records.index');
 Route::get('/legacy/academic-records/dashboard', fn() => Inertia::render('legacy/AcademicRecordsDashboard'))
     ->name('legacy.academic-records.dashboard');
-
-// Legacy system linking
 Route::get('/legacy/link', [\App\Http\Controllers\LegacyLinkController::class,'form'])->name('legacy.link.form');
 Route::post('/legacy/link', [\App\Http\Controllers\LegacyLinkController::class,'link'])->name('legacy.link.submit');
 Route::delete('/legacy/link', [\App\Http\Controllers\LegacyLinkController::class,'unlink'])->name('legacy.link.unlink');
-
-// Faculty class list (legacy proxy)
 Route::get('/faculty/class-list', [\App\Http\Controllers\InstructorClassListController::class,'page'])
     ->name('faculty.class-list.page');
 Route::get('/legacy/faculty/class-list', [\App\Http\Controllers\InstructorClassListController::class,'index'])
     ->name('legacy.faculty.class-list');
+
+/*
+|--------------------------------------------------------------------------
+| Include default auth scaffolding (login, password, etc.)
+|--------------------------------------------------------------------------
+*/
+if (file_exists(__DIR__.'/auth.php')) {
+    require __DIR__.'/auth.php';
+}
+if (file_exists(__DIR__.'/settings.php')) require __DIR__.'/settings.php';

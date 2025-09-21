@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Auth;
 use App\Models\User;
+use Carbon\Carbon;
 
 class DefenseRequest extends Model
 {
@@ -178,5 +179,49 @@ class DefenseRequest extends Model
         $this->attributes['workflow_history'] = is_array($value)
             ? json_encode($value)
             : $value;
+    }
+
+    public function scheduledStartAt(): ?Carbon
+    {
+        if (!$this->scheduled_date || !$this->scheduled_time) return null;
+        return Carbon::parse($this->scheduled_date->format('Y-m-d').' '.$this->scheduled_time);
+    }
+
+    public function scheduledEndAt(): ?Carbon
+    {
+        // Prefer explicit end time; fallback: +1 hour from start; ultimate fallback: date end of day
+        if ($this->scheduled_date && $this->scheduled_end_time) {
+            return Carbon::parse($this->scheduled_date->format('Y-m-d').' '.$this->scheduled_end_time);
+        }
+        $start = $this->scheduledStartAt();
+        if ($start) return (clone $start)->addHour();
+        if ($this->scheduled_date) {
+            return Carbon::parse($this->scheduled_date->format('Y-m-d').' 23:59:59');
+        }
+        return null;
+    }
+
+    public function attemptAutoComplete(?int $systemUserId = null): bool
+    {
+        if ($this->workflow_state !== 'scheduled') return false;
+        $end = $this->scheduledEndAt();
+        if ($end && now()->greaterThan($end)) {
+            $from = $this->workflow_state;
+            $this->workflow_state = 'completed';
+            // Keep status as Approved (do not introduce new status if you rely on existing tabs)
+            $this->status = 'Approved';
+            $this->last_status_updated_at = now();
+            $this->last_status_updated_by = $systemUserId;
+            $this->addWorkflowEntry(
+                'completed',
+                'Auto-completed after scheduled defense end time passed',
+                $systemUserId,
+                $from,
+                'completed'
+            );
+            $this->save();
+            return true;
+        }
+        return false;
     }
 }
