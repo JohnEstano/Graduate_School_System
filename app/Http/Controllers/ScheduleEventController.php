@@ -29,6 +29,7 @@ class ScheduleEventController extends Controller
                 'type'     => $e->type,
                 'color'    => $e->color ?: '#2563eb',
                 'origin'   => 'event',
+                'description' => $e->description,          // <--- ADDED
             ];
         });
 
@@ -108,7 +109,12 @@ class ScheduleEventController extends Controller
             'created_by' => $user->id
         ]);
 
-        return response()->json(['ok'=>true,'event_id'=>$ev->id,'color'=>$ev->color]);
+        return response()->json([
+            'ok'=>true,
+            'event_id'=>$ev->id,
+            'color'=>$ev->color,
+            'description'=>$ev->description,
+        ]);
     }
 
     public function update(Request $r, Event $event) {
@@ -134,7 +140,11 @@ class ScheduleEventController extends Controller
         if (array_key_exists('end',$data)) $event->end_at = $data['end'];
         if (isset($data['allDay'])) $event->all_day = $data['allDay'];
         $event->save();
-        return response()->json(['ok'=>true]);
+        return response()->json([
+            'ok'=>true,
+            'description'=>$event->description,
+            'color'=>$event->color
+        ]);
     }
 
     public function move(Request $r, Event $event) {

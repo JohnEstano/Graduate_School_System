@@ -6,20 +6,19 @@ import {
   startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays,
   format, isSameMonth, isSameDay, isToday, parseISO
 } from "date-fns";
+// UI components
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
-import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
-import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, X, GraduationCap, Pencil, Trash2, Printer } from "lucide-react";
-import {
-  Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogFooter
-} from "@/components/ui/dialog";
+import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
+// Icons
+import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, X, GraduationCap, Trash2, Printer } from "lucide-react";
+import { createPortal } from 'react-dom';
 
 const pad2 = (n:number)=> n.toString().padStart(2,'0');
 
@@ -48,8 +47,9 @@ type CalendarEntry = {
   start?: string;
   end?: string;
   raw: DefenseEvent;
-  defense?: boolean;          // NEW: marks defense requests
-  color?: string;             // NEW: custom color for general events
+  defense?: boolean;
+  color?: string;
+  description?: string;
   __layout?: { top: number; height: number; leftPct: number; widthPct: number };
 };
 
@@ -57,8 +57,8 @@ const MONTHS = ["January","February","March","April","May","June","July","August
 const CURRENT_YEAR = new Date().getFullYear();
 const YEARS = Array.from({ length: 9 }, (_, i) => CURRENT_YEAR - 4 + i);
 
-const DAY_START_HOUR = 0;   // 00:00 (midnight)
-const DAY_END_HOUR = 24;    // exclusive upper bound (do NOT render 24:00 label)
+const DAY_START_HOUR = 0;
+const DAY_END_HOUR = 24;
 const MINUTE_STEP = 30;
 const MINUTES_IN_DAY_RANGE = (DAY_END_HOUR - DAY_START_HOUR) * 60;
 const SLOT_HEIGHT = 44;
@@ -121,7 +121,7 @@ function computeOverlaps(dayEvents: CalendarEntry[]): CalendarEntry[] {
   for (const ev of sorted) {
     const start = timeToOffsetMinutes(ev.start);
     const endRaw = ev.end ? timeToOffsetMinutes(ev.end) : (start + 30);
-    const end = Math.max(start + 5, endRaw); // minimum 5 minutes
+    const end = Math.max(start + 5, endRaw);
     active = active.filter(a => a.end > start);
     const used = new Set(active.map(a => a.col));
     let col = 0;
@@ -133,7 +133,6 @@ function computeOverlaps(dayEvents: CalendarEntry[]): CalendarEntry[] {
   return sorted;
 }
 
-// NEW helper for readable text color against custom bg
 function getTextColor(bg?: string) {
   if (!bg) return '#064e3b';
   const c = bg.replace('#','');
@@ -144,21 +143,55 @@ function getTextColor(bg?: string) {
   const lum = 0.2126*Math.pow(r,2.2)+0.7152*Math.pow(g,2.2)+0.0722*Math.pow(b,2.2);
   return lum > 0.55 ? '#1f2937' : '#ffffff';
 }
+function hexToRgb(hex: string) {
+  const m = hex.replace('#','').match(/^([0-9a-fA-F]{6})$/);
+  if (!m) return { r: 37, g: 99, b: 235 };
+  const h = m[1];
+  return {
+    r: parseInt(h.slice(0,2),16),
+    g: parseInt(h.slice(2,4),16),
+    b: parseInt(h.slice(4,6),16)
+  };
+}
+function getTheme(ev: CalendarEntry) {
+  const base = (ev.defense ? '#059669' : (ev.color || '#2563eb')).toLowerCase();
+  function shade(hex:string, amt:number) {
+    const c = hex.replace('#','');
+    const num = parseInt(c,16);
+    let r = (num >> 16) + amt;
+    let g = (num >> 8 & 0x00FF) + amt;
+    let b = (num & 0x0000FF) + amt;
+    r = Math.max(0, Math.min(255,r));
+    g = Math.max(0, Math.min(255,g));
+    b = Math.max(0, Math.min(255,b));
+    return '#'+((1<<24)+(r<<16)+(g<<8)+b).toString(16).slice(1);
+  }
+  const border = shade(base, -30);
+  const { r, g, b } = hexToRgb(base);
+  const luminance = (0.299*r + 0.587*g + 0.114*b)/255;
+  const text = luminance > 0.55 ? '#1f2937' : '#ffffff';
+  const subText = luminance > 0.55 ? '#111827' : 'rgba(255,255,255,0.85)';
+  return { base, border, text, subText };
+}
 
-const TOOLBAR_STICKY_TOP = 0;      // Adjust if AppLayout has its own fixed navbar height
+const TOOLBAR_STICKY_TOP = 0;
 const TOOLBAR_HEIGHT = 52;
 const VIEW_HEADER_OFFSET = TOOLBAR_STICKY_TOP + TOOLBAR_HEIGHT;
 const GLASS_HEADER = "backdrop-blur supports-[backdrop-filter]:bg-white/85 bg-white/70 dark:bg-neutral-900/75 shadow-sm";
 
+function getCsrf() {
+  const meta = document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement | null;
+  return meta?.content || '';
+}
+
 export default function SchedulePage({ canManage, userRole }: { canManage: boolean; userRole: string }) {
   const [rawEvents, setRawEvents] = useState<DefenseEvent[]>([]);
   const [events, setEvents] = useState<CalendarEntry[]>([]);
+  const [extraEvents, setExtraEvents] = useState<CalendarEntry[]>([]);
   const [monthCursor, setMonthCursor] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<Date | null>(new Date());
   const [view, setView] = useState<'month' | 'week' | 'day'>('week');
   const [loading, setLoading] = useState(false);
-  const [showCard, setShowCard] = useState(false);
-  const [extraEvents, setExtraEvents] = useState<CalendarEntry[]>([]);
   const [showAdd, setShowAdd] = useState(false);
   const [adding, setAdding] = useState(false);
   const [addTitle, setAddTitle] = useState("");
@@ -168,11 +201,11 @@ export default function SchedulePage({ canManage, userRole }: { canManage: boole
   const [addAllDay, setAddAllDay] = useState(false);
   const [addDesc, setAddDesc] = useState("");
   const [addError, setAddError] = useState<string | null>(null);
-  const [addColor, setAddColor] = useState<string>("#10b981"); // NEW color state
+  const [addColor, setAddColor] = useState<string>("#10b981");
   const colorChoices = ["#10b981","#0ea5e9","#6366f1","#f59e0b","#ef4444","#d946ef","#14b8a6","#6d28d9"];
+  const [search] = useState(""); // reserved for future filtering UI
 
   const [now, setNow] = useState(new Date());
-  const [search, setSearch] = useState(""); // Added search state
   useEffect(() => {
     const id = setInterval(()=> setNow(new Date()), 60000);
     return () => clearInterval(id);
@@ -198,6 +231,7 @@ export default function SchedulePage({ canManage, userRole }: { canManage: boole
   };
   const handleDayLeave = () => setDayCursor({v:false,y:0});
 
+  // Defense requests
   useEffect(() => {
     setLoading(true);
     fetch('/defense-requests/calendar')
@@ -206,7 +240,7 @@ export default function SchedulePage({ canManage, userRole }: { canManage: boole
       .finally(()=> setLoading(false));
   }, []);
 
-  // Fetch general (non-defense) events for current visible month range
+  // Non-defense events for month range
   useEffect(() => {
     const rangeStart = startOfMonth(monthCursor);
     const rangeEnd = endOfMonth(monthCursor);
@@ -238,16 +272,17 @@ export default function SchedulePage({ canManage, userRole }: { canManage: boole
                 program: undefined,
                 student_name: undefined,
               },
-              color: it.color || '#34d399',
+              color: it.color || '#2563eb',
               defense: false,
-            };
+              description: (it.description ?? it.desc ?? it.details ?? it.detail ?? it.note ?? it.notes ?? "") as string
+            } as CalendarEntry;
           });
         setExtraEvents(mapped);
       })
       .catch(()=>{/* ignore */});
   }, [monthCursor]);
 
-  // Combine defense + extra events
+  // Merge events
   useEffect(() => {
     const defenseEntries = rawEvents.map(d => ({
       id: 'def-'+d.id,
@@ -318,10 +353,6 @@ export default function SchedulePage({ canManage, userRole }: { canManage: boole
     return map;
   }, [weekDays, eventsByDate]);
 
-  useEffect(() => {
-    setShowCard(dayEvents.length > 0);
-  }, [dayEvents.length]);
-
   const goPrev = () => {
     if (view === 'month') setMonthCursor(addDays(startOfMonth(monthCursor), -1));
     else if (view === 'week') setSelectedDate(d => addDays(d || new Date(), -7));
@@ -350,45 +381,27 @@ export default function SchedulePage({ canManage, userRole }: { canManage: boole
 
   const renderMonth = () => {
     const weeks = monthWeeks;
-    const cellMinHeight = 120; // adjust if you want taller / shorter rows
-
+    const cellMinHeight = 120;
     return (
-      <div
-        className={cn(
-          "w-full border border-t-0 bg-white flex flex-col rounded-b-md rounded-t-none"
-        )}
-      >
-        {/* STICKY WEEKDAY HEADER (copies week view header styling) */}
+      <div className="w-full border border-t-0 bg-white flex flex-col rounded-b-md rounded-t-none">
         <div
-            className={cn(
-              "grid border-b sticky z-40",
-              GLASS_HEADER
-            )}
-            style={{
-              gridTemplateColumns: "repeat(7, 1fr)",
-              top: VIEW_HEADER_OFFSET
-            }}
+          className={cn("grid border-b sticky z-40", GLASS_HEADER)}
+          style={{ gridTemplateColumns: "repeat(7, 1fr)", top: VIEW_HEADER_OFFSET }}
         >
           {['SUN','MON','TUE','WED','THU','FRI','SAT'].map(d => (
-            <div
-              key={d}
-              className="h-12 border-r last:border-r-0 flex items-center justify-center text-[10px] font-semibold uppercase tracking-wide"
-            >
+            <div key={d} className="h-12 border-r last:border-r-0 flex items-center justify-center text-[10px] font-semibold uppercase tracking-wide">
               {d}
             </div>
           ))}
         </div>
-
-        {/* MONTH GRID */}
         <div className="grid grid-cols-7">
-          {weeks.map((week, wi) =>
+          {weeks.map(week =>
             week.map(day => {
               const key = format(day,'yyyy-MM-dd');
               const list = eventsByDate[key] || [];
               const outMonth = !isSameMonth(day, monthCursor);
               const today = isToday(day);
               const selected = selectedDate && isSameDay(day, selectedDate);
-
               return (
                 <div
                   key={key}
@@ -396,18 +409,15 @@ export default function SchedulePage({ canManage, userRole }: { canManage: boole
                   className={cn(
                     "relative p-1 border-r border-b last:[&:nth-last-child(-n+7)]:border-b-0 cursor-pointer overflow-hidden transition-colors focus:outline-none focus-visible:outline-none",
                     outMonth ? "bg-muted/20 text-muted-foreground" : "bg-white",
-                    // removed selected ring highlight
                     "hover:bg-accent/40"
                   )}
                   style={{ minHeight: cellMinHeight }}
                 >
-                  {/* Date number pill */}
                   <div className="flex items-start justify-between mb-0.5">
                     <span
                       className={cn(
                         "w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-semibold select-none",
                         today && "bg-primary text-white shadow",
-                        // if you ALSO want to remove selected pill color, comment the next line
                         !today && selected && "bg-primary/80 text-white",
                         !today && !selected && "text-muted-foreground"
                       )}
@@ -443,18 +453,15 @@ export default function SchedulePage({ canManage, userRole }: { canManage: boole
                 </div>
               );
             })
-          )
-          }
+          )}
         </div>
       </div>
     );
   };
 
-  // Week view (no internal scroll; page scroll handles height; aligned columns)
   const renderWeek = () => {
     const TIME_COL_WIDTH = 90;
     const totalHeight = TIME_SLOTS.length * SLOT_HEIGHT;
-
     let weekCursorTime: string | null = null;
     if (weekCursor.v) {
       const minutesOffset = Math.min(
@@ -468,14 +475,10 @@ export default function SchedulePage({ canManage, userRole }: { canManage: boole
       const ampm = hour24 >= 12 ? 'PM' : 'AM';
       weekCursorTime = `${hour12}:${pad2(minute)} ${ampm}`;
     }
-
     return (
       <div className="w-full border border-t-0 bg-white flex flex-col overflow-visible rounded-b-md rounded-t-none">
         <div
-          className={cn(
-            "grid border-b sticky z-40",
-            GLASS_HEADER
-          )}
+          className={cn("grid border-b sticky z-40", GLASS_HEADER)}
           style={{ gridTemplateColumns: `${TIME_COL_WIDTH}px repeat(7, 1fr)`, top: VIEW_HEADER_OFFSET }}
         >
           <div className="h-12 border-r flex items-center justify-center text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
@@ -507,7 +510,6 @@ export default function SchedulePage({ canManage, userRole }: { canManage: boole
             );
           })}
         </div>
-
         <div
           ref={weekGridRef}
           className="relative"
@@ -515,67 +517,33 @@ export default function SchedulePage({ canManage, userRole }: { canManage: boole
           onMouseMove={handleWeekMove}
           onMouseLeave={handleWeekLeave}
         >
-          <div
-            className="absolute left-0 top-0 bottom-0 border-r bg-white z-20"
-            style={{ width: TIME_COL_WIDTH }}
-          >
+          <div className="absolute left-0 top-0 bottom-0 border-r bg-white z-20" style={{ width: TIME_COL_WIDTH }}>
             {TIME_SLOTS.map(slot => (
-              <div
-                key={slot.minutes}
-                className="relative flex items-center justify-end pr-3"
-                style={{ height: SLOT_HEIGHT }}
-              >
-                <span
-                  className={cn(
-                    "select-none text-[10px]",
-                    slot.isHour ? "font-semibold text-muted-foreground" : "text-muted-foreground/50"
-                  )}
-                >
+              <div key={slot.minutes} className="relative flex items-center justify-end pr-3" style={{ height: SLOT_HEIGHT }}>
+                <span className={cn("select-none text-[10px]", slot.isHour ? "font-semibold text-muted-foreground" : "text-muted-foreground/50")}>
                   {slot.label.replace(':00','')}
                 </span>
               </div>
             ))}
           </div>
-
-          <div
-            className="absolute top-0 bottom-0 right-0 grid"
-            style={{ left: TIME_COL_WIDTH, gridTemplateColumns: "repeat(7, 1fr)" }}
-          >
+          <div className="absolute top-0 bottom-0 right-0 grid" style={{ left: TIME_COL_WIDTH, gridTemplateColumns: "repeat(7, 1fr)" }}>
             {weekDays.map(d => {
               const dateKey = format(d,'yyyy-MM-dd');
               const list = weekMap[dateKey] || [];
               return (
-                <div
-                  key={'week-col-'+dateKey}
-                  className={cn(
-                    "relative border-r",
-                    isToday(d) && "bg-primary/5"
-                  )}
-                >
+                <div key={'week-col-'+dateKey} className={cn("relative border-r", isToday(d) && "bg-primary/5")}>
                   {Array.from({ length: DAY_END_HOUR - DAY_START_HOUR }, (_, i) =>
                     i % 2 === 1 ? (
-                      <div
-                        key={'stripe-'+i}
-                        className="absolute inset-x-0 bg-muted/15"
-                        style={{
-                          top: i * 2 * SLOT_HEIGHT,
-                          height: SLOT_HEIGHT * 2
-                        }}
-                      />
+                      <div key={'stripe-'+i} className="absolute inset-x-0 bg-muted/15" style={{ top: i * 2 * SLOT_HEIGHT, height: SLOT_HEIGHT * 2 }} />
                     ) : null
                   )}
-
                   {TIME_SLOTS.map((slot,i) => (
                     <div
                       key={slot.minutes}
-                      className={cn(
-                        "absolute left-0 right-0 border-b",
-                        slot.isHour ? "border-muted-foreground/40" : "border-muted/40"
-                      )}
+                      className={cn("absolute left-0 right-0 border-b", slot.isHour ? "border-muted-foreground/40" : "border-muted/40")}
                       style={{ top: i * SLOT_HEIGHT }}
                     />
                   ))}
-
                   {list.map(ev => {
                     const startMin = Math.max(0, timeToOffsetMinutes(ev.start));
                     const endMin = Math.min(
@@ -583,7 +551,7 @@ export default function SchedulePage({ canManage, userRole }: { canManage: boole
                       ev.end ? timeToOffsetMinutes(ev.end) : startMin + 60
                     );
                     const topPct = (startMin / MINUTES_IN_DAY_RANGE) * 100;
-                    const duration = Math.max(5, (endMin - startMin)); // minutes
+                    const duration = Math.max(5, (endMin - startMin));
                     const heightPct = (duration / MINUTES_IN_DAY_RANGE) * 100;
                     const l = ev.__layout;
                     return (
@@ -591,9 +559,7 @@ export default function SchedulePage({ canManage, userRole }: { canManage: boole
                         key={ev.id}
                         className={cn(
                           "absolute rounded-md text-[11px] flex flex-col overflow-hidden cursor-pointer",
-                          ev.defense
-                            ? EVENT_BASE
-                            : "ring-1 ring-emerald-500/40 shadow-sm",
+                          ev.defense ? EVENT_BASE : "ring-1 ring-emerald-500/40 shadow-sm",
                           "hover:ring-2"
                         )}
                         style={{
@@ -611,7 +577,8 @@ export default function SchedulePage({ canManage, userRole }: { canManage: boole
                             setEditEvent(ev);
                           } else {
                             setSelectedDate(parseISO(ev.date));
-                            setShowCard(true);
+                            setDetailEvent(ev);
+                            setView('day');
                           }
                         }}
                       >
@@ -636,13 +603,9 @@ export default function SchedulePage({ canManage, userRole }: { canManage: boole
                 </div>
               );
             })}
-
             {weekCursor.v && (
               <>
-                <div
-                  className="pointer-events-none absolute left-0 right-0 h-px bg-black/60 z-40"
-                  style={{ top: weekCursor.y }}
-                />
+                <div className="pointer-events-none absolute left-0 right-0 h-px bg-black/60 z-40" style={{ top: weekCursor.y }} />
                 {weekCursorTime && (
                   <div
                     className="pointer-events-none absolute z-50 -translate-y-1/2 px-1.5 py-0.5 bg-black text-white rounded text-[10px] font-medium shadow"
@@ -659,13 +622,11 @@ export default function SchedulePage({ canManage, userRole }: { canManage: boole
     );
   };
 
-  // Day view
   const renderDay = () => {
     const d = selectedDate || new Date();
     const key = format(d,'yyyy-MM-dd');
     const list = computeOverlaps((eventsByDate[key] || []).map(e => ({...e})));
     const totalHeight = TIME_SLOTS.length * SLOT_HEIGHT;
-
     let dayCursorTime: string | null = null;
     if (dayCursor.v) {
       const minutesOffset = Math.min(
@@ -679,17 +640,9 @@ export default function SchedulePage({ canManage, userRole }: { canManage: boole
       const ampm = hour24 >= 12 ? 'PM' : 'AM';
       dayCursorTime = `${hour12}:${pad2(minute)} ${ampm}`;
     }
-
     return (
       <div className="w-full border border-t-0 bg-white flex flex-col rounded-b-md rounded-t-none">
-        {/* STICKY DAY HEADER */}
-        <div
-          className={cn(
-            "sticky flex items-center justify-between px-6 py-4 border-b z-40",
-            GLASS_HEADER
-          )}
-          style={{ top: VIEW_HEADER_OFFSET }}
-        >
+        <div className={cn("sticky flex items-center justify-between px-6 py-4 border-b z-40", GLASS_HEADER)} style={{ top: VIEW_HEADER_OFFSET }}>
           <div className="flex items-end gap-4">
             <div className="flex flex-col leading-none">
               <span className="text-4xl font-bold tracking-tight">
@@ -705,8 +658,6 @@ export default function SchedulePage({ canManage, userRole }: { canManage: boole
             Approved Defenses
           </Badge>
         </div>
-
-        {/* TIME GRID */}
         <div
           ref={dayGridRef}
           className="relative"
@@ -714,48 +665,28 @@ export default function SchedulePage({ canManage, userRole }: { canManage: boole
           onMouseLeave={handleDayLeave}
         >
           <div className="relative" style={{ minHeight: totalHeight }}>
-            {/* Time labels column */}
             <div className="absolute left-0 top-0 bottom-0 w-[90px] border-r bg-white z-20">
               {TIME_SLOTS.map(slot => (
-                <div
-                  key={slot.minutes}
-                  className="relative flex items-center justify-end pr-3"
-                  style={{ height: SLOT_HEIGHT }}
-                >
-                  <span className={cn(
-                    "text-[11px] select-none",
-                    slot.isHour ? "font-semibold text-muted-foreground" : "text-muted-foreground/50"
-                  )}>{slot.label.replace(':00','')}</span>
+                <div key={slot.minutes} className="relative flex items-center justify-end pr-3" style={{ height: SLOT_HEIGHT }}>
+                  <span className={cn("text-[11px] select-none", slot.isHour ? "font-semibold text-muted-foreground" : "text-muted-foreground/50")}>
+                    {slot.label.replace(':00','')}
+                  </span>
                 </div>
               ))}
             </div>
-
-            {/* Main day column */}
             <div className="absolute left-[90px] right-0 top-0 bottom-0">
-              {/* Background stripes */}
               {Array.from({length: DAY_END_HOUR - DAY_START_HOUR}, (_,i)=> (
                 i % 2 === 1 ? (
-                  <div
-                    key={'stripe-'+i}
-                    className="absolute inset-x-0 bg-muted/15"
-                    style={{ top: i * 2 * SLOT_HEIGHT, height: SLOT_HEIGHT * 2 }}
-                  />
+                  <div key={'stripe-'+i} className="absolute inset-x-0 bg-muted/15" style={{ top: i * 2 * SLOT_HEIGHT, height: SLOT_HEIGHT * 2 }} />
                 ) : null
               ))}
-
-              {/* Horizontal lines */}
               {TIME_SLOTS.map((slot,i) => (
                 <div
                   key={slot.minutes}
-                  className={cn(
-                    "absolute left-0 right-0 border-b",
-                    slot.isHour ? "border-muted-foreground/40" : "border-muted/40"
-                  )}
+                  className={cn("absolute left-0 right-0 border-b", slot.isHour ? "border-muted-foreground/40" : "border-muted/40")}
                   style={{ top: i * SLOT_HEIGHT }}
                 />
               ))}
-
-              {/* Events */}
               {list.map(ev => {
                 const startMin = Math.max(0, timeToOffsetMinutes(ev.start));
                 const endMin = Math.min(
@@ -771,9 +702,7 @@ export default function SchedulePage({ canManage, userRole }: { canManage: boole
                     key={ev.id}
                     className={cn(
                       "absolute rounded-md p-2 text-[11px] flex flex-col overflow-hidden cursor-pointer",
-                      ev.defense
-                        ? EVENT_BASE_SOLID
-                        : "ring-1 ring-emerald-500/40 hover:ring-2"
+                      ev.defense ? EVENT_BASE_SOLID : "ring-1 ring-emerald-500/40 hover:ring-2"
                     )}
                     style={{
                       top: `calc(${topPct}% )`,
@@ -789,8 +718,7 @@ export default function SchedulePage({ canManage, userRole }: { canManage: boole
                       if (canManage && !ev.defense) {
                         setEditEvent(ev);
                       } else {
-                        setSelectedDate(parseISO(ev.date));
-                        setShowCard(true);
+                        setDetailEvent(ev);
                       }
                     }}
                   >
@@ -818,14 +746,9 @@ export default function SchedulePage({ canManage, userRole }: { canManage: boole
                   </div>
                 );
               })}
-
-              {/* Cursor follow line + tooltip (restored) */}
               {dayCursor.v && (
                 <>
-                  <div
-                    className="pointer-events-none absolute left-0 right-0 h-px bg-black/60 z-40"
-                    style={{ top: dayCursor.y }}
-                  />
+                  <div className="pointer-events-none absolute left-0 right-0 h-px bg-black/60 z-40" style={{ top: dayCursor.y }} />
                   {dayCursorTime && (
                     <div
                       className="pointer-events-none absolute z-50 -translate-y-1/2 px-1.5 py-0.5 bg-black text-white rounded text-[10px] font-medium shadow"
@@ -844,87 +767,139 @@ export default function SchedulePage({ canManage, userRole }: { canManage: boole
   };
 
   const sidePanelRef = useRef<HTMLDivElement | null>(null);
-
   const [editEvent, setEditEvent] = useState<CalendarEntry | null>(null);
+  const [detailEvent, setDetailEvent] = useState<CalendarEntry | null>(null);
+  const [detailClosing, setDetailClosing] = useState(false);
+  const [detailAnimating, setDetailAnimating] = useState(false);
   const isEditing = !!editEvent;
 
-  const SidePanel = (
-    <div
-      ref={sidePanelRef}
-      className={cn(
-        "fixed top-24 right-4 z-40 w-[360px] max-h-[72vh] bg-white border rounded-md shadow-xl flex flex-col transition-all",
-        showCard ? "opacity-100 translate-x-0" : "opacity-0 pointer-events-none translate-x-6"
-      )}
-    >
-      <div className="flex items-center justify-between px-4 py-2.5 border-b bg-gradient-to-r from-emerald-50 to-white">
-        <div className="text-xs font-semibold tracking-wide">
-          {selectedDate ? format(selectedDate,'PPP') : 'Select a date'}
-        </div>
-        <Button variant="ghost" size="sm" className="h-6 px-2" onClick={()=> setShowCard(false)}>
-          <X className="h-4 w-4" />
-        </Button>
-      </div>
-      <div className="flex-1 overflow-y-auto p-3 space-y-2">
-        {dayEvents.length === 0 && (
-          <div className="text-[11px] text-muted-foreground text-center py-6">
-            No scheduled defenses.
-          </div>
-        )}
-        {dayEvents.map(ev => {
-          const start = ev.start ? format(parseISO('2020-01-01T'+ev.start),'h:mm a') : '—';
-          const end = ev.end ? format(parseISO('2020-01-01T'+ev.end),'h:mm a') : '';
-          return (
-            <div
-              key={ev.id}
-              className="border rounded-md p-2.5 bg-emerald-50 hover:bg-emerald-100 transition-colors"
-            >
-              <div className="flex items-start justify-between gap-2">
-                <div className="font-semibold text-[12px] leading-snug flex items-center gap-1">
-                  {ev.defense && <GraduationCap className="h-4 w-4" />}
-                  {truncate(ev.title, 70)}
-                </div>
-                {ev.defense && (
-                  <Badge variant="outline" className="text-[10px] border-emerald-500/50 text-emerald-700 bg-emerald-100/80">
-                    Approved
-                  </Badge>
-                )}
-              </div>
-              <div className="text-[11px] mt-1 text-emerald-700 font-medium">
-                {start}{end && ` – ${end}`} {ev.raw.defense_venue && ' • '+ev.raw.defense_venue}
-              </div>
-              <div className="text-[11px] text-muted-foreground truncate">
-                {ev.raw.student_name} {ev.raw.program && <span className="opacity-80">({ev.raw.program})</span>}
-              </div>
-              {ev.raw.defense_type && (
-                <div className="text-[10px] mt-0.5 text-emerald-700 uppercase tracking-wide font-medium">
-                  {ev.raw.defense_type}
-                </div>
-              )}
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
-
-  const getCsrf = () => {
-    const el = document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement | null;
-    return el?.content || '';
+  const closeDetail = () => {
+    if (!detailEvent || detailClosing) return;
+    setDetailClosing(true);
+    setTimeout(() => {
+      setDetailEvent(null);
+      setDetailClosing(false);
+    }, 180);
   };
 
-  // Outside-click close for side panel
   useEffect(() => {
-    if (!showCard) return;
-    const handler = (e: MouseEvent) => {
+    if (detailEvent) {
+      setDetailClosing(false);
+      setDetailAnimating(true);
+      const id = requestAnimationFrame(() => setDetailAnimating(false));
+      return () => cancelAnimationFrame(id);
+    }
+  }, [detailEvent]);
+
+  // Outside click / ESC close for detail panel
+  useEffect(() => {
+    if (!detailEvent) return;
+    const handleClick = (e: MouseEvent) => {
       if (sidePanelRef.current && !sidePanelRef.current.contains(e.target as Node)) {
-        setShowCard(false);
+        closeDetail();
       }
     };
-    window.addEventListener('mousedown', handler);
-    return () => window.removeEventListener('mousedown', handler);
-  }, [showCard]);
+    const handleEsc = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') closeDetail();
+    };
+    document.addEventListener('mousedown', handleClick);
+    document.addEventListener('keydown', handleEsc);
+    return () => {
+      document.removeEventListener('mousedown', handleClick);
+      document.removeEventListener('keydown', handleEsc);
+    };
+  }, [detailEvent]);
 
-  // When editing selected event populate fields
+  const DetailPanel = detailEvent && view === 'day'
+    ? createPortal(
+        <div
+          ref={sidePanelRef}
+            className={cn(
+              "fixed right-4 w-[400px] max-h-[82vh] flex flex-col rounded-lg overflow-hidden shadow-lg border z-[2500]",
+              "transition-all duration-200 ease-out will-change-transform will-change-opacity origin-top",
+              (detailAnimating || detailClosing)
+                ? "opacity-0 translate-y-2 scale-[0.97]"
+                : "opacity-100 translate-y-0 scale-100"
+            )}
+            style={{ top: TOOLBAR_STICKY_TOP + TOOLBAR_HEIGHT + 14 }}
+        >
+          {(() => {
+            const ev = detailEvent;
+            const t = getTheme(ev);
+            const dateStr = format(parseISO(ev.date), 'PPP');
+            const timeStr =
+              (ev.start ? format(parseISO('2020-01-01T'+ev.start),'h:mm a') : '') +
+              (ev.end ? ' – '+format(parseISO('2020-01-01T'+ev.end),'h:mm a') : (ev.start ? '' : ''));
+            const desc = (ev.description && ev.description.trim()) || '—';
+            return (
+              <>
+                <div
+                  className="px-4 py-3 flex items-start gap-3"
+                  style={{ background: t.base, borderBottom: `1px solid ${t.border}`, color: t.text }}
+                >
+                  <div className="mt-0.5 shrink-0">
+                    {ev.defense
+                      ? <GraduationCap className="h-5 w-5" style={{ color: t.text }} />
+                      : <CalendarIcon className="h-5 w-5" style={{ color: t.text }} />}
+                  </div>
+                  <div className="flex-1">
+                    <h2 className="font-semibold text-sm leading-snug pr-6" style={{ color: t.text }} title={ev.title}>
+                      {ev.title}
+                    </h2>
+                    <div className="text-[11px] font-medium mt-0.5" style={{ color: t.subText }}>
+                      {dateStr}{timeStr && ' • '+timeStr}
+                    </div>
+                  </div>
+                  <Button variant="ghost" size="icon" className="h-7 w-7 -m-1" onClick={closeDetail}>
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+                <div className="flex-1 overflow-y-auto p-4 bg-white">
+                  <div className="space-y-4">
+                    <div className="space-y-3">
+                      <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                        {ev.defense ? 'Defense Details' : 'Event Details'}
+                      </div>
+                      <dl className="grid grid-cols-3 gap-x-2 gap-y-1 text-[11px]">
+                        <dt className="font-medium text-muted-foreground">Date</dt>
+                        <dd className="col-span-2">{dateStr}</dd>
+
+                        <dt className="font-medium text-muted-foreground">Time</dt>
+                        <dd className="col-span-2">{timeStr || '—'}</dd>
+
+                        {ev.defense && (
+                          <>
+                            <dt className="font-medium text-muted-foreground">Student</dt>
+                            <dd className="col-span-2">{ev.raw.student_name || '—'}</dd>
+
+                            <dt className="font-medium text-muted-foreground">Program</dt>
+                            <dd className="col-span-2">{ev.raw.program || '—'}</dd>
+
+                            <dt className="font-medium text-muted-foreground">Type</dt>
+                            <dd className="col-span-2 uppercase">{ev.raw.defense_type || '—'}</dd>
+
+                            <dt className="font-medium text-muted-foreground">Mode</dt>
+                            <dd className="col-span-2">{ev.raw.defense_mode || '—'}</dd>
+
+                            <dt className="font-medium text-muted-foreground">Venue</dt>
+                            <dd className="col-span-2">{ev.raw.defense_venue || '—'}</dd>
+                          </>
+                        )}
+
+                        <dt className="font-medium text-muted-foreground">Description</dt>
+                        <dd className="col-span-2 whitespace-pre-wrap">{desc}</dd>
+                      </dl>
+                    </div>
+                  </div>
+                </div>
+              </>
+            );
+          })()}
+        </div>,
+        document.body
+      )
+    : null;
+
   useEffect(() => {
     if (editEvent) {
       setShowAdd(true);
@@ -932,13 +907,12 @@ export default function SchedulePage({ canManage, userRole }: { canManage: boole
       setAddDate(editEvent.date);
       setAddAllDay(false);
       setAddStart(editEvent.start ? editEvent.start.slice(0,5) : "08:00");
-      setAddEnd(editEvent.end ? editEvent.end.slice(0,5) : addStart);
-      setAddDesc(editEvent.raw?.thesis_title === editEvent.title ? "" : (editEvent.raw as any)?.description || "");
+      setAddEnd(editEvent.end ? editEvent.end.slice(0,5) : (editEvent.start ? editEvent.start.slice(0,5) : "09:00"));
+      setAddDesc(editEvent.description || "");
       setAddColor(editEvent.color || "#10b981");
     }
   }, [editEvent]);
 
-  // RESET form when dialog closed
   useEffect(() => {
     if (!showAdd && !editEvent) {
       setAddTitle("");
@@ -949,11 +923,11 @@ export default function SchedulePage({ canManage, userRole }: { canManage: boole
       setAddColor("#10b981");
     }
     if (!showAdd && editEvent) setEditEvent(null);
-  }, [showAdd]);
+  }, [showAdd, editEvent]);
 
   const handlePrint = () => {
     try {
-      const sorted = [...filtered].slice().sort((a,b)=> 
+      const sorted = [...filtered].slice().sort((a,b)=>
         a.date === b.date
           ? (a.start||'23:59').localeCompare(b.start||'23:59')
           : a.date.localeCompare(b.date)
@@ -961,24 +935,25 @@ export default function SchedulePage({ canManage, userRole }: { canManage: boole
       const esc = (s:string)=> (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
       const rows = sorted.map(ev => {
         const dateStr = format(parseISO(ev.date),'MMM d, yyyy');
-        const timeStr = (ev.start ? format(parseISO('2020-01-01T'+ev.start),'h:mm a') : '') +
+        const timeStr =
+          (ev.start ? format(parseISO('2020-01-01T'+ev.start),'h:mm a') : '') +
           (ev.end ? ' – '+format(parseISO('2020-01-01T'+ev.end),'h:mm a') : '');
         return `<tr>
           <td>${esc(dateStr)}</td>
           <td>${esc(timeStr)}</td>
-            <td>${esc(ev.title)}</td>
-            <td>${esc(ev.raw.student_name||'—')}</td>
-            <td>${esc(ev.raw.program||'—')}</td>
-            <td>${esc(ev.raw.defense_type||'—')}</td>
-            <td>${esc(ev.raw.defense_venue || ev.raw.defense_mode || '—')}</td>
+          <td>${esc(ev.title)}</td>
+          <td>${esc(ev.raw.student_name||'—')}</td>
+          <td>${esc(ev.raw.program||'—')}</td>
+          <td>${esc(ev.raw.defense_type||'—')}</td>
+          <td>${esc(ev.raw.defense_venue || ev.raw.defense_mode || '—')}</td>
         </tr>`;
       }).join('') || `<tr><td colspan="7" style="text-align:center;padding:16px;color:#666;">No scheduled defenses.</td></tr>`;
-
       const html = `<!DOCTYPE html>
 <html>
 <head>
 <meta charset="utf-8"/>
 <title>Schedules Print</title>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
 <style>
   * { box-sizing:border-box; font-family: system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial,sans-serif; }
   body { margin:24px; color:#111; }
@@ -987,10 +962,7 @@ export default function SchedulePage({ canManage, userRole }: { canManage: boole
   thead th { background:#f1f5f9; text-align:left; padding:6px 8px; font-weight:600; border:1px solid #dbe1e6; }
   td { padding:6px 8px; border:1px solid #e2e8f0; vertical-align:top; }
   tbody tr:nth-child(even) { background:#fafafa; }
-  @media print {
-    body { margin:8px 16px; }
-    button { display:none; }
-  }
+  @media print { body { margin:8px 16px; } }
 </style>
 </head>
 <body>
@@ -998,33 +970,26 @@ export default function SchedulePage({ canManage, userRole }: { canManage: boole
 <table>
   <thead>
     <tr>
-      <th>Date</th>
-      <th>Time</th>
-      <th>Title</th>
-      <th>Student</th>
-      <th>Program</th>
-      <th>Type</th>
-      <th>Venue / Mode</th>
+      <th>Date</th><th>Time</th><th>Title</th><th>Student</th><th>Program</th><th>Type</th><th>Venue / Mode</th>
     </tr>
   </thead>
-  <tbody>
-    ${rows}
-  </tbody>
+  <tbody>${rows}</tbody>
 </table>
-<script>
-  window.onload = function() {
-    setTimeout(function(){ window.print(); }, 100);
-  };
-</script>
+<script>window.addEventListener('load',()=>{setTimeout(()=>window.print(),120);});</script>
 </body>
 </html>`;
-      const w = window.open('', '_blank', 'noopener,noreferrer,width=1200,height=800');
-      if (!w) return;
-      w.document.open();
-      w.document.write(html);
-      w.document.close();
-    } catch(e) {
+      const blob = new Blob([html], { type: 'text/html' });
+      const url = URL.createObjectURL(blob);
+      const w = window.open(url, '_blank');
+      if (!w) {
+        alert('Pop-up blocked. Allow pop-ups to print.');
+        URL.revokeObjectURL(url);
+        return;
+      }
+      setTimeout(()=> URL.revokeObjectURL(url), 5000);
+    } catch (e) {
       console.error('Print failed', e);
+      alert('Print failed.');
     }
   };
 
@@ -1032,8 +997,6 @@ export default function SchedulePage({ canManage, userRole }: { canManage: boole
     <AppLayout breadcrumbs={breadcrumbs}>
       <Head title="Schedules" />
       <div className="flex flex-col gap-0">
-
-        {/* Toolbar */}
         <div
           className={cn(
             "flex flex-wrap items-center gap-2 w-full bg-white border rounded-md rounded-b-none px-3 py-2 sticky z-50",
@@ -1050,8 +1013,6 @@ export default function SchedulePage({ canManage, userRole }: { canManage: boole
             </Button>
             <Button variant="outline" onClick={goToday}>Today</Button>
           </div>
-
-          {/* View toggles (segmented) */}
           <div className="inline-flex rounded-md border overflow-hidden h-8">
             {(['day','week','month'] as const).map(v => (
               <button
@@ -1059,18 +1020,14 @@ export default function SchedulePage({ canManage, userRole }: { canManage: boole
                 type="button"
                 onClick={()=> setView(v)}
                 className={cn(
-                  "px-3 text-xs font-medium uppercase tracking-wide transition-colors",
-                  "focus:outline-none",
-                  view === v
-                    ? "bg-primary text-white"
-                    : "bg-white hover:bg-muted/60 text-muted-foreground"
+                  "px-3 text-xs font-medium uppercase tracking-wide transition-colors focus:outline-none",
+                  view === v ? "bg-primary text-white" : "bg-white hover:bg-muted/60 text-muted-foreground"
                 )}
               >
                 {v}
               </button>
             ))}
           </div>
-
           {view === 'month' && (
             <>
               <Select
@@ -1086,7 +1043,6 @@ export default function SchedulePage({ canManage, userRole }: { canManage: boole
                 </SelectTrigger>
                 <SelectContent>
                   {MONTHS.map((m,i)=>(
-
                     <SelectItem key={m} value={String(i)}>{m}</SelectItem>
                   ))}
                 </SelectContent>
@@ -1110,18 +1066,9 @@ export default function SchedulePage({ canManage, userRole }: { canManage: boole
               </Select>
             </>
           )}
-
-          {/* Removed vertical separator & search bar */}
-
           {canManage && (
             <div className="flex items-center gap-2 ml-auto">
-              <Button
-                type="button"
-                size="icon"
-                variant="outline"
-                onClick={handlePrint}
-                title="Print schedules"
-              >
+              <Button type="button" size="icon" variant="outline" onClick={handlePrint} title="Print schedules">
                 <Printer className="h-4 w-4" />
               </Button>
               <Dialog open={showAdd} onOpenChange={o => { setShowAdd(o); if (!o) setAddError(null); }}>
@@ -1142,30 +1089,28 @@ export default function SchedulePage({ canManage, userRole }: { canManage: boole
                     )}
                     <div className="grid gap-1">
                       <Label className="text-xs">Title</Label>
-                      <Input
+                      <Textarea
+                        rows={2}
                         value={addTitle}
                         onChange={e=> setAddTitle(e.target.value)}
                         placeholder="Event title"
-                        className="h-8 text-xs"
+                        className="text-xs resize-none"
                       />
                     </div>
                     <div className="flex gap-3">
                       <div className="flex-1 grid gap-1">
                         <Label className="text-xs">Date</Label>
-                        <Input
+                        <input
                           type="date"
                           value={addDate}
                           onChange={e=> setAddDate(e.target.value)}
-                          className="h-8 text-xs"
+                          className="h-8 text-xs border rounded-md px-2"
                         />
                       </div>
                       <div className="grid gap-1 w-28">
                         <Label className="text-xs">All Day</Label>
                         <div className="h-8 px-2 flex items-center gap-2 border rounded-md">
-                          <Checkbox
-                            checked={addAllDay}
-                            onCheckedChange={v=> setAddAllDay(!!v)}
-                          />
+                          <Checkbox checked={addAllDay} onCheckedChange={v=> setAddAllDay(!!v)} />
                           <span className="text-[11px]">Yes</span>
                         </div>
                       </div>
@@ -1174,22 +1119,22 @@ export default function SchedulePage({ canManage, userRole }: { canManage: boole
                       <div className="flex gap-3">
                         <div className="grid gap-1 flex-1">
                           <Label className="text-xs">Start</Label>
-                          <Input
+                          <input
                             type="time"
                             step={300}
                             value={addStart}
                             onChange={e=> setAddStart(e.target.value)}
-                            className="h-8 text-xs"
+                            className="h-8 text-xs border rounded-md px-2"
                           />
                         </div>
                         <div className="grid gap-1 flex-1">
                           <Label className="text-xs">End</Label>
-                          <Input
+                          <input
                             type="time"
                             step={300}
                             value={addEnd}
                             onChange={e=> setAddEnd(e.target.value)}
-                            className="h-8 text-xs"
+                            className="h-8 text-xs border rounded-md px-2"
                           />
                         </div>
                       </div>
@@ -1253,12 +1198,7 @@ export default function SchedulePage({ canManage, userRole }: { canManage: boole
                         <Trash2 className="h-4 w-4 mr-1" /> Delete
                       </Button>
                     )}
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={()=> setShowAdd(false)}
-                      disabled={adding}
-                    >Cancel</Button>
+                    <Button variant="outline" size="sm" onClick={()=> setShowAdd(false)} disabled={adding}>Cancel</Button>
                     <Button
                       size="sm"
                       onClick={async () => {
@@ -1280,10 +1220,8 @@ export default function SchedulePage({ canManage, userRole }: { canManage: boole
                             allDay: addAllDay,
                             color: addColor
                           };
-
                           let resp: Response;
                           if (isEditing && editEvent) {
-                            // FIX: use PUT (route is defined with PUT) instead of PATCH
                             resp = await fetch(`/api/calendar/events/${editEvent.raw.id}`, {
                               method: 'PUT',
                               headers: { 'Content-Type':'application/json','Accept':'application/json','X-CSRF-TOKEN': csrf },
@@ -1296,18 +1234,14 @@ export default function SchedulePage({ canManage, userRole }: { canManage: boole
                               body: JSON.stringify(payload)
                             });
                           }
-
                           if (!resp.ok) {
                             const j = await resp.json().catch(()=> ({}));
                             throw new Error(j.message || j.error || 'Save failed');
                           }
                           const j = await resp.json().catch(()=> ({}));
                           const eventId = j.event_id || (editEvent && editEvent.raw.id);
-                          
-                          // FIX: correct all‑day visual times (00:00 -> 23:59 instead of 06:00 -> 21:59)
                           const s = addAllDay ? "00:00" : addStart;
                           const e = addAllDay ? "23:59" : addEnd;
-
                           setExtraEvents(prev => {
                             const others = prev.filter(p => p.raw.id !== eventId);
                             const newEntry: CalendarEntry = {
@@ -1329,11 +1263,11 @@ export default function SchedulePage({ canManage, userRole }: { canManage: boole
                                 student_name: undefined,
                               },
                               color: addColor,
-                              defense: false
+                              defense: false,
+                              description: addDesc.trim()
                             };
                             return [...others, newEntry];
                           });
-
                           setShowAdd(false);
                           setEditEvent(null);
                         } catch(err:any) {
@@ -1351,18 +1285,11 @@ export default function SchedulePage({ canManage, userRole }: { canManage: boole
               </Dialog>
             </div>
           )}
-
         </div>
-
-        {/* Calendar Views (outside toolbar) */}
         {view === 'month' && renderMonth()}
         {view === 'week' && renderWeek()}
         {view === 'day' && renderDay()}
-
-        {/* Side Panel */}
-        {SidePanel}
-
-        {/* Table */}
+        {DetailPanel}
         {false && (
           <div className="border rounded-md overflow-hidden bg-white hidden">
             <div className="bg-muted/40 px-3 py-2 text-xs font-semibold">Scheduled Defenses (Filtered)</div>
@@ -1424,7 +1351,6 @@ export default function SchedulePage({ canManage, userRole }: { canManage: boole
             </Table>
           </div>
         )}
-
       </div>
     </AppLayout>
   );
