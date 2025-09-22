@@ -18,6 +18,8 @@ use App\Http\Controllers\Auth\GoogleController;
 use App\Http\Controllers\CoordinatorDefenseController;
 use App\Models\User;
 use App\Models\DefenseRequest;
+use App\Http\Controllers\ScheduleController;
+use App\Http\Controllers\ScheduleEventController;
 
 /*
 |--------------------------------------------------------------------------
@@ -89,7 +91,15 @@ Route::middleware(['auth','verified'])->group(function () {
     Route::post('/payment', [PaymentSubmissionController::class,'store'])->name('payment.store');
 
     /* Student schedule page */
-    Route::get('/schedule', fn() => Inertia::render('schedule/Index'))->name('schedule.index');
+    Route::get('/schedule', [ScheduleController::class,'index'])->name('schedule.index');
+    Route::get('/schedules', fn() => redirect()->route('schedule.index'));
+
+    // Events API
+    Route::get('/api/calendar/events', [ScheduleEventController::class,'list'])->name('api.calendar.events');
+    Route::post('/api/calendar/events', [ScheduleEventController::class,'store'])->name('api.calendar.events.store');
+    Route::put('/api/calendar/events/{event}', [ScheduleEventController::class,'update'])->name('api.calendar.events.update');
+    Route::patch('/api/calendar/events/{event}/move', [ScheduleEventController::class,'move'])->name('api.calendar.events.move');
+    Route::delete('/api/calendar/events/{event}', [ScheduleEventController::class,'destroy'])->name('api.calendar.events.delete');
 
     /* Defense Requirements (student submit) */
     Route::get('/defense-requirements', [DefenseRequirementController::class,'index'])->name('defense-requirements.index');
@@ -103,6 +113,8 @@ Route::middleware(['auth','verified'])->group(function () {
 
     /* Defense Request (main workflow) */
     Route::get('/defense-request', [DefenseRequestController::class,'index'])->name('defense-request.index');
+    // Alias so frontend calls to /defense-requests (plural) also hit the same index action (JSON or Inertia)
+    Route::get('/defense-requests', [DefenseRequestController::class,'index'])->name('defense-requests.index');
     Route::post('/defense-request', [DefenseRequestController::class,'store'])->name('defense-request.store');
 
     /* Workflow actions */
@@ -273,6 +285,8 @@ Route::middleware(['auth','verified'])->group(function () {
 */
 Route::middleware(['auth'])->group(function () {
     Route::get('/api/panel-members', [PanelistController::class,'allCombined'])->name('api.panel-members');
+    Route::get('/adviser/defense-requests', [DefenseRequestController::class,'adviserQueue'])
+        ->name('adviser.defense-requests');
 });
 
 /*

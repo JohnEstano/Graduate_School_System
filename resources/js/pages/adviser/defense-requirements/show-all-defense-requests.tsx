@@ -1,10 +1,10 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { ChevronDown, FileText, Hourglass, Check, X, Search, Eye } from "lucide-react";
+import { ChevronDown, FileText, Hourglass, Check, X, Search, Paperclip } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import dayjs from "dayjs";
@@ -46,6 +46,11 @@ type DefenseRequest = {
         timestamp: string;
     }>;
 };
+
+function getDisplayName(req: DefenseRequest) {
+    const middleInitial = req.middle_name ? `${req.middle_name[0].toUpperCase()}. ` : '';
+    return `${req.first_name} ${middleInitial}${req.last_name}`;
+}
 
 const statusDetails: Record<
     string,
@@ -108,20 +113,6 @@ const statusDetails: Record<
     },
 };
 
-function getDisplayName(req: DefenseRequest) {
-    const middleInitial = req.middle_name ? `${req.middle_name[0].toUpperCase()}. ` : '';
-    return `${req.first_name} ${middleInitial}${req.last_name}`;
-}
-
-function UserAvatar({ name }: { name: string }) {
-    const initial = name?.charAt(0).toUpperCase() || "?";
-    return (
-        <span className="inline-flex items-center justify-center h-6 w-6 rounded-full bg-zinc-200 text-xs font-bold text-zinc-700 mr-1">
-            {initial}
-        </span>
-    );
-}
-
 export default function ShowAllDefenseRequests({
     defenseRequests = [],
     showActions = false,
@@ -147,11 +138,8 @@ export default function ShowAllDefenseRequests({
         setProcessingId(id);
         try {
             const csrfToken = (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content;
-            if (!csrfToken) {
-                throw new Error('CSRF token not found');
-            }
+            if (!csrfToken) throw new Error('CSRF token not found');
 
-            const body = { decision, comment: comments || '' };
             const res = await fetch(`/defense-requests/${id}/adviser-decision`, {
                 method: 'POST',
                 headers: {
@@ -159,34 +147,27 @@ export default function ShowAllDefenseRequests({
                     'X-CSRF-TOKEN': csrfToken,
                     'Accept': 'application/json'
                 },
-                body: JSON.stringify(body),
+                body: JSON.stringify({ decision, comment: comments || '' }),
                 credentials: 'same-origin'
             });
             
             if (!res.ok) {
                 const errorData = await res.json().catch(() => ({}));
-                console.error('Decision failed:', res.status, res.statusText, errorData);
-                alert(`Failed to process decision: ${errorData.message || res.statusText}. Please try again.`);
+                alert(`Failed: ${errorData.message || res.statusText}`);
                 return;
             }
-            
             const result = await res.json();
-            if (result.success) {
-                // Refresh the page to show updated data
-                window.location.reload();
-            } else {
-                alert('Decision processing failed. Please try again.');
-            }
-        } catch (error) {
-            console.error('Network error:', error);
-            alert('Network error. Please check your connection and try again.');
+            if (result.success) window.location.reload();
+            else alert('Decision failed.');
+        } catch (e) {
+            console.error(e);
+            alert('Network error.');
         } finally {
             setProcessingId(null);
             setConfirmAction(null);
         }
     }
 
-    // Filter requests by search
     const filteredRequests = defenseRequests.filter(req => {
         const name = getDisplayName(req).toLowerCase();
         const thesis = req.thesis_title?.toLowerCase() || "";
@@ -197,23 +178,19 @@ export default function ShowAllDefenseRequests({
     return (
         <div className="flex flex-col pb-5 w-full">
             <div className="w-full bg-white border border-zinc-200 rounded-lg overflow-hidden">
-                {/* Header row */}
+                {/* Header */}
                 <div className="flex flex-row items-center justify-between w-full p-3 border-b bg-white">
                     <div className="flex items-center gap-2">
                         <div className="h-10 w-10 flex items-center justify-center rounded-full bg-blue-500/10 border border-blue-500">
                             <FileText className="h-5 w-5 text-blue-400" />
                         </div>
                         <div>
-                            <span className="text-base font-semibold">
-                                {title}
-                            </span>
-                            <span className="block text-xs text-muted-foreground ">
-                                {description}
-                            </span>
+                            <span className="text-base font-semibold">{title}</span>
+                            <span className="block text-xs text-muted-foreground">{description}</span>
                         </div>
                     </div>
                 </div>
-                {/* Search bar row */}
+                {/* Search */}
                 <div className="flex items-center px-4 py-3 border-b bg-white">
                     <Input
                         type="text"
@@ -224,6 +201,7 @@ export default function ShowAllDefenseRequests({
                         className="max-w-xs text-sm py-1 h-8"
                     />
                 </div>
+
                 {filteredRequests.length === 0 ? (
                     <div className="p-6 text-center text-sm text-muted-foreground bg-white">
                         No defense requests found.
@@ -240,9 +218,11 @@ export default function ShowAllDefenseRequests({
                             const status = req.status?.toLowerCase() || "pending";
                             const details = statusDetails[status] || statusDetails["pending"];
                             const isOpen = openItems[req.id] ?? false;
-                            const timeSubmitted = req.created_at
-                                ? dayjs(req.created_at).fromNow()
-                                : "Unknown";
+                            const timeSubmitted = req.created_at ? dayjs(req.created_at).fromNow() : "Unknown";
+
+                            const wf = (req.workflow_state || '').toLowerCase();
+                            const pillLabel = getAdviserWorkflowLabel(wf);
+                            const pillClasses = statePillClasses(pillLabel);
 
                             return (
                                 <div key={req.id} className="border-b border-zinc-200 bg-white">
@@ -250,178 +230,157 @@ export default function ShowAllDefenseRequests({
                                         open={isOpen}
                                         onOpenChange={(open) => setOpenItems(prev => ({ ...prev, [req.id]: open }))}
                                     >
+                                        {/* Trigger */}
                                         <CollapsibleTrigger asChild>
-                                            <div className="flex items-center justify-between px-4 py-3 cursor-pointer bg-white hover:bg-zinc-50 transition">
-                                                <div className="flex items-center gap-4">
-                                                    {/* Show only the icon for status */}
-                                                    <span>
-                                                        {details.icon}
-                                                    </span>
-                                                    <div className="flex items-center">
-                                                        <UserAvatar name={req.first_name} />
-                                                        <span className="text-xs text-muted-foreground font-medium">
-                                                            {getDisplayName(req)}
-                                                        </span>
+                                            <div className="group cursor-pointer bg-white hover:bg-zinc-50 transition">
+                                                <div className="p-3 flex items-center gap-4">
+                                                    <div className="shrink-0">
+                                                        <ChevronDown className={`h-4 w-4 text-zinc-500 transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`} />
                                                     </div>
-                                                </div>
-                                                <div className="flex items-center gap-2">
-                                                    <span className="text-xs text-muted-foreground">
-                                                        Submitted {timeSubmitted}
-                                                    </span>
-                                                    <ChevronDown
-                                                        className={`transition-transform duration-200 h-4 w-4 text-muted-foreground ${isOpen ? "rotate-180" : ""}`}
-                                                    />
+                                                    <div className="shrink-0">
+                                                        {details.icon}
+                                                    </div>
+                                                    <div className="flex flex-col min-w-0 flex-1">
+                                                        <div className="flex items-center gap-2 min-w-0">
+                                                            <span className="text-sm font-medium truncate">
+                                                                {pillLabel === 'Waiting for your review' ? 'Under Adviser Review' : pillLabel}
+                                                            </span>
+                                                            <span className={`text-[10px] px-2 py-0.5 rounded-full border ${pillClasses}`}>
+                                                                {pillLabel}
+                                                            </span>
+                                                        </div>
+                                                        <div className="text-[11px] text-zinc-500 truncate">
+                                                            {getDisplayName(req)} • {req.thesis_title || 'Untitled Thesis'}
+                                                        </div>
+                                                    </div>
+                                                    <div className="text-[11px] text-zinc-500 whitespace-nowrap">
+                                                        {timeSubmitted && `Submitted ${timeSubmitted}`}
+                                                    </div>
                                                 </div>
                                             </div>
                                         </CollapsibleTrigger>
+
+                                        {/* Content */}
                                         <CollapsibleContent>
-                                            <div className="px-4 py-3 space-y-4">
-                                                {/* Status Description */}
-                                                <div className={`flex flex-col ${details.bg} p-3 rounded`}>
-                                                    <div className="flex items-center justify-between mb-1">
-                                                        <span className={`font-semibold text-xs text-zinc-600`}>
-                                                            {status.charAt(0).toUpperCase() + status.slice(1)}
-                                                        </span>
+                                            <div className="px-5 pb-6 pt-4 bg-white">
+                                                {/* TOP META + ATTACHMENT CHIPS */}
+                                                <div className="rounded-lg border border-zinc-200 mb-6">
+                                                    <div className="flex flex-wrap items-start justify-between gap-6 p-4">
+                                                        <div className="grid gap-6 sm:grid-cols-3 flex-1 min-w-0">
+                                                            <HeaderMetaItem label="Thesis Title" value={req.thesis_title || '—'} />
+                                                            <HeaderMetaItem label="Student Name" value={getDisplayName(req)} />
+                                                            <HeaderMetaItem label="Adviser" value={req.defense_adviser || 'You'} />
+                                                        </div>
+                                                        <div className="flex flex-col items-end gap-1 shrink-0 text-[11px] text-zinc-500">
+                                                            <span>Submitted {timeSubmitted}</span>
+                                                        </div>
                                                     </div>
-                                                    <div className="text-xs text-muted-foreground space-y-2">
-                                                        <div>{details.getDescription(req)}</div>
-                                                    </div>
-                                                </div>
-
-                                                {/* Request Details */}
-                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
-                                                    <div>
-                                                        <span className="font-medium text-gray-700">Thesis Title:</span>
-                                                        <p className="text-gray-600 mt-1">{req.thesis_title}</p>
-                                                    </div>
-                                                    <div>
-                                                        <span className="font-medium text-gray-700">Defense Type:</span>
-                                                        <p className="text-gray-600 mt-1">{req.defense_type}</p>
-                                                    </div>
-                                                    <div>
-                                                        <span className="font-medium text-gray-700">Student ID:</span>
-                                                        <p className="text-gray-600 mt-1">{req.school_id}</p>
-                                                    </div>
-                                                    <div>
-                                                        <span className="font-medium text-gray-700">Program:</span>
-                                                        <p className="text-gray-600 mt-1">{req.program}</p>
-                                                    </div>
-                                                </div>
-
-                                                {/* Attachments */}
-                                                <div>
-                                                    <span className="font-medium text-gray-700 text-xs">Attachments:</span>
-                                                    <div className="mt-2 space-y-2">
-                                                        {req.rec_endorsement && (
-                                                            <div className="flex items-center gap-2">
-                                                                <FileText className="h-4 w-4 text-blue-500" />
-                                                                <a 
-                                                                    href={`/storage/${req.rec_endorsement}`}
-                                                                    target="_blank"
-                                                                    rel="noopener noreferrer"
-                                                                    className="text-xs text-blue-600 hover:underline"
-                                                                >
-                                                                    REC Endorsement
-                                                                </a>
-                                                            </div>
-                                                        )}
-                                                        {req.proof_of_payment && (
-                                                            <div className="flex items-center gap-2">
-                                                                <FileText className="h-4 w-4 text-blue-500" />
-                                                                <a 
-                                                                    href={`/storage/${req.proof_of_payment}`}
-                                                                    target="_blank"
-                                                                    rel="noopener noreferrer"
-                                                                    className="text-xs text-blue-600 hover:underline"
-                                                                >
-                                                                    Proof of Payment
-                                                                </a>
-                                                            </div>
-                                                        )}
-                                                        {req.manuscript_proposal && (
-                                                            <div className="flex items-center gap-2">
-                                                                <FileText className="h-4 w-4 text-blue-500" />
-                                                                <a 
-                                                                    href={`/storage/${req.manuscript_proposal}`}
-                                                                    target="_blank"
-                                                                    rel="noopener noreferrer"
-                                                                    className="text-xs text-blue-600 hover:underline"
-                                                                >
-                                                                    Manuscript Proposal
-                                                                </a>
-                                                            </div>
-                                                        )}
-                                                        {req.similarity_index && (
-                                                            <div className="flex items-center gap-2">
-                                                                <FileText className="h-4 w-4 text-blue-500" />
-                                                                <a 
-                                                                    href={`/storage/${req.similarity_index}`}
-                                                                    target="_blank"
-                                                                    rel="noopener noreferrer"
-                                                                    className="text-xs text-blue-600 hover:underline"
-                                                                >
-                                                                    Similarity Index
-                                                                </a>
-                                                            </div>
-                                                        )}
-                                                        {req.advisers_endorsement && (
-                                                            <div className="flex items-center gap-2">
-                                                                <FileText className="h-4 w-4 text-blue-500" />
-                                                                <a 
-                                                                    href={`/storage/${req.advisers_endorsement}`}
-                                                                    target="_blank"
-                                                                    rel="noopener noreferrer"
-                                                                    className="text-xs text-blue-600 hover:underline"
-                                                                >
-                                                                    Adviser's Endorsement
-                                                                </a>
-                                                            </div>
-                                                        )}
-                                                        {req.reference_no && (
-                                                            <div className="flex items-center gap-2">
-                                                                <span className="text-xs text-gray-700">Reference No: <strong>{req.reference_no}</strong></span>
-                                                            </div>
+                                                    <div className="flex flex-wrap gap-4 px-4 pb-4">
+                                                        {req.manuscript_proposal && <AttachmentChip file={req.manuscript_proposal} label="Manuscript" />}
+                                                        {req.similarity_index && <AttachmentChip file={req.similarity_index} label="Similarity" />}
+                                                        {req.rec_endorsement && <AttachmentChip file={req.rec_endorsement} label="Endorsement" />}
+                                                        {req.proof_of_payment && <AttachmentChip file={req.proof_of_payment} label="Payment" />}
+                                                        {req.advisers_endorsement && <AttachmentChip file={req.advisers_endorsement} label="Adviser Endorse." />}
+                                                        {!req.manuscript_proposal && !req.similarity_index && !req.rec_endorsement && !req.proof_of_payment && !req.advisers_endorsement && (
+                                                            <span className="text-xs text-zinc-500">No attachments uploaded.</span>
                                                         )}
                                                     </div>
                                                 </div>
 
-                                                {/* Workflow History & Comments */}
+                                                {/* Banner */}
+                                                {(() => {
+                                                    let short = 'Pending';
+                                                    let desc = '';
+                                                    if (!wf || ['submitted','adviser-review','pending',''].includes(wf)) {
+                                                        short = 'Pending';
+                                                        desc = `This defense request for ${getDisplayName(req)} (${req.thesis_title}) is waiting for your review.`;
+                                                    } else if (wf === 'adviser-approved') {
+                                                        short = 'Pending';
+                                                        desc = `Approved by you. Awaiting Coordinator review.`;
+                                                    } else if (wf === 'adviser-rejected') {
+                                                        short = 'Rejected';
+                                                        desc = `You rejected this request. Student will revise and resubmit.`;
+                                                    } else if (wf === 'coordinator-approved' || status === 'approved') {
+                                                        short = 'Approved';
+                                                        desc = `Coordinator approved. Ready / scheduled for defense.`;
+                                                    } else if (wf === 'completed') {
+                                                        short = 'Completed';
+                                                        desc = `Defense process completed.`;
+                                                    } else {
+                                                        short = wf;
+                                                        desc = `Current state: ${wf}.`;
+                                                    }
+                                                    const color =
+                                                        short === 'Rejected'
+                                                            ? 'bg-rose-50 text-rose-700 border-rose-100'
+                                                            : short === 'Approved'
+                                                                ? 'bg-emerald-50 text-emerald-700 border-emerald-100'
+                                                                : short === 'Completed'
+                                                                    ? 'bg-indigo-50 text-indigo-700 border-indigo-100'
+                                                                    : 'bg-zinc-50 text-zinc-700 border-zinc-100';
+
+                                                    return (
+                                                        <div className={`border ${color} rounded-md px-4 py-3 mb-6`}>
+                                                            <p className="text-sm font-semibold mb-1">{short}</p>
+                                                            <p className="text-xs leading-relaxed">{desc}</p>
+                                                        </div>
+                                                    );
+                                                })()}
+
+                                                {/* Details grid */}
+                                                <div className="grid gap-6 md:grid-cols-2 mb-6">
+                                                    <div className="space-y-3">
+                                                        <Detail label="Thesis Title" value={req.thesis_title || '—'} />
+                                                        <Detail label="Student Name" value={getDisplayName(req)} />
+                                                        <Detail label="Student ID" value={req.school_id || '—'} />
+                                                        <Detail label="Program" value={req.program || '—'} />
+                                                        {req.reference_no && <Detail label="Reference No." value={req.reference_no} />}
+                                                    </div>
+                                                    <div className="space-y-3">
+                                                        <Detail label="Defense Type" value={req.defense_type || '—'} />
+                                                        <Detail label="Adviser" value={req.defense_adviser || 'You'} />
+                                                        <Detail label="Submitted" value={timeSubmitted} />
+                                                        <Detail label="Workflow State" value={(req.workflow_state || 'pending').toLowerCase()} />
+                                                        {req.date_of_defense && <Detail label="Defense Date" value={dayjs(req.date_of_defense).format('MMMM D, YYYY')} />}
+                                                        {req.mode_defense && <Detail label="Mode" value={req.mode_defense} />}
+                                                    </div>
+                                                </div>
+
+                                                {/* Workflow history / comments */}
                                                 {(req.adviser_comments || req.coordinator_comments || req.workflow_history?.length) && (
-                                                    <div>
-                                                        <span className="font-medium text-gray-700 text-xs">Workflow History:</span>
-                                                        <div className="mt-2 space-y-2">
+                                                    <div className="mb-6">
+                                                        <p className="text-xs font-semibold mb-2 uppercase tracking-wide text-zinc-500">Workflow History</p>
+                                                        <div className="space-y-2">
                                                             {req.adviser_comments && (
                                                                 <div className="bg-blue-50 border border-blue-200 rounded p-2">
-                                                                    <div className="text-xs font-medium text-blue-800">Adviser Comment:</div>
+                                                                    <div className="text-[11px] font-semibold text-blue-800">Adviser Comment</div>
                                                                     <div className="text-xs text-blue-700 mt-1">{req.adviser_comments}</div>
                                                                     {req.adviser_reviewed_at && (
-                                                                        <div className="text-xs text-blue-600 mt-1">
-                                                                            {dayjs(req.adviser_reviewed_at).format('MMM D, YYYY [at] h:mm A')}
+                                                                        <div className="text-[10px] text-blue-600 mt-1">
+                                                                            {dayjs(req.adviser_reviewed_at).format('MMM D, YYYY h:mm A')}
                                                                         </div>
                                                                     )}
                                                                 </div>
                                                             )}
                                                             {req.coordinator_comments && (
                                                                 <div className="bg-green-50 border border-green-200 rounded p-2">
-                                                                    <div className="text-xs font-medium text-green-800">Coordinator Comment:</div>
+                                                                    <div className="text-[11px] font-semibold text-green-800">Coordinator Comment</div>
                                                                     <div className="text-xs text-green-700 mt-1">{req.coordinator_comments}</div>
                                                                     {req.coordinator_reviewed_at && (
-                                                                        <div className="text-xs text-green-600 mt-1">
-                                                                            {dayjs(req.coordinator_reviewed_at).format('MMM D, YYYY [at] h:mm A')}
+                                                                        <div className="text-[10px] text-green-600 mt-1">
+                                                                            {dayjs(req.coordinator_reviewed_at).format('MMM D, YYYY h:mm A')}
                                                                         </div>
                                                                     )}
                                                                 </div>
                                                             )}
-                                                            {req.workflow_history?.map((entry, index) => (
-                                                                <div key={index} className="bg-gray-50 border border-gray-200 rounded p-2">
-                                                                    <div className="text-xs font-medium text-gray-800">
+                                                            {req.workflow_history?.map((entry, idx) => (
+                                                                <div key={idx} className="bg-gray-50 border border-gray-200 rounded p-2">
+                                                                    <div className="text-[11px] font-semibold text-gray-800">
                                                                         {entry.action.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase())} by {entry.user_name}
                                                                     </div>
-                                                                    {entry.comment && (
-                                                                        <div className="text-xs text-gray-700 mt-1">{entry.comment}</div>
-                                                                    )}
-                                                                    <div className="text-xs text-gray-600 mt-1">
-                                                                        {dayjs(entry.timestamp).format('MMM D, YYYY [at] h:mm A')}
+                                                                    {entry.comment && <div className="text-xs text-gray-700 mt-1">{entry.comment}</div>}
+                                                                    <div className="text-[10px] text-gray-600 mt-1">
+                                                                        {dayjs(entry.timestamp).format('MMM D, YYYY h:mm A')}
                                                                     </div>
                                                                 </div>
                                                             ))}
@@ -429,9 +388,9 @@ export default function ShowAllDefenseRequests({
                                                     </div>
                                                 )}
 
-                                                {/* Action Buttons */}
-                                                {showActions && (req.workflow_state === 'adviser-review' || req.workflow_state === 'submitted') && (
-                                                    <div className="flex gap-2 pt-2 border-t">
+                                                {/* Actions */}
+                                                {showActions && (wf === 'adviser-review' || wf === 'submitted' || wf === 'pending') && (
+                                                    <div className="flex gap-2 pt-4 border-t">
                                                         <Button
                                                             size="sm"
                                                             variant="outline"
@@ -444,7 +403,7 @@ export default function ShowAllDefenseRequests({
                                                         </Button>
                                                         <Button
                                                             size="sm"
-                                                            className="bg-green-600 hover:bg-green-700"
+                                                            className="bg-emerald-600 hover:bg-emerald-700"
                                                             disabled={processingId === req.id}
                                                             onClick={() => setConfirmAction({id: req.id, action: 'approve'})}
                                                         >
@@ -522,5 +481,61 @@ export default function ShowAllDefenseRequests({
                 </Dialog>
             )}
         </div>
+    );
+}
+
+// Helpers
+function getAdviserWorkflowLabel(wf: string) {
+    if (!wf || ['submitted','adviser-review','pending',''].includes(wf)) return 'Waiting for your review';
+    if (wf === 'adviser-approved') return 'Waiting for coordinator';
+    if (wf === 'adviser-rejected') return 'Rejected';
+    if (wf === 'coordinator-approved') return 'Approved';
+    if (wf === 'completed') return 'Completed';
+    return 'In progress';
+}
+function statePillClasses(label: string) {
+    if (label === 'Waiting for your review') return 'bg-amber-100 text-amber-700 border-amber-200';
+    if (label === 'Waiting for coordinator') return 'bg-blue-100 text-blue-700 border-blue-200';
+    if (label === 'Rejected') return 'bg-rose-100 text-rose-700 border-rose-200';
+    if (label === 'Approved') return 'bg-emerald-100 text-emerald-700 border-emerald-200';
+    if (label === 'Completed') return 'bg-indigo-100 text-indigo-700 border-indigo-200';
+    return 'bg-zinc-100 text-zinc-700 border-zinc-200';
+}
+function Detail({ label, value }: { label: string; value: React.ReactNode }) {
+    return (
+        <div>
+            <p className="text-[10px] uppercase tracking-wide font-semibold text-zinc-500 mb-0.5">{label}</p>
+            <p className="text-sm font-medium break-words">{value}</p>
+        </div>
+    );
+}
+
+// Header meta + chips (no duplicate list, no shadows)
+function HeaderMetaItem({ label, value }: { label: string; value: React.ReactNode }) {
+    return (
+        <div className="min-w-0">
+            <p className="text-[10px] uppercase tracking-wide text-zinc-500 font-semibold mb-1">{label}</p>
+            <p className="text-sm font-semibold truncate">{value}</p>
+        </div>
+    );
+}
+function AttachmentChip({ file, label }: { file: string; label: string }) {
+    const fileName = file.split('/').pop();
+    return (
+        <a
+            href={`/storage/${file}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={e => e.stopPropagation()}
+            className="flex items-center gap-3 rounded-lg border border-zinc-200 bg-white pl-3 pr-4 py-2.5 hover:bg-zinc-50 transition text-xs"
+        >
+            <span className="h-8 w-8 flex items-center justify-center rounded-md bg-rose-500 text-white">
+                <Paperclip className="h-4 w-4" />
+            </span>
+            <span className="flex flex-col leading-tight truncate">
+                <span className="font-semibold text-[11px]">{label}</span>
+                <span className="text-[10px] text-zinc-500 truncate max-w-[120px]">{fileName}</span>
+            </span>
+        </a>
     );
 }

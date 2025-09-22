@@ -3,9 +3,9 @@ import { usePage, Link } from '@inertiajs/react';
 import { Sun, Moon, CircleEllipsis, Ellipsis } from 'lucide-react';
 import RemindersWidget from '../widgets/reminders-widget';
 import UpcomingSchedulesWidget from '../widgets/upcomming-schedules-widget';
-import PendingDefenseRequestsWidget from '../widgets/pending-defense-request-widget';
 import WeeklyDefenseSchedulesWidget from '../widgets/weekly-defense-schedule-widget';
 import QuickActionsWidget from '../widgets/quick-actions-widget';
+import ImmediateActionDefenseRequestsWidget from '../widgets/immediate-action-defense-requests-widget';
 import { Separator } from "@/components/ui/separator";
 import type { DefenseRequest } from '@/types';
 
@@ -39,7 +39,7 @@ export default function FacultyDashboard() {
     } = usePage<PageProps>().props;
 
     const [allRequests, setAllRequests] = useState<DefenseRequest[]>([]);
-    const [pendingRequests, setPendingRequests] = useState<DefenseRequest[]>([]);
+    const [immediateRequests, setImmediateRequests] = useState<DefenseRequest[]>([]);
     const [todayEvents, setTodayEvents] = useState<DefenseRequest[]>([]);
     const [loading, setLoading] = useState(true);
 
@@ -56,29 +56,22 @@ export default function FacultyDashboard() {
     ];
 
     useEffect(() => {
-        fetch('/defense-requests', {
-            headers: {
-                'Accept': 'application/json'
-            }
+        fetch('/adviser/defense-requests', {
+            headers: { 'Accept': 'application/json' }
         })
             .then(res => res.json())
             .then((data) => {
-                // If backend returns { defenseRequests: [...] }
-                const requests = Array.isArray(data) ? data : data.defenseRequests ?? [];
-                setAllRequests(requests);
-                setPendingRequests(requests.filter((r: DefenseRequest) => r.status === 'Pending'));
-                const today = new Date();
-                const closeEvents = requests.filter((dr: DefenseRequest) => {
-                    const eventDate = new Date(dr.date_of_defense);
-                    const diff = (eventDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24);
-                    return diff >= 0 && diff < 3;
+                const list = (data && data.items) ? data.items : [];
+                setAllRequests(list);
+                const needs = list.filter((r: any) => {
+                    const wf = (r.workflow_state || '').toLowerCase();
+                    return ['','submitted','pending','adviser-pending','adviser-review'].includes(wf);
                 });
-                setTodayEvents(closeEvents);
+                setImmediateRequests(needs);
+                const todayStr = new Date().toISOString().slice(0,10);
+                setTodayEvents(list.filter((r:any)=> (r.scheduled_date === todayStr)));
             })
-            .catch(() => {
-                setAllRequests([]);
-                setPendingRequests([]);
-            })
+            .catch(() => {})
             .finally(() => setLoading(false));
     }, []);
 
@@ -111,7 +104,10 @@ export default function FacultyDashboard() {
             {/* Widgets Body */}
             <div className="flex flex-col gap-6 bg-gray-100 ms-4 me-4 rounded-xl mt-2 mb-2 px-5 py-8 dark:bg-zinc-900">
                 <div className="w-full mb-2 flex flex-col md:flex-row gap-4">
-                    <PendingDefenseRequestsWidget pendingRequests={pendingRequests} loading={loading} />
+                    <ImmediateActionDefenseRequestsWidget
+                        requests={immediateRequests}
+                        loading={loading}
+                    />
                     <WeeklyDefenseSchedulesWidget
                         weekDays={weekDays}
                         selectedDay={selectedDay}

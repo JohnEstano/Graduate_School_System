@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import EndorseDefenseDialog from './endorse-defense-dialog';
 import { Input } from "@/components/ui/input";
 import { toast } from 'sonner';  // Sonner toast
+import { RequirementCollapseHeader } from "@/components/defense/RequirementCollapseHeader";
 
 dayjs.extend(relativeTime);
 
@@ -29,6 +30,7 @@ type DefenseRequirement = {
     program: string;
     school_id: string;
     defense_adviser: string;
+    workflow_state?: string; // added
 };
 
 const statusDetails: Record<string,{icon: React.ReactNode;}> = {
@@ -148,6 +150,27 @@ export default function ShowAllDefenseRequirements({
                                 ? dayjs(req.created_at).fromNow()
                                 : "Unknown";
 
+                            // NEW: derive a user-facing state label focused on adviser perspective
+                            const workflow = ((req as any).workflow_state || '').toLowerCase();
+                            let adviserLabel = '';
+                            if (!workflow || ['submitted','pending','adviser-pending',''].includes(workflow)) {
+                                adviserLabel = 'Waiting for your review';
+                            } else if (['adviser-approved'].includes(workflow)) {
+                                adviserLabel = 'Waiting for coordinator';
+                            } else if (['adviser-rejected'].includes(workflow)) {
+                                adviserLabel = 'Rejected';
+                            } else {
+                                adviserLabel = 'In progress';
+                            }
+
+                            const labelColorClasses = adviserLabel === 'Waiting for your review'
+                                ? 'bg-amber-100 text-amber-700 border-amber-200'
+                                : adviserLabel === 'Rejected'
+                                    ? 'bg-rose-100 text-rose-700 border-rose-200'
+                                    : adviserLabel === 'Waiting for coordinator'
+                                        ? 'bg-blue-100 text-blue-700 border-blue-200'
+                                        : 'bg-zinc-100 text-zinc-700 border-zinc-200';
+
                             return (
                                 <div key={req.id} className="border-b border-zinc-200 bg-white">
                                     <Collapsible
@@ -155,94 +178,129 @@ export default function ShowAllDefenseRequirements({
                                         onOpenChange={(open) => setOpenItems(prev => ({ ...prev, [req.id]: open }))}
                                     >
                                         <CollapsibleTrigger asChild>
-                                            <div className="flex items-center justify-between px-4 py-3 cursor-pointer bg-white hover:bg-zinc-50 transition">
-                                                <div className="flex items-center gap-4">
-                                                    {details.icon}
-                                                    <div className="flex items-center">
-                                                        <UserAvatar name={req.first_name} />
-                                                        <span className="text-xs text-muted-foreground font-medium">
-                                                            {getDisplayName(req)}
-                                                        </span>
-                                                    </div>
-                                                </div>
-                                                <div className="flex items-center gap-2">
-                                                    <span className="text-xs text-muted-foreground">
-                                                        Submitted {timeSubmitted}
-                                                    </span>
-                                                    <ChevronDown
-                                                        className={`transition-transform duration-200 h-4 w-4 text-muted-foreground ${isOpen ? "rotate-180" : ""}`}
-                                                    />
-                                                </div>
-                                            </div>
+                                            <RequirementCollapseHeader
+                                              req={req}
+                                              isOpen={isOpen}
+                                              onToggle={() => setOpenItems(prev => ({ ...prev, [req.id]: !isOpen }))}
+                                            />
                                         </CollapsibleTrigger>
                                         <CollapsibleContent>
-                                            <div className="px-4 py-4 bg-white rounded-b">
-                                                <div className="flex items-center gap-2 mb-2">
-                                                    <span className="text-xs text-muted-foreground font-semibold">Thesis title:</span>
-                                                    <span className="text-sm font-bold">{req.thesis_title}</span>
-                                                    <Badge variant="secondary" className="w-fit text-xs ml-2">
-                                                        {req.defense_type}
-                                                    </Badge>
+                                            {/* NEW CLEAN LAYOUT */}
+                                            <div className="px-5 pb-6 pt-4 bg-white">
+                                                {/* Status / Banner */}
+                                                {(() => {
+                                                    const wf = (req.workflow_state || '').toLowerCase();
+                                                    let short = 'Pending';
+                                                    let desc = '';
+                                                    if (!wf || ['submitted','pending','adviser-pending',''].includes(wf)) {
+                                                        short = 'Pending';
+                                                        desc = `This defense request for ${getDisplayName(req)} (${req.thesis_title}) is waiting for your review.`;
+                                                    } else if (wf === 'adviser-approved') {
+                                                        short = 'Pending';
+                                                        desc = `Approved by you. Awaiting Coordinator review.`;
+                                                    } else if (wf === 'adviser-rejected') {
+                                                        short = 'Rejected';
+                                                        desc = `You rejected this request.`;
+                                                    } else if (wf === 'completed') {
+                                                        short = 'Completed';
+                                                        desc = `Defense processing completed.`;
+                                                    } else {
+                                                        short = wf;
+                                                        desc = `Current state: ${wf}.`;
+                                                    }
+
+                                                    const color =
+                                                        short === 'Rejected' ? 'bg-rose-50 text-rose-700 border-rose-100' :
+                                                        short === 'Completed' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' :
+                                                        'bg-zinc-50 text-zinc-700 border-zinc-100';
+
+                                                    return (
+                                                        <div className={`border ${color} rounded-md px-4 py-3 mb-5`}>
+                                                            <p className="text-sm font-semibold mb-1">{short}</p>
+                                                            <p className="text-xs leading-relaxed">{desc}</p>
+                                                        </div>
+                                                    );
+                                                })()}
+                                                {/* Details */}
+                                                <div className="grid gap-6 md:grid-cols-2 mb-6">
+                                                    <div className="space-y-3">
+                                                        <Detail label="Thesis Title" value={req.thesis_title || '—'} />
+                                                        <Detail label="Student Name" value={getDisplayName(req)} />
+                                                        <Detail label="Student ID" value={req.school_id || '—'} />
+                                                        <Detail label="Program" value={req.program || '—'} />
+                                                    </div>
+                                                    <div className="space-y-3">
+                                                        <Detail label="Defense Type" value={req.defense_type || '—'} />
+                                                        <Detail label="Adviser" value={req.defense_adviser || 'You'} />
+                                                        <Detail label="Submitted" value={timeSubmitted} />
+                                                        <Detail label="Workflow State" value={(req.workflow_state || 'pending').toLowerCase()} />
+                                                    </div>
                                                 </div>
-                                                <div className="flex flex-wrap gap-2 mb-2">
-                                                    <FileAttachment file={req.rec_endorsement} label="REC Endorsement" />
-                                                    <FileAttachment file={req.proof_of_payment} label="Proof of Payment" />
-                                                    <FileAttachment file={req.manuscript_proposal} label="Manuscript Proposal" />
-                                                    <FileAttachment file={req.similarity_index} label="Similarity Index" />
+                                                {/* Attachments */}
+                                                <div className="mb-6">
+                                                    <p className="text-xs font-semibold mb-2 uppercase tracking-wide text-zinc-500">Attachments</p>
+                                                    <ul className="space-y-1">
+                                                        {req.rec_endorsement && <AttachmentLine file={req.rec_endorsement} label="REC Endorsement" />}
+                                                        {req.proof_of_payment && <AttachmentLine file={req.proof_of_payment} label="Proof of Payment" />}
+                                                        {req.manuscript_proposal && <AttachmentLine file={req.manuscript_proposal} label="Manuscript Proposal" />}
+                                                        {req.similarity_index && <AttachmentLine file={req.similarity_index} label="Similarity Index" />}
+                                                        {!req.rec_endorsement && !req.proof_of_payment && !req.manuscript_proposal && !req.similarity_index && (
+                                                            <li className="text-xs text-zinc-500">No files uploaded.</li>
+                                                        )}
+                                                    </ul>
                                                 </div>
-                                                <textarea
-                                                  placeholder="Optional comment..."
-                                                  value={commentDraft[req.id] || ''}
-                                                  onChange={e => setCommentDraft(c => ({ ...c, [req.id]: e.target.value }))}
-                                                  className="w-full border rounded p-2 text-xs mb-2"
-                                                />
-                                                <div className="flex justify-end gap-2 mt-2">
-                                                    <Button
-                                                        size="sm"
-                                                        variant="outline"
-                                                        className="text-xs"
-                                                        onClick={async () => {
-                                                            try {
-                                                                await adviserDecisionRequest(req.id,'reject', commentDraft[req.id] || '');
-                                                                (req as any).workflow_state = 'adviser-rejected';
-                                                                (req as any).status = 'Rejected';
-                                                                toast.success('Request rejected.');
-                                                                setOpenItems(prev => ({ ...prev, [req.id]: false }));
-                                                            } catch(e:any) {
-                                                                toast.error(e.message || 'Error rejecting');
-                                                            }
-                                                        }}
-                                                    >
-                                                        <X className="w-4 h-4 mr-1 text-rose-600" />
-                                                        Reject
-                                                    </Button>
-                                                    <Button
-                                                        size="sm"
-                                                        variant="outline"
-                                                        className="text-xs"
-                                                        onClick={async () => {
-                                                            try {
-                                                                await adviserDecisionRequest(req.id,'approve', commentDraft[req.id] || '');
-                                                                (req as any).workflow_state = 'adviser-approved';
-                                                                (req as any).status = 'Pending';
-                                                                toast.success('Request approved.');
-                                                                setOpenItems(prev => ({ ...prev, [req.id]: false }));
-                                                            } catch(e:any) {
-                                                                toast.error(e.message || 'Error approving');
-                                                            }
-                                                        }}
-                                                    >
-                                                        <CircleArrowRight className="w-4 h-4 mr-1 text-green-600" />
-                                                        Approve
-                                                    </Button>
-                                                    {endorseDialogId === req.id && (
-                                                        <EndorseDefenseDialog
-                                                            request={req}
-                                                            open={endorseDialogId === req.id}
-                                                            onOpenChange={(open: boolean) => !open && setEndorseDialogId(null)}
+                                                {/* Comment + Actions only if awaiting adviser decision */}
+                                                {(!req.workflow_state || ['submitted','pending','adviser-pending',''].includes((req.workflow_state || '').toLowerCase())) && (
+                                                    <div className="mt-2 border-t pt-4">
+                                                        <label className="block text-xs font-semibold mb-1 text-zinc-600">Comment (optional)</label>
+                                                        <textarea
+                                                            placeholder="Add an optional remark for the student..."
+                                                            value={commentDraft[req.id] || ''}
+                                                            onChange={e => setCommentDraft(c => ({ ...c, [req.id]: e.target.value }))}
+                                                            className="w-full border rounded-md p-2 text-xs resize-y min-h-[70px] focus:outline-none focus:ring-1 focus:ring-rose-300"
                                                         />
-                                                    )}
-                                                </div>
+                                                        <div className="flex justify-end gap-2 mt-3">
+                                                            <Button
+                                                                size="sm"
+                                                                variant="outline"
+                                                                className="text-xs"
+                                                                onClick={async () => {
+                                                                    try {
+                                                                        await adviserDecisionRequest(req.id,'reject', commentDraft[req.id] || '');
+                                                                        (req as any).workflow_state = 'adviser-rejected';
+                                                                        (req as any).status = 'Rejected';
+                                                                        toast.success('Request rejected.');
+                                                                        setOpenItems(prev => ({ ...prev, [req.id]: false }));
+                                                                    } catch(e:any) {
+                                                                        toast.error(e.message || 'Error rejecting');
+                                                                    }
+                                                                }}
+                                                            >
+                                                                <X className="w-4 h-4 mr-1 text-rose-600" />
+                                                                Reject
+                                                            </Button>
+                                                            <Button
+                                                                size="sm"
+                                                                variant="default"
+                                                                className="text-xs bg-emerald-600 hover:bg-emerald-600/90"
+                                                                onClick={async () => {
+                                                                    try {
+                                                                        await adviserDecisionRequest(req.id,'approve', commentDraft[req.id] || '');
+                                                                        (req as any).workflow_state = 'adviser-approved';
+                                                                        (req as any).status = 'Pending';
+                                                                        toast.success('Request approved.');
+                                                                        setOpenItems(prev => ({ ...prev, [req.id]: false }));
+                                                                    } catch(e:any) {
+                                                                        toast.error(e.message || 'Error approving');
+                                                                    }
+                                                                }}
+                                                            >
+                                                                <CircleArrowRight className="w-4 h-4 mr-1" />
+                                                                Approve
+                                                            </Button>
+                                                        </div>
+                                                    </div>
+                                                )}
                                             </div>
                                         </CollapsibleContent>
                                     </Collapsible>
@@ -271,4 +329,31 @@ async function adviserDecisionRequest(id: number, decision: 'approve'|'reject', 
     try { json = await res.json(); } catch {}
     if (!res.ok) throw new Error(json.error || `HTTP ${res.status}`);
     return json;
+}
+
+function Detail({ label, value }: { label: string; value: React.ReactNode }) {
+    return (
+        <div>
+            <p className="text-[10px] uppercase tracking-wide font-semibold text-zinc-500 mb-0.5">{label}</p>
+            <p className="text-sm font-medium break-words">{value}</p>
+        </div>
+    );
+}
+
+function AttachmentLine({ file, label }: { file: string; label: string }) {
+    const name = file.split('/').pop();
+    return (
+        <li>
+            <a
+                href={`/storage/${file}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="group inline-flex items-center gap-2 text-xs text-sky-700 hover:underline"
+            >
+                <Paperclip className="h-3.5 w-3.5 text-sky-600 group-hover:text-sky-700" />
+                <span className="font-medium">{label}</span>
+                <span className="text-zinc-500 truncate max-w-[180px]">{name}</span>
+            </a>
+        </li>
+    );
 }

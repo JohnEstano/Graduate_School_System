@@ -20,6 +20,7 @@ class DefenseRequest extends Model
         'coordinator_reviewed_at' => 'datetime',
         'submitted_at'            => 'datetime',
         'scheduled_date'          => 'datetime',
+        'scheduled_end_time'      => 'string', // added
     ];
 
     public function user()                { return $this->belongsTo(User::class,'submitted_by'); }
@@ -223,5 +224,10 @@ class DefenseRequest extends Model
             return true;
         }
         return false;
+    }
+
+    public function getStudentDisplayNameAttribute(): string
+    {
+        return $this->user?->name ?? 'Student';
     }
 }

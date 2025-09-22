@@ -61,15 +61,26 @@ export default function CoordinatorDashboard() {
                 'Accept': 'application/json'
             }
         })
-            .then(res => res.json())
+            .then(res => {
+                if (!res.ok) throw new Error('Failed');
+                return res.json();
+            })
             .then((data) => {
-                // If backend returns { defenseRequests: [...] }
-                const requests = Array.isArray(data) ? data : data.defenseRequests ?? [];
+                const requests = Array.isArray(data)
+                    ? data
+                    : (data.defenseRequests ?? []);
                 setAllRequests(requests);
-                setPendingRequests(requests.filter((r: DefenseRequest) => r.status === 'Pending'));
+
+                // Prefer normalized_status when available, fallback to status
+                const pending = requests.filter(
+                    (r: any) => (r.normalized_status || r.status) === 'Pending'
+                );
+                setPendingRequests(pending);
+
                 const today = new Date();
-                const closeEvents = requests.filter((dr: DefenseRequest) => {
-                    const eventDate = new Date(dr.date_of_defense);
+                const closeEvents = requests.filter((dr: any) => {
+                    if (!dr.scheduled_date) return false;
+                    const eventDate = new Date(dr.scheduled_date);
                     const diff = (eventDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24);
                     return diff >= 0 && diff < 3;
                 });
@@ -78,6 +89,7 @@ export default function CoordinatorDashboard() {
             .catch(() => {
                 setAllRequests([]);
                 setPendingRequests([]);
+                setTodayEvents([]);
             })
             .finally(() => setLoading(false));
     }, []);

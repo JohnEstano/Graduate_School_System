@@ -46,7 +46,7 @@ export default function WeeklyDefenseSchedulesWidget({
         });
 
     return (
-        <div className="w-full md:w-[340px] border  rounded-xl p-5 bg-white dark:bg-zinc-900 flex flex-col">
+        <div className="w-full md:w-[350px] border  rounded-xl p-5 bg-white dark:bg-zinc-900 flex flex-col">
             <div className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
                 This Week's Event's
             </div>

@@ -3,10 +3,9 @@ import { usePage } from '@inertiajs/react';
 import { Sun, Moon } from 'lucide-react';
 import RemindersWidget from '../widgets/reminders-widget';
 import UpcomingSchedulesWidget from '../widgets/upcomming-schedules-widget';
-import PendingDefenseRequestsWidget from '../widgets/pending-defense-request-widget';
+import DefenseStatusWidget from '../widgets/defense-status-widget';
 import WeeklyDefenseSchedulesWidget from '../widgets/weekly-defense-schedule-widget';
 import QuickActionsWidget from '../widgets/quick-actions-widget';
-import DefenseStatusWidget from '../widgets/defense-status-widget';
 import type { DefenseRequest } from '@/types';
 
 type DefenseRequirement = {
@@ -70,51 +69,37 @@ export default function StudentDashboard() {
     ];
 
     useEffect(() => {
-        // Fetch newest defense-requests if server didn't provide them
-        const fetchData = async () => {
+        const hydrate = (requests: DefenseRequest[]) => {
+            let mine = requests.filter(r => {
+                const sb: any = (r as any).submitted_by;
+                return sb === user?.id || sb === String(user?.id);
+            });
+            if (mine.length === 0) mine = requests; // fallback
+            const sorted = [...mine].sort((a: any, b: any) => {
+                const at = a.created_at ? new Date(a.created_at).getTime() : 0;
+                const bt = b.created_at ? new Date(b.created_at).getTime() : 0;
+                return bt - at;
+            });
+            setAllRequests(sorted);
+        };
+
+        const load = async () => {
+            setLoading(true);
             try {
-                const res = await fetch('/defense-requests', { headers: { Accept: 'application/json' } });
+                const res = await fetch('/defense-request', { headers: { Accept: 'application/json' } });
+                if (!res.ok) throw new Error('bad');
                 const data = await res.json();
-                const requests = Array.isArray(data) ? data : data.defenseRequests ?? [];
-                // Only keep student's own requests on this page
-                const mine = requests.filter((r: DefenseRequest) => r.submitted_by === user?.id);
-                setAllRequests(mine);
-                setPendingRequests(mine.filter((r: DefenseRequest) => r.status === 'Pending'));
-                const today = new Date();
-                const closeEvents = mine.filter((dr: DefenseRequest) => {
-                    const eventDate = dr.date_of_defense ? new Date(dr.date_of_defense) : null;
-                    if (!eventDate || Number.isNaN(eventDate.getTime())) return false;
-                    const diff = (eventDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24);
-                    return diff >= 0 && diff < 3;
-                });
-                setTodayEvents(closeEvents);
+                const list = Array.isArray(data) ? data : (data.defenseRequests ?? []);
+                hydrate(list);
             } catch (e) {
+                console.error('fetch defense requests failed', e);
                 setAllRequests([]);
-                setPendingRequests([]);
-                setTodayEvents([]);
             } finally {
                 setLoading(false);
             }
         };
-
-        // If server already provided defenseRequests, use them instead of fetching
-        if (serverDefenseRequests && serverDefenseRequests.length > 0) {
-            const mine = serverDefenseRequests.filter((r: DefenseRequest) => r.submitted_by === user?.id);
-            setAllRequests(mine);
-            setPendingRequests(mine.filter((r: DefenseRequest) => r.status === 'Pending'));
-            const today = new Date();
-            const closeEvents = mine.filter((dr: DefenseRequest) => {
-                const eventDate = dr.date_of_defense ? new Date(dr.date_of_defense) : null;
-                if (!eventDate || Number.isNaN(eventDate.getTime())) return false;
-                const diff = (eventDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24);
-                return diff >= 0 && diff < 3;
-            });
-            setTodayEvents(closeEvents);
-            setLoading(false);
-        } else {
-            fetchData();
-        }
-    }, [serverDefenseRequests, user?.id]);
+        load();
+    }, [user?.id]);
 
     // prefer server-provided list; if not present, fall back to locally fetched allRequests
     const approvedDefenses = (serverDefenseRequests && serverDefenseRequests.length > 0) ? serverDefenseRequests : allRequests;
@@ -155,8 +140,8 @@ export default function StudentDashboard() {
             <div className="flex flex-col gap-6 bg-gray-100 ms-4 me-4 rounded-xl mt-2  px-5 py-8">
                 <div className="w-full mb-2 flex flex-col md:flex-row gap-4">
                     <DefenseStatusWidget
-                        defenseRequirement={defenseRequirement}
-                        defenseRequest={defenseRequest}
+                        recentRequests={allRequests}
+                        loading={loading}
                     />
                     <WeeklyDefenseSchedulesWidget
                         weekDays={weekDays}

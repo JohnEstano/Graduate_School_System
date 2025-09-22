@@ -1,12 +1,11 @@
 import { ChevronRight, GraduationCap } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import type { DefenseRequest } from '@/types';
 
 function getPriorityBadge(priority?: string) {
     const value = (priority || '').trim();
     let className =
-        "cursor-pointer rounded-full  px-2 py-1 border font-bold text-[10px] " +
+        "cursor-pointer rounded-full px-2 py-1 border font-bold text-[10px] " +
         (value === 'High'
             ? "bg-rose-100 text-rose-700 border-rose-200 dark:bg-rose-950 dark:text-rose-300 dark:border-rose-900"
             : value === 'Low'
@@ -27,16 +26,12 @@ type Props = {
 
 const PendingDefenseRequestsWidget: React.FC<Props> = ({ pendingRequests, loading = false }) => {
     const showSkeleton = loading;
-
-    // Remove extra filtering!
-    // const filteredPendingRequests = pendingRequests.filter(req => req.status === 'Pending');
     const filteredPendingRequests = pendingRequests;
 
     return (
         <div className="flex-1 border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-5 bg-white dark:bg-zinc-900 flex flex-col transition min-h-[220px]">
             {showSkeleton ? (
                 <div className="flex flex-col gap-3 h-full">
-                    {/* Top Row Skeleton */}
                     <div className="flex items-center justify-between mb-2">
                         <div>
                             <Skeleton className="h-8 w-16 mb-2 bg-gray-100" />
@@ -48,7 +43,6 @@ const PendingDefenseRequestsWidget: React.FC<Props> = ({ pendingRequests, loadin
                         </div>
                     </div>
                     <Skeleton className="h-4 w-full mb-2 bg-gray-100" />
-                    {/* Table Skeleton */}
                     <div className="flex flex-col gap-2 mt-2">
                         {[...Array(3)].map((_, i) => (
                             <div key={i} className="flex items-center gap-2">
@@ -60,18 +54,20 @@ const PendingDefenseRequestsWidget: React.FC<Props> = ({ pendingRequests, loadin
                 </div>
             ) : (
                 <>
-                    {/* Top Row: Value, Description, Icons (Clickable & Hoverable) */}
                     <a
                         href="/defense-requests"
                         className="flex items-center justify-between mb-2 group cursor-pointer select-none"
                         style={{ textDecoration: 'none' }}
                     >
                         <div>
-                            <div className="text-4xl font-bold text-primary-700 dark:text-primary-300">
+                            <div className="text-4xl font-bold text-rose-500">
                                 {filteredPendingRequests.length}
                             </div>
                             <div className="text-[13px] font-medium text-gray-700 dark:text-gray-300">
                                 Pending Defense Requests
+                            </div>
+                            <div className="text-[11px] mt-1 text-gray-500 dark:text-gray-400">
+                                Awaiting processing
                             </div>
                         </div>
                         <div className="flex items-center gap-2">
@@ -81,9 +77,7 @@ const PendingDefenseRequestsWidget: React.FC<Props> = ({ pendingRequests, loadin
                             <ChevronRight className="size-6 text-gray-400 transition-transform transition-colors duration-200 group-hover:text-rose-500 group-hover:translate-x-1" />
                         </div>
                     </a>
-                    {/* Separator */}
                     <hr className="my-2 border-gray-200 dark:border-gray-700" />
-                    {/* Preview Table (Not clickable) */}
                     <div className="overflow-x-auto">
                         {filteredPendingRequests.length === 0 ? (
                             <div className="text-center text-gray-400 py-6">
@@ -108,7 +102,7 @@ const PendingDefenseRequestsWidget: React.FC<Props> = ({ pendingRequests, loadin
                             </table>
                         )}
                         {filteredPendingRequests.length > 3 && (
-                            <span className="text-xs text-primary-700 dark:text-primary-300 mt-2 inline-block">
+                            <span className="text-xs text-rose-500 mt-2 inline-block">
                                 +{filteredPendingRequests.length - 3} more
                             </span>
                         )}
