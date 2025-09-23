@@ -6,9 +6,11 @@ import HeadingSmall from '@/components/heading-small';
 import { Button } from '@/components/ui/button';
 import { Rnd } from 'react-rnd';
 import { getDocument, GlobalWorkerOptions } from 'pdfjs-dist';
-import 'pdfjs-dist/build/pdf.worker.min.js';
+import workerSrc from 'pdfjs-dist/build/pdf.worker.min.mjs?url'; // or pdf.worker.mjs?url
+import * as pdfjsLib from 'pdfjs-dist';
 
-GlobalWorkerOptions.workerSrc = new URL('pdfjs-dist/build/pdf.worker.min.js', import.meta.url).toString();
+// Set the worker source for pdfjs
+pdfjsLib.GlobalWorkerOptions.workerSrc = workerSrc;
 
 type BreadcrumbItem = { title:string; href:string };
 
