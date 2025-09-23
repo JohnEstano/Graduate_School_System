@@ -230,4 +230,8 @@ class DefenseRequest extends Model
     {
         return $this->user?->name ?? 'Student';
     }
+
+    public function generatedDocuments(){
+      return $this->hasMany(GeneratedDocument::class);
+    }
 }

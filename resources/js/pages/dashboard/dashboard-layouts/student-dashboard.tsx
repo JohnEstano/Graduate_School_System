@@ -6,6 +6,7 @@ import UpcomingSchedulesWidget from '../widgets/upcomming-schedules-widget';
 import DefenseStatusWidget from '../widgets/defense-status-widget';
 import WeeklyDefenseSchedulesWidget from '../widgets/weekly-defense-schedule-widget';
 import QuickActionsWidget from '../widgets/quick-actions-widget';
+import ExamEligibilityWidget from '../widgets/exam-eligibility-widget';
 import type { DefenseRequest } from '@/types';
 
 type DefenseRequirement = {
@@ -156,6 +157,7 @@ export default function StudentDashboard() {
                 <div className="grid gap-4 md:grid-cols-2">
                     <RemindersWidget />
                     <UpcomingSchedulesWidget loading={loading} todayEvents={todayEvents} />
+                    <ExamEligibilityWidget />
                 </div>
                 {/* You can add another widget here, e.g. RecentActivityWidget */}
             </div>

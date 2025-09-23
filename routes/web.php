@@ -20,6 +20,9 @@ use App\Models\User;
 use App\Models\DefenseRequest;
 use App\Http\Controllers\ScheduleController;
 use App\Http\Controllers\ScheduleEventController;
+use App\Http\Controllers\DocumentTemplateController;
+use App\Http\Controllers\UserSignatureController;
+use App\Http\Controllers\GeneratedDocumentController;
 
 /*
 |--------------------------------------------------------------------------
@@ -71,6 +74,30 @@ Route::get('/test-upload-limits', function () {
 |--------------------------------------------------------------------------
 */
 Route::middleware(['auth','verified'])->group(function () {
+
+    // Settings: Document Templates (Dean / Coordinator only)
+    Route::get('/settings/documents', function() {
+        abort_unless(in_array(Auth::user()->role,['Dean','Coordinator']),403);
+        return Inertia::render('settings/documents/Index');
+    })->name('settings.documents');
+
+    Route::get('/settings/documents/{template}/edit', function(\App\Models\DocumentTemplate $template) {
+        abort_unless(in_array(Auth::user()->role,['Dean','Coordinator']),403);
+        return Inertia::render('settings/documents/TemplateEditor', [
+            'templateId'=>$template->id,
+            'template'=>$template
+        ]);
+    })->name('settings.documents.edit');
+
+    // Settings: Signatures (any staff who can sign)
+    Route::get('/settings/signatures', function() {
+        return Inertia::render('settings/signatures/Index');
+    })->name('settings.signatures');
+
+    // Manual (debug) generation for a defense request
+    Route::post('/defense-requests/{defenseRequest}/generate-docs',
+        [GeneratedDocumentController::class,'generateNow'])
+        ->name('defense-requests.generate-docs');
 
     Route::get('/dashboard', [DashboardController::class,'index'])->name('dashboard');
 
@@ -287,6 +314,19 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/api/panel-members', [PanelistController::class,'allCombined'])->name('api.panel-members');
     Route::get('/adviser/defense-requests', [DefenseRequestController::class,'adviserQueue'])
         ->name('adviser.defense-requests');
+
+    Route::get('/api/document-templates', [DocumentTemplateController::class,'index']);
+    Route::get('/api/document-templates/{template}', [DocumentTemplateController::class,'show']);
+    Route::post('/api/document-templates', [DocumentTemplateController::class,'store']);
+    Route::put('/api/document-templates/{template}/fields', [DocumentTemplateController::class,'updateFields']);
+    Route::delete('/api/document-templates/{template}', [DocumentTemplateController::class,'destroy']);
+
+    Route::get('/api/signatures', [UserSignatureController::class,'index']);
+    Route::post('/api/signatures', [UserSignatureController::class,'store']);
+    Route::patch('/api/signatures/{signature}/activate', [UserSignatureController::class,'activate']);
+
+    Route::get('/generated-documents/{doc}',[GeneratedDocumentController::class,'show'])
+        ->name('generated-documents.show');
 });
 
 /*

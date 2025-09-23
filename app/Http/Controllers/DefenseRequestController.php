@@ -14,6 +14,7 @@ use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Carbon\Carbon;
+use App\Jobs\GenerateDefenseDocumentsJob;
 
 class DefenseRequestController extends Controller
 {
@@ -291,6 +292,12 @@ class DefenseRequestController extends Controller
             $defenseRequest->workflow_history = $hist;
 
             $defenseRequest->save();
+
+            // Only dispatch when it just became Approved
+            if ($defenseRequest->status === 'Approved') {
+                // Queue job AFTER transaction commits
+                GenerateDefenseDocumentsJob::dispatch($defenseRequest->id)->afterCommit();
+            }
 
             return response()->json([
                 'ok'=>true,

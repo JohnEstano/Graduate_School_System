@@ -60,17 +60,18 @@ function timeLabel(hhmm?: string) {
   return format(d,'h:mm a');
 }
 
-export default function WeeklyDefenseSchedulesWidget({
-  weekDays,
-  selectedDay,
-  setSelectedDay,
-  approvedDefenses,
-  loading = false,
-  referenceDate,
-  studentId,
-  userRole,
-  canManage
-}: Props) {
+export default function WeeklyDefenseSchedulesWidget(props: Props) {
+  const {
+    weekDays,
+    selectedDay,
+    setSelectedDay,
+    approvedDefenses,
+    loading = false,
+    referenceDate,
+    studentId,
+    userRole,
+    canManage
+  } = props;
 
   // --- New: fetch general events for the whole week range ---
   const [weekEvents, setWeekEvents] = useState<ApiEvent[]>([]);
@@ -144,7 +145,7 @@ export default function WeeklyDefenseSchedulesWidget({
   const canSeeRaw = canManage || MANAGE_ROLES.includes(userRole || '');
 
   return (
-    <div className="w-full md:w-[380px] border rounded-xl p-5 bg-white dark:bg-zinc-900 flex flex-col">
+    <div className="w-full md:w-[380px] border rounded-xl p-5 bg-white dark:bg-zinc-900 flex flex-col min-h-[260px]">
       <div className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
         This Week&apos;s Schedules
       </div>
@@ -157,7 +158,7 @@ export default function WeeklyDefenseSchedulesWidget({
               "px-2.5 py-1 rounded-full text-xs font-semibold transition cursor-pointer whitespace-nowrap",
               selectedDay === day.value
                 ? "bg-rose-500 text-white"
-                : "bg-gray-100 dark:bg-zinc-800 text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-zinc-700"
+                : "bg-gray-100 dark:bg-zinc-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-zinc-700"
             )}
             onClick={() => setSelectedDay(day.value)}
             disabled={overallLoading}
@@ -194,24 +195,26 @@ export default function WeeklyDefenseSchedulesWidget({
                   "group flex items-center gap-2 px-2 py-2 rounded border max-w-full text-xs",
                   isDefense
                     ? "border-emerald-500/60 bg-emerald-50 dark:bg-emerald-900/20"
-                    : "border-blue-500/50 bg-blue-50 dark:bg-blue-900/20"
+                    : "border-gray-300 bg-gray-50 dark:border-zinc-700 dark:bg-zinc-800/60"
                 )}
                 style={{ minWidth: 0 }}
                 title={item.title}
               >
                 {isDefense
                   ? <GraduationCap className={cn("flex-shrink-0", item.owner ? "text-emerald-600" : "text-emerald-500")} size={18} />
-                  : <CalendarIcon className="text-blue-500 flex-shrink-0" size={18} />
+                  : <CalendarIcon className="text-gray-500 dark:text-gray-400 flex-shrink-0" size={18} />
                 }
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-1">
-                    <span className="font-semibold truncate max-w-[200px]">
+                    <span className="font-semibold truncate max-w-[200px] text-gray-800 dark:text-gray-200">
                       {item.title}
                     </span>
                     <span
                       className={cn(
                         "px-1.5 py-[1px] rounded-full text-[9px] font-bold tracking-wide shrink-0",
-                        isDefense ? "bg-emerald-500 text-white" : "bg-blue-500 text-white"
+                        isDefense
+                          ? "bg-emerald-500 text-white"
+                          : "bg-gray-400 text-white dark:bg-zinc-600"
                       )}
                     >
                       {badge}

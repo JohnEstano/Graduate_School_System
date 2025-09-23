@@ -41,8 +41,10 @@ export type DefenseRequestSummary = {
   last_name: string;
   program: string;
   thesis_title: string;
-  date_of_defense: string;
-  mode_defense: string;
+  date_of_defense?: string;
+  scheduled_date?: string;       // backend name
+  mode_defense?: string;
+  defense_mode?: string;         // backend name
   defense_type: string;
   status: 'Pending' | 'In progress' | 'Approved' | 'Rejected' | 'Needs-info';
   priority: 'Low' | 'Medium' | 'High';
@@ -81,7 +83,14 @@ function ShowAllRequestsInner({ defenseRequests: initial, onStatusChange }: Show
     return el?.content || '';
   }
 
-  const [defenseRequests, setDefenseRequests] = useState<DefenseRequestSummary[]>(initial || []);
+  const normalizeRequests = (list: DefenseRequestSummary[]) =>
+    list.map(r => ({
+      ...r,
+      date_of_defense: r.date_of_defense || r.scheduled_date || undefined,
+      mode_defense: r.mode_defense || r.defense_mode || undefined
+    }));
+
+  const [defenseRequests, setDefenseRequests] = useState<DefenseRequestSummary[]>(normalizeRequests(initial || []));
   const [search, setSearch] = useState('');
   const [priorityFilter, setPriorityFilter] = useState<string[]>([]);
   const [typeFilter, setTypeFilter] = useState<string[]>([]);
@@ -128,9 +137,7 @@ function ShowAllRequestsInner({ defenseRequests: initial, onStatusChange }: Show
       const response = await fetch('/coordinator/defense-requests/all-defense-requests');
       if (response.ok) {
         const data: DefenseRequestSummary[] = await response.json();
-        // Do NOT filter out adviser-approved anymore.
-        // (If you still want to hide impossible states you can do it here.)
-        setDefenseRequests(data);
+        setDefenseRequests(normalizeRequests(data));
       } else {
         toast.error('Failed to fetch defense requests');
       }
@@ -396,12 +403,14 @@ function ShowAllRequestsInner({ defenseRequests: initial, onStatusChange }: Show
               </p>
             )}
             {singleConfirm.action === 'approve' && (
-              <div className="flex items-start gap-2 rounded-md border bg-muted/40 p-3 text-xs leading-relaxed">
-                <Signature className="h-4 w-4 mt-0.5 text-primary" />
-                <span>
-                  Approving this defense request will mean you allow the use of your signature
-                  for the required official defense documents.
-                </span>
+              <div className="flex flex-col items-center gap-3 rounded-md border bg-muted/40 p-5">
+                <div className="rounded-full bg-primary/10 p-4">
+                  <Signature className="h-14 w-14 text-primary" />
+                </div>
+                <p className="text-center text-sm leading-relaxed">
+                  Approving this defense request authorizes the use of your signature
+                  on the official defense documents.
+                </p>
               </div>
             )}
           </div>
@@ -433,12 +442,14 @@ function ShowAllRequestsInner({ defenseRequests: initial, onStatusChange }: Show
               </span>?
             </p>
             {confirmAction === 'approve' && (
-              <div className="flex items-start gap-2 rounded-md border bg-muted/40 p-3 text-xs leading-relaxed">
-                <Signature className="h-4 w-4 mt-0.5 text-primary" />
-                <span>
-                  Approving these defense requests will mean you allow the use of your signature
-                  for their official defense documents.
-                </span>
+              <div className="flex flex-col items-center gap-3 rounded-md border bg-muted/40 p-5">
+                <div className="rounded-full bg-primary/10 p-4">
+                  <Signature className="h-14 w-14 text-primary" />
+                </div>
+                <p className="text-center text-sm leading-relaxed">
+                  Approving these defense requests authorizes the use of your signature
+                  on their official defense documents.
+                </p>
               </div>
             )}
             <div className="flex justify-end gap-2">

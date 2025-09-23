@@ -3,7 +3,9 @@
 use App\Http\Controllers\Settings\PasswordController;
 use App\Http\Controllers\Settings\ProfileController;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
+use App\Models\DocumentTemplate;
 
 /*
 | Central settings & profile routes.
@@ -27,7 +29,24 @@ Route::middleware(['auth','verified'])->group(function () {
     Route::put('/settings/password', [PasswordController::class, 'update'])->name('password.update');
 
     // Appearance (example page)
-    Route::get('/settings/appearance', function () {
-        return Inertia::render('settings/appearance');
-    })->name('appearance');
+    Route::get('/settings/appearance', fn () => Inertia::render('settings/appearance'))->name('appearance');
+
+    // Document Templates (Dean / Coordinator)
+    Route::get('/settings/documents', function () {
+        abort_unless(in_array(Auth::user()->role,['Dean','Coordinator']),403);
+        return Inertia::render('settings/documents/Index');
+    })->name('settings.documents');
+
+    Route::get('/settings/documents/{template}/edit', function (DocumentTemplate $template) {
+        abort_unless(in_array(Auth::user()->role,['Dean','Coordinator']),403);
+        return Inertia::render('settings/documents/TemplateEditor', [
+            'templateId' => $template->id,
+            'template'   => $template
+        ]);
+    })->name('settings.documents.edit');
+
+    // E‑Signatures
+    Route::get('/settings/signatures', function () {
+        return Inertia::render('settings/signatures/Index');
+    })->name('settings.signatures');
 });

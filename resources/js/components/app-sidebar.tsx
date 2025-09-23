@@ -76,7 +76,7 @@ const assistantNavItems: MainNavItem[] = [
         subItems: [
             { title: 'Defense Request', href: '/defense-request' },
 
-            { title: 'Defense Management', href: '/coordinator/defense-management', icon: Calendar },
+          //  { title: 'Defense Management', href: '/coordinator/defense-management', icon: Calendar },
             { title: 'Panelists', href: '/panelists', icon: SquareUserRound },
         ],
     },

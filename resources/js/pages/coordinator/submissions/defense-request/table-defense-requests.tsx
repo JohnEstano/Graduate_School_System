@@ -4,7 +4,6 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { ArrowUp, ArrowDown, ChevronsUpDown, Eye, CheckCircle, CircleX, CircleArrowLeft } from 'lucide-react';
 import { format } from 'date-fns';
-import { Progress } from '@/components/ui/progress';
 import { router } from '@inertiajs/react';
 
 export type DefenseRequestSummary = {
@@ -14,9 +13,11 @@ export type DefenseRequestSummary = {
   last_name: string;
   program: string;
   thesis_title: string;
-  date_of_defense: string;
+  date_of_defense?: string;
+  scheduled_date?: string;
   defense_type: string;
-  mode_defense: string;
+  mode_defense?: string;
+  defense_mode?: string;
   status: 'Pending' | 'In progress' | 'Approved' | 'Rejected' | 'Needs-info';
   priority: 'Low' | 'Medium' | 'High';
   last_status_updated_by?: string;
@@ -57,8 +58,6 @@ export default function TableDefenseRequests({
   onRowReject,
   onRowRetrieve
 }: TableDefenseRequestsProps) {
-  const showProgress = tabType === 'approved' && columns.progress;
-
   return (
     <div className="relative w-full">
       {/* Contain horizontal scroll INSIDE this div only */}
@@ -87,7 +86,6 @@ export default function TableDefenseRequests({
               {columns.mode && <TableHead className="text-center px-1 py-2">Mode</TableHead>}
               {columns.type && <TableHead className="text-center px-1 py-2">Type</TableHead>}
               {columns.priority && <TableHead className="text-center px-1 py-2">Priority</TableHead>}
-              {showProgress && <TableHead className="text-center px-1 py-2">Progress</TableHead>}
               <TableHead className="text-center px-1 py-2">Actions</TableHead>
             </TableRow>
           </TableHeader>
@@ -95,8 +93,10 @@ export default function TableDefenseRequests({
             {paged
               .slice()
               .sort((a, b) => {
-                const da = a.date_of_defense ? new Date(a.date_of_defense).getTime() : 0;
-                const db = b.date_of_defense ? new Date(b.date_of_defense).getTime() : 0;
+                const daStr = a.date_of_defense || a.scheduled_date;
+                const dbStr = b.date_of_defense || b.scheduled_date;
+                const da = daStr ? new Date(daStr).getTime() : 0;
+                const db = dbStr ? new Date(dbStr).getTime() : 0;
                 return db - da;
               })
               .map(r => {
@@ -130,15 +130,18 @@ export default function TableDefenseRequests({
 
                     {columns.date && (
                       <TableCell className="px-1 py-2 text-center whitespace-nowrap">
-                        {r.date_of_defense && !isNaN(new Date(r.date_of_defense).getTime())
-                          ? format(new Date(r.date_of_defense), 'MMM dd, yyyy')
-                          : '—'}
+                        {(() => {
+                          const raw = r.date_of_defense || r.scheduled_date;
+                          return raw && !isNaN(new Date(raw).getTime())
+                            ? format(new Date(raw), 'MMM dd, yyyy')
+                            : '—';
+                        })()}
                       </TableCell>
                     )}
 
                     {columns.mode && (
                       <TableCell className="px-1 py-2 text-center capitalize">
-                        {r.mode_defense?.replace('-', ' ') || '—'}
+                        {(r.mode_defense || r.defense_mode)?.replace('-', ' ') || '—'}
                       </TableCell>
                     )}
 
@@ -173,15 +176,6 @@ export default function TableDefenseRequests({
                         >
                           {r.priority}
                         </Badge>
-                      </TableCell>
-                    )}
-
-                    {showProgress && (
-                      <TableCell className="px-1 py-2 text-center">
-                        <div className="flex flex-col gap-1 items-center">
-                          <Progress value={40} className="w-full h-2" />
-                          <span className="text-[11px] text-muted-foreground">In Progress</span>
-                        </div>
                       </TableCell>
                     )}
 
@@ -249,7 +243,6 @@ export default function TableDefenseRequests({
                     (columns.mode ? 1 : 0) +
                     (columns.type ? 1 : 0) +
                     (columns.priority ? 1 : 0) +
-                    (showProgress ? 1 : 0) +
                     1
                   }
                   className="text-center py-10 text-muted-foreground"
