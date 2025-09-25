@@ -16,8 +16,9 @@ import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, Dialog
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Skeleton } from "@/components/ui/skeleton";
 // Icons
-import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, X, GraduationCap, Trash2, Printer } from "lucide-react";
+import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, X, GraduationCap, Trash2, Printer, CalendarDays, CalendarRange, Calendar } from "lucide-react";
 import { createPortal } from 'react-dom';
 
 const pad2 = (n:number)=> n.toString().padStart(2,'0');
@@ -64,9 +65,9 @@ const MINUTES_IN_DAY_RANGE = (DAY_END_HOUR - DAY_START_HOUR) * 60;
 const SLOT_HEIGHT = 44;
 
 const EVENT_BASE =
-  "bg-emerald-300/90 hover:bg-emerald-300 text-emerald-900 ring-1 ring-emerald-500/40 shadow-sm transition-colors";
+  "bg-zinc-100 dark:bg-zinc-900/90 hover:bg-zinc-200 dark:hover:bg-zinc-800 text-zinc-900 dark:text-zinc-100 ring-1 ring-zinc-300 dark:ring-zinc-700/40 shadow-sm transition-colors";
 const EVENT_BASE_SOLID =
-  "bg-emerald-400/90 hover:bg-emerald-400 text-emerald-950 ring-1 ring-emerald-600/40 shadow-sm transition-colors";
+  "bg-zinc-200 dark:bg-zinc-900 hover:bg-zinc-300 dark:hover:bg-zinc-800 text-zinc-900 dark:text-zinc-100 ring-1 ring-zinc-400 dark:ring-zinc-700/40 shadow-sm transition-colors";
 
 function buildTimeSlots() {
   const slots: { label: string; minutes: number; isHour: boolean }[] = [];
@@ -174,10 +175,10 @@ function getTheme(ev: CalendarEntry) {
   return { base, border, text, subText };
 }
 
+const GLASS_HEADER = "backdrop-blur supports-[backdrop-filter]:bg-white/85 bg-white/70 dark:bg-zinc-900/75 shadow-sm";
 const TOOLBAR_STICKY_TOP = 0;
 const TOOLBAR_HEIGHT = 52;
 const VIEW_HEADER_OFFSET = TOOLBAR_STICKY_TOP + TOOLBAR_HEIGHT;
-const GLASS_HEADER = "backdrop-blur supports-[backdrop-filter]:bg-white/85 bg-white/70 dark:bg-neutral-900/75 shadow-sm";
 
 function getCsrf() {
   const meta = document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement | null;
@@ -436,7 +437,7 @@ export default function SchedulePage({ canManage, userRole }: { canManage: boole
                         key={ev.id}
                         className={cn(
                           "px-1 py-0.5 rounded text-[10px] font-medium truncate flex items-center gap-1",
-                          ev.defense ? EVENT_BASE_SOLID : "ring-1 ring-emerald-500/30"
+                          ev.defense ? EVENT_BASE_SOLID : EVENT_BASE // <-- use neutral ring, not emerald
                         )}
                         style={
                           !ev.defense
@@ -559,8 +560,8 @@ export default function SchedulePage({ canManage, userRole }: { canManage: boole
                         key={ev.id}
                         className={cn(
                           "absolute rounded-md text-[11px] flex flex-col overflow-hidden cursor-pointer",
-                          ev.defense ? EVENT_BASE : "ring-1 ring-emerald-500/40 shadow-sm",
-                          "hover:ring-2"
+                          ev.defense ? EVENT_BASE : EVENT_BASE, // <-- use neutral ring for all
+                          "hover:ring-2 ring-primary/40"
                         )}
                         style={{
                           top: `calc(${topPct}% )`,
@@ -702,7 +703,8 @@ export default function SchedulePage({ canManage, userRole }: { canManage: boole
                     key={ev.id}
                     className={cn(
                       "absolute rounded-md p-2 text-[11px] flex flex-col overflow-hidden cursor-pointer",
-                      ev.defense ? EVENT_BASE_SOLID : "ring-1 ring-emerald-500/40 hover:ring-2"
+                      ev.defense ? EVENT_BASE_SOLID : EVENT_BASE, // <-- use neutral ring for all
+                      "hover:ring-2 ring-primary/40"
                     )}
                     style={{
                       top: `calc(${topPct}% )`,
@@ -731,7 +733,7 @@ export default function SchedulePage({ canManage, userRole }: { canManage: boole
                     <div className="text-[11px] font-medium mt-0.5">
                       {ev.start && formatTime(ev.start)}
                       {ev.end && ' – ' + formatTime(ev.end)}
-                      {ev.raw.defense_venue && ev.defense && ' • '+ev.raw.defense_venue}
+                      {ev.raw.student_name && ev.defense && ' • '+ev.raw.student_name}
                     </div>
                     {ev.defense && ev.raw.student_name && (
                       <div className="text-[10px] truncate">
@@ -996,360 +998,382 @@ export default function SchedulePage({ canManage, userRole }: { canManage: boole
   return (
     <AppLayout breadcrumbs={breadcrumbs}>
       <Head title="Schedules" />
-      <div className="flex flex-col gap-0">
-        <div
-          className={cn(
-            "flex flex-wrap items-center gap-2 w-full bg-white border rounded-md rounded-b-none px-3 py-2 sticky z-50",
-            "shadow-sm"
-          )}
-          style={{ top: TOOLBAR_STICKY_TOP }}
-        >
-          <div className="flex items-center gap-1">
-            <Button size="icon" variant="outline" onClick={goPrev}>
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-            <Button size="icon" variant="outline" onClick={goNext}>
-              <ChevronRight className="h-4 w-4" />
-            </Button>
-            <Button variant="outline" onClick={goToday}>Today</Button>
+      <div className="flex flex-col gap-0 bg-white dark:bg-zinc-900 min-h-screen">
+        {/* Skeleton Loader */}
+        {loading ? (
+          <div className="w-full min-h-[70vh] bg-zinc-100 dark:bg-zinc-900 flex flex-col gap-4 p-0 m-0">
+            {/* Top short row */}
+            <Skeleton className="h-6 w-1/6 rounded bg-zinc-300 dark:bg-zinc-800 mt-8 mx-8" />
+            {/* Main rows */}
+            <Skeleton className="h-12 w-3/4 rounded bg-zinc-300 dark:bg-zinc-800 mx-8" />
+            <Skeleton className="h-12 w-2/3 rounded bg-zinc-300 dark:bg-zinc-800 mx-8" />
+            {/* Big rectangle for calendar/content */}
+            <Skeleton className="h-[500px] w-full rounded bg-zinc-300 dark:bg-zinc-800 mt-4" />
           </div>
-          <div className="inline-flex rounded-md border overflow-hidden h-8">
-            {(['day','week','month'] as const).map(v => (
-              <button
-                key={v}
-                type="button"
-                onClick={()=> setView(v)}
-                className={cn(
-                  "px-3 text-xs font-medium uppercase tracking-wide transition-colors focus:outline-none",
-                  view === v ? "bg-primary text-white" : "bg-white hover:bg-muted/60 text-muted-foreground"
-                )}
-              >
-                {v}
-              </button>
-            ))}
-          </div>
-          {view === 'month' && (
-            <>
-              <Select
-                value={String(monthCursor.getMonth())}
-                onValueChange={val => {
-                  const d = new Date(monthCursor);
-                  d.setMonth(Number(val));
-                  setMonthCursor(d);
-                }}
-              >
-                <SelectTrigger className="w-[130px] h-8">
-                  <SelectValue>{MONTHS[monthCursor.getMonth()]}</SelectValue>
-                </SelectTrigger>
-                <SelectContent>
-                  {MONTHS.map((m,i)=>(
-                    <SelectItem key={m} value={String(i)}>{m}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Select
-                value={String(monthCursor.getFullYear())}
-                onValueChange={val => {
-                  const d = new Date(monthCursor);
-                  d.setFullYear(Number(val));
-                  setMonthCursor(d);
-                }}
-              >
-                <SelectTrigger className="w-[100px] h-8">
-                  <SelectValue>{monthCursor.getFullYear()}</SelectValue>
-                </SelectTrigger>
-                <SelectContent>
-                  {YEARS.map(y => (
-                    <SelectItem key={y} value={String(y)}>{y}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </>
-          )}
-          {canManage && (
-            <div className="flex items-center gap-2 ml-auto">
-              <Button type="button" size="icon" variant="outline" onClick={handlePrint} title="Print schedules">
-                <Printer className="h-4 w-4" />
-              </Button>
-              <Dialog open={showAdd} onOpenChange={o => { setShowAdd(o); if (!o) setAddError(null); }}>
-                <DialogTrigger asChild>
-                  <Button size="sm">{isEditing ? 'Edit Event' : 'Add Event'}</Button>
-                </DialogTrigger>
-                <DialogContent className="sm:max-w-md">
-                  <DialogHeader>
-                    <DialogTitle className="text-sm font-semibold">
-                      {isEditing ? 'Edit Event' : 'Create Event'}
-                    </DialogTitle>
-                  </DialogHeader>
-                  <div className="space-y-3 py-1">
-                    {addError && (
-                      <div className="text-[11px] text-red-600 bg-red-50 border border-red-200 px-2 py-1 rounded">
-                        {addError}
-                      </div>
+        ) : (
+          <>
+            <div
+              className={cn(
+                "flex flex-wrap items-center gap-2 w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-md rounded-b-none px-3 py-2 sticky z-50",
+                "shadow-sm"
+              )}
+              style={{ top: TOOLBAR_STICKY_TOP }}
+            >
+              <div className="flex items-center gap-1">
+                <Button size="icon" variant="outline" onClick={goPrev}>
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                <Button size="icon" variant="outline" onClick={goNext}>
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+                <Button variant="outline" onClick={goToday}>Today</Button>
+              </div>
+              <div className="inline-flex rounded-md border border-zinc-200 dark:border-zinc-800 overflow-hidden h-8">
+                {([
+                  { key: 'day', label: 'Day', icon: <CalendarDays className="mr-1 h-4 w-4" /> },
+                  { key: 'week', label: 'Week', icon: <CalendarRange className="mr-1 h-4 w-4" /> },
+                  { key: 'month', label: 'Month', icon: <Calendar className="mr-1 h-4 w-4" /> },
+                ] as const).map(v => (
+                  <button
+                    key={v.key}
+                    type="button"
+                    onClick={()=> setView(v.key)}
+                    className={cn(
+                      "px-3 text-xs font-medium uppercase tracking-wide transition-colors focus:outline-none flex items-center cursor-pointer",
+                      view === v.key
+                        ? "bg-primary text-white"
+                        : "bg-white dark:bg-zinc-900 hover:bg-muted/60 dark:hover:bg-zinc-800 text-muted-foreground"
                     )}
-                    <div className="grid gap-1">
-                      <Label className="text-xs">Title</Label>
-                      <Textarea
-                        rows={2}
-                        value={addTitle}
-                        onChange={e=> setAddTitle(e.target.value)}
-                        placeholder="Event title"
-                        className="text-xs resize-none"
-                      />
-                    </div>
-                    <div className="flex gap-3">
-                      <div className="flex-1 grid gap-1">
-                        <Label className="text-xs">Date</Label>
-                        <input
-                          type="date"
-                          value={addDate}
-                          onChange={e=> setAddDate(e.target.value)}
-                          className="h-8 text-xs border rounded-md px-2"
-                        />
-                      </div>
-                      <div className="grid gap-1 w-28">
-                        <Label className="text-xs">All Day</Label>
-                        <div className="h-8 px-2 flex items-center gap-2 border rounded-md">
-                          <Checkbox checked={addAllDay} onCheckedChange={v=> setAddAllDay(!!v)} />
-                          <span className="text-[11px]">Yes</span>
-                        </div>
-                      </div>
-                    </div>
-                    {!addAllDay && (
-                      <div className="flex gap-3">
-                        <div className="grid gap-1 flex-1">
-                          <Label className="text-xs">Start</Label>
-                          <input
-                            type="time"
-                            step={300}
-                            value={addStart}
-                            onChange={e=> setAddStart(e.target.value)}
-                            className="h-8 text-xs border rounded-md px-2"
-                          />
-                        </div>
-                        <div className="grid gap-1 flex-1">
-                          <Label className="text-xs">End</Label>
-                          <input
-                            type="time"
-                            step={300}
-                            value={addEnd}
-                            onChange={e=> setAddEnd(e.target.value)}
-                            className="h-8 text-xs border rounded-md px-2"
-                          />
-                        </div>
-                      </div>
-                    )}
-                    <div className="grid gap-1">
-                      <Label className="text-xs">Description (optional)</Label>
-                      <Textarea
-                        value={addDesc}
-                        onChange={e=> setAddDesc(e.target.value)}
-                        rows={3}
-                        className="text-xs resize-none"
-                        placeholder="Short description..."
-                      />
-                    </div>
-                    <div className="grid gap-1">
-                      <Label className="text-xs">Color</Label>
-                      <div className="flex flex-wrap gap-2">
-                        {colorChoices.map(c => (
-                          <button
-                            key={c}
-                            type="button"
-                            onClick={()=> setAddColor(c)}
-                            className={cn(
-                              "w-6 h-6 rounded-full ring-2 transition",
-                              addColor === c ? "ring-black scale-110" : "ring-transparent hover:ring-gray-400"
-                            )}
-                            style={{ backgroundColor: c }}
-                            aria-label={`Choose ${c}`}
-                          />
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                  <DialogFooter className="gap-2">
-                    {isEditing && (
-                      <Button
-                        type="button"
-                        variant="destructive"
-                        size="sm"
-                        onClick={async ()=>{
-                          if(!editEvent) return;
-                          if(!confirm('Delete this event?')) return;
-                          setAdding(true);
-                          try {
-                            const csrf = getCsrf();
-                            const resp = await fetch(`/api/calendar/events/${editEvent.raw.id}`, {
-                              method:'DELETE',
-                              headers:{'Accept':'application/json','X-CSRF-TOKEN': csrf}
-                            });
-                            if(!resp.ok) throw new Error('Delete failed');
-                            setExtraEvents(prev => prev.filter(p => p.raw.id !== editEvent.raw.id));
-                            setShowAdd(false);
-                            setEditEvent(null);
-                          } catch(e:any){
-                            setAddError(e.message||'Delete failed');
-                          } finally {
-                            setAdding(false);
-                          }
-                        }}
-                      >
-                        <Trash2 className="h-4 w-4 mr-1" /> Delete
-                      </Button>
-                    )}
-                    <Button variant="outline" size="sm" onClick={()=> setShowAdd(false)} disabled={adding}>Cancel</Button>
-                    <Button
-                      size="sm"
-                      onClick={async () => {
-                        if (!addTitle.trim()) { setAddError("Title required."); return; }
-                        if (!addDate) { setAddError("Date required."); return; }
-                        if (!addAllDay && addEnd <= addStart) {
-                          setAddError("End must be after start.");
-                          return;
-                        }
-                        setAddError(null);
-                        setAdding(true);
-                        try {
-                          const csrf = getCsrf();
-                          const payload:any = {
-                            title: addTitle.trim(),
-                            description: addDesc.trim() || null,
-                            start: addAllDay ? `${addDate} 00:00:00` : `${addDate} ${addStart}:00`,
-                            end: addAllDay ? `${addDate} 23:59:59` : `${addDate} ${addEnd}:00`,
-                            allDay: addAllDay,
-                            color: addColor
-                          };
-                          let resp: Response;
-                          if (isEditing && editEvent) {
-                            resp = await fetch(`/api/calendar/events/${editEvent.raw.id}`, {
-                              method: 'PUT',
-                              headers: { 'Content-Type':'application/json','Accept':'application/json','X-CSRF-TOKEN': csrf },
-                              body: JSON.stringify(payload)
-                            });
-                          } else {
-                            resp = await fetch('/api/calendar/events', {
-                              method: 'POST',
-                              headers: { 'Content-Type':'application/json','Accept':'application/json','X-CSRF-TOKEN': csrf },
-                              body: JSON.stringify(payload)
-                            });
-                          }
-                          if (!resp.ok) {
-                            const j = await resp.json().catch(()=> ({}));
-                            throw new Error(j.message || j.error || 'Save failed');
-                          }
-                          const j = await resp.json().catch(()=> ({}));
-                          const eventId = j.event_id || (editEvent && editEvent.raw.id);
-                          const s = addAllDay ? "00:00" : addStart;
-                          const e = addAllDay ? "23:59" : addEnd;
-                          setExtraEvents(prev => {
-                            const others = prev.filter(p => p.raw.id !== eventId);
-                            const newEntry: CalendarEntry = {
-                              id: 'ev-'+eventId,
-                              title: addTitle.trim(),
-                              date: addDate,
-                              start: s,
-                              end: e,
-                              raw: {
-                                id: eventId,
-                                thesis_title: addTitle.trim(),
-                                date_of_defense: addDate,
-                                start_time: s,
-                                end_time: e,
-                                defense_type: undefined,
-                                defense_mode: undefined,
-                                defense_venue: undefined,
-                                program: undefined,
-                                student_name: undefined,
-                              },
-                              color: addColor,
-                              defense: false,
-                              description: addDesc.trim()
-                            };
-                            return [...others, newEntry];
-                          });
-                          setShowAdd(false);
-                          setEditEvent(null);
-                        } catch(err:any) {
-                          setAddError(err.message || 'Error');
-                        } finally {
-                          setAdding(false);
-                        }
-                      }}
-                      disabled={adding}
-                    >
-                      {adding ? 'Saving...' : 'Save Event'}
-                    </Button>
-                  </DialogFooter>
-                </DialogContent>
-              </Dialog>
-            </div>
-          )}
-        </div>
-        {view === 'month' && renderMonth()}
-        {view === 'week' && renderWeek()}
-        {view === 'day' && renderDay()}
-        {DetailPanel}
-        {false && (
-          <div className="border rounded-md overflow-hidden bg-white hidden">
-            <div className="bg-muted/40 px-3 py-2 text-xs font-semibold">Scheduled Defenses (Filtered)</div>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="text-xs">Date</TableHead>
-                  <TableHead className="text-xs">Time</TableHead>
-                  <TableHead className="text-xs">Title</TableHead>
-                  <TableHead className="text-xs">Student</TableHead>
-                  <TableHead className="text-xs">Program</TableHead>
-                  <TableHead className="text-xs">Type</TableHead>
-                  <TableHead className="text-xs">Venue / Mode</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filtered.length === 0 && (
-                  <TableRow>
-                    <TableCell colSpan={7} className="text-center text-xs text-muted-foreground">
-                      No scheduled defenses.
-                    </TableCell>
-                  </TableRow>
-                )}
-                {filtered
-                  .slice()
-                  .sort((a,b)=> a.date === b.date
-                    ? (a.start||'23:59').localeCompare(b.start||'23:59')
-                    : a.date.localeCompare(b.date))
-                  .map(ev => (
-                  <TableRow
-                    key={ev.id}
-                    className="cursor-pointer hover:bg-muted/40"
-                    onClick={() => {
-                      setSelectedDate(parseISO(ev.date));
-                      setView('day');
+                  >
+                    {v.icon}
+                    {v.label}
+                  </button>
+                ))}
+              </div>
+              {view === 'month' && (
+                <>
+                  <Select
+                    value={String(monthCursor.getMonth())}
+                    onValueChange={val => {
+                      const d = new Date(monthCursor);
+                      d.setMonth(Number(val));
+                      setMonthCursor(d);
                     }}
                   >
-                    <TableCell className="text-[11px]">
-                      {format(parseISO(ev.date),'MMM d, yyyy')}
-                    </TableCell>
-                    <TableCell className="text-[11px] whitespace-nowrap">
-                      {ev.start && format(parseISO('2020-01-01T'+ev.start),'h:mm a')}
-                      {ev.end && ' – '+format(parseISO('2020-01-01T'+ev.end),'h:mm a')}
-                    </TableCell>
-                    <TableCell className="text-[11px] truncate max-w-[240px]" title={ev.title}>
-                      {ev.title}
-                    </TableCell>
-                    <TableCell className="text-[11px] truncate max-w-[160px]" title={ev.raw.student_name}>
-                      {ev.raw.student_name || '—'}
-                    </TableCell>
-                    <TableCell className="text-[11px]">{ev.raw.program || '—'}</TableCell>
-                    <TableCell className="text-[11px]">{ev.raw.defense_type || '—'}</TableCell>
-                    <TableCell className="text-[11px]">
-                      {ev.raw.defense_venue || ev.raw.defense_mode || '—'}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
+                    <SelectTrigger className="w-[130px] h-8">
+                      <SelectValue>{MONTHS[monthCursor.getMonth()]}</SelectValue>
+                    </SelectTrigger>
+                    <SelectContent>
+                      {MONTHS.map((m,i)=>(
+                        <SelectItem key={m} value={String(i)}>{m}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Select
+                    value={String(monthCursor.getFullYear())}
+                    onValueChange={val => {
+                      const d = new Date(monthCursor);
+                      d.setFullYear(Number(val));
+                      setMonthCursor(d);
+                    }}
+                  >
+                    <SelectTrigger className="w-[100px] h-8">
+                      <SelectValue>{monthCursor.getFullYear()}</SelectValue>
+                    </SelectTrigger>
+                    <SelectContent>
+                      {YEARS.map(y => (
+                        <SelectItem key={y} value={String(y)}>{y}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </>
+              )}
+              {canManage && (
+                <div className="flex items-center gap-2 ml-auto">
+                  <Button type="button" size="icon" variant="outline" onClick={handlePrint} title="Print schedules">
+                    <Printer className="h-4 w-4 hover:cursor-printer" />
+                  </Button>
+                  <Dialog open={showAdd} onOpenChange={o => { setShowAdd(o); if (!o) setAddError(null); }}>
+                    <DialogTrigger asChild>
+                      <Button className="hover:cursor-pointer" size="sm">{isEditing ? 'Edit Event' : 'Add Event'}</Button>
+                    </DialogTrigger>
+                    <DialogContent className="sm:max-w-md">
+                      <DialogHeader>
+                        <DialogTitle className="text-sm font-semibold">
+                          {isEditing ? 'Edit Event' : 'Create Event'}
+                        </DialogTitle>
+                      </DialogHeader>
+                      <div className="space-y-3 py-1">
+                        {addError && (
+                          <div className="text-[11px] text-red-600 bg-red-50 border border-red-200 px-2 py-1 rounded">
+                            {addError}
+                          </div>
+                        )}
+                        <div className="grid gap-1">
+                          <Label className="text-xs">Title</Label>
+                          <Textarea
+                            rows={2}
+                            value={addTitle}
+                            onChange={e=> setAddTitle(e.target.value)}
+                            placeholder="Event title"
+                            className="text-xs resize-none"
+                          />
+                        </div>
+                        <div className="flex gap-3">
+                          <div className="flex-1 grid gap-1">
+                            <Label className="text-xs">Date</Label>
+                            <input
+                              type="date"
+                              value={addDate}
+                              onChange={e=> setAddDate(e.target.value)}
+                              className="h-8 text-xs border rounded-md px-2"
+                            />
+                          </div>
+                          <div className="grid gap-1 w-28">
+                            <Label className="text-xs">All Day</Label>
+                            <div className="h-8 px-2 flex items-center gap-2 border rounded-md">
+                              <Checkbox checked={addAllDay} onCheckedChange={v=> setAddAllDay(!!v)} />
+                              <span className="text-[11px]">Yes</span>
+                            </div>
+                          </div>
+                        </div>
+                        {!addAllDay && (
+                          <div className="flex gap-3">
+                            <div className="grid gap-1 flex-1">
+                              <Label className="text-xs">Start</Label>
+                              <input
+                                type="time"
+                                step={300}
+                                value={addStart}
+                                onChange={e=> setAddStart(e.target.value)}
+                                className="h-8 text-xs border rounded-md px-2"
+                              />
+                            </div>
+                            <div className="grid gap-1 flex-1">
+                              <Label className="text-xs">End</Label>
+                              <input
+                                type="time"
+                                step={300}
+                                value={addEnd}
+                                onChange={e=> setAddEnd(e.target.value)}
+                                className="h-8 text-xs border rounded-md px-2"
+                              />
+                            </div>
+                          </div>
+                        )}
+                        <div className="grid gap-1">
+                          <Label className="text-xs">Description (optional)</Label>
+                          <Textarea
+                            value={addDesc}
+                            onChange={e=> setAddDesc(e.target.value)}
+                            rows={3}
+                            className="text-xs resize-none"
+                            placeholder="Short description..."
+                          />
+                        </div>
+                        <div className="grid gap-1">
+                          <Label className="text-xs">Color</Label>
+                          <div className="flex flex-wrap gap-2">
+                            {colorChoices.map(c => (
+                              <button
+                                key={c}
+                                type="button"
+                                onClick={()=> setAddColor(c)}
+                                className={cn(
+                                  "w-6 h-6 rounded-full ring-2 transition",
+                                  addColor === c ? "ring-black scale-110" : "ring-transparent hover:ring-gray-400"
+                                )}
+                                style={{ backgroundColor: c }}
+                                aria-label={`Choose ${c}`}
+                              />
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                      <DialogFooter className="gap-2">
+                        {isEditing && (
+                          <Button
+                            type="button"
+                            variant="destructive"
+                            size="sm"
+                            onClick={async ()=>{
+                              if(!editEvent) return;
+                              if(!confirm('Delete this event?')) return;
+                              setAdding(true);
+                              try {
+                                const csrf = getCsrf();
+                                const resp = await fetch(`/api/calendar/events/${editEvent.raw.id}`, {
+                                  method:'DELETE',
+                                  headers:{'Accept':'application/json','X-CSRF-TOKEN': csrf}
+                                });
+                                if(!resp.ok) throw new Error('Delete failed');
+                                setExtraEvents(prev => prev.filter(p => p.raw.id !== editEvent.raw.id));
+                                setShowAdd(false);
+                                setEditEvent(null);
+                              } catch(e:any){
+                                setAddError(e.message||'Delete failed');
+                              } finally {
+                                setAdding(false);
+                              }
+                            }}
+                          >
+                            <Trash2 className="h-4 w-4 mr-1" /> Delete
+                          </Button>
+                        )}
+                        <Button variant="outline" size="sm" onClick={()=> setShowAdd(false)} disabled={adding}>Cancel</Button>
+                        <Button
+                          size="sm"
+                          onClick={async () => {
+                            if (!addTitle.trim()) { setAddError("Title required."); return; }
+                            if (!addDate) { setAddError("Date required."); return; }
+                            if (!addAllDay && addEnd <= addStart) {
+                              setAddError("End must be after start.");
+                              return;
+                            }
+                            setAddError(null);
+                            setAdding(true);
+                            try {
+                              const csrf = getCsrf();
+                              const payload:any = {
+                                title: addTitle.trim(),
+                                description: addDesc.trim() || null,
+                                start: addAllDay ? `${addDate} 00:00:00` : `${addDate} ${addStart}:00`,
+                                end: addAllDay ? `${addDate} 23:59:59` : `${addDate} ${addEnd}:00`,
+                                allDay: addAllDay,
+                                color: addColor
+                              };
+                              let resp: Response;
+                              if (isEditing && editEvent) {
+                                resp = await fetch(`/api/calendar/events/${editEvent.raw.id}`, {
+                                  method: 'PUT',
+                                  headers: { 'Content-Type':'application/json','Accept':'application/json','X-CSRF-TOKEN': csrf },
+                                  body: JSON.stringify(payload)
+                                });
+                              } else {
+                                resp = await fetch('/api/calendar/events', {
+                                  method: 'POST',
+                                  headers: { 'Content-Type':'application/json','Accept':'application/json','X-CSRF-TOKEN': csrf },
+                                  body: JSON.stringify(payload)
+                                });
+                              }
+                              if (!resp.ok) {
+                                const j = await resp.json().catch(()=> ({}));
+                                throw new Error(j.message || j.error || 'Save failed');
+                              }
+                              const j = await resp.json().catch(()=> ({}));
+                              const eventId = j.event_id || (editEvent && editEvent.raw.id);
+                              const s = addAllDay ? "00:00" : addStart;
+                              const e = addAllDay ? "23:59" : addEnd;
+                              setExtraEvents(prev => {
+                                const others = prev.filter(p => p.raw.id !== eventId);
+                                const newEntry: CalendarEntry = {
+                                  id: 'ev-'+eventId,
+                                  title: addTitle.trim(),
+                                  date: addDate,
+                                  start: s,
+                                  end: e,
+                                  raw: {
+                                    id: eventId,
+                                    thesis_title: addTitle.trim(),
+                                    date_of_defense: addDate,
+                                    start_time: s,
+                                    end_time: e,
+                                    defense_type: undefined,
+                                    defense_mode: undefined,
+                                    defense_venue: undefined,
+                                    program: undefined,
+                                    student_name: undefined,
+                                  },
+                                  color: addColor,
+                                  defense: false,
+                                  description: addDesc.trim()
+                                };
+                                return [...others, newEntry];
+                              });
+                              setShowAdd(false);
+                              setEditEvent(null);
+                            } catch(err:any) {
+                              setAddError(err.message || 'Error');
+                            } finally {
+                              setAdding(false);
+                            }
+                          }}
+                          disabled={adding}
+                        >
+                          {adding ? 'Saving...' : 'Save Event'}
+                        </Button>
+                      </DialogFooter>
+                    </DialogContent>
+                  </Dialog>
+                </div>
+              )}
+            </div>
+            {view === 'month' && renderMonth()}
+            {view === 'week' && renderWeek()}
+            {view === 'day' && renderDay()}
+            {DetailPanel}
+            {false && (
+              <div className="border rounded-md overflow-hidden bg-white hidden">
+                <div className="bg-muted/40 px-3 py-2 text-xs font-semibold">Scheduled Defenses (Filtered)</div>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="text-xs">Date</TableHead>
+                      <TableHead className="text-xs">Time</TableHead>
+                      <TableHead className="text-xs">Title</TableHead>
+                      <TableHead className="text-xs">Student</TableHead>
+                      <TableHead className="text-xs">Program</TableHead>
+                      <TableHead className="text-xs">Type</TableHead>
+                      <TableHead className="text-xs">Venue / Mode</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filtered.length === 0 && (
+                      <TableRow>
+                        <TableCell colSpan={7} className="text-center text-xs text-muted-foreground">
+                          No scheduled defenses.
+                        </TableCell>
+                      </TableRow>
+                    )}
+                    {filtered
+                      .slice()
+                      .sort((a,b)=> a.date === b.date
+                        ? (a.start||'23:59').localeCompare(b.start||'23:59')
+                        : a.date.localeCompare(b.date))
+                      .map(ev => (
+                      <TableRow
+                        key={ev.id}
+                        className="cursor-pointer hover:bg-muted/40"
+                        onClick={() => {
+                          setSelectedDate(parseISO(ev.date));
+                          setView('day');
+                        }}
+                      >
+                        <TableCell className="text-[11px]">
+                          {format(parseISO(ev.date),'MMM d, yyyy')}
+                        </TableCell>
+                        <TableCell className="text-[11px] whitespace-nowrap">
+                          {ev.start && format(parseISO('2020-01-01T'+ev.start),'h:mm a')}
+                          {ev.end && ' – '+format(parseISO('2020-01-01T'+ev.end),'h:mm a')}
+                        </TableCell>
+                        <TableCell className="text-[11px] truncate max-w-[240px]" title={ev.title}>
+                          {ev.title}
+                        </TableCell>
+                        <TableCell className="text-[11px] truncate max-w-[160px]" title={ev.raw.student_name}>
+                          {ev.raw.student_name || '—'}
+                        </TableCell>
+                        <TableCell className="text-[11px]">{ev.raw.program || '—'}</TableCell>
+                        <TableCell className="text-[11px]">{ev.raw.defense_type || '—'}</TableCell>
+                        <TableCell className="text-[11px]">
+                          {ev.raw.defense_venue || ev.raw.defense_mode || '—'}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+          </>
         )}
       </div>
     </AppLayout>

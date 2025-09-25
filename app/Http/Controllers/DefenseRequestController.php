@@ -60,7 +60,8 @@ class DefenseRequestController extends Controller
                     'id','first_name','middle_name','last_name','school_id','program',
                     'thesis_title','defense_type','status','priority','workflow_state',
                     'scheduled_date','scheduled_time','scheduled_end_time',
-                    'defense_mode','defense_venue','panels_assigned_at'
+                    'defense_mode','defense_venue','panels_assigned_at',
+                    'defense_adviser','adviser_reviewed_at' // <-- ADD THESE
                 ])->map(function($r){
                     return [
                         'id' => $r->id,
@@ -81,6 +82,21 @@ class DefenseRequestController extends Controller
                         'defense_venue' => $r->defense_venue,
                         'panels_assigned_at' => $r->panels_assigned_at,
                         'normalized_status' => $this->normalizeStatusForCoordinator($r),
+                        // ADD THESE TWO FIELDS:
+                        'adviser' => $r->defense_adviser ?: '—',
+                        'submitted_at' => $r->adviser_reviewed_at
+                            ? (is_object($r->adviser_reviewed_at)
+                                ? $r->adviser_reviewed_at->format('Y-m-d H:i:s')
+                                : date('Y-m-d H:i:s', strtotime($r->adviser_reviewed_at)))
+                            : '—',
+                        // ADD THIS LINE:
+                        'panelists' => collect([
+                            $r->defense_chairperson ?? null,
+                            $r->defense_panelist1 ?? null,
+                            $r->defense_panelist2 ?? null,
+                            $r->defense_panelist3 ?? null,
+                            $r->defense_panelist4 ?? null,
+                        ])->filter()->values()->all(),
                     ];
                 });
 

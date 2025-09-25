@@ -532,8 +532,15 @@ class CoordinatorDefenseController extends Controller
 
     private function mapDefenseRequestForList(DefenseRequest $r): array
     {
-        // Only called after filtering, logic unchanged
         $status = $this->normalizeDefenseRequestStatus($r);
+
+        $adviserName = $r->defense_adviser ?: '—';
+        $submittedAt = $r->adviser_reviewed_at
+            ? (is_object($r->adviser_reviewed_at)
+                ? $r->adviser_reviewed_at->format('Y-m-d H:i:s')
+                : date('Y-m-d H:i:s', strtotime($r->adviser_reviewed_at)))
+            : '—';
+
         return [
             'id' => $r->id,
             'first_name' => $r->first_name,
@@ -547,6 +554,8 @@ class CoordinatorDefenseController extends Controller
             'status' => $status,
             'workflow_state' => $r->workflow_state,
             'priority' => $r->priority,
+            'adviser' => $adviserName,
+            'submitted_at' => $submittedAt,
             'defense_chairperson' => $r->defense_chairperson,
             'defense_panelist1' => $r->defense_panelist1,
             'defense_panelist2' => $r->defense_panelist2,
@@ -560,6 +569,13 @@ class CoordinatorDefenseController extends Controller
             'scheduling_notes' => $r->scheduling_notes,
             'last_status_updated_by' => $r->lastStatusUpdater?->name,
             'last_status_updated_at' => $r->last_status_updated_at?->format('Y-m-d H:i:s'),
+            'panelists' => collect([
+                $r->defense_chairperson ?? null,
+                $r->defense_panelist1 ?? null,
+                $r->defense_panelist2 ?? null,
+                $r->defense_panelist3 ?? null,
+                $r->defense_panelist4 ?? null,
+            ])->filter()->values()->all(),
         ];
     }
 

@@ -177,6 +177,22 @@ export function AppSidebar() {
         });
     }
 
+    // Add state for expanded menus
+    const [expandedMenus, setExpandedMenus] = useState<string[]>(() => {
+        // Restore from localStorage
+        try {
+            const saved = localStorage.getItem("sidebar.expandedMenus");
+            return saved ? JSON.parse(saved) : [];
+        } catch {
+            return [];
+        }
+    });
+
+    // Save to localStorage whenever expandedMenus changes
+    useEffect(() => {
+        localStorage.setItem("sidebar.expandedMenus", JSON.stringify(expandedMenus));
+    }, [expandedMenus]);
+
     return (
         <Sidebar collapsible="offcanvas" className="px-3 pt-5" variant="inset">
             <SidebarHeader>
@@ -192,7 +208,11 @@ export function AppSidebar() {
             </SidebarHeader>
 
             <SidebarContent>
-                <NavMain items={navItems} />
+                <NavMain
+                    items={navItems}
+                    expandedMenus={expandedMenus}
+                    setExpandedMenus={setExpandedMenus}
+                />
             </SidebarContent>
 
             <SidebarFooter>

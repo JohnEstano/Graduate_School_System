@@ -1,5 +1,5 @@
 import { startOfWeek, parseISO, isSameDay, format } from "date-fns";
-import { GraduationCap, Calendar as CalendarIcon } from "lucide-react";
+import { GraduationCap, Calendar as CalendarIcon, ChevronRight } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useEffect, useMemo, useState } from "react";
 import { cn } from "@/lib/utils";
@@ -145,23 +145,41 @@ export default function WeeklyDefenseSchedulesWidget(props: Props) {
   const canSeeRaw = canManage || MANAGE_ROLES.includes(userRole || '');
 
   return (
-    <div className="w-full md:w-[380px] border rounded-xl p-5 bg-white dark:bg-zinc-900 flex flex-col min-h-[260px]">
-      <div className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-        This Week&apos;s Schedules
-      </div>
+    <div className="w-full md:w-[580px] border rounded-xl p-5 bg-white dark:bg-zinc-900 flex flex-col min-h-[340px]">
+      <a
+        href="/schedules"
+        className="flex items-center justify-between mb-2 group cursor-pointer select-none"
+        style={{ textDecoration: 'none' }}
+      >
+        <div>
+          <div className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+            This Week&apos;s Schedules
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="inline-flex items-center justify-center rounded-full bg-rose-500 p-2">
+            <CalendarIcon className="size-6 text-white" />
+          </span>
+          <ChevronRight className="size-6 text-gray-400 transition-transform transition-colors duration-200 group-hover:text-rose-500 group-hover:translate-x-1" />
+        </div>
+      </a>
 
-      <div className="flex flex-nowrap gap-2 mb-3">
+      {/* Add space between header and tabs */}
+      <div className="h-2" />
+
+      <div className="flex flex-nowrap gap-2 mb-3 justify-between">
         {weekDays.map(day => (
           <button
             key={day.value}
             className={cn(
-              "px-2.5 py-1 rounded-full text-xs font-semibold transition cursor-pointer whitespace-nowrap",
+              "flex-1 px-2.5 py-1 rounded-full text-xs font-semibold  cursor-pointer whitespace-nowrap text-center",
               selectedDay === day.value
                 ? "bg-rose-500 text-white"
                 : "bg-gray-100 dark:bg-zinc-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-zinc-700"
             )}
             onClick={() => setSelectedDay(day.value)}
             disabled={overallLoading}
+            style={{ minWidth: 0 }}
           >
             {day.label}
           </button>

@@ -1,12 +1,17 @@
-import { CalendarDays, Receipt, Settings } from "lucide-react";
+import { CalendarDays, Receipt, Settings, BookOpen, User2, BadgeDollarSign, Users } from "lucide-react";
 import { Link } from "@inertiajs/react";
-import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip"; // Adjust import path as needed
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 
-const actions = [
+
+type Props = {
+    userRole?: string;
+};
+
+const STUDENT_ACTIONS = [
     {
-        label: "Schedules",
-        href: "/schedules",
-        icon: <CalendarDays className="size-5 text-white" size={20} />,
+        label: "Academic Records",
+        href: "/academic-records",
+        icon: <BookOpen className="size-5 text-white" size={20} />,
         bg: "bg-rose-500",
     },
     {
@@ -18,16 +23,50 @@ const actions = [
     {
         label: "Settings",
         href: "/settings",
-        icon: <Settings className="size-5 text-gray-600" size={20} />,
-        bg: "bg-blue-50",
+        icon: <Settings className="size-5 text-white" size={20} />,
+        bg: "bg-slate-400",
     },
 ];
 
-export default function QuickActionsWidget() {
+const ADMIN_ACTIONS = [
+ 
+    {
+        label: "Payments",
+        href: "/payments",
+        icon: <Receipt className="size-5 text-white" size={20} />,
+        bg: "bg-rose-500",
+    },
+    {
+        label: "Honorariums",
+        href: "/honorariums",
+        icon: <BadgeDollarSign className="size-5 text-white" size={20} />,
+        bg: "bg-rose-500",
+    },
+    {
+        label: "Panelists",
+        href: "/panelists",
+        icon: <Users className="size-5 text-white" size={20} />,
+        bg: "bg-rose-500",
+    },
+    {
+        label: "Settings",
+        href: "/settings",
+        icon: <Settings className="size-5 text-white" size={20} />,
+        bg: "bg-slate-400",
+    },
+];
+
+const MANAGE_ROLES = ["Coordinator", "Dean", "Administrative Assistant"];
+
+export default function QuickActionsWidget({ userRole }: Props) {
+    const actions = MANAGE_ROLES.includes(userRole || "")
+        ? ADMIN_ACTIONS
+        : STUDENT_ACTIONS;
+
     return (
-        <div className="bg-white dark:bg-zinc-900 rounded-xl p-4">
+        <div className="dark:bg-zinc-900 rounded-xl p-4">
             <h2 className="text-sm font-semibold mb-3 text-gray-900 dark:text-white">Quick Actions</h2>
-            <div className="flex gap-4">
+            <div className="flex gap-4 justify-center">
                 {actions.map((action) => (
                     <Tooltip key={action.label}>
                         <TooltipTrigger asChild>

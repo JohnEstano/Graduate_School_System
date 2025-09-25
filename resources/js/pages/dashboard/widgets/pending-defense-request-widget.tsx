@@ -1,6 +1,7 @@
 import { ChevronRight, GraduationCap } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import type { DefenseRequest } from '@/types';
+import { formatDistanceToNowStrict, parseISO } from 'date-fns';
 
 function getPriorityBadge(priority?: string) {
     const value = (priority || '').trim();
@@ -29,7 +30,7 @@ const PendingDefenseRequestsWidget: React.FC<Props> = ({ pendingRequests, loadin
     const filteredPendingRequests = pendingRequests;
 
     return (
-        <div className="flex-1 border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-5 bg-white dark:bg-zinc-900 flex flex-col transition min-h-[220px]">
+        <div className="flex-1 border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-5 bg-white dark:bg-zinc-900 flex flex-col  min-h-[220px]">
             {showSkeleton ? (
                 <div className="flex flex-col gap-3 h-full">
                     <div className="flex items-center justify-between mb-2">
@@ -60,14 +61,8 @@ const PendingDefenseRequestsWidget: React.FC<Props> = ({ pendingRequests, loadin
                         style={{ textDecoration: 'none' }}
                     >
                         <div>
-                            <div className="text-4xl font-bold text-rose-500">
-                                {filteredPendingRequests.length}
-                            </div>
-                            <div className="text-[13px] font-medium text-gray-700 dark:text-gray-300">
+                            <div className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
                                 Pending Defense Requests
-                            </div>
-                            <div className="text-[11px] mt-1 text-gray-500 dark:text-gray-400">
-                                Awaiting processing
                             </div>
                         </div>
                         <div className="flex items-center gap-2">
@@ -80,22 +75,55 @@ const PendingDefenseRequestsWidget: React.FC<Props> = ({ pendingRequests, loadin
                     <hr className="my-2 border-gray-200 dark:border-gray-700" />
                     <div className="overflow-x-auto">
                         {filteredPendingRequests.length === 0 ? (
-                            <div className="text-center text-gray-400 py-6">
+                            <div className="text-xs text-muted-foreground text-center py-10">
                                 No pending defense requests.
                             </div>
                         ) : (
                             <table className="w-full text-xs table-fixed">
                                 <thead>
                                     <tr className="text-gray-500 dark:text-gray-400">
-                                        <th className="text-left py-1 pr-4 w-4/5">Thesis Title</th>
-                                        <th className="text-center py-1 pl-4 w-1/5">Priority</th>
+                                        <th className="text-left py-1 pr-2 w-2/5">Thesis Title</th>
+                                        <th className="text-left py-1 px-2 w-1/5">Adviser</th>
+                                        <th className="text-left py-1 px-2 w-1/5">Presenter</th>
+                                        <th className="text-center py-1 px-2 w-1/6">Submitted</th>
+                                        <th className="text-center py-1 pl-2 w-1/6">Priority</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {filteredPendingRequests.slice(0, 3).map(req => (
-                                        <tr key={req.id}>
-                                            <td className="truncate py-1 pr-4 w-4/5">{req.thesis_title}</td>
-                                            <td className="py-1 pl-4 w-1/5 text-center">{getPriorityBadge(req.priority)}</td>
+                                    {filteredPendingRequests.slice(0, 3).map((req, idx) => (
+                                        <tr
+                                            key={req.id}
+                                            className={` ${
+                                                idx % 2 === 0
+                                                    ? "bg-gray-50 dark:bg-zinc-800"
+                                                    : "bg-white dark:bg-zinc-900"
+                                            } hover:bg-rose-50 dark:hover:bg-rose-950`}
+                                        >
+                                            <td className="truncate py-2 pr-2 w-2/5 font-medium">
+                                                {req.thesis_title || <span className="text-gray-400">N/A</span>}
+                                            </td>
+                                            <td className="py-2 px-2 w-1/5">
+                                                {/* Adviser: just show N/A or blank, since not in type */}
+                                                <span className="text-gray-400">N/A</span>
+                                            </td>
+                                            <td className="py-2 px-2 w-1/5">
+                                                {/* Presenter: first_name + last_name */}
+                                                {`${req.first_name ?? ''} ${req.last_name ?? ''}`.trim() || <span className="text-gray-400">N/A</span>}
+                                            </td>
+                                            <td className="py-2 px-2 w-1/6 text-center">
+                                                {req.submitted_by
+                                                    ? formatDistanceToNowStrict(
+                                                        typeof req.submitted_by === 'string'
+                                                            ? parseISO(req.submitted_by)
+                                                            : req.submitted_by,
+                                                        { addSuffix: true }
+                                                    )
+                                                    : <span className="text-gray-400">N/A</span>
+                                                }
+                                            </td>
+                                            <td className="py-2 pl-2 w-1/6 text-center">
+                                                {getPriorityBadge(req.priority)}
+                                            </td>
                                         </tr>
                                     ))}
                                 </tbody>

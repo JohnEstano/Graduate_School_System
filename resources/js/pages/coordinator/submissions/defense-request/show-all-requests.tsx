@@ -21,7 +21,8 @@ import {
   XCircle,
   Clock4,
   CircleArrowLeft,
-  Signature            // <-- added
+  Signature,
+  Filter
 } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import TableDefenseRequests from './table-defense-requests';
@@ -101,14 +102,35 @@ function ShowAllRequestsInner({ defenseRequests: initial, onStatusChange }: Show
 
   const [selectedByTab, setSelectedByTab] = useState<{ [k: string]: number[] }>({ pending: [], rejected: [], approved: [] });
 
+  // Update columns state to reflect new columns for each tab
   const [columns, setColumns] = useState<Record<string, boolean>>({
     title: true,
     presenter: true,
+    adviser: true,      // Added
+    submitted_at: true, // Added
+    program: true,      // Added
     date: true,
     mode: true,
     type: true,
     priority: true
   });
+
+  // Helper to get columns per tab
+  function getColumnsForTab(tab: 'pending' | 'rejected' | 'approved') {
+    if (tab === 'pending' || tab === 'rejected') {
+      return {
+        title: columns.title,
+        presenter: columns.presenter,
+        adviser: columns.adviser,
+        submitted_at: columns.submitted_at,
+        program: columns.program,
+        type: columns.type,
+        priority: columns.priority
+      };
+    }
+    // Approved tab: keep all columns
+    return columns;
+  }
 
   // Bulk status confirm (single-row actions removed)
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
@@ -475,10 +497,10 @@ function ShowAllRequestsInner({ defenseRequests: initial, onStatusChange }: Show
         </DialogContent>
       </Dialog>
 
-      <Card className="flex flex-col border-none shadow-none p-1 flex-1 min-h-0">
+      <Card className="flex flex-col border-none shadow-none p-0 flex-1 min-h-0"> {/* p-0 for less padding */}
         <div className="flex flex-wrap items-center">
           <Tabs value={tab} onValueChange={v => setTab(v as any)}>
-            <TabsList>
+            <TabsList className="gap-1 py-1"> {/* gap-1 and py-1 for tighter tabs */}
               <TabsTrigger value="pending"><Clock4 /> Pending <Badge className="ml-1" variant="secondary">{pendingCount}</Badge></TabsTrigger>
               <TabsTrigger value="rejected"><XCircle /> Rejected <Badge className="ml-1" variant="secondary">{rejectedCount}</Badge></TabsTrigger>
               <TabsTrigger value="approved"><CheckCircle /> Approved <Badge className="ml-1" variant="secondary">{approvedCount}</Badge></TabsTrigger>
@@ -486,85 +508,88 @@ function ShowAllRequestsInner({ defenseRequests: initial, onStatusChange }: Show
           </Tabs>
         </div>
         <CardContent className="ps-0 pe-0 flex-1 flex flex-col min-h-0 overflow-hidden">
-          {/* Ensure internal scrolling containers manage overflow, not the page */}
           {/* Toolbar */}
-            <div className="flex items-center justify-between mt-2 mb-2">
-              <div className="flex items-center gap-2">
-                <div className="relative">
-                  <Input
-                    placeholder="Search..."
-                    value={search}
-                    onChange={e => {
-                      setSearch(e.target.value);
-                      setPage(1);
-                    }}
-                    className="pl-2 h-8 text-sm w-[230px]"
-                  />
-                  <Search className="absolute right-2 top-1.5 h-4 w-4 text-muted-foreground" />
-                </div>
+          <div className="flex items-center justify-between mb-1 mt-0">
+            <div className="flex items-center gap-1">
+              <div className="relative">
+                {/* slightly reduced width */}
+                <Input
+                  placeholder="Search..."
+                  value={search}
+                  onChange={e => {
+                    setSearch(e.target.value);
+                    setPage(1);
+                  }}
+                  className="pl-2 h-8 text-sm w-[210px]"
+                />
+                <Search className="absolute right-2 top-1.5 h-4 w-4 text-muted-foreground" />
+              </div>
+              <Separator orientation="vertical" className="mx-1 h-5" /> {/* mx-1 and h-5 for less space */}
+              <Filter className="h-4 w-4 text-zinc-900 dark:text-zinc-200" />
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" className="rounded-md border-dashed text-xs h-8 px-3 flex items-center gap-1">
+                    <CirclePlus /> Priority
+                    {priorityFilter.length > 0 && (
+                      <Badge variant="secondary" className="ml-1 px-2 py-0.5 rounded-full text-xs">
+                        {priorityFilter.length > 1 ? `${priorityFilter.length} selected` : priorityFilter[0]}
+                      </Badge>
+                    )}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-44 p-1" side="bottom" align="start">
+                  {['Low', 'Medium', 'High'].map(p => (
+                    <div
+                      key={p}
+                      onClick={() =>
+                        setPriorityFilter(fp => (fp.includes(p) ? fp.filter(x => x !== p) : [...fp, p]))
+                      }
+                      className="flex items-center gap-2 p-2 rounded hover:bg-muted cursor-pointer"
+                    >
+                      <Checkbox checked={priorityFilter.includes(p)} />
+                      <span className="text-sm">{p}</span>
+                    </div>
+                  ))}
+                  <Separator className="my-2" />
+                  <Button size="sm" variant="ghost" className="w-full" onClick={() => setPriorityFilter([])}>
+                    <X size={14} /> Clear
+                  </Button>
+                </PopoverContent>
+              </Popover>
 
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button variant="outline" className="rounded-md border-dashed text-xs h-8 px-3 flex items-center gap-1">
-                      <CirclePlus /> Priority
-                      {priorityFilter.length > 0 && (
-                        <Badge variant="secondary" className="ml-1 px-2 py-0.5 rounded-full text-xs">
-                          {priorityFilter.length > 1 ? `${priorityFilter.length} selected` : priorityFilter[0]}
-                        </Badge>
-                      )}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-44 p-1" side="bottom" align="start">
-                    {['Low', 'Medium', 'High'].map(p => (
-                      <div
-                        key={p}
-                        onClick={() =>
-                          setPriorityFilter(fp => (fp.includes(p) ? fp.filter(x => x !== p) : [...fp, p]))
-                        }
-                        className="flex items-center gap-2 p-2 rounded hover:bg-muted cursor-pointer"
-                      >
-                        <Checkbox checked={priorityFilter.includes(p)} />
-                        <span className="text-sm">{p}</span>
-                      </div>
-                    ))}
-                    <Separator className="my-2" />
-                    <Button size="sm" variant="ghost" className="w-full" onClick={() => setPriorityFilter([])}>
-                      <X size={14} /> Clear
-                    </Button>
-                  </PopoverContent>
-                </Popover>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" className="rounded-md border-dashed text-xs h-8 px-3 flex items-center gap-1">
+                    <CirclePlus /> Type
+                    {typeFilter.length > 0 && (
+                      <Badge variant="secondary" className="ml-1 px-2 py-0.5 rounded-full text-xs">
+                        {typeFilter.length > 1 ? `${typeFilter.length} selected` : typeFilter[0]}
+                      </Badge>
+                    )}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-44 p-1" side="bottom" align="start">
+                  {['Proposal', 'Prefinal', 'Final'].map(t => (
+                    <div
+                      key={t}
+                      onClick={() =>
+                        setTypeFilter(ft => (ft.includes(t) ? ft.filter(x => x !== t) : [...ft, t]))
+                      }
+                      className="flex items-center gap-2 p-2 rounded hover:bg-muted cursor-pointer"
+                    >
+                      <Checkbox checked={typeFilter.includes(t)} />
+                      <span className="text-sm">{t}</span>
+                    </div>
+                  ))}
+                  <Separator className="my-2" />
+                  <Button size="sm" variant="ghost" className="w-full" onClick={() => setTypeFilter([])}>
+                    <X size={14} /> Clear
+                  </Button>
+                </PopoverContent>
+              </Popover>
 
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button variant="outline" className="rounded-md border-dashed text-xs h-8 px-3 flex items-center gap-1">
-                      <CirclePlus /> Type
-                      {typeFilter.length > 0 && (
-                        <Badge variant="secondary" className="ml-1 px-2 py-0.5 rounded-full text-xs">
-                          {typeFilter.length > 1 ? `${typeFilter.length} selected` : typeFilter[0]}
-                        </Badge>
-                      )}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-44 p-1" side="bottom" align="start">
-                    {['Proposal', 'Prefinal', 'Final'].map(t => (
-                      <div
-                        key={t}
-                        onClick={() =>
-                          setTypeFilter(ft => (ft.includes(t) ? ft.filter(x => x !== t) : [...ft, t]))
-                        }
-                        className="flex items-center gap-2 p-2 rounded hover:bg-muted cursor-pointer"
-                      >
-                        <Checkbox checked={typeFilter.includes(t)} />
-                        <span className="text-sm">{t}</span>
-                      </div>
-                    ))}
-                    <Separator className="my-2" />
-                    <Button size="sm" variant="ghost" className="w-full" onClick={() => setTypeFilter([])}>
-                      <X size={14} /> Clear
-                    </Button>
-                  </PopoverContent>
-                </Popover>
-
+              {/* Only show the date filter button for the approved tab */}
+              {tab === 'approved' && (
                 <Popover>
                   <PopoverTrigger asChild>
                     <Button variant="outline" className="rounded-md border-dashed text-xs h-8 px-3 flex items-center gap-1">
@@ -584,68 +609,74 @@ function ShowAllRequestsInner({ defenseRequests: initial, onStatusChange }: Show
                     </Button>
                   </PopoverContent>
                 </Popover>
+              )}
 
-                {(priorityFilter.length > 0 || typeFilter.length > 0 || dateRange?.from) && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-8 px-3 flex items-center gap-1"
-                    onClick={() => {
-                      setPriorityFilter([]);
-                      setTypeFilter([]);
-                      setDateRange(undefined);
-                    }}
-                  >
-                    <X size={14} /> Reset
-                  </Button>
-                )}
-              </div>
-
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button variant="outline" className="rounded-md border-dashed text-xs h-8 px-3">
-                    <Settings2 />
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-52 p-1" side="bottom" align="end">
-                  {[
-                    { key: 'title', label: 'Title' },
-                    { key: 'presenter', label: 'Presenter' },
-                    { key: 'date', label: 'Scheduled Date' },
-                    { key: 'mode', label: 'Mode' },
-                    { key: 'type', label: 'Type' },
-                    { key: 'priority', label: 'Priority' }
-                  ].map(({ key, label }) => (
-                    <div
-                      key={key}
-                      onClick={() => toggleColumn(key)}
-                      className="flex items-center gap-2 p-2 rounded hover:bg-muted cursor-pointer"
-                    >
-                      <Checkbox checked={columns[key]} />
-                      <span className="text-sm">{label}</span>
-                    </div>
-                  ))}
-                  <Separator className="my-2" />
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    className="w-full"
-                    onClick={() =>
-                      setColumns({
-                        title: true,
-                        presenter: true,
-                        date: true,
-                        mode: true,
-                        type: true,
-                        priority: true
-                      })
-                    }
-                  >
-                    Show all
-                  </Button>
-                </PopoverContent>
-              </Popover>
+              {(priorityFilter.length > 0 || typeFilter.length > 0 || dateRange?.from) && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 px-3 flex items-center gap-1"
+                  onClick={() => {
+                    setPriorityFilter([]);
+                    setTypeFilter([]);
+                    setDateRange(undefined);
+                  }}
+                >
+                  <X size={14} /> Reset
+                </Button>
+              )}
             </div>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" className="rounded-md border-dashed text-xs h-8 px-3">
+                  <Settings2 />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-52 p-1" side="bottom" align="end">
+                {[
+                  { key: 'title', label: 'Title' },
+                  { key: 'presenter', label: 'Presenter' },
+                  { key: 'adviser', label: 'Adviser' },      // Added
+                  { key: 'submitted_at', label: 'Submitted' }, // Added
+                  { key: 'program', label: 'Program' },      // Added
+                  { key: 'date', label: 'Scheduled Date' },
+                  { key: 'mode', label: 'Mode' },
+                  { key: 'type', label: 'Type' },
+                  { key: 'priority', label: 'Priority' }
+                ].map(({ key, label }) => (
+                  <div
+                    key={key}
+                    onClick={() => toggleColumn(key)}
+                    className="flex items-center gap-2 p-2 rounded hover:bg-muted cursor-pointer"
+                  >
+                    <Checkbox checked={columns[key]} />
+                    <span className="text-sm">{label}</span>
+                  </div>
+                ))}
+                <Separator className="my-2" />
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="w-full"
+                  onClick={() =>
+                    setColumns({
+                      title: true,
+                      presenter: true,
+                      adviser: true,      // Added
+                      submitted_at: true, // Added
+                      program: true,      // Added
+                      date: true,
+                      mode: true,
+                      type: true,
+                      priority: true
+                    })
+                  }
+                >
+                  Show all
+                </Button>
+              </PopoverContent>
+            </Popover>
+          </div>
 
           {/* Floating bulk bar */}
           {selected.length > 0 && (tab === 'pending' || tab === 'rejected') && (
@@ -696,7 +727,7 @@ function ShowAllRequestsInner({ defenseRequests: initial, onStatusChange }: Show
                     <div className="flex-1 flex flex-col min-h-0">
                       <TableDefenseRequests
                         paged={pagedRequests.pending}
-                        columns={columns}
+                        columns={getColumnsForTab('pending')}
                         selected={selected}
                         toggleSelectOne={toggleSelectOne}
                         headerChecked={headerChecked}
@@ -720,7 +751,7 @@ function ShowAllRequestsInner({ defenseRequests: initial, onStatusChange }: Show
                     <div className="flex-1 flex flex-col min-h-0">
                       <TableDefenseRequests
                         paged={pagedRequests.rejected}
-                        columns={columns}
+                        columns={getColumnsForTab('rejected')}
                         selected={selected}
                         toggleSelectOne={toggleSelectOne}
                         headerChecked={headerChecked}
@@ -744,15 +775,18 @@ function ShowAllRequestsInner({ defenseRequests: initial, onStatusChange }: Show
                       <TableDefenseRequests
                         paged={pagedRequests.approved}
                         columns={{ ...columns, progress: true }}
-                        selected={selected}
-                        toggleSelectOne={toggleSelectOne}
-                        headerChecked={headerChecked}
-                        toggleSelectAll={toggleSelectAll}
+                        selected={[]} // Remove selection for approved tab
+                        toggleSelectOne={() => {}} // No-op
+                        headerChecked={false} // No select-all
+                        toggleSelectAll={() => {}} // No-op
                         toggleSort={toggleSort}
                         sortDir={sortDir}
                         onPriorityChange={onPriorityChange}
                         tabType="approved"
                         onViewDetails={id => router.visit(`/coordinator/defense-requests/${id}/details`)}
+                        highlightMissingDateMode
+                        hideActions // <-- Add this prop to signal TableDefenseRequests to hide actions column
+                        hideSelect // <-- Add this prop to signal TableDefenseRequests to hide select boxes
                       />
                     </div>
                   </CardContent>
