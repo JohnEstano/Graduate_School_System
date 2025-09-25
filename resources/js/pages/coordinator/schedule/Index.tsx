@@ -380,6 +380,13 @@ export default function SchedulePage({ canManage, userRole }: { canManage: boole
     return s.length > n ? s.slice(0,n)+'…' : s;
   }
 
+  const [editMode, setEditMode] = useState(false);
+  const [draggedEvent, setDraggedEvent] = useState<CalendarEntry | null>(null);
+
+  // Add preview state for month and week drag
+  const [dragHoverDate, setDragHoverDate] = useState<string | null>(null);
+  const [dragHoverWeekCol, setDragHoverWeekCol] = useState<string | null>(null);
+
   const renderMonth = () => {
     const weeks = monthWeeks;
     const cellMinHeight = 120;
@@ -406,13 +413,33 @@ export default function SchedulePage({ canManage, userRole }: { canManage: boole
               return (
                 <div
                   key={key}
-                  onClick={() => { setSelectedDate(day); setView('day'); }}
+                  onClick={() => { if (!editMode) { setSelectedDate(day); setView('day'); } }}
                   className={cn(
                     "relative p-1 border-r border-b last:[&:nth-last-child(-n+7)]:border-b-0 cursor-pointer overflow-hidden transition-colors focus:outline-none focus-visible:outline-none",
                     outMonth ? "bg-muted/20 text-muted-foreground" : "bg-white",
                     "hover:bg-accent/40"
                   )}
                   style={{ minHeight: cellMinHeight }}
+                  onDragOver={e => {
+                    if (editMode && draggedEvent && !draggedEvent.defense) e.preventDefault();
+                  }}
+                  onDragEnter={e => {
+                    if (editMode && draggedEvent && !draggedEvent.defense) setDragHoverDate(key);
+                  }}
+                  onDragLeave={e => {
+                    if (editMode && draggedEvent && !draggedEvent.defense) setDragHoverDate(null);
+                  }}
+                  onDrop={e => {
+                    if (editMode && draggedEvent && !draggedEvent.defense) {
+                      setEditEvent({
+                        ...draggedEvent,
+                        date: format(day, 'yyyy-MM-dd'),
+                      });
+                      setShowAdd(true);
+                      setDraggedEvent(null);
+                      setDragHoverDate(null);
+                    }
+                  }}
                 >
                   <div className="flex items-start justify-between mb-0.5">
                     <span
@@ -437,7 +464,7 @@ export default function SchedulePage({ canManage, userRole }: { canManage: boole
                         key={ev.id}
                         className={cn(
                           "px-1 py-0.5 rounded text-[10px] font-medium truncate flex items-center gap-1",
-                          ev.defense ? EVENT_BASE_SOLID : EVENT_BASE // <-- use neutral ring, not emerald
+                          ev.defense ? EVENT_BASE_SOLID : EVENT_BASE
                         )}
                         style={
                           !ev.defense
@@ -445,12 +472,44 @@ export default function SchedulePage({ canManage, userRole }: { canManage: boole
                             : undefined
                         }
                         title={ev.title}
+                        draggable={editMode && !ev.defense}
+                        onDragStart={e => {
+                          if (editMode && !ev.defense) setDraggedEvent(ev);
+                        }}
+                        onDragEnd={() => setDraggedEvent(null)}
+                        onClick={e => {
+                          e.stopPropagation();
+                          if (!editMode) {
+                            setSelectedDate(day);
+                            setView('day');
+                          }
+                        }}
                       >
                         {ev.defense && <GraduationCap className="h-3 w-3" />}
                         {truncate(ev.title, 26)}
                       </div>
                     ))}
                   </div>
+                  {/* --- Drag Preview --- */}
+                  {dragHoverDate === key && draggedEvent && editMode && !draggedEvent.defense && (
+                    <div
+                      className={cn(
+                        "absolute left-0 right-0 top-7 z-50 px-1 py-0.5 rounded text-[10px] font-medium truncate flex items-center gap-1 shadow-lg pointer-events-none",
+                        EVENT_BASE
+                      )}
+                      style={{
+                        backgroundColor: draggedEvent.color || '#6ee7b7',
+                        color: getTextColor(draggedEvent.color),
+                        opacity: 0.65,
+                        border: '2px dashed #888',
+                        boxShadow: '0 2px 8px rgba(0,0,0,0.12)'
+                      }}
+                    >
+                      {draggedEvent.defense && <GraduationCap className="h-3 w-3" />}
+                      {truncate(draggedEvent.title, 26)}
+                      <span className="ml-1 text-[9px] text-muted-foreground">(Preview)</span>
+                    </div>
+                  )}
                 </div>
               );
             })
@@ -486,14 +545,14 @@ export default function SchedulePage({ canManage, userRole }: { canManage: boole
             TIME
           </div>
           {weekDays.map(d => {
-            const selected = selectedDate && isSameDay(d, selectedDate);
+            const isSelected = selectedDate && isSameDay(d, selectedDate);
             const today = isToday(d);
             return (
               <div
                 key={d.toISOString()}
                 className={cn(
                   "h-12 border-r flex flex-col items-center justify-center gap-0.5 text-xs font-medium",
-                  selected && !today && "bg-primary/5",
+                  isSelected && !today && "bg-primary/5",
                   today && "text-primary font-semibold"
                 )}
               >
@@ -502,7 +561,7 @@ export default function SchedulePage({ canManage, userRole }: { canManage: boole
                   className={cn(
                     "w-7 h-7 rounded-full flex items-center justify-center text-[12px] font-semibold",
                     today && "bg-primary text-white shadow",
-                    !today && selected && "bg-primary/80 text-white"
+                    !today && isSelected && "bg-primary/80 text-white"
                   )}
                 >
                   {format(d,'d')}
@@ -532,7 +591,30 @@ export default function SchedulePage({ canManage, userRole }: { canManage: boole
               const dateKey = format(d,'yyyy-MM-dd');
               const list = weekMap[dateKey] || [];
               return (
-                <div key={'week-col-'+dateKey} className={cn("relative border-r", isToday(d) && "bg-primary/5")}>
+                <div
+                  key={'week-col-'+dateKey}
+                  className={cn("relative border-r", isToday(d) && "bg-primary/5")}
+                  onDragOver={e => {
+                    if (editMode && draggedEvent && !draggedEvent.defense) e.preventDefault();
+                  }}
+                  onDragEnter={e => {
+                    if (editMode && draggedEvent && !draggedEvent.defense) setDragHoverWeekCol(dateKey);
+                  }}
+                  onDragLeave={e => {
+                    if (editMode && draggedEvent && !draggedEvent.defense) setDragHoverWeekCol(null);
+                  }}
+                  onDrop={e => {
+                    if (editMode && draggedEvent && !draggedEvent.defense) {
+                      setEditEvent({
+                        ...draggedEvent,
+                        date: dateKey,
+                      });
+                      setShowAdd(true);
+                      setDraggedEvent(null);
+                      setDragHoverWeekCol(null);
+                    }
+                  }}
+                >
                   {Array.from({ length: DAY_END_HOUR - DAY_START_HOUR }, (_, i) =>
                     i % 2 === 1 ? (
                       <div key={'stripe-'+i} className="absolute inset-x-0 bg-muted/15" style={{ top: i * 2 * SLOT_HEIGHT, height: SLOT_HEIGHT * 2 }} />
@@ -560,7 +642,7 @@ export default function SchedulePage({ canManage, userRole }: { canManage: boole
                         key={ev.id}
                         className={cn(
                           "absolute rounded-md text-[11px] flex flex-col overflow-hidden cursor-pointer",
-                          ev.defense ? EVENT_BASE : EVENT_BASE, // <-- use neutral ring for all
+                          ev.defense ? EVENT_BASE : EVENT_BASE,
                           "hover:ring-2 ring-primary/40"
                         )}
                         style={{
@@ -574,12 +656,14 @@ export default function SchedulePage({ canManage, userRole }: { canManage: boole
                         title={ev.title}
                         onClick={(e) => {
                           e.stopPropagation();
-                          if (canManage && !ev.defense) {
-                            setEditEvent(ev);
-                          } else {
-                            setSelectedDate(parseISO(ev.date));
-                            setDetailEvent(ev);
-                            setView('day');
+                          if (!editMode) {
+                            if (canManage && !ev.defense) {
+                              setEditEvent(ev);
+                            } else {
+                              setSelectedDate(parseISO(ev.date));
+                              setDetailEvent(ev);
+                              setView('day');
+                            }
                           }
                         }}
                       >
@@ -601,6 +685,26 @@ export default function SchedulePage({ canManage, userRole }: { canManage: boole
                       </div>
                     );
                   })}
+                  {/* --- Drag Preview for week view --- */}
+                  {dragHoverWeekCol === dateKey && draggedEvent && editMode && !draggedEvent.defense && (
+                    <div
+                      className={cn(
+                        "absolute left-2 right-2 top-2 z-50 px-2 py-1 rounded text-[11px] font-medium truncate flex items-center gap-1 shadow-lg pointer-events-none",
+                        EVENT_BASE
+                      )}
+                      style={{
+                        backgroundColor: draggedEvent.color || '#6ee7b7',
+                        color: getTextColor(draggedEvent.color),
+                        opacity: 0.65,
+                        border: '2px dashed #888',
+                        boxShadow: '0 2px 8px rgba(0,0,0,0.12)'
+                      }}
+                    >
+                      {draggedEvent.defense && <GraduationCap className="h-3 w-3" />}
+                      {truncate(draggedEvent.title, 26)}
+                      <span className="ml-1 text-[9px] text-muted-foreground">(Preview)</span>
+                    </div>
+                  )}
                 </div>
               );
             })}
@@ -703,7 +807,7 @@ export default function SchedulePage({ canManage, userRole }: { canManage: boole
                     key={ev.id}
                     className={cn(
                       "absolute rounded-md p-2 text-[11px] flex flex-col overflow-hidden cursor-pointer",
-                      ev.defense ? EVENT_BASE_SOLID : EVENT_BASE, // <-- use neutral ring for all
+                      ev.defense ? EVENT_BASE_SOLID : EVENT_BASE,
                       "hover:ring-2 ring-primary/40"
                     )}
                     style={{
@@ -715,12 +819,15 @@ export default function SchedulePage({ canManage, userRole }: { canManage: boole
                       color: ev.defense ? undefined : getTextColor(ev.color)
                     }}
                     title={ev.title}
+                    // Only allow details in read mode
                     onClick={(e)=> {
                       e.stopPropagation();
-                      if (canManage && !ev.defense) {
-                        setEditEvent(ev);
-                      } else {
-                        setDetailEvent(ev);
+                      if (!editMode) {
+                        if (canManage && !ev.defense) {
+                          setEditEvent(ev);
+                        } else {
+                          setDetailEvent(ev);
+                        }
                       }
                     }}
                   >
@@ -1026,7 +1133,7 @@ export default function SchedulePage({ canManage, userRole }: { canManage: boole
                 <Button size="icon" variant="outline" onClick={goNext}>
                   <ChevronRight className="h-4 w-4" />
                 </Button>
-                <Button variant="outline" onClick={goToday}>Today</Button>
+                <Button className="hover:cursor-pointer" variant="outline" onClick={goToday}>Today</Button>
               </div>
               <div className="inline-flex rounded-md border border-zinc-200 dark:border-zinc-800 overflow-hidden h-8">
                 {([
@@ -1050,6 +1157,14 @@ export default function SchedulePage({ canManage, userRole }: { canManage: boole
                   </button>
                 ))}
               </div>
+              {/* --- Edit Mode Toggle Button --- */}
+              <Button
+                variant={editMode ? "default" : "outline"}
+                className="ml-2"
+                onClick={() => setEditMode(e => !e)}
+              >
+                {editMode ? "Exit Edit Mode" : "Edit Mode"}
+              </Button>
               {view === 'month' && (
                 <>
                   <Select
