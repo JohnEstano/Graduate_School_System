@@ -1218,6 +1218,7 @@ const GRID_LINE = `${GRID_LINE_LIGHT} ${GRID_LINE_DARK}`;
               )}
               style={{ top: TOOLBAR_STICKY_TOP }}
             >
+              {/* Navigation buttons */}
               <div className="flex items-center gap-1">
                 <Button size="icon" variant="outline" onClick={goPrev}>
                   <ChevronLeft className="h-4 w-4" />
@@ -1227,92 +1228,96 @@ const GRID_LINE = `${GRID_LINE_LIGHT} ${GRID_LINE_DARK}`;
                 </Button>
                 <Button className="hover:cursor-pointer" variant="outline" onClick={goToday}>Today</Button>
               </div>
-                <div className="inline-flex rounded-md border border-zinc-200 dark:border-zinc-800 overflow-hidden h-8">
+              {/* View switcher tabs */}
+              <div className="inline-flex rounded-md border border-zinc-200 dark:border-zinc-800 overflow-hidden h-8">
                 {([
                   { key: 'day', label: 'Day', icon: <CalendarDays className="mr-1 h-4 w-4" /> },
                   { key: 'week', label: 'Week', icon: <CalendarRange className="mr-1 h-4 w-4" /> },
                   { key: 'month', label: 'Month', icon: <Calendar className="mr-1 h-4 w-4" /> },
                 ] as const).map(v => (
                   <button
-                  key={v.key}
-                  type="button"
-                  onClick={()=> setView(v.key)}
-                  className={cn(
-                    "px-3 text-xs font-medium uppercase tracking-wide  focus:outline-none flex items-center cursor-pointer",
-                    view === v.key
-                    ? "bg-primary text-white dark:bg-rose-500 dark:text-white"
-                    : "bg-white dark:bg-zinc-900 hover:bg-muted/60 dark:hover:bg-zinc-800 text-muted-foreground"
-                  )}
+                    key={v.key}
+                    type="button"
+                    onClick={()=> setView(v.key)}
+                    className={cn(
+                      "px-3 text-xs font-medium uppercase tracking-wide  focus:outline-none flex items-center cursor-pointer",
+                      view === v.key
+                      ? "bg-primary text-white dark:bg-rose-500 dark:text-white"
+                      : "bg-white dark:bg-zinc-900 hover:bg-muted/60 dark:hover:bg-zinc-800 text-muted-foreground"
+                    )}
                   >
-                  {v.icon}
-                  {v.label}
+                    {v.icon}
+                    {v.label}
                   </button>
                 ))}
-                </div>
-              {/* --- Edit Mode Toggle Button --- */}
-              <Button
-                variant={editMode ? "default" : "outline"}
-                className="ml-2"
-                onClick={() => setEditMode(e => !e)}
-              >
-                {editMode ? "Exit Edit Mode" : "Edit Mode"}
-              </Button>
+
+              </div>
+              {/* Month/Year dropdowns (only in month view) */}
               {view === 'month' && (
-                <>
+                <div className="flex items-center gap-2 ml-2">
                   <Select
-                    value={String(monthCursor.getMonth())}
+                    value={MONTHS[monthCursor.getMonth()]}
                     onValueChange={val => {
-                      const d = new Date(monthCursor);
-                      d.setMonth(Number(val));
-                      setMonthCursor(d);
+                      const idx = MONTHS.indexOf(val);
+                      if (idx !== -1) setMonthCursor(new Date(monthCursor.getFullYear(), idx, 1));
                     }}
                   >
-                    <SelectTrigger className="w-[130px] h-8">
-                      <SelectValue>{MONTHS[monthCursor.getMonth()]}</SelectValue>
+                    <SelectTrigger className="w-[120px] h-8" >
+                      <SelectValue placeholder="Month" />
                     </SelectTrigger>
                     <SelectContent>
-                      {MONTHS.map((m,i)=>(
-                        <SelectItem key={m} value={String(i)}>{m}</SelectItem>
+                      {MONTHS.map(m => (
+                        <SelectItem key={m} value={m}>{m}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                   <Select
-                    value={String(monthCursor.getFullYear())}
-                    onValueChange={val => {
-                      const d = new Date(monthCursor);
-                      d.setFullYear(Number(val));
-                      setMonthCursor(d);
-                    }}
+                    value={monthCursor.getFullYear().toString()}
+                    onValueChange={val => setMonthCursor(new Date(Number(val), monthCursor.getMonth(), 1))}
                   >
-                    <SelectTrigger className="w-[100px] h-8">
-                      <SelectValue>{monthCursor.getFullYear()}</SelectValue>
+                    <SelectTrigger className="w-[90px] h-8" >
+                      <SelectValue placeholder="Year" />
                     </SelectTrigger>
                     <SelectContent>
                       {YEARS.map(y => (
-                        <SelectItem key={y} value={String(y)}>{y}</SelectItem>
+                        <SelectItem key={y} value={y.toString()}>{y}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
-                </>
+                </div>
               )}
+              {/* Edit/View Mode Dropdown, Print, Add Event */}
               {canManage && (
                 <div className="flex items-center gap-2 ml-auto">
+                  <Select
+                    value={editMode ? "editing" : "viewing"}
+                    onValueChange={val => setEditMode(val === "editing")}
+                  >
+                    <SelectTrigger className="w-[110px] h-8">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="viewing">Viewing</SelectItem>
+                      <SelectItem value="editing">Editing</SelectItem>
+                    </SelectContent>
+                  </Select>
                   <Button type="button" size="icon" variant="outline" onClick={handlePrint} title="Print schedules">
                     <Printer className="h-4 w-4 hover:cursor-printer" />
                   </Button>
+                  {/* Add/Edit Event Dialog */}
                   <Dialog open={showAdd} onOpenChange={o => {
                     setShowAdd(o);
                     setAddError(null);
                     if (!o) {
-                      setEditEvent(null);         // <-- Reset edit event
-                      setActiveDrag(null);        // <-- Reset drag state
-                      setDraggedEvent(null);      // <-- Reset drag event
-                      setDraggedOverDate(null);   // <-- Reset hovered cell
-                      setDragHoverWeekCol(null);  // <-- Reset week col hover
+                      setEditEvent(null);
+                      setActiveDrag(null);
+                      setDraggedEvent(null);
+                      setDraggedOverDate(null);
+                      setDragHoverWeekCol(null);
                     }
                   }}>
                     <DialogTrigger asChild>
-                      <Button className="hover:cursor-pointer" size="sm">{isEditing ? 'Edit Event' : 'Add Event'}</Button>
+                      <Button className="hover:cursor-pointer dark:bg-rose" size="sm">{isEditing ? 'Edit Event' : 'Add Event'}</Button>
                     </DialogTrigger>
                     <DialogContent className="sm:max-w-md">
                       <DialogHeader>
@@ -1329,62 +1334,8 @@ const GRID_LINE = `${GRID_LINE_LIGHT} ${GRID_LINE_DARK}`;
                         <div className="grid gap-1">
                           <Label className="text-xs">Title</Label>
                           <Textarea
-                            rows={2}
                             value={addTitle}
-                            onChange={e=> setAddTitle(e.target.value)}
-                            placeholder="Event title"
-                            className="text-xs resize-none"
-                          />
-                        </div>
-                        <div className="flex gap-3">
-                          <div className="flex-1 grid gap-1">
-                            <Label className="text-xs">Date</Label>
-                            <input
-                              type="date"
-                              value={addDate}
-                              onChange={e=> setAddDate(e.target.value)}
-                              className="h-8 text-xs border rounded-md px-2"
-                            />
-                          </div>
-                          <div className="grid gap-1 w-28">
-                            <Label className="text-xs">All Day</Label>
-                            <div className="h-8 px-2 flex items-center gap-2 border rounded-md">
-                              <Checkbox checked={addAllDay} onCheckedChange={v=> setAddAllDay(!!v)} />
-                              <span className="text-[11px]">Yes</span>
-                            </div>
-                          </div>
-                        </div>
-                        {!addAllDay && (
-                          <div className="flex gap-3">
-                            <div className="grid gap-1 flex-1">
-                              <Label className="text-xs">Start</Label>
-                              <input
-                                type="time"
-                                step={300}
-                                value={addStart}
-                                onChange={e=> setAddStart(e.target.value)}
-                                className="h-8 text-xs border rounded-md px-2"
-                              />
-                            </div>
-                            <div className="grid gap-1 flex-1">
-                              <Label className="text-xs">End</Label>
-                              <input
-                                type="time"
-                                step={300}
-                                value={addEnd}
-                                onChange={e=> setAddEnd(e.target.value)}
-                                className="h-8 text-xs border rounded-md px-2"
-                              />
-                            </div>
-                          </div>
-                        )}
-                        <div className="grid gap-1">
-                          <Label className="text-xs">Description (optional)</Label>
-                          <Textarea
-                            value={addDesc}
-                            onChange={e=> setAddDesc(e.target.value)}
-                            rows={3}
-                            className="text-xs resize-none"
+                            onChange={e => setAddTitle(e.target.value)}
                             placeholder="Short description..."
                           />
                         </div>
