@@ -70,9 +70,9 @@ const MINUTES_IN_DAY_RANGE = (DAY_END_HOUR - DAY_START_HOUR) * 60;
 const SLOT_HEIGHT = 44;
 
 const EVENT_BASE =
-  "bg-zinc-100 dark:bg-zinc-900/90 hover:bg-zinc-200 dark:hover:bg-zinc-800 text-zinc-900 dark:text-zinc-100 ring-1 ring-zinc-300 dark:ring-zinc-700/40 shadow-sm transition-colors";
+  "bg-zinc-100 dark:bg-zinc-900/90 hover:bg-zinc-200 dark:hover:bg-zinc-800 text-zinc-900 dark:text-zinc-100 ring-1 ring-zinc-300 dark:ring-zinc-700/40 shadow-sm";
 const EVENT_BASE_SOLID =
-  "bg-zinc-200 dark:bg-zinc-900 hover:bg-zinc-300 dark:hover:bg-zinc-800 text-zinc-900 dark:text-zinc-100 ring-1 ring-zinc-400 dark:ring-zinc-700/40 shadow-sm transition-colors";
+  "bg-zinc-200 dark:bg-zinc-900 hover:bg-zinc-300 dark:hover:bg-zinc-800 text-zinc-900 dark:text-zinc-100 ring-1 ring-zinc-400 dark:ring-zinc-700/40 shadow-sm ";
 
 function buildTimeSlots() {
   const slots: { label: string; minutes: number; isHour: boolean }[] = [];
@@ -255,7 +255,7 @@ const DroppableCell = ({
     <div
       ref={setNodeRef}
       className={cn(
-        "relative p-1 border-r border-b last:[&:nth-last-child(-n+7)]:border-b-0 cursor-pointer overflow-hidden transition-colors focus:outline-none focus-visible:outline-none",
+        "relative p-1 border-r border-b last:[&:nth-last-child(-n+7)]:border-b-0 cursor-pointer overflow-hidden focus:outline-none focus-visible:outline-none",
         "bg-white dark:bg-zinc-900", // <-- Add dark mode background
         "border-zinc-200 dark:border-zinc-800" // <-- Add dark mode border
       )}
@@ -1212,28 +1212,28 @@ export default function SchedulePage({ canManage, userRole }: { canManage: boole
                 </Button>
                 <Button className="hover:cursor-pointer" variant="outline" onClick={goToday}>Today</Button>
               </div>
-              <div className="inline-flex rounded-md border border-zinc-200 dark:border-zinc-800 overflow-hidden h-8">
+                <div className="inline-flex rounded-md border border-zinc-200 dark:border-zinc-800 overflow-hidden h-8">
                 {([
                   { key: 'day', label: 'Day', icon: <CalendarDays className="mr-1 h-4 w-4" /> },
                   { key: 'week', label: 'Week', icon: <CalendarRange className="mr-1 h-4 w-4" /> },
                   { key: 'month', label: 'Month', icon: <Calendar className="mr-1 h-4 w-4" /> },
                 ] as const).map(v => (
                   <button
-                    key={v.key}
-                    type="button"
-                    onClick={()=> setView(v.key)}
-                    className={cn(
-                      "px-3 text-xs font-medium uppercase tracking-wide transition-colors focus:outline-none flex items-center cursor-pointer",
-                      view === v.key
-                        ? "bg-primary text-white"
-                        : "bg-white dark:bg-zinc-900 hover:bg-muted/60 dark:hover:bg-zinc-800 text-muted-foreground"
-                    )}
+                  key={v.key}
+                  type="button"
+                  onClick={()=> setView(v.key)}
+                  className={cn(
+                    "px-3 text-xs font-medium uppercase tracking-wide  focus:outline-none flex items-center cursor-pointer",
+                    view === v.key
+                    ? "bg-primary text-white dark:bg-rose-500 dark:text-white"
+                    : "bg-white dark:bg-zinc-900 hover:bg-muted/60 dark:hover:bg-zinc-800 text-muted-foreground"
+                  )}
                   >
-                    {v.icon}
-                    {v.label}
+                  {v.icon}
+                  {v.label}
                   </button>
                 ))}
-              </div>
+                </div>
               {/* --- Edit Mode Toggle Button --- */}
               <Button
                 variant={editMode ? "default" : "outline"}
