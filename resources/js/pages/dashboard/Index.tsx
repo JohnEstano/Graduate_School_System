@@ -22,12 +22,10 @@ type PageProps = {
 };
 
 export default function DashboardIndex() {
-    const {
-        auth: { user },
-    } = usePage<PageProps>().props;
+    const page = usePage<PageProps>().props;
+    const { auth: { user } } = page;
 
-    let ComponentToRender: React.FC<{ user: { name: string; role: string } }>;
-    // Prefer effective_role (computed server-side) when available
+    let ComponentToRender: React.FC<any>;
     const activeRole = (user as any)?.effective_role || user.role;
 
     switch (activeRole) {
@@ -59,7 +57,7 @@ export default function DashboardIndex() {
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Dashboard" />
-            <ComponentToRender user={user} />
+            <ComponentToRender {...page} />
         </AppLayout>
     );
 }

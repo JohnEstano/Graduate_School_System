@@ -23,6 +23,7 @@ class CreateDefenseRequestCancellationsTable extends Migration
         });
     }
 
+    
     /**
      * Reverse the migrations.
      */

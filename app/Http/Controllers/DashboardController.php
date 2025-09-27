@@ -76,13 +76,14 @@ class DashboardController extends Controller
                 'user' => [
                     'id' => $user->id,
                     'name' => $user->name,
-                    'email' => $user->email ?? null,
-                    'avatar' => $user->avatar ?? null,
-                    'role' => $user->role, // legacy column (may be null)
-                    'effective_role' => $effective,
-                    'school_id' => $user->school_id, // <-- add this line
-                    'created_at' => $user->created_at ?? null,
-                    'updated_at' => $user->updated_at ?? null,
+                    'first_name' => $user->first_name,
+                    'middle_name' => $user->middle_name,
+                    'last_name' => $user->last_name,
+                    'email' => $user->email,
+                    'role' => $effective,
+                    'school_id' => $user->school_id,
+                    'avatar' => $user->employee_photo_url ?? null, // or $user->avatar if you have an accessor
+                    // add other fields as needed
                 ],
             ],
             // student-specific objects (may be null / empty if not applicable)

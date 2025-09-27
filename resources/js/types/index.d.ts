@@ -80,6 +80,7 @@ export interface DefenseRequest {
     priority: string;
     last_status_updated_by?: string;
     last_status_updated_at?: string;
+    defense_adviser?: string;
 }
 export type Panelist = {
     id: number;

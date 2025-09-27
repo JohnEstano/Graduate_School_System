@@ -110,7 +110,6 @@ export default function StudentDashboard() {
 
     // Example: Get most recent payment amount (replace with real data source)
     const recentPaymentAmount = page.recentPayment?.amount ?? 0; // If you have recentPayment in props
-    // If not, you may need to fetch payments and get the latest one
 
     // --- Student Metrics Cards ---
     const metrics = [
@@ -135,84 +134,98 @@ export default function StudentDashboard() {
     ];
 
     return (
-        <div className="flex h-full flex-1 flex-col gap-4 overflow-auto rounded-xl pt-5">
-            {/* Header */}
-            <div className="mb-7 mt-3 flex flex-row justify-between items-center relative overflow-hidden" style={{ minHeight: '120px' }}>
-                <div className="flex flex-col pr-8 pl-7">
-                    <span className="flex items-center text-xs font-semibold text-gray-700 dark:text-gray-200 mb-1 relative z-10">
-                        {isDaytime() ? (
-                            <Sun className="mr-1 size-4 text-yellow-500" />
-                        ) : (
-                            <Moon className="mr-1 size-4 text-blue-500" />
-                        )}
-                        {getFormattedDate()}
-                    </span>
-                    <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white relative z-10">
-                        Hi, {user?.name}!
-                    </h1>
-                    <span className="text-xs text-gray-400 dark:text-gray-500 mt-1 relative z-10">
-                        {user?.role ?? 'Student'}
-                        {user?.school_id && (
-                            <>
-                                <span className="mx-1">/</span>
-                                <span className="text-rose-500 font-bold">{user.school_id}</span>
-                            </>
-                        )}
-                    </span>
+        <div className="flex h-full flex-1 flex-col gap-4 overflow-auto  bg-white dark:bg-background">
+            {/* Skeleton Loader */}
+            {loading ? (
+                <div className="w-full min-h-[70vh] bg-zinc-100 dark:bg-zinc-900 flex flex-col gap-4 p-0 m-0">
+                    {/* Top short row */}
+                    <div className="h-6 w-1/6 rounded bg-zinc-300 dark:bg-zinc-800 mt-8 mx-8" />
+                    {/* Main rows */}
+                    <div className="h-12 w-3/4 rounded bg-zinc-300 dark:bg-zinc-800 mx-8" />
+                    <div className="h-12 w-2/3 rounded bg-zinc-300 dark:bg-zinc-800 mx-8" />
+                    {/* Big rectangle for dashboard body */}
+                    <div className="h-[500px] w-full rounded bg-zinc-300 dark:bg-zinc-800 mt-4" />
                 </div>
-                <div className="flex items-center">
-                    <div className="h-12 w-px mx-4 bg-gray-300 dark:bg-gray-700 opacity-60" />
-                    <div className="mr-8">
-                        <QuickActionsWidget userRole={user?.role} />
+            ) : (
+                <>
+                    {/* Header */}
+                    <div className="mb-7 mt-5 flex flex-row justify-between items-center relative overflow-hidden" style={{ minHeight: '120px' }}>
+                        <div className="flex flex-col pr-8 pl-7">
+                            <span className="flex items-center text-xs font-semibold text-gray-700 dark:text-gray-200 mb-1 relative z-10">
+                                {isDaytime() ? (
+                                    <Sun className="mr-1 size-4 text-yellow-500" />
+                                ) : (
+                                    <Moon className="mr-1 size-4 text-blue-500" />
+                                )}
+                                {getFormattedDate()}
+                            </span>
+                            <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white relative z-10">
+                                Hi, {user?.name}!
+                            </h1>
+                            <span className="text-xs text-gray-400 dark:text-gray-500 mt-1 relative z-10">
+                                {user?.role ?? 'Student'}
+                                {user?.school_id && (
+                                    <>
+                                        <span className="mx-1">/</span>
+                                        <span className="text-rose-500 dark:text-rose-400 font-bold">{user.school_id}</span>
+                                    </>
+                                )}
+                            </span>
+                        </div>
+                        <div className="flex items-center">
+                            <div className="h-12 w-px mx-4 bg-gray-300 dark:bg-gray-700 opacity-60" />
+                            <div className="mr-8">
+                                <QuickActionsWidget userRole={user?.role} />
+                            </div>
+                        </div>
                     </div>
-                </div>
-            </div>
 
-            {/* Metrics Cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 px-7">
-                {metrics.map((metric, idx) => (
-                    <Card key={idx} className="border border-1 bg-white dark:bg-muted rounded-xl shadow-none flex flex-row items-center min-h-[70px] py-4 px-5">
-                        <div className="flex flex-col justify-center flex-1">
-                            <CardHeader className="pb-1 px-0">
-                                <CardTitle className="text-xs font-semibold text-gray-600 dark:text-gray-300">{metric.title}</CardTitle>
-                            </CardHeader>
-                            <CardContent className="px-0 py-0">
-                                <div className="mb-0.5">
-                                    <span className="text-2xl font-bold text-gray-900 dark:text-white leading-tight">{metric.value}</span>
+                    {/* Metrics Cards */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 px-7">
+                        {metrics.map((metric, idx) => (
+                            <Card key={idx} className="border border-1 bg-white dark:bg-muted rounded-xl shadow-none flex flex-row items-center min-h-[70px] py-4 px-5">
+                                <div className="flex flex-col justify-center flex-1">
+                                    <CardHeader className="pb-1 px-0">
+                                        <CardTitle className="text-xs font-semibold text-gray-600 dark:text-gray-300">{metric.title}</CardTitle>
+                                    </CardHeader>
+                                    <CardContent className="px-0 py-0">
+                                        <div className="mb-0.5">
+                                            <span className="text-2xl font-bold text-gray-900 dark:text-white leading-tight">{metric.value}</span>
+                                        </div>
+                                        <div className="text-[11px] text-gray-400 dark:text-gray-500 mt-0.5">{metric.description}</div>
+                                    </CardContent>
                                 </div>
-                                <div className="text-[11px] text-gray-400 mt-0.5">{metric.description}</div>
-                            </CardContent>
-                        </div>
-                        <div className="flex items-center justify-center ml-3 w-[40px] h-[40px]">
-                            {React.cloneElement(metric.icon, { className: "text-rose-500 size-7" })}
-                        </div>
-                    </Card>
-                ))}
-            </div>
+                                <div className="flex items-center justify-center ml-3 w-[40px] h-[40px]">
+                                    {React.cloneElement(metric.icon, { className: "text-rose-500 dark:text-rose-400 size-7" })}
+                                </div>
+                            </Card>
+                        ))}
+                    </div>
 
-            {/* Widgets Body */}
-            <div className="flex flex-col gap-6 bg-gray-100 ms-4 me-4 rounded-xl mt-2 mb-2 px-5 py-8">
-                <div className="w-full mb-2 flex flex-col md:flex-row gap-4">
-                    {/* Schedules first */}
-                    <WeeklyDefenseSchedulesWidget
-                        weekDays={weekDays}
-                        selectedDay={selectedDay}
-                        setSelectedDay={setSelectedDay}
-                        approvedDefenses={approvedDefenses as DefenseRequest[]}
-                        referenceDate={new Date()}
-                        loading={loading}
-                        studentId={user?.id}
-                    />
-                 
-                    <DefenseStatusWidget
-                        recentRequests={allRequests}
-                        loading={loading}
-                    />
-                </div>
-                <div className="grid gap-4 md:grid-cols-2">
-                 {/*put here your other widgets if you create one please*/}
-                </div>
-            </div>
+                    {/* Widgets Body */}
+                    <div className="flex flex-col gap-6 bg-gray-100 dark:bg-muted ms-4 me-4 rounded-xl mt-2 mb-2 px-5 py-8">
+                        <div className="w-full mb-2 flex flex-col md:flex-row gap-4">
+                            {/* Schedules first */}
+                            <WeeklyDefenseSchedulesWidget
+                                weekDays={weekDays}
+                                selectedDay={selectedDay}
+                                setSelectedDay={setSelectedDay}
+                                approvedDefenses={approvedDefenses as DefenseRequest[]}
+                                referenceDate={new Date()}
+                                loading={loading}
+                                studentId={user?.id}
+                            />
+                            <DefenseStatusWidget
+                                recentRequests={allRequests}
+                                loading={loading}
+                            />
+                        </div>
+                        <div className="grid gap-4 md:grid-cols-2">
+                            {/*put here your other widgets if you create one please*/}
+                        </div>
+                    </div>
+                </>
+            )}
         </div>
     );
 }

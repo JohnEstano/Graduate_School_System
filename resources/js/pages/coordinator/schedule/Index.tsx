@@ -20,8 +20,13 @@ import { Skeleton } from "@/components/ui/skeleton";
 // Icons
 import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, X, GraduationCap, Trash2, Printer, CalendarDays, CalendarRange, Calendar } from "lucide-react";
 import { createPortal } from 'react-dom';
+import { useDroppable, useDraggable, DndContext, closestCenter, type DragStartEvent, type DragEndEvent, type DragOverEvent, DragOverlay } from "@dnd-kit/core";
 
 const pad2 = (n:number)=> n.toString().padStart(2,'0');
+
+function truncate(s: string, n=28) {
+  return s.length > n ? s.slice(0,n)+'…' : s;
+}
 
 const breadcrumbs: BreadcrumbItem[] = [
   { title: 'Dashboard', href: '/dashboard' },
@@ -185,6 +190,90 @@ function getCsrf() {
   return meta?.content || '';
 }
 
+// --- DRAG & DROP LOGIC ---
+type DragData = {
+  event: CalendarEntry;
+  fromDate: string;
+};
+
+const DraggableEventCard = ({
+  event,
+  editMode,
+  onClick,
+}: {
+  event: CalendarEntry;
+  editMode: boolean;
+  onClick?: (e: React.MouseEvent) => void;
+}) => {
+  const { attributes, listeners, setNodeRef } = useDraggable({
+    id: event.id,
+    data: { event, fromDate: event.date },
+    disabled: !editMode || event.defense,
+  });
+  return (
+    <div
+      ref={setNodeRef}
+      {...attributes}
+      {...listeners}
+      className={cn(
+        "px-1 py-0.5 rounded text-[10px] font-medium truncate flex items-center gap-1 transition",
+        event.defense ? EVENT_BASE_SOLID : EVENT_BASE
+        // Remove isDragging styles!
+      )}
+      style={
+        !event.defense
+          ? { backgroundColor: event.color || '#6ee7b7', color: getTextColor(event.color) }
+          : undefined
+      }
+      title={event.title}
+      onClick={onClick}
+    >
+      {event.defense && <GraduationCap className="h-3 w-3" />}
+      {truncate(event.title, 26)}
+    </div>
+  );
+};
+
+const DroppableCell = ({
+  dateKey,
+  children,
+  editMode,
+  isDragOver,
+  activeDrag, // <-- add this prop
+}: {
+  dateKey: string;
+  children: React.ReactNode;
+  editMode: boolean;
+  isDragOver?: boolean;
+  activeDrag?: DragData | null; // <-- add this prop type
+}) => {
+  const { setNodeRef } = useDroppable({
+    id: dateKey,
+    disabled: !editMode,
+  });
+  return (
+    <div
+      ref={setNodeRef}
+      className={cn(
+        "relative p-1 border-r border-b last:[&:nth-last-child(-n+7)]:border-b-0 cursor-pointer overflow-hidden transition-colors focus:outline-none focus-visible:outline-none"
+      )}
+      style={{ minHeight: 120 }}
+    >
+      {children}
+      {/* Render ghost card if dragging over this cell */}
+      {isDragOver && activeDrag && (
+        <div className="absolute left-1 right-1 top-7 z-30 pointer-events-none" style={{ opacity: 0.6 }}>
+          <DraggableEventCard
+            event={activeDrag.event}
+            editMode={false}
+          />
+        </div>
+      )}
+    </div>
+  );
+};
+
+// --- MAIN COMPONENT ---
 export default function SchedulePage({ canManage, userRole }: { canManage: boolean; userRole: string }) {
   const [rawEvents, setRawEvents] = useState<DefenseEvent[]>([]);
   const [events, setEvents] = useState<CalendarEntry[]>([]);
@@ -382,140 +471,125 @@ export default function SchedulePage({ canManage, userRole }: { canManage: boole
 
   const [editMode, setEditMode] = useState(false);
   const [draggedEvent, setDraggedEvent] = useState<CalendarEntry | null>(null);
-
-  // Add preview state for month and week drag
-  const [dragHoverDate, setDragHoverDate] = useState<string | null>(null);
+  const [activeDrag, setActiveDrag] = useState<DragData | null>(null);
   const [dragHoverWeekCol, setDragHoverWeekCol] = useState<string | null>(null);
+  // --- Add state for hovered cell ---
+  const [draggedOverDate, setDraggedOverDate] = useState<string | null>(null);
+
+  // --- Update DND handlers ---
+  function handleDragStart(event: DragStartEvent) {
+    if (event.active.data.current) {
+      setActiveDrag(event.active.data.current as DragData);
+    }
+  }
+  function handleDragEnd(event: DragEndEvent) {
+    setActiveDrag(null);
+    setDraggedOverDate(null);
+    const { active, over } = event;
+    if (!active || !over) return;
+    const dragData = active.data.current as DragData;
+    if (!dragData || dragData.event.defense) return;
+    if (dragData.fromDate !== over.id) {
+      setEditEvent({
+        ...dragData.event,
+        date: over.id as string,
+      });
+      setShowAdd(true);
+    }
+  }
+  function handleDragOver(event: DragOverEvent) {
+    if (event.over?.id) {
+      setDraggedOverDate(event.over.id as string);
+    } else {
+      setDraggedOverDate(null);
+    }
+  }
+
 
   const renderMonth = () => {
     const weeks = monthWeeks;
-    const cellMinHeight = 120;
     return (
-      <div className="w-full border border-t-0 bg-white flex flex-col rounded-b-md rounded-t-none">
-        <div
-          className={cn("grid border-b sticky z-40", GLASS_HEADER)}
-          style={{ gridTemplateColumns: "repeat(7, 1fr)", top: VIEW_HEADER_OFFSET }}
-        >
-          {['SUN','MON','TUE','WED','THU','FRI','SAT'].map(d => (
-            <div key={d} className="h-12 border-r last:border-r-0 flex items-center justify-center text-[10px] font-semibold uppercase tracking-wide">
-              {d}
-            </div>
-          ))}
-        </div>
-        <div className="grid grid-cols-7">
-          {weeks.map(week =>
-            week.map(day => {
-              const key = format(day,'yyyy-MM-dd');
-              const list = eventsByDate[key] || [];
-              const outMonth = !isSameMonth(day, monthCursor);
-              const today = isToday(day);
-              const selected = selectedDate && isSameDay(day, selectedDate);
-              return (
-                <div
-                  key={key}
-                  onClick={() => { if (!editMode) { setSelectedDate(day); setView('day'); } }}
-                  className={cn(
-                    "relative p-1 border-r border-b last:[&:nth-last-child(-n+7)]:border-b-0 cursor-pointer overflow-hidden transition-colors focus:outline-none focus-visible:outline-none",
-                    outMonth ? "bg-muted/20 text-muted-foreground" : "bg-white",
-                    "hover:bg-accent/40"
-                  )}
-                  style={{ minHeight: cellMinHeight }}
-                  onDragOver={e => {
-                    if (editMode && draggedEvent && !draggedEvent.defense) e.preventDefault();
-                  }}
-                  onDragEnter={e => {
-                    if (editMode && draggedEvent && !draggedEvent.defense) setDragHoverDate(key);
-                  }}
-                  onDragLeave={e => {
-                    if (editMode && draggedEvent && !draggedEvent.defense) setDragHoverDate(null);
-                  }}
-                  onDrop={e => {
-                    if (editMode && draggedEvent && !draggedEvent.defense) {
-                      setEditEvent({
-                        ...draggedEvent,
-                        date: format(day, 'yyyy-MM-dd'),
-                      });
-                      setShowAdd(true);
-                      setDraggedEvent(null);
-                      setDragHoverDate(null);
-                    }
-                  }}
-                >
-                  <div className="flex items-start justify-between mb-0.5">
-                    <span
-                      className={cn(
-                        "w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-semibold select-none",
-                        today && "bg-primary text-white shadow",
-                        !today && selected && "bg-primary/80 text-white",
-                        !today && !selected && "text-muted-foreground"
-                      )}
-                    >
-                      {format(day,'d')}
-                    </span>
-                    {list.length > 3 && (
-                      <span className="text-[10px] text-muted-foreground mt-0.5">
-                        +{list.length-3}
-                      </span>
-                    )}
-                  </div>
-                  <div className="space-y-0.5">
-                    {list.slice(0,3).map(ev => (
-                      <div
-                        key={ev.id}
+      <DndContext
+        collisionDetection={closestCenter}
+        onDragStart={handleDragStart}
+        onDragEnd={handleDragEnd}
+        onDragOver={handleDragOver}
+      >
+        <div className="w-full border border-t-0 bg-white flex flex-col rounded-b-md rounded-t-none">
+          <div
+            className={cn("grid border-b sticky z-40", GLASS_HEADER)}
+            style={{ gridTemplateColumns: "repeat(7, 1fr)", top: VIEW_HEADER_OFFSET }}
+          >
+            {['SUN','MON','TUE','WED','THU','FRI','SAT'].map(d => (
+              <div key={d} className="h-12 border-r last:border-r-0 flex items-center justify-center text-[10px] font-semibold uppercase tracking-wide">
+                {d}
+              </div>
+            ))}
+          </div>
+          <div className="grid grid-cols-7">
+            {weeks.map(week =>
+              week.map(day => {
+                const key = format(day,'yyyy-MM-dd');
+                const list = eventsByDate[key] || [];
+                const outMonth = !isSameMonth(day, monthCursor);
+                const today = isToday(day);
+                const selected = selectedDate && isSameDay(day, selectedDate);
+                return (
+                  <DroppableCell
+                    key={key}
+                    dateKey={key}
+                    editMode={editMode}
+                    isDragOver={draggedOverDate === key}
+                    activeDrag={activeDrag} // <-- pass it here
+                  >
+                    <div className="flex items-start justify-between mb-0.5">
+                      <span
                         className={cn(
-                          "px-1 py-0.5 rounded text-[10px] font-medium truncate flex items-center gap-1",
-                          ev.defense ? EVENT_BASE_SOLID : EVENT_BASE
+                          "w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-semibold select-none",
+                          today && "bg-primary text-white shadow",
+                          !today && selected && "bg-primary/80 text-white",
+                          !today && !selected && "text-muted-foreground"
                         )}
-                        style={
-                          !ev.defense
-                            ? { backgroundColor: ev.color || '#6ee7b7', color: getTextColor(ev.color) }
-                            : undefined
-                        }
-                        title={ev.title}
-                        draggable={editMode && !ev.defense}
-                        onDragStart={e => {
-                          if (editMode && !ev.defense) setDraggedEvent(ev);
-                        }}
-                        onDragEnd={() => setDraggedEvent(null)}
-                        onClick={e => {
-                          e.stopPropagation();
-                          if (!editMode) {
-                            setSelectedDate(day);
-                            setView('day');
-                          }
-                        }}
                       >
-                        {ev.defense && <GraduationCap className="h-3 w-3" />}
-                        {truncate(ev.title, 26)}
-                      </div>
-                    ))}
-                  </div>
-                  {/* --- Drag Preview --- */}
-                  {dragHoverDate === key && draggedEvent && editMode && !draggedEvent.defense && (
-                    <div
-                      className={cn(
-                        "absolute left-0 right-0 top-7 z-50 px-1 py-0.5 rounded text-[10px] font-medium truncate flex items-center gap-1 shadow-lg pointer-events-none",
-                        EVENT_BASE
+                        {format(day,'d')}
+                      </span>
+                      {list.length > 3 && (
+                        <span className="text-[10px] text-muted-foreground mt-0.5">
+                          +{list.length-3}
+                        </span>
                       )}
-                      style={{
-                        backgroundColor: draggedEvent.color || '#6ee7b7',
-                        color: getTextColor(draggedEvent.color),
-                        opacity: 0.65,
-                        border: '2px dashed #888',
-                        boxShadow: '0 2px 8px rgba(0,0,0,0.12)'
-                      }}
-                    >
-                      {draggedEvent.defense && <GraduationCap className="h-3 w-3" />}
-                      {truncate(draggedEvent.title, 26)}
-                      <span className="ml-1 text-[9px] text-muted-foreground">(Preview)</span>
                     </div>
-                  )}
-                </div>
-              );
-            })
-          )}
+                    <div className="space-y-0.5">
+                      {list.slice(0,3).map(ev => (
+                        <DraggableEventCard
+                          key={ev.id}
+                          event={ev}
+                          editMode={editMode}
+                          onClick={e => {
+                            e.stopPropagation();
+                            if (!editMode) {
+                              setSelectedDate(day);
+                              setView('day');
+                            }
+                          }}
+                        />
+                      ))}
+                    </div>
+                  </DroppableCell>
+                );
+              })
+            )}
+          </div>
+          <DragOverlay>
+            {activeDrag ? (
+              <DraggableEventCard
+                event={activeDrag.event}
+                editMode={false}
+              />
+            ) : null}
+          </DragOverlay>
         </div>
-      </div>
+      </DndContext>
     );
   };
 
@@ -1023,14 +1097,6 @@ export default function SchedulePage({ canManage, userRole }: { canManage: boole
   }, [editEvent]);
 
   useEffect(() => {
-    if (!showAdd && !editEvent) {
-      setAddTitle("");
-      setAddDesc("");
-      setAddAllDay(false);
-      setAddStart("08:00");
-      setAddEnd("09:00");
-      setAddColor("#10b981");
-    }
     if (!showAdd && editEvent) setEditEvent(null);
   }, [showAdd, editEvent]);
 
@@ -1208,7 +1274,17 @@ export default function SchedulePage({ canManage, userRole }: { canManage: boole
                   <Button type="button" size="icon" variant="outline" onClick={handlePrint} title="Print schedules">
                     <Printer className="h-4 w-4 hover:cursor-printer" />
                   </Button>
-                  <Dialog open={showAdd} onOpenChange={o => { setShowAdd(o); if (!o) setAddError(null); }}>
+                  <Dialog open={showAdd} onOpenChange={o => {
+                    setShowAdd(o);
+                    setAddError(null);
+                    if (!o) {
+                      setEditEvent(null);         // <-- Reset edit event
+                      setActiveDrag(null);        // <-- Reset drag state
+                      setDraggedEvent(null);      // <-- Reset drag event
+                      setDraggedOverDate(null);   // <-- Reset hovered cell
+                      setDragHoverWeekCol(null);  // <-- Reset week col hover
+                    }
+                  }}>
                     <DialogTrigger asChild>
                       <Button className="hover:cursor-pointer" size="sm">{isEditing ? 'Edit Event' : 'Add Event'}</Button>
                     </DialogTrigger>
