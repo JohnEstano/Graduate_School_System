@@ -7,6 +7,7 @@ type NavItem = { title:string; href:string; roles?:string[] };
 
 const baseNav: NavItem[] = [
   { title:'Profile',    href:'/settings/profile' },
+   { title:'General',            href:'/settings/general', roles:['Coordinator'] }, 
   { title:'Password',   href:'/settings/password' },
   { title:'Appearance', href:'/settings/appearance' },
 ];
@@ -14,11 +15,13 @@ const baseNav: NavItem[] = [
 const extraNav: NavItem[] = [
   { title:'Document Templates', href:'/settings/documents', roles:['Dean','Coordinator'] },
   { title:'E‑Signatures',       href:'/settings/signatures' },
+ 
 ];
 
 export default function SettingsLayout({ children }: PropsWithChildren) {
   const page = usePage();
   const role = (page.props as any)?.auth?.user?.role;
+  // Only filter links by role for those that specify roles
   const items = [...baseNav, ...extraNav.filter(i => !i.roles || i.roles.includes(role))];
   const path = typeof window !== 'undefined' ? window.location.pathname : '';
 
@@ -35,11 +38,11 @@ export default function SettingsLayout({ children }: PropsWithChildren) {
                   key={i.href}
                   href={i.href}
                   className={[
-                    'px-3 py-2 rounded text-sm transition-colors',
-                    'text-gray-700 dark:text-gray-300',
-                    'hover:bg-gray-100 dark:hover:bg-gray-800',
+                    'px-3 py-2 rounded-md text-sm font-medium',
+                    'text-zinc dark:text-white',
+                    'hover:bg-zinc-100 dark:hover:bg-zinc-800',
                     active
-                      ? 'bg-gray-200 dark:bg-gray-700 font-medium text-gray-900 dark:text-gray-100'
+                      ? 'bg-zinc-100 dark:bg-zinc-700 font-medium text-zinc-900 dark:text-zinc-100'
                       : ''
                   ].join(' ')}
                 >

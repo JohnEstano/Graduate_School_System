@@ -14,9 +14,14 @@ class DefenseRequirementController extends Controller
         $requirements = DefenseRequest::where('submitted_by', Auth::id())->orderByDesc('created_at')->get();
         $defenseRequest = DefenseRequest::where('school_id', Auth::user()->school_id)->latest()->first();
 
+        // Read from DB
+        $acceptDefense = \DB::table('settings')->where('key', 'accept_defense')->value('value');
+        $acceptDefense = $acceptDefense === null ? true : $acceptDefense === '1'; // <-- FIXED
+
         return inertia('student/submissions/defense-requirements/Index', [
             'defenseRequirements' => $requirements,
             'defenseRequest' => $defenseRequest,
+            'acceptDefense' => $acceptDefense,
         ]);
     }
 
@@ -92,6 +97,12 @@ class DefenseRequirementController extends Controller
 
     public function store(Request $request)
     {
+        $acceptDefense = \DB::table('settings')->where('key', 'accept_defense')->value('value');
+        $acceptDefense = $acceptDefense === null ? true : $acceptDefense === '1'; // <-- FIXED
+        if (!$acceptDefense) {
+            return back()->withErrors(['message' => 'Defense requirement submissions are currently closed.']);
+        }
+
         // Early upload error interception
         foreach (['rec_endorsement','proof_of_payment','manuscript_proposal','similarity_index'] as $fileField) {
             if ($request->hasFile($fileField)) {

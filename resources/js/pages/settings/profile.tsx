@@ -46,11 +46,10 @@ export default function Profile({ mustVerifyEmail, status }: { mustVerifyEmail: 
                         <div>
                             <AlertTitle className="font-semibold mb-1">Notice</AlertTitle>
                             <AlertDescription>
-                                Account details is fetched directly from the{' '} myUIC portal. If you wish to change any user informations and details on your account, please do it on the official portal.
+                                Account details and information are fetched directly from the official myUIC portal database. Use the official myUIC portal if you wish to change any of the user information.
                             </AlertDescription>
                         </div>
                     </Alert>
-                    <HeadingSmall title="Profile information" description="View your name, email, and school details" />
                     <div className="flex flex-row items-center gap-6 mb-8">
                         <Avatar className="h-20 w-20">
                             <AvatarFallback className="text-3xl font-bold bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-200">
@@ -70,35 +69,31 @@ export default function Profile({ mustVerifyEmail, status }: { mustVerifyEmail: 
                             <div className="font-medium text-base">{user.first_name}</div>
                         </div>
                         <div>
-                            <div className="text-xs text-muted-foreground mb-1">Middle Name</div>
-                            <div className="font-medium text-base">
-                                {typeof user.middle_name === 'string' && user.middle_name.trim().length > 0
-                                    ? user.middle_name
-                                    : '—'}
-                            </div>
-                        </div>
-                        <div>
                             <div className="text-xs text-muted-foreground mb-1">Last Name</div>
                             <div className="font-medium text-base">{user.last_name}</div>
-                        </div>
-                        <div>
-                            <div className="text-xs text-muted-foreground mb-1">Email</div>
-                            <div className="font-medium text-base">{user.email}</div>
                         </div>
                         <div>
                             <div className="text-xs text-muted-foreground mb-1">School ID</div>
                             <div className="font-medium text-base">{user.school_id ?? '—'}</div>
                         </div>
                         <div>
-                            <div className="text-xs text-muted-foreground mb-1">Program</div>
-                            <div className="font-medium text-base">{user.program ?? '—'}</div>
+                            <div className="text-xs text-muted-foreground mb-1">Role</div>
+                            <div className="font-medium text-base">{user.role ?? '—'}</div>
                         </div>
+                        <div>
+                            <div className="text-xs text-muted-foreground mb-1">Email</div>
+                            <div className="font-medium text-base">{user.email ?? '—'}</div>
+                        </div>
+                        {user.program && (
+                            <div>
+                                <div className="text-xs text-muted-foreground mb-1">Program</div>
+                                <div className="font-medium text-base">{user.program}</div>
+                            </div>
+                        )}
+                        {/* Add other fields as needed, keep all existing ones */}
                     </div>
                     {mustVerifyEmail && user.email_verified_at === null && (
                         <div className="mt-6">
-                            <p className="text-muted-foreground text-sm">
-                                Your email address is unverified.&nbsp;
-                            </p>
                             {status === 'verification-link-sent' && (
                                 <div className="mt-2 text-sm font-medium text-green-600">
                                     A new verification link has been sent to your email address.
@@ -106,6 +101,8 @@ export default function Profile({ mustVerifyEmail, status }: { mustVerifyEmail: 
                             )}
                         </div>
                     )}
+                    {/* Add extra space at the bottom */}
+                    <div className="h-24" />
                 </div>
             </SettingsLayout>
         </AppLayout>

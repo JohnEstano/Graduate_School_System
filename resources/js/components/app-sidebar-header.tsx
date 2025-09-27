@@ -59,7 +59,7 @@ export function AppSidebarHeader({ breadcrumbs = [] }: { breadcrumbs?: Breadcrum
                             <Button
                                 ref={bellBtnRef}
                                 variant="ghost"
-                                className="h-8 w-8 p-3  hover:bg-accent dark:text-muted-foreground dark:hover:bg-muted hover:cursor-pointer relative"
+                                className="h-8 w-8 p-3  hover:bg-accent dark:text-white dark:hover:bg-muted hover:cursor-pointer relative"
                                 aria-label="Show notifications"
                             >
                                 <Bell className="size-5 stroke-[1.5]" />

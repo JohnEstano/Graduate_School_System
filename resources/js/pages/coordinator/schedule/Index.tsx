@@ -239,13 +239,13 @@ const DroppableCell = ({
   children,
   editMode,
   isDragOver,
-  activeDrag, // <-- add this prop
+  activeDrag,
 }: {
   dateKey: string;
   children: React.ReactNode;
   editMode: boolean;
   isDragOver?: boolean;
-  activeDrag?: DragData | null; // <-- add this prop type
+  activeDrag?: DragData | null;
 }) => {
   const { setNodeRef } = useDroppable({
     id: dateKey,
@@ -255,7 +255,9 @@ const DroppableCell = ({
     <div
       ref={setNodeRef}
       className={cn(
-        "relative p-1 border-r border-b last:[&:nth-last-child(-n+7)]:border-b-0 cursor-pointer overflow-hidden transition-colors focus:outline-none focus-visible:outline-none"
+        "relative p-1 border-r border-b last:[&:nth-last-child(-n+7)]:border-b-0 cursor-pointer overflow-hidden transition-colors focus:outline-none focus-visible:outline-none",
+        "bg-white dark:bg-zinc-900", // <-- Add dark mode background
+        "border-zinc-200 dark:border-zinc-800" // <-- Add dark mode border
       )}
       style={{ minHeight: 120 }}
     >
@@ -517,7 +519,11 @@ export default function SchedulePage({ canManage, userRole }: { canManage: boole
       >
         <div className="w-full border border-t-0 bg-white flex flex-col rounded-b-md rounded-t-none">
           <div
-            className={cn("grid border-b sticky z-40", GLASS_HEADER)}
+            className={cn(
+              "grid border-b sticky z-40",
+              GLASS_HEADER,
+              "bg-transparent" 
+            )}
             style={{ gridTemplateColumns: "repeat(7, 1fr)", top: VIEW_HEADER_OFFSET }}
           >
             {['SUN','MON','TUE','WED','THU','FRI','SAT'].map(d => (
@@ -540,14 +546,14 @@ export default function SchedulePage({ canManage, userRole }: { canManage: boole
                     dateKey={key}
                     editMode={editMode}
                     isDragOver={draggedOverDate === key}
-                    activeDrag={activeDrag} // <-- pass it here
+                    activeDrag={activeDrag}
                   >
                     <div className="flex items-start justify-between mb-0.5">
                       <span
                         className={cn(
                           "w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-semibold select-none",
-                          today && "bg-primary text-white shadow",
-                          !today && selected && "bg-primary/80 text-white",
+                          today && "bg-rose-500 text-white shadow dark:bg-rose-500", // <-- fixed for dark mode
+                          !today && selected && "bg-rose-500/80 text-white dark:bg-rose-500/80", // <-- fixed for dark mode
                           !today && !selected && "text-muted-foreground"
                         )}
                       >
@@ -610,7 +616,7 @@ export default function SchedulePage({ canManage, userRole }: { canManage: boole
       weekCursorTime = `${hour12}:${pad2(minute)} ${ampm}`;
     }
     return (
-      <div className="w-full border border-t-0 bg-white flex flex-col overflow-visible rounded-b-md rounded-t-none">
+      <div className="w-full border border-t-0 bg-white dark:bg-zinc-900 flex flex-col overflow-visible rounded-b-md rounded-t-none">
         <div
           className={cn("grid border-b sticky z-40", GLASS_HEADER)}
           style={{ gridTemplateColumns: `${TIME_COL_WIDTH}px repeat(7, 1fr)`, top: VIEW_HEADER_OFFSET }}
@@ -651,7 +657,7 @@ export default function SchedulePage({ canManage, userRole }: { canManage: boole
           onMouseMove={handleWeekMove}
           onMouseLeave={handleWeekLeave}
         >
-          <div className="absolute left-0 top-0 bottom-0 border-r bg-white z-20" style={{ width: TIME_COL_WIDTH }}>
+          <div className="absolute left-0 top-0 bottom-0 border-r bg-white dark:bg-zinc-900 z-20" style={{ width: TIME_COL_WIDTH }}>
             {TIME_SLOTS.map(slot => (
               <div key={slot.minutes} className="relative flex items-center justify-end pr-3" style={{ height: SLOT_HEIGHT }}>
                 <span className={cn("select-none text-[10px]", slot.isHour ? "font-semibold text-muted-foreground" : "text-muted-foreground/50")}>
@@ -667,7 +673,12 @@ export default function SchedulePage({ canManage, userRole }: { canManage: boole
               return (
                 <div
                   key={'week-col-'+dateKey}
-                  className={cn("relative border-r", isToday(d) && "bg-primary/5")}
+                  className={cn(
+                    "relative border-r",
+                    isToday(d) && "bg-primary/5 dark:bg-emerald-900/10", // <-- Add dark mode highlight
+                    "border-zinc-200 dark:border-zinc-800", // <-- Add dark mode border
+                    "bg-white dark:bg-zinc-900" // <-- Add dark mode background
+                  )}
                   onDragOver={e => {
                     if (editMode && draggedEvent && !draggedEvent.defense) e.preventDefault();
                   }}
@@ -820,7 +831,7 @@ export default function SchedulePage({ canManage, userRole }: { canManage: boole
       dayCursorTime = `${hour12}:${pad2(minute)} ${ampm}`;
     }
     return (
-      <div className="w-full border border-t-0 bg-white flex flex-col rounded-b-md rounded-t-none">
+      <div className="w-full border border-t-0 bg-white dark:bg-zinc-900 flex flex-col rounded-b-md rounded-t-none">
         <div className={cn("sticky flex items-center justify-between px-6 py-4 border-b z-40", GLASS_HEADER)} style={{ top: VIEW_HEADER_OFFSET }}>
           <div className="flex items-end gap-4">
             <div className="flex flex-col leading-none">
@@ -844,7 +855,7 @@ export default function SchedulePage({ canManage, userRole }: { canManage: boole
           onMouseLeave={handleDayLeave}
         >
           <div className="relative" style={{ minHeight: totalHeight }}>
-            <div className="absolute left-0 top-0 bottom-0 w-[90px] border-r bg-white z-20">
+            <div className="absolute left-0 top-0 bottom-0 w-[90px] border-r bg-white dark:bg-zinc-900 z-20">
               {TIME_SLOTS.map(slot => (
                 <div key={slot.minutes} className="relative flex items-center justify-end pr-3" style={{ height: SLOT_HEIGHT }}>
                   <span className={cn("text-[11px] select-none", slot.isHour ? "font-semibold text-muted-foreground" : "text-muted-foreground/50")}>
@@ -853,7 +864,7 @@ export default function SchedulePage({ canManage, userRole }: { canManage: boole
                 </div>
               ))}
             </div>
-            <div className="absolute left-[90px] right-0 top-0 bottom-0">
+            <div className="absolute left-[90px] right-0 top-0 bottom-0 bg-white dark:bg-zinc-900">
               {Array.from({length: DAY_END_HOUR - DAY_START_HOUR}, (_,i)=> (
                 i % 2 === 1 ? (
                   <div key={'stripe-'+i} className="absolute inset-x-0 bg-muted/15" style={{ top: i * 2 * SLOT_HEIGHT, height: SLOT_HEIGHT * 2 }} />

@@ -130,9 +130,10 @@ type Props = {
     onFinish?: () => void;
     open: boolean;
     onOpenChange: (open: boolean) => void;
+    acceptDefense?: boolean; // <-- add prop
 };
 
-export default function SubmitDefenseRequirements({ onFinish, open, onOpenChange }: Props) {
+export default function SubmitDefenseRequirements({ onFinish, open, onOpenChange, acceptDefense = true }: Props) {
     // Get logged-in user info from Inertia page props
     const { props } = usePage<any>();
     const user = props?.auth?.user || {};
@@ -479,6 +480,23 @@ export default function SubmitDefenseRequirements({ onFinish, open, onOpenChange
             ),
         },
     ];
+
+    // If submissions are closed, show a blocking message
+    if (!acceptDefense) {
+        return (
+            <Dialog open={open} onOpenChange={onOpenChange}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Defense Requirement Submission Closed</DialogTitle>
+                        <DialogDescription>
+                            The coordinator has disabled defense requirement submissions. Please try again later or contact your coordinator.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <Button onClick={() => onOpenChange(false)}>Close</Button>
+                </DialogContent>
+            </Dialog>
+        );
+    }
 
     return (
         <Dialog open={open} onOpenChange={handleDialogChange}>

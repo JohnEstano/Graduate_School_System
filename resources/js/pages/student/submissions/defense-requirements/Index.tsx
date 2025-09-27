@@ -25,6 +25,8 @@ import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuIte
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from "@/components/ui/skeleton";
+import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
+import { Info as InfoIcon } from "lucide-react";
 
 dayjs.extend(relativeTime);
 
@@ -100,11 +102,14 @@ type PageProps = {
     };
     defenseRequirements?: DefenseRequirement[];
     defenseRequest?: DefenseRequest | null;
+    acceptDefense?: boolean; // <-- added
 };
 
 export default function DefenseRequestIndex() {
     const { props } = usePage<PageProps>();
-    const { defenseRequirements = [], defenseRequest: initialDefenseRequest } = props;
+    const { defenseRequirements = [], defenseRequest: initialDefenseRequest, acceptDefense = true } = props; // <-- get acceptDefense
+
+    const [showClosedAlert, setShowClosedAlert] = useState(!acceptDefense);
 
     const [defenseRequest, setDefenseRequest] = useState<DefenseRequest | null>(initialDefenseRequest || null);
     const [lastUpdateTime, setLastUpdateTime] = useState<string>(dayjs().format('h:mm A'));
@@ -470,6 +475,7 @@ export default function DefenseRequestIndex() {
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Defense Requirements" />
+           
             {/* Skeleton Loader */}
             {loading ? (
                 <div className="w-full min-h-[70vh] bg-zinc-100 dark:bg-zinc-900 flex flex-col gap-4 p-0 m-0">
@@ -483,6 +489,28 @@ export default function DefenseRequestIndex() {
                 </div>
             ) : (
                 <div className="flex flex-col px-7 pt-5 pb-5 w-full">
+                     {/* Alert if submissions are closed */}
+            {!acceptDefense && showClosedAlert && (
+                <Alert
+                    className="bg-yellow-50 dark:bg-yellow-950 border-yellow-200 dark:border-yellow-900 text-yellow-900 dark:text-yellow-100 flex items-start gap-3 px-6 py-5 rounded-xl mb-4 relative"
+                >
+                    <InfoIcon className="h-5 w-5 text-yellow-500 dark:text-yellow-400 mt-1 flex-shrink-0" />
+                    <div>
+                        <AlertTitle className="font-semibold mb-1">Defense Requirement Submissions Closed</AlertTitle>
+                        <AlertDescription>
+                            The defense requirement submission period is currently closed. Please contact your coordinator for more information.
+                        </AlertDescription>
+                    </div>
+                    <button
+                        type="button"
+                        className="absolute top-2 right-2 text-yellow-900 dark:text-yellow-100 hover:text-yellow-700 dark:hover:text-yellow-300 rounded p-1"
+                        aria-label="Close"
+                        onClick={() => setShowClosedAlert(false)}
+                    >
+                        <X className="h-4 w-4" />
+                    </button>
+                </Alert>
+            )}
                     <div className="w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg overflow-hidden">
                         <div className="flex flex-row items-center justify-between w-full p-3 border-b border-zinc-200 dark:border-zinc-800">
                             <div className="flex items-center gap-2">
@@ -501,11 +529,13 @@ export default function DefenseRequestIndex() {
                             <Button
                                 className="bg-rose-500 text-sm px-5 rounded-md dark:bg-rose-600 disabled:opacity-60"
                                 onClick={() => setOpen(true)}
-                                disabled={hasActiveWorkflow}
+                                disabled={hasActiveWorkflow || !acceptDefense} // <-- disable if closed
                                 title={
-                                    hasActiveWorkflow
-                                        ? 'You already have an active defense workflow. Finish (or reach a terminal state) before submitting another.'
-                                        : 'Submit new defense requirements'
+                                    !acceptDefense
+                                        ? 'Defense requirement submissions are currently closed.'
+                                        : hasActiveWorkflow
+                                            ? 'You already have an active defense workflow. Finish (or reach a terminal state) before submitting another.'
+                                            : 'Submit new defense requirements'
                                 }
                             >
                                 Submit requirements
@@ -514,6 +544,7 @@ export default function DefenseRequestIndex() {
                                 open={open}
                                 onOpenChange={setOpen}
                                 onFinish={handleSuccess}
+                                acceptDefense={acceptDefense} // <-- pass to child
                             />
                         </div>
                         {defenseRequirements.length === 0 ? (

@@ -6,6 +6,7 @@ use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 use App\Models\DocumentTemplate;
+use Illuminate\Http\Request;
 
 /*
 | Central settings & profile routes.
@@ -49,4 +50,24 @@ Route::middleware(['auth','verified'])->group(function () {
     Route::get('/settings/signatures', function () {
         return Inertia::render('settings/signatures/Index');
     })->name('settings.signatures');
+
+    // General Settings (Coordinator only)
+    Route::get('/settings/general', function () {
+        abort_unless(Auth::user()->role === 'Coordinator', 403);
+        $acceptDefense = \DB::table('settings')->where('key', 'accept_defense')->value('value');
+        $acceptDefense = $acceptDefense === null ? true : $acceptDefense === '1'; // <-- FIXED
+        return Inertia::render('settings/general', [
+            'initialAcceptDefense' => $acceptDefense,
+        ]);
+    })->name('settings.general');
+
+    Route::post('/api/settings/general', function (Request $request) {
+        abort_unless(Auth::user()->role === 'Coordinator', 403);
+        $accept = $request->input('acceptDefense') ? '1' : '0';
+        \DB::table('settings')->updateOrInsert(
+            ['key' => 'accept_defense'],
+            ['value' => $accept]
+        );
+        return response()->json(['ok' => true, 'acceptDefense' => $accept]);
+    });
 });
