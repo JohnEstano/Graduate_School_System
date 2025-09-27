@@ -508,6 +508,10 @@ export default function SchedulePage({ canManage, userRole }: { canManage: boole
   }
 
 
+  const GRID_LINE_LIGHT = "border-zinc-200";
+const GRID_LINE_DARK = "dark:border-zinc-700";
+const GRID_LINE = `${GRID_LINE_LIGHT} ${GRID_LINE_DARK}`;
+
   const renderMonth = () => {
     const weeks = monthWeeks;
     return (
@@ -517,17 +521,20 @@ export default function SchedulePage({ canManage, userRole }: { canManage: boole
         onDragEnd={handleDragEnd}
         onDragOver={handleDragOver}
       >
-        <div className="w-full border border-t-0 bg-white flex flex-col rounded-b-md rounded-t-none">
+        <div className="w-full border border-t-0 bg-white dark:bg-zinc-900 flex flex-col rounded-b-md rounded-t-none">
           <div
             className={cn(
               "grid border-b sticky z-40",
               GLASS_HEADER,
-              "bg-transparent" 
+              "bg-transparent"
             )}
             style={{ gridTemplateColumns: "repeat(7, 1fr)", top: VIEW_HEADER_OFFSET }}
           >
             {['SUN','MON','TUE','WED','THU','FRI','SAT'].map(d => (
-              <div key={d} className="h-12 border-r last:border-r-0 flex items-center justify-center text-[10px] font-semibold uppercase tracking-wide">
+              <div key={d} className={cn(
+                "h-12 border-r last:border-r-0 flex items-center justify-center text-[10px] font-semibold uppercase tracking-wide",
+                GRID_LINE
+              )}>
                 {d}
               </div>
             ))}
@@ -552,8 +559,8 @@ export default function SchedulePage({ canManage, userRole }: { canManage: boole
                       <span
                         className={cn(
                           "w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-semibold select-none",
-                          today && "bg-rose-500 text-white shadow dark:bg-rose-500", // <-- fixed for dark mode
-                          !today && selected && "bg-rose-500/80 text-white dark:bg-rose-500/80", // <-- fixed for dark mode
+                          today && "bg-rose-500 text-white shadow dark:bg-rose-500",
+                          !today && selected && "bg-rose-500/80 text-white dark:bg-rose-500/80",
                           !today && !selected && "text-muted-foreground"
                         )}
                       >
@@ -621,7 +628,10 @@ export default function SchedulePage({ canManage, userRole }: { canManage: boole
           className={cn("grid border-b sticky z-40", GLASS_HEADER)}
           style={{ gridTemplateColumns: `${TIME_COL_WIDTH}px repeat(7, 1fr)`, top: VIEW_HEADER_OFFSET }}
         >
-          <div className="h-12 border-r flex items-center justify-center text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+          <div className={cn(
+            "h-12 border-r flex items-center justify-center text-[10px] font-semibold uppercase tracking-wide text-muted-foreground",
+            GRID_LINE
+          )}>
             TIME
           </div>
           {weekDays.map(d => {
@@ -632,16 +642,17 @@ export default function SchedulePage({ canManage, userRole }: { canManage: boole
                 key={d.toISOString()}
                 className={cn(
                   "h-12 border-r flex flex-col items-center justify-center gap-0.5 text-xs font-medium",
-                  isSelected && !today && "bg-primary/5",
-                  today && "text-primary font-semibold"
+                  isSelected && !today && "bg-primary/5 dark:bg-rose-900/10",
+                  today && "text-primary font-semibold",
+                  GRID_LINE
                 )}
               >
                 <span className="uppercase tracking-wide text-[10px]">{format(d,'EEE')}</span>
                 <span
                   className={cn(
                     "w-7 h-7 rounded-full flex items-center justify-center text-[12px] font-semibold",
-                    today && "bg-primary text-white shadow",
-                    !today && isSelected && "bg-primary/80 text-white"
+                    today && "bg-rose-500 text-white shadow dark:bg-rose-500",
+                    !today && isSelected && "bg-rose-500/80 text-white dark:bg-rose-500/80"
                   )}
                 >
                   {format(d,'d')}
@@ -657,7 +668,7 @@ export default function SchedulePage({ canManage, userRole }: { canManage: boole
           onMouseMove={handleWeekMove}
           onMouseLeave={handleWeekLeave}
         >
-          <div className="absolute left-0 top-0 bottom-0 border-r bg-white dark:bg-zinc-900 z-20" style={{ width: TIME_COL_WIDTH }}>
+          <div className={cn("absolute left-0 top-0 bottom-0 border-r bg-white dark:bg-zinc-900 z-20", GRID_LINE)} style={{ width: TIME_COL_WIDTH }}>
             {TIME_SLOTS.map(slot => (
               <div key={slot.minutes} className="relative flex items-center justify-end pr-3" style={{ height: SLOT_HEIGHT }}>
                 <span className={cn("select-none text-[10px]", slot.isHour ? "font-semibold text-muted-foreground" : "text-muted-foreground/50")}>
@@ -675,9 +686,9 @@ export default function SchedulePage({ canManage, userRole }: { canManage: boole
                   key={'week-col-'+dateKey}
                   className={cn(
                     "relative border-r",
-                    isToday(d) && "bg-primary/5 dark:bg-emerald-900/10", // <-- Add dark mode highlight
-                    "border-zinc-200 dark:border-zinc-800", // <-- Add dark mode border
-                    "bg-white dark:bg-zinc-900" // <-- Add dark mode background
+                    isToday(d) && "bg-primary/5 dark:bg-emerald-900/10",
+                    GRID_LINE,
+                    "bg-white dark:bg-zinc-900"
                   )}
                   onDragOver={e => {
                     if (editMode && draggedEvent && !draggedEvent.defense) e.preventDefault();
@@ -702,13 +713,13 @@ export default function SchedulePage({ canManage, userRole }: { canManage: boole
                 >
                   {Array.from({ length: DAY_END_HOUR - DAY_START_HOUR }, (_, i) =>
                     i % 2 === 1 ? (
-                      <div key={'stripe-'+i} className="absolute inset-x-0 bg-muted/15" style={{ top: i * 2 * SLOT_HEIGHT, height: SLOT_HEIGHT * 2 }} />
+                      <div key={'stripe-'+i} className="absolute inset-x-0 bg-muted/15 dark:bg-zinc-800/30" style={{ top: i * 2 * SLOT_HEIGHT, height: SLOT_HEIGHT * 2 }} />
                     ) : null
                   )}
                   {TIME_SLOTS.map((slot,i) => (
                     <div
                       key={slot.minutes}
-                      className={cn("absolute left-0 right-0 border-b", slot.isHour ? "border-muted-foreground/40" : "border-muted/40")}
+                      className={cn("absolute left-0 right-0", slot.isHour ? `${GRID_LINE} border-b-2` : `${GRID_LINE} border-b`)}
                       style={{ top: i * SLOT_HEIGHT }}
                     />
                   ))}
@@ -728,13 +739,15 @@ export default function SchedulePage({ canManage, userRole }: { canManage: boole
                         className={cn(
                           "absolute rounded-md text-[11px] flex flex-col overflow-hidden cursor-pointer",
                           ev.defense ? EVENT_BASE : EVENT_BASE,
-                          "hover:ring-2 ring-primary/40"
+                          "hover:ring-2 ring-primary/40",
+                          "bg-white dark:bg-zinc-800", // <-- Ensure card bg for dark
+                          "border border-zinc-200 dark:border-zinc-700" // <-- Card border for dark
                         )}
                         style={{
                           top: `calc(${topPct}% )`,
                           height: `calc(${heightPct}% )`,
-                          left: `calc(${(l?.leftPct ?? 0)}% + 4px)`,
-                          width: `calc(${(l?.widthPct ?? 100)}% - 8px)`,
+                          left: `calc(${(l?.leftPct ?? 0)}% )`,
+                          width: `calc(${(l?.widthPct ?? 100)}% )`,
                           backgroundColor: ev.defense ? undefined : (ev.color || '#34d399'),
                           color: ev.defense ? undefined : getTextColor(ev.color)
                         }}
@@ -832,7 +845,7 @@ export default function SchedulePage({ canManage, userRole }: { canManage: boole
     }
     return (
       <div className="w-full border border-t-0 bg-white dark:bg-zinc-900 flex flex-col rounded-b-md rounded-t-none">
-        <div className={cn("sticky flex items-center justify-between px-6 py-4 border-b z-40", GLASS_HEADER)} style={{ top: VIEW_HEADER_OFFSET }}>
+        <div className={cn("sticky flex items-center justify-between px-6 py-4 border-b z-40", GLASS_HEADER, GRID_LINE)} style={{ top: VIEW_HEADER_OFFSET }}>
           <div className="flex items-end gap-4">
             <div className="flex flex-col leading-none">
               <span className="text-4xl font-bold tracking-tight">
@@ -855,7 +868,7 @@ export default function SchedulePage({ canManage, userRole }: { canManage: boole
           onMouseLeave={handleDayLeave}
         >
           <div className="relative" style={{ minHeight: totalHeight }}>
-            <div className="absolute left-0 top-0 bottom-0 w-[90px] border-r bg-white dark:bg-zinc-900 z-20">
+            <div className={cn("absolute left-0 top-0 bottom-0 w-[90px] border-r bg-white dark:bg-zinc-900 z-20", GRID_LINE)}>
               {TIME_SLOTS.map(slot => (
                 <div key={slot.minutes} className="relative flex items-center justify-end pr-3" style={{ height: SLOT_HEIGHT }}>
                   <span className={cn("text-[11px] select-none", slot.isHour ? "font-semibold text-muted-foreground" : "text-muted-foreground/50")}>
@@ -867,13 +880,13 @@ export default function SchedulePage({ canManage, userRole }: { canManage: boole
             <div className="absolute left-[90px] right-0 top-0 bottom-0 bg-white dark:bg-zinc-900">
               {Array.from({length: DAY_END_HOUR - DAY_START_HOUR}, (_,i)=> (
                 i % 2 === 1 ? (
-                  <div key={'stripe-'+i} className="absolute inset-x-0 bg-muted/15" style={{ top: i * 2 * SLOT_HEIGHT, height: SLOT_HEIGHT * 2 }} />
+                  <div key={'stripe-'+i} className="absolute inset-x-0 bg-muted/15 dark:bg-zinc-800/30" style={{ top: i * 2 * SLOT_HEIGHT, height: SLOT_HEIGHT * 2 }} />
                 ) : null
               ))}
               {TIME_SLOTS.map((slot,i) => (
                 <div
                   key={slot.minutes}
-                  className={cn("absolute left-0 right-0 border-b", slot.isHour ? "border-muted-foreground/40" : "border-muted/40")}
+                  className={cn("absolute left-0 right-0", slot.isHour ? `${GRID_LINE} border-b-2` : `${GRID_LINE} border-b`)}
                   style={{ top: i * SLOT_HEIGHT }}
                 />
               ))}
@@ -893,7 +906,9 @@ export default function SchedulePage({ canManage, userRole }: { canManage: boole
                     className={cn(
                       "absolute rounded-md p-2 text-[11px] flex flex-col overflow-hidden cursor-pointer",
                       ev.defense ? EVENT_BASE_SOLID : EVENT_BASE,
-                      "hover:ring-2 ring-primary/40"
+                      "hover:ring-2 ring-primary/40",
+                      "bg-white dark:bg-zinc-800", // <-- Ensure card bg for dark
+                      "border border-zinc-200 dark:border-zinc-700" // <-- Card border for dark
                     )}
                     style={{
                       top: `calc(${topPct}% )`,
@@ -1048,7 +1063,7 @@ export default function SchedulePage({ canManage, userRole }: { canManage: boole
                     <X className="h-4 w-4" />
                   </Button>
                 </div>
-                <div className="flex-1 overflow-y-auto p-4 bg-white">
+                <div className="flex-1 overflow-y-auto p-4 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100">
                   <div className="space-y-4">
                     <div className="space-y-3">
                       <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
