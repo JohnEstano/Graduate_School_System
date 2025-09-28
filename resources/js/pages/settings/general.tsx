@@ -138,7 +138,7 @@ export default function GeneralSettings({
           {(role === "Adviser" || role === "Faculty") && (
             <>
               <div>
-                <div className="text-sm text-muted-foreground mb-1">Your Adviser Code</div>
+                <div className="text-base font-medium mb-1">Your Adviser Code</div>
                 <div className="flex items-center gap-3">
                   <Input value={adviserCode} disabled className="w-40 font-mono text-base" />
                   <Button
@@ -161,10 +161,10 @@ export default function GeneralSettings({
                     disabled={adviserLoading}
                     aria-label="Auto-accept students"
                   />
-                  <span className="text-base font-normal">Auto-accept students who enter your adviser code</span>
+                  <span className="text-base font-medium">Auto-accept students who enter your adviser code</span>
                 </div>
                 <div className="text-sm text-muted-foreground max-w-lg">
-                  When enabled, students who enter your code are automatically linked to you. When disabled, you must manually approve each student.
+                  When enabled, students who enter your code are automatically registered as your students. When disabled, you must manually approve each student.
                 </div>
               </div>
               <Dialog open={adviserDialogOpen} onOpenChange={setAdviserDialogOpen}>
