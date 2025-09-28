@@ -66,11 +66,13 @@ const assistantNavItems: MainNavItem[] = [
         ],
     },
     {
-        title: 'Honorarium',
-        href: '/honorarium-summary',
+        title: 'Honorarium Summary',
+        href: '/honorarium',
         icon: DollarSign,
         
     },
+
+    
     { title: 'Student Records', href: '/student-records', icon: Users },
     { title: 'Schedules', href: '/schedules', icon: CalendarFold },
     { title: 'Messages', href: '/messages', icon: MessageSquareText },

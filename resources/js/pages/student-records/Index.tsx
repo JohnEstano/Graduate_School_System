@@ -8,23 +8,15 @@ import IndividualRecord from './individual-records';
 import EditStudentModal from './edit-student-record';
 import DeletePrompt from './delete-prompt';
 import {
-  ChevronsLeft,
-  ChevronLeft,
-  ChevronRight,
-  ChevronsRight,
   Eye,
   SquarePen,
   Trash2,
-  Calendar,
-  Book,
-  Check,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Command, CommandEmpty, CommandGroup, CommandItem, CommandList, CommandInput } from '@/components/ui/command';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { cn } from '@/lib/utils';
 import { SearchInput } from '@/components/ui/search-input';
 
 interface StudentRecord {
@@ -144,112 +136,26 @@ export default function Index({ records, filters }: IndexProps) {
             value={data.search}
             onChange={(e) => setData('search', e.target.value)}
           />
-
-          <div className="flex items-center space-x-4">
-            <span className="text-sm font-medium text-muted-foreground">Filter:</span>
-
-            {/* Year Filter */}
-            <Popover open={isYearPopoverOpen} onOpenChange={setYearPopoverOpen}>
-              <PopoverTrigger asChild>
-                <Button variant="outline" className="w-[150px] justify-start text-left font-normal">
-                  <Calendar className="mr-2 h-4 w-4" />
-                  {data.year ?? 'All Years'}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-[200px] p-0" align="start">
-                <Command>
-                  <CommandInput placeholder="Search years..." />
-                  <CommandList>
-                    <CommandEmpty>No year found.</CommandEmpty>
-                    <CommandGroup>
-                      <CommandItem
-                        onSelect={() => {
-                          setData('year', null);
-                          setYearPopoverOpen(false);
-                        }}
-                      >
-                        <Check className={cn('mr-2 h-4 w-4', data.year === null ? 'opacity-100' : 'opacity-0')} />
-                        All Years
-                      </CommandItem>
-
-                      {generateYearRange(2020, 2025).map((year) => (
-                        <CommandItem
-                          key={year}
-                          onSelect={() => {
-                            setData('year', year);
-                            setYearPopoverOpen(false);
-                          }}
-                        >
-                          <Check className={cn('mr-2 h-4 w-4', data.year === year ? 'opacity-100' : 'opacity-0')} />
-                          {year}
-                        </CommandItem>
-                      ))}
-                    </CommandGroup>
-                  </CommandList>
-                </Command>
-              </PopoverContent>
-            </Popover>
-
-            {/* Program Filter */}
-            <Popover open={isProgramPopoverOpen} onOpenChange={setProgramPopoverOpen}>
-              <PopoverTrigger asChild>
-                <Button variant="outline" className="w-[180px] justify-start text-left font-normal">
-                  <Book className="mr-2 h-4 w-4" />
-                  {data.program ?? 'All Programs'}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-[200px] p-0" align="start">
-                <Command>
-                  <CommandInput placeholder="Filter program..." />
-                  <CommandList>
-                    <CommandEmpty>No program found.</CommandEmpty>
-                    <CommandGroup>
-                      {programCategories.map((program) => (
-                        <CommandItem
-                          key={program}
-                          onSelect={() => {
-                            setData('program', program);
-                            setProgramPopoverOpen(false);
-                          }}
-                        >
-                          <Check className={cn('mr-2 h-4 w-4', data.program === program ? 'opacity-100' : 'opacity-0')} />
-                          {program}
-                        </CommandItem>
-                      ))}
-                    </CommandGroup>
-                    <CommandItem
-                      onSelect={() => {
-                        setData('program', null);
-                        setProgramPopoverOpen(false);
-                      }}
-                      className="text-red-500"
-                    >
-                      Clear Filter
-                    </CommandItem>
-                  </CommandList>
-                </Command>
-              </PopoverContent>
-            </Popover>
-          </div>
         </div>
 
-        {/* Table */}
-        <div className="rounded-md overflow-x-auto border border-border bg-white dark:bg-[#121212] p-2">
+        {/* Scrollable Table with Sticky Header */}
+        <div className="rounded-md border border-border bg-white dark:bg-[#121212] p-2 max-h-[75vh] overflow-y-auto">
           <Table className="min-w-full text-sm">
-            <TableHeader>
+            <TableHeader className="sticky top-0 bg-white dark:bg-[#121212] z-10 shadow-sm">
               <TableRow>
-                <TableHead className="w-[30%] px-1 py-2">Student</TableHead>
-                <TableHead className="w-[15%] px-1 py-2 text-center">Program</TableHead>
-                <TableHead className="w-[15%] px-1 py-2 text-center">OR Number</TableHead>
-                <TableHead className="w-[15%] px-1 py-2 text-center">Payment Date</TableHead>
-                <TableHead className="w-[10%] px-1 py-2 text-center">Records</TableHead>
-                <TableHead className="w-[15%] px-1 py-2 text-center">Actions</TableHead>
+                <TableHead className="w-[30%] px-1 py-2">Student Name</TableHead>
+                <TableHead className="w-[15%] px-1 py-2 text-center">Program/Section</TableHead>
+                <TableHead className="w-[15%] px-1 py-2 text-center">Academic Status</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {records.data.length > 0 ? (
                 records.data.map((record) => (
-                  <TableRow key={record.id} className="hover:bg-muted/50">
+                  <TableRow
+                    key={record.id}
+                    className="hover:bg-muted/50 cursor-pointer"
+                    onClick={() => openIndividualRecord(record)}
+                  >
                     <TableCell className="flex items-center space-x-4 px-1 py-2">
                       <Avatar className="h-10 w-10 flex-shrink-0 bg-blue-100 text-blue-600 dark:bg-blue-900 dark:text-blue-300">
                         <AvatarFallback>{record.first_name.charAt(0)}</AvatarFallback>
@@ -263,43 +169,11 @@ export default function Index({ records, filters }: IndexProps) {
                     </TableCell>
                     <TableCell className="px-1 py-2 text-center">{record.program}</TableCell>
                     <TableCell className="px-1 py-2 text-center">{record.or_number}</TableCell>
-                    <TableCell className="px-1 py-2 text-center">{record.payment_date}</TableCell>
-                    <TableCell className="px-1 py-2 text-center">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="rounded-md px-3 py-2 h-auto text-xs flex items-center gap-1"
-                        onClick={() => openIndividualRecord(record)}
-                      >
-                        <Eye className="w-4 h-4" />
-                        <span className="hidden sm:inline-block">View</span>
-                      </Button>
-                    </TableCell>
-                    <TableCell className="px-1 py-2 text-center">
-                      <div className="flex justify-center space-x-2">
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          className="rounded-md h-auto p-2"
-                          onClick={() => openEditModal(record)}
-                        >
-                          <SquarePen className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          className="rounded-md h-auto p-2"
-                          onClick={() => openDeletePrompt(record)}
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
                   </TableRow>
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={6} className="h-24 text-center">
+                  <TableCell colSpan={4} className="h-24 text-center">
                     No results found.
                   </TableCell>
                 </TableRow>
@@ -308,53 +182,24 @@ export default function Index({ records, filters }: IndexProps) {
           </Table>
         </div>
 
-        {/* Pagination */}
-        {records.last_page > 1 && (
-          <div className="mt-4 flex justify-end items-center space-x-2 text-sm text-muted-foreground">
-            <span>Page {records.current_page} of {records.last_page}</span>
-            <Button variant="outline" size="icon" disabled={records.current_page === 1}
-              onClick={() => router.get(route('student-records.index', { ...data, page: 1 }))}>
-              <ChevronsLeft className="w-4 h-4" />
-            </Button>
-            <Button variant="outline" size="icon" disabled={records.current_page === 1}
-              onClick={() => router.get(route('student-records.index', { ...data, page: records.current_page - 1 }))}>
-              <ChevronLeft className="w-4 h-4" />
-            </Button>
-            <Button variant="outline" size="icon" disabled={records.current_page === records.last_page}
-              onClick={() => router.get(route('student-records.index', { ...data, page: records.current_page + 1 }))}>
-              <ChevronRight className="w-4 h-4" />
-            </Button>
-            <Button variant="outline" size="icon" disabled={records.current_page === records.last_page}
-              onClick={() => router.get(route('student-records.index', { ...data, page: records.last_page }))}>
-              <ChevronsRight className="w-4 h-4" />
-            </Button>
-          </div>
-        )}
-
-        {/* Modals */}
+        {/* Individual Record Modal (same style as Show.tsx) */}
         {showIndividualRecord && selectedRecord && (
-          <div className="fixed inset-0 z-50 flex justify-center items-center bg-black/80">
-            <div className="bg-white dark:bg-gray-800 w-1/2 max-h-[80vh] min-h-[40vh] rounded-lg shadow-lg overflow-auto p-2">
-              <IndividualRecord record={selectedRecord} />
-              <div className="text-right">
-                <Button
-                  onClick={() => setShowIndividualRecord(false)}
-                  className="bg-rose-500 hover:bg-rose-600 text-white px-6 py-2 rounded"
-                >
-                  Close
-                </Button>
-              </div>
-            </div>
-          </div>
+          <IndividualRecord
+            record={selectedRecord as any}
+            onClose={() => setShowIndividualRecord(false)}
+          />
         )}
 
-{isEditModalOpen && selectedRecord && (
-  <EditStudentModal
-    isOpen={isEditModalOpen}
-    onClose={() => setIsEditModalOpen(false)}
-    record={selectedRecord}
-  />
-)}
+        {/* Edit Modal */}
+        {isEditModalOpen && selectedRecord && (
+          <EditStudentModal
+            isOpen={isEditModalOpen }
+            onClose={() => setIsEditModalOpen(false)}
+            record={selectedRecord}
+          />
+        )}
+
+        {/* Delete Prompt */}
         <DeletePrompt
           isOpen={showDeletePrompt}
           onClose={() => setShowDeletePrompt(false)}

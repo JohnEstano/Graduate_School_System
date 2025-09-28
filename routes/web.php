@@ -11,6 +11,9 @@ Route::get('/', function () {
     return Inertia::render('welcome');
 })->name('home');
 
+Route::post('/programs/{programId}/panelists', [HonorariumSummaryController::class, 'storePanelist'])
+    ->name('programs.panelists.store');
+
 // The routes here means that to be rendered or accessed, you need to login or have prior authentication.
 Route::middleware(['auth', 'verified'])->group(function () {
     // Dashboard route
@@ -52,12 +55,75 @@ Route::middleware(['auth', 'verified'])->group(function () {
         return Inertia::render('student/submissions/comprehensive-exam/Index');
     })->name('comprehensive-exam.index');
 
-    //Honorarium route
-    // honorarium-summary route
-    Route::get('/honorarium-summary', [HonorariumSummaryController::class, 'Index'])
-    ->name('honorarium-summary.index');
-    Route::get('/honorarium-summary/{record}/download', [HonorariumSummaryController::class, 'download'])
-    ->name('honorarium-summary.download');
+
+
+
+
+
+
+
+
+
+
+
+    // HONORARIUM ROUTES
+    // Page 1 - List all programs
+    Route::get('/honorarium', [HonorariumSummaryController::class, 'index']) 
+        ->name('honorarium.index'); 
+
+        
+Route::get('/honorarium/individual-record/{programId}', [HonorariumSummaryController::class, 'show'])
+    ->name('honorarium-record.show');
+    
+
+// Download CSV for a program
+Route::get('/honorarium/{record}/download', [HonorariumSummaryController::class, 'downloadCSV'])
+    ->name('honorarium.download');
+
+Route::get('/honorarium/{id}/download-pdf', [HonorariumSummaryController::class, 'downloadPDF'])
+    ->name('honorarium.downloadPDF');
+
+
+
+
+    
+
+    // For program filter
+    Route::get('/student-records/program/{program}', [StudentRecordController::class, 'getByProgram'])
+        ->name('student-records.getByProgram');
+
+    // For DOCX download
+    Route::get('/student-records/{id}/download-docs', [StudentRecordController::class, 'downloadDocs'])
+        ->name('student-records.downloadDocs');
+
+
+
+
+
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     //student-records route
     Route::get('/student-records', [StudentRecordController::class, 'index'])->name('student-records.index');
     Route::put('/student-records/{studentRecord}', [StudentRecordController::class, 'update'])->name('student-records.update');

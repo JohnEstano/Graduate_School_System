@@ -2,23 +2,21 @@ import React from 'react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 
-interface PanelRow {
-  chair: string;
-  member: string;
+interface Panelist {
+  id: number;
+  pfirst_name: string;
+  pmiddle_name: string | null;
+  plast_name: string;
+  role: string;
 }
 
 interface ViewPanelistProps {
   isOpen: boolean;
   onClose: () => void;
+  panelists: Panelist[];
 }
 
-const panelData: PanelRow[] = [
-  { chair: 'Chair Person 1', member: 'Panelist 1' },
-  { chair: 'Chair Person 2', member: 'Panelist 2' },
-  { chair: 'Chair Person 3', member: 'Panelist 3' },
-];
-
-const ViewPanelist: React.FC<ViewPanelistProps> = ({ isOpen, onClose }) => {
+const ViewPanelist: React.FC<ViewPanelistProps> = ({ isOpen, onClose, panelists }) => {
   if (!isOpen) return null;
 
   return (
@@ -30,25 +28,37 @@ const ViewPanelist: React.FC<ViewPanelistProps> = ({ isOpen, onClose }) => {
           <h2 className="text-white font-semibold">Panelists</h2>
         </div>
 
-        {/* Table using same interface as IndividualRecord */}
+        {/* Table */}
         <Table className="min-w-full text-sm">
           <TableHeader>
             <TableRow>
-              <TableHead>Chair Name</TableHead>
-              <TableHead>Member Name</TableHead>
+              <TableHead>Name</TableHead>
+              <TableHead>Role</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {panelData.map((row, index) => (
-              <TableRow key={index}>
-                <TableCell>{row.chair}</TableCell>
-                <TableCell>{row.member}</TableCell>
+            {panelists.length > 0 ? (
+              panelists.map((panelist) => (
+                <TableRow key={panelist.id}>
+                  <TableCell>
+                    {panelist.pfirst_name}{" "}
+                    {panelist.pmiddle_name ? panelist.pmiddle_name + " " : ""}
+                    {panelist.plast_name}
+                  </TableCell>
+                  <TableCell>{panelist.role}</TableCell>
+                </TableRow>
+              ))
+            ) : (
+              <TableRow>
+                <TableCell colSpan={2} className="text-center text-gray-500">
+                  No panelists found123
+                </TableCell>
               </TableRow>
-            ))}
+            )}
           </TableBody>
         </Table>
 
-        {/* Close Button styled like IndividualRecord Cancel */}
+        {/* Close Button */}
         <div className="flex justify-end mt-4">
           <Button
             variant="outline"

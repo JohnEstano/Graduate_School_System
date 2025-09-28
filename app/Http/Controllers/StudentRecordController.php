@@ -3,11 +3,16 @@
 namespace App\Http\Controllers;
 
 use App\Models\StudentRecord;
+use App\Models\PanelistRecord;
+use App\Models\PaymentRecord; 
 use Illuminate\Http\Request;
+use PhpOffice\PhpWord\PhpWord;
+use PhpOffice\PhpWord\IOFactory;
 use Inertia\Inertia;
 
 class StudentRecordController extends Controller
 {
+    // Existing index method
     public function index(Request $request)
     {
         $records = StudentRecord::with('payments') // eager load payments
@@ -33,16 +38,39 @@ class StudentRecordController extends Controller
         ]);
     }
 
-    public function show(StudentRecord $studentRecord)
-    {
-        // Load related payments
-        $studentRecord->load('payments');
+    // Show individual record page
+public function show($id)
+{
+    // Load the student with all payments and panelists
+    $studentRecord = StudentRecord::with([
+        'payments.panelist', // eager load panelist relation
+    ])->findOrFail($id);
 
-        return Inertia::render('student-records/individual-records', [
-            'record' => $studentRecord
-        ]);
-    }
+    // Transform payments to include a panelists array
+    $studentRecord->payments->transform(function ($payment) {
+        return [
+            'id' => $payment->id,
+            'payment_date' => $payment->payment_date,
+            'defense_status' => $payment->defense_status,
+            'amount' => $payment->amount,
+            // 🔹 Always return panelists as an array
+            'panelists' => $payment->panelist ? [[
+                'role' => $payment->panelist->role,
+                'pfirst_name' => $payment->panelist->pfirst_name,
+                'plast_name' => $payment->panelist->plast_name,
+                'amount' => $payment->amount, // payment amount
+            ]] : [],
+        ];
+    });
 
+    // Return JSON response for React/Inertia
+    return response()->json($studentRecord);
+}
+
+
+
+
+    // Update a record
     public function update(Request $request, StudentRecord $studentRecord)
     {
         $request->validate([
@@ -65,10 +93,74 @@ class StudentRecordController extends Controller
         return redirect()->back()->with('success', 'Record updated successfully.');
     }
 
+    // Delete a record
     public function destroy(StudentRecord $studentRecord)
     {
         $studentRecord->delete();
 
         return redirect()->back()->with('success', 'Record deleted successfully.');
     }
+
+    // 🔹 NEW: API endpoint for React modal to fetch student records by program
+    public function getByProgram(string $program)
+    {
+        $records = StudentRecord::where('program', $program)
+            ->orderBy('payment_date', 'desc')
+            ->get();
+
+        return response()->json($records);
+    }
+
+    // 🔹 NEW: API endpoint to fetch panelist names + roles (for ViewPanelist modal)
+    public function getPanelists()
+    {
+        $panelists = PanelistRecord::select(
+                'pfirst_name',
+                'pmiddle_name',
+                'plast_name',
+                'role'
+            )
+            ->orderBy('role', 'asc')
+            ->get()
+            ->map(function ($panelist) {
+                return [
+                    'name' => trim($panelist->pfirst_name . ' ' . ($panelist->pmiddle_name ? $panelist->pmiddle_name . ' ' : '') . $panelist->plast_name),
+                    'role' => $panelist->role,
+                ];
+            });
+
+        return response()->json($panelists);
+    }
+
+    public function downloadDocs($id)
+    {
+        $payment = PaymentRecord::with(['studentRecord', 'studentRecord.program'])
+            ->findOrFail($id);
+
+        $phpWord = new PhpWord();
+        $section = $phpWord->addSection();
+
+        // Title
+        $section->addText("Payment Summary", ['bold' => true, 'size' => 16]);
+        $section->addTextBreak();
+
+        // Student details
+        $student = $payment->studentRecord;
+        $section->addText("Student: {$student->first_name} {$student->last_name}");
+        $section->addText("School Year: {$payment->school_year}");
+        $section->addText("Payment Date: {$payment->payment_date}");
+        $section->addText("Defense Status: {$payment->defense_status}");
+        $section->addText("Amount: ₱" . number_format($payment->amount, 2));
+
+        // Save temp file
+        $fileName = "payment-{$payment->id}.docx";
+        $tempFile = tempnam(sys_get_temp_dir(), $fileName);
+
+        $writer = IOFactory::createWriter($phpWord, 'Word2007');
+        $writer->save($tempFile);
+
+        return response()->download($tempFile, $fileName)->deleteFileAfterSend(true);
+    }
+
 }
+    
