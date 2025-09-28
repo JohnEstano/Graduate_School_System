@@ -53,11 +53,30 @@ Route::middleware(['auth','verified'])->group(function () {
 
     // General Settings (Coordinator only)
     Route::get('/settings/general', function () {
-        abort_unless(Auth::user()->role === 'Coordinator', 403);
-        $acceptDefense = \DB::table('settings')->where('key', 'accept_defense')->value('value');
-        $acceptDefense = $acceptDefense === null ? true : $acceptDefense === '1'; // <-- FIXED
+        $role = Auth::user()->role;
+        abort_unless(in_array($role, ['Coordinator', 'Adviser', 'Faculty']), 403);
+
+        // Coordinator: defense submissions
+        $acceptDefense = null;
+        if ($role === 'Coordinator') {
+            $acceptDefense = \DB::table('settings')->where('key', 'accept_defense')->value('value');
+            $acceptDefense = $acceptDefense === null ? true : $acceptDefense === '1';
+        }
+
+        // Adviser/Faculty: adviser code and auto-accept
+        $autoAccept = null;
+        $adviserCode = null;
+        if (in_array($role, ['Adviser', 'Faculty'])) {
+            $autoAccept = \DB::table('adviser_settings')->where('adviser_id', Auth::id())->value('auto_accept_students');
+            $autoAccept = $autoAccept === null ? false : $autoAccept == 1;
+            $adviserCode = Auth::user()->adviser_code;
+        }
+
         return Inertia::render('settings/general', [
+            'role' => $role,
             'initialAcceptDefense' => $acceptDefense,
+            'initialAutoAccept' => $autoAccept,
+            'initialAdviserCode' => $adviserCode,
         ]);
     })->name('settings.general');
 
@@ -70,4 +89,36 @@ Route::middleware(['auth','verified'])->group(function () {
         );
         return response()->json(['ok' => true, 'acceptDefense' => $accept]);
     });
+
+    Route::post('/settings/adviser/reset-code', function (Request $request) {
+        $user = Auth::user();
+        abort_unless(in_array($user->role, ['Adviser', 'Faculty']), 403);
+        $user->adviser_code = null;
+        $user->generateAdviserCode();
+        return response()->json(['adviser_code' => $user->adviser_code]);
+    });
+
+    Route::post('/settings/adviser/auto-accept', function (Request $request) {
+        $user = Auth::user();
+        abort_unless(in_array($user->role, ['Adviser', 'Faculty']), 403);
+        $autoAccept = $request->input('autoAccept') ? 1 : 0;
+    \DB::table('adviser_settings')->updateOrInsert(
+        ['adviser_id' => $user->id],
+        ['auto_accept_students' => $autoAccept]
+    );
+    return response()->json(['autoAccept' => $autoAccept]);
+});
+
+    Route::get('/settings/adviser', function () {
+        $user = Auth::user();
+        abort_unless(in_array($user->role, ['Adviser', 'Faculty']), 403);
+
+        $autoAccept = \DB::table('adviser_settings')->where('adviser_id', $user->id)->value('auto_accept_students');
+        $autoAccept = $autoAccept === null ? false : $autoAccept == 1;
+
+        return Inertia::render('settings/adviser', [
+            'initialAutoAccept' => $autoAccept,
+            'initialAdviserCode' => $user->adviser_code,
+        ]);
+    })->name('settings.adviser');
 });

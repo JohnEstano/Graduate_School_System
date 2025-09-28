@@ -9,6 +9,8 @@ import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { Info } from "lucide-react";
 import { useState } from "react";
 import axios from "axios";
+import { Input } from "@/components/ui/input";
+import { toast } from "sonner";
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -47,10 +49,13 @@ export default function Profile({ mustVerifyEmail, status }: { mustVerifyEmail: 
     const handleRegisterAdviser = async () => {
         setRegisterLoading(true);
         setError("");
+        const toastId = toast.loading("Registering adviser...");
         try {
             const res = await axios.post("/api/adviser/register-with-code", { adviser_code: adviserCode });
+            toast.success("Adviser registered successfully!", { id: toastId });
             window.location.reload();
         } catch (e: any) {
+            toast.dismiss(toastId);
             setError(e.response?.data?.error || "Registration failed.");
         } finally {
             setRegisterLoading(false);
@@ -121,20 +126,20 @@ export default function Profile({ mustVerifyEmail, status }: { mustVerifyEmail: 
                                         <div className="text-xs text-muted-foreground mt-1">{adviser.email}</div>
                                     </>
                                 ) : (
-                                    <div className="flex flex-col gap-2 mt-2">
-                                        <input
+                                    <div className="flex flex-row gap-2 mt-2 items-center">
+                                        <Input
                                             type="text"
                                             placeholder="Paste adviser code here"
                                             value={typeof adviserCode === "string" ? adviserCode : ""}
                                             onChange={e => setAdviserCode(e.target.value)}
-                                            className="border px-2 py-1 rounded text-sm"
                                             disabled={registerLoading}
+                                            className="w-48"
                                         />
                                         <Button
                                             onClick={handleRegisterAdviser}
                                             disabled={registerLoading || !adviserCode}
-                                            variant="ghost"
-                                            className="w-fit"
+                                            variant="default"
+                                            className="px-4"
                                         >
                                             Register Adviser
                                         </Button>
