@@ -18,7 +18,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Skeleton } from "@/components/ui/skeleton";
 // Icons
-import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, X, GraduationCap, Trash2, Printer, CalendarDays, CalendarRange, Calendar } from "lucide-react";
+import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, X, GraduationCap, Trash2, Printer, CalendarDays, CalendarRange, Calendar, Eye, Edit } from "lucide-react";
 import { createPortal } from 'react-dom';
 import { useDroppable, useDraggable, DndContext, closestCenter, type DragStartEvent, type DragEndEvent, type DragOverEvent, DragOverlay } from "@dnd-kit/core";
 
@@ -205,7 +205,7 @@ const DraggableEventCard = ({
   editMode: boolean;
   onClick?: (e: React.MouseEvent) => void;
 }) => {
-  const { attributes, listeners, setNodeRef } = useDraggable({
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: event.id,
     data: { event, fromDate: event.date },
     disabled: !editMode || event.defense,
@@ -216,9 +216,9 @@ const DraggableEventCard = ({
       {...attributes}
       {...listeners}
       className={cn(
-        "px-1 py-0.5 rounded text-[10px] font-medium truncate flex items-center gap-1 transition",
-        event.defense ? EVENT_BASE_SOLID : EVENT_BASE
-        // Remove isDragging styles!
+        "px-1 py-0.5 rounded text-[10px] font-medium truncate flex items-center gap-1 transition cursor-grab active:cursor-grabbing",
+        event.defense ? EVENT_BASE_SOLID : EVENT_BASE,
+        isDragging && "opacity-50" // Visual feedback during drag
       )}
       style={
         !event.defense
@@ -247,17 +247,19 @@ const DroppableCell = ({
   isDragOver?: boolean;
   activeDrag?: DragData | null;
 }) => {
-  const { setNodeRef } = useDroppable({
+  const { setNodeRef, isOver } = useDroppable({
     id: dateKey,
     disabled: !editMode,
   });
+  
   return (
     <div
       ref={setNodeRef}
       className={cn(
         "relative p-1 border-r border-b last:[&:nth-last-child(-n+7)]:border-b-0 cursor-pointer overflow-hidden focus:outline-none focus-visible:outline-none",
-        "bg-white dark:bg-zinc-900", // <-- Add dark mode background
-        "border-zinc-200 dark:border-zinc-800" // <-- Add dark mode border
+        "bg-white dark:bg-zinc-900",
+        "border-zinc-200 dark:border-zinc-800",
+        isOver && "bg-blue-50 dark:bg-blue-900/20 ring-2 ring-blue-400 ring-inset" // Visual feedback for drop target
       )}
       style={{ minHeight: 120 }}
     >
@@ -269,6 +271,199 @@ const DroppableCell = ({
             event={activeDrag.event}
             editMode={false}
           />
+        </div>
+      )}
+    </div>
+  );
+};
+
+const DroppableDayColumn = ({
+  dateKey,
+  children,
+  editMode,
+  isDragOver,
+  activeDrag,
+}: {
+  dateKey: string;
+  children: React.ReactNode;
+  editMode: boolean;
+  isDragOver?: boolean;
+  activeDrag?: DragData | null;
+}) => {
+  const { setNodeRef, isOver } = useDroppable({
+    id: dateKey,
+    disabled: !editMode,
+  });
+  
+  return (
+    <div
+      ref={setNodeRef}
+      className={cn(
+        "relative h-full",
+        isOver && "bg-blue-50 dark:bg-blue-900/20 ring-2 ring-blue-400 ring-inset" // Visual feedback for drop target
+      )}
+    >
+      {children}
+      {/* Render ghost card if dragging over this column */}
+      {isDragOver && activeDrag && (
+        <div className="absolute left-2 right-2 top-2 z-50 pointer-events-none" style={{ opacity: 0.6 }}>
+          <div
+            className={cn(
+              "px-2 py-1 rounded text-[11px] font-medium truncate flex items-center gap-1 shadow-lg",
+              EVENT_BASE
+            )}
+            style={{
+              backgroundColor: activeDrag.event.color || '#6ee7b7',
+              color: getTextColor(activeDrag.event.color),
+              border: '2px dashed #888',
+            }}
+          >
+            {activeDrag.event.defense && <GraduationCap className="h-3 w-3" />}
+            {truncate(activeDrag.event.title, 26)}
+            <span className="ml-1 text-[9px] text-muted-foreground">(Preview)</span>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+const DraggableWeekEvent = ({
+  event,
+  editMode,
+  onClick,
+}: {
+  event: CalendarEntry;
+  editMode: boolean;
+  onClick?: (e: React.MouseEvent) => void;
+}) => {
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
+    id: event.id,
+    data: { event, fromDate: event.date },
+    disabled: !editMode || event.defense,
+  });
+
+  const l = event.__layout;
+  const startMin = Math.max(0, timeToOffsetMinutes(event.start));
+  const endMin = Math.min(
+    MINUTES_IN_DAY_RANGE,
+    event.end ? timeToOffsetMinutes(event.end) : startMin + 60
+  );
+  const topPct = (startMin / MINUTES_IN_DAY_RANGE) * 100;
+  const duration = Math.max(5, (endMin - startMin));
+  const heightPct = (duration / MINUTES_IN_DAY_RANGE) * 100;
+
+  return (
+    <div
+      ref={setNodeRef}
+      {...attributes}
+      {...listeners}
+      className={cn(
+        "absolute rounded-md text-[11px] flex flex-col overflow-hidden cursor-grab active:cursor-grabbing",
+        event.defense ? EVENT_BASE : EVENT_BASE,
+        "hover:ring-2 ring-primary/40",
+        "bg-white dark:bg-zinc-800",
+        "border border-zinc-200 dark:border-zinc-700",
+        isDragging && "opacity-50 z-50" // Visual feedback during drag
+      )}
+      style={{
+        top: `calc(${topPct}% )`,
+        height: `calc(${heightPct}% )`,
+        left: `calc(${(l?.leftPct ?? 0)}% )`,
+        width: `calc(${(l?.widthPct ?? 100)}% )`,
+        backgroundColor: event.defense ? undefined : (event.color || '#34d399'),
+        color: event.defense ? undefined : getTextColor(event.color)
+      }}
+      title={event.title}
+      onClick={onClick}
+    >
+      <div className="px-1 pt-1 flex items-start gap-1">
+        {event.defense && <GraduationCap className="h-3.5 w-3.5 shrink-0 text-emerald-900/80" />}
+        <span className="font-semibold leading-tight truncate">
+          {truncate(event.title, 56)}
+        </span>
+      </div>
+      <div className="px-1 pb-1 font-medium">
+        {event.start && formatTime(event.start)}
+        {event.end && ' – ' + formatTime(event.end)}
+      </div>
+      {event.raw.student_name && event.defense && (
+        <div className="px-1 pb-1 truncate text-emerald-950/90 text-[10px]">
+          {truncate(event.raw.student_name, 40)}
+        </div>
+      )}
+    </div>
+  );
+};
+
+const DraggableDayEvent = ({
+  event,
+  editMode,
+  onClick,
+}: {
+  event: CalendarEntry;
+  editMode: boolean;
+  onClick?: (e: React.MouseEvent) => void;
+}) => {
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
+    id: event.id,
+    data: { event, fromDate: event.date },
+    disabled: !editMode || event.defense,
+  });
+
+  const l = event.__layout;
+  const startMin = Math.max(0, timeToOffsetMinutes(event.start));
+  const endMin = Math.min(
+    MINUTES_IN_DAY_RANGE,
+    event.end ? timeToOffsetMinutes(event.end) : startMin + 60
+  );
+  const topPct = (startMin / MINUTES_IN_DAY_RANGE) * 100;
+  const duration = Math.max(5, (endMin - startMin));
+  const heightPct = (duration / MINUTES_IN_DAY_RANGE) * 100;
+
+  return (
+    <div
+      ref={setNodeRef}
+      {...attributes}
+      {...listeners}
+      className={cn(
+        "absolute rounded-md p-2 text-[11px] flex flex-col overflow-hidden cursor-grab active:cursor-grabbing",
+        event.defense ? EVENT_BASE_SOLID : EVENT_BASE,
+        "hover:ring-2 ring-primary/40",
+        "bg-white dark:bg-zinc-800",
+        "border border-zinc-200 dark:border-zinc-700",
+        isDragging && "opacity-50 z-50" // Visual feedback during drag
+      )}
+      style={{
+        top: `calc(${topPct}% )`,
+        height: `calc(${heightPct}% )`,
+        left: `calc(${(l?.leftPct ?? 0)}% )`,
+        width: `calc(${(l?.widthPct ?? 100)}% )`,
+        backgroundColor: event.defense ? undefined : (event.color || '#34d399'),
+        color: event.defense ? undefined : getTextColor(event.color)
+      }}
+      title={event.title}
+      onClick={onClick}
+    >
+      <div className="flex items-start gap-1">
+        {event.defense && <GraduationCap className="h-4 w-4 shrink-0" />}
+        <div className="font-semibold leading-tight truncate text-[12px]">
+          {truncate(event.title, 80)}
+        </div>
+      </div>
+      <div className="text-[11px] font-medium mt-0.5">
+        {event.start && formatTime(event.start)}
+        {event.end && ' – ' + formatTime(event.end)}
+        {event.raw.student_name && event.defense && ' • '+event.raw.student_name}
+      </div>
+      {event.defense && event.raw.student_name && (
+        <div className="text-[10px] truncate">
+          {event.raw.student_name} {event.raw.program && <span className="opacity-70">({event.raw.program})</span>}
+        </div>
+      )}
+      {event.defense && event.raw.defense_type && (
+        <div className="text-[10px] mt-0.5 uppercase tracking-wide">
+          {event.raw.defense_type}
         </div>
       )}
     </div>
@@ -472,11 +667,22 @@ export default function SchedulePage({ canManage, userRole }: { canManage: boole
   }
 
   const [editMode, setEditMode] = useState(false);
-  const [draggedEvent, setDraggedEvent] = useState<CalendarEntry | null>(null);
   const [activeDrag, setActiveDrag] = useState<DragData | null>(null);
-  const [dragHoverWeekCol, setDragHoverWeekCol] = useState<string | null>(null);
-  // --- Add state for hovered cell ---
   const [draggedOverDate, setDraggedOverDate] = useState<string | null>(null);
+
+  // --- NEW: Drag state reset function ---
+  const resetDragState = () => {
+    setActiveDrag(null);
+    setDraggedOverDate(null);
+  };
+
+  // --- NEW: Effect to monitor drag state and ensure cleanup ---
+  useEffect(() => {
+    // If dialog closes and we have pending drag states, reset them
+    if (!showAdd && activeDrag) {
+      resetDragState();
+    }
+  }, [showAdd, activeDrag]);
 
   // --- Update DND handlers ---
   function handleDragStart(event: DragStartEvent) {
@@ -484,13 +690,18 @@ export default function SchedulePage({ canManage, userRole }: { canManage: boole
       setActiveDrag(event.active.data.current as DragData);
     }
   }
+
   function handleDragEnd(event: DragEndEvent) {
-    setActiveDrag(null);
-    setDraggedOverDate(null);
     const { active, over } = event;
+    
+    // Always reset drag states first
+    resetDragState();
+    
     if (!active || !over) return;
+    
     const dragData = active.data.current as DragData;
     if (!dragData || dragData.event.defense) return;
+    
     if (dragData.fromDate !== over.id) {
       setEditEvent({
         ...dragData.event,
@@ -499,6 +710,7 @@ export default function SchedulePage({ canManage, userRole }: { canManage: boole
       setShowAdd(true);
     }
   }
+
   function handleDragOver(event: DragOverEvent) {
     if (event.over?.id) {
       setDraggedOverDate(event.over.id as string);
@@ -507,10 +719,9 @@ export default function SchedulePage({ canManage, userRole }: { canManage: boole
     }
   }
 
-
   const GRID_LINE_LIGHT = "border-zinc-200";
-const GRID_LINE_DARK = "dark:border-zinc-700";
-const GRID_LINE = `${GRID_LINE_LIGHT} ${GRID_LINE_DARK}`;
+  const GRID_LINE_DARK = "dark:border-zinc-700";
+  const GRID_LINE = `${GRID_LINE_LIGHT} ${GRID_LINE_DARK}`;
 
   const renderMonth = () => {
     const weeks = monthWeeks;
@@ -623,205 +834,163 @@ const GRID_LINE = `${GRID_LINE_LIGHT} ${GRID_LINE_DARK}`;
       weekCursorTime = `${hour12}:${pad2(minute)} ${ampm}`;
     }
     return (
-      <div className="w-full border border-t-0 bg-white dark:bg-zinc-900 flex flex-col overflow-visible rounded-b-md rounded-t-none">
-        <div
-          className={cn("grid border-b sticky z-40", GLASS_HEADER)}
-          style={{ gridTemplateColumns: `${TIME_COL_WIDTH}px repeat(7, 1fr)`, top: VIEW_HEADER_OFFSET }}
-        >
-          <div className={cn(
-            "h-12 border-r flex items-center justify-center text-[10px] font-semibold uppercase tracking-wide text-muted-foreground",
-            GRID_LINE
-          )}>
-            TIME
-          </div>
-          {weekDays.map(d => {
-            const isSelected = selectedDate && isSameDay(d, selectedDate);
-            const today = isToday(d);
-            return (
-              <div
-                key={d.toISOString()}
-                className={cn(
-                  "h-12 border-r flex flex-col items-center justify-center gap-0.5 text-xs font-medium",
-                  isSelected && !today && "bg-primary/5 dark:bg-rose-900/10",
-                  today && "text-primary font-semibold",
-                  GRID_LINE
-                )}
-              >
-                <span className="uppercase tracking-wide text-[10px]">{format(d,'EEE')}</span>
-                <span
-                  className={cn(
-                    "w-7 h-7 rounded-full flex items-center justify-center text-[12px] font-semibold",
-                    today && "bg-rose-500 text-white shadow dark:bg-rose-500",
-                    !today && isSelected && "bg-rose-500/80 text-white dark:bg-rose-500/80"
-                  )}
-                >
-                  {format(d,'d')}
-                </span>
-              </div>
-            );
-          })}
-        </div>
-        <div
-          ref={weekGridRef}
-          className="relative"
-          style={{ minHeight: totalHeight }}
-          onMouseMove={handleWeekMove}
-          onMouseLeave={handleWeekLeave}
-        >
-          <div className={cn("absolute left-0 top-0 bottom-0 border-r bg-white dark:bg-zinc-900 z-20", GRID_LINE)} style={{ width: TIME_COL_WIDTH }}>
-            {TIME_SLOTS.map(slot => (
-              <div key={slot.minutes} className="relative flex items-center justify-end pr-3" style={{ height: SLOT_HEIGHT }}>
-                <span className={cn("select-none text-[10px]", slot.isHour ? "font-semibold text-muted-foreground" : "text-muted-foreground/50")}>
-                  {slot.label.replace(':00','')}
-                </span>
-              </div>
-            ))}
-          </div>
-          <div className="absolute top-0 bottom-0 right-0 grid" style={{ left: TIME_COL_WIDTH, gridTemplateColumns: "repeat(7, 1fr)" }}>
+      <DndContext
+        collisionDetection={closestCenter}
+        onDragStart={handleDragStart}
+        onDragEnd={handleDragEnd}
+        onDragOver={handleDragOver}
+      >
+        <div className="w-full border border-t-0 bg-white dark:bg-zinc-900 flex flex-col overflow-visible rounded-b-md rounded-t-none">
+          <div
+            className={cn("grid border-b sticky z-40", GLASS_HEADER)}
+            style={{ gridTemplateColumns: `${TIME_COL_WIDTH}px repeat(7, 1fr)`, top: VIEW_HEADER_OFFSET }}
+          >
+            <div className={cn(
+              "h-12 border-r flex items-center justify-center text-[10px] font-semibold uppercase tracking-wide text-muted-foreground",
+              GRID_LINE
+            )}>
+              TIME
+            </div>
             {weekDays.map(d => {
-              const dateKey = format(d,'yyyy-MM-dd');
-              const list = weekMap[dateKey] || [];
+              const isSelected = selectedDate && isSameDay(d, selectedDate);
+              const today = isToday(d);
               return (
                 <div
-                  key={'week-col-'+dateKey}
+                  key={d.toISOString()}
                   className={cn(
-                    "relative border-r",
-                    isToday(d) && "bg-primary/5 dark:bg-emerald-900/10",
-                    GRID_LINE,
-                    "bg-white dark:bg-zinc-900"
+                    "h-12 border-r flex flex-col items-center justify-center gap-0.5 text-xs font-medium",
+                    isSelected && !today && "bg-primary/5 dark:bg-rose-900/10",
+                    today && "text-primary font-semibold",
+                    GRID_LINE
                   )}
-                  onDragOver={e => {
-                    if (editMode && draggedEvent && !draggedEvent.defense) e.preventDefault();
-                  }}
-                  onDragEnter={e => {
-                    if (editMode && draggedEvent && !draggedEvent.defense) setDragHoverWeekCol(dateKey);
-                  }}
-                  onDragLeave={e => {
-                    if (editMode && draggedEvent && !draggedEvent.defense) setDragHoverWeekCol(null);
-                  }}
-                  onDrop={e => {
-                    if (editMode && draggedEvent && !draggedEvent.defense) {
-                      setEditEvent({
-                        ...draggedEvent,
-                        date: dateKey,
-                      });
-                      setShowAdd(true);
-                      setDraggedEvent(null);
-                      setDragHoverWeekCol(null);
-                    }
-                  }}
                 >
-                  {Array.from({ length: DAY_END_HOUR - DAY_START_HOUR }, (_, i) =>
-                    i % 2 === 1 ? (
-                      <div key={'stripe-'+i} className="absolute inset-x-0 bg-muted/15 dark:bg-zinc-800/30" style={{ top: i * 2 * SLOT_HEIGHT, height: SLOT_HEIGHT * 2 }} />
-                    ) : null
-                  )}
-                  {TIME_SLOTS.map((slot,i) => (
-                    <div
-                      key={slot.minutes}
-                      className={cn("absolute left-0 right-0", slot.isHour ? `${GRID_LINE} border-b-2` : `${GRID_LINE} border-b`)}
-                      style={{ top: i * SLOT_HEIGHT }}
-                    />
-                  ))}
-                  {list.map(ev => {
-                    const startMin = Math.max(0, timeToOffsetMinutes(ev.start));
-                    const endMin = Math.min(
-                      MINUTES_IN_DAY_RANGE,
-                      ev.end ? timeToOffsetMinutes(ev.end) : startMin + 60
-                    );
-                    const topPct = (startMin / MINUTES_IN_DAY_RANGE) * 100;
-                    const duration = Math.max(5, (endMin - startMin));
-                    const heightPct = (duration / MINUTES_IN_DAY_RANGE) * 100;
-                    const l = ev.__layout;
-                    return (
-                      <div
-                        key={ev.id}
-                        className={cn(
-                          "absolute rounded-md text-[11px] flex flex-col overflow-hidden cursor-pointer",
-                          ev.defense ? EVENT_BASE : EVENT_BASE,
-                          "hover:ring-2 ring-primary/40",
-                          "bg-white dark:bg-zinc-800", // <-- Ensure card bg for dark
-                          "border border-zinc-200 dark:border-zinc-700" // <-- Card border for dark
-                        )}
-                        style={{
-                          top: `calc(${topPct}% )`,
-                          height: `calc(${heightPct}% )`,
-                          left: `calc(${(l?.leftPct ?? 0)}% )`,
-                          width: `calc(${(l?.widthPct ?? 100)}% )`,
-                          backgroundColor: ev.defense ? undefined : (ev.color || '#34d399'),
-                          color: ev.defense ? undefined : getTextColor(ev.color)
-                        }}
-                        title={ev.title}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          if (!editMode) {
-                            if (canManage && !ev.defense) {
-                              setEditEvent(ev);
-                            } else {
-                              setSelectedDate(parseISO(ev.date));
-                              setDetailEvent(ev);
-                              setView('day');
-                            }
-                          }
-                        }}
-                      >
-                        <div className="px-1 pt-1 flex items-start gap-1">
-                          {ev.defense && <GraduationCap className="h-3.5 w-3.5 shrink-0 text-emerald-900/80" />}
-                          <span className="font-semibold leading-tight truncate">
-                            {truncate(ev.title, 56)}
-                          </span>
-                        </div>
-                        <div className="px-1 pb-1 font-medium">
-                          {ev.start && formatTime(ev.start)}
-                          {ev.end && ' – ' + formatTime(ev.end)}
-                        </div>
-                        {ev.raw.student_name && ev.defense && (
-                          <div className="px-1 pb-1 truncate text-emerald-950/90 text-[10px]">
-                            {truncate(ev.raw.student_name, 40)}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                  {/* --- Drag Preview for week view --- */}
-                  {dragHoverWeekCol === dateKey && draggedEvent && editMode && !draggedEvent.defense && (
-                    <div
-                      className={cn(
-                        "absolute left-2 right-2 top-2 z-50 px-2 py-1 rounded text-[11px] font-medium truncate flex items-center gap-1 shadow-lg pointer-events-none",
-                        EVENT_BASE
-                      )}
-                      style={{
-                        backgroundColor: draggedEvent.color || '#6ee7b7',
-                        color: getTextColor(draggedEvent.color),
-                        opacity: 0.65,
-                        border: '2px dashed #888',
-                        boxShadow: '0 2px 8px rgba(0,0,0,0.12)'
-                      }}
-                    >
-                      {draggedEvent.defense && <GraduationCap className="h-3 w-3" />}
-                      {truncate(draggedEvent.title, 26)}
-                      <span className="ml-1 text-[9px] text-muted-foreground">(Preview)</span>
-                    </div>
-                  )}
+                  <span className="uppercase tracking-wide text-[10px]">{format(d,'EEE')}</span>
+                  <span
+                    className={cn(
+                      "w-7 h-7 rounded-full flex items-center justify-center text-[12px] font-semibold",
+                      today && "bg-rose-500 text-white shadow dark:bg-rose-500",
+                      !today && isSelected && "bg-rose-500/80 text-white dark:bg-rose-500/80"
+                    )}
+                  >
+                    {format(d,'d')}
+                  </span>
                 </div>
               );
             })}
-            {weekCursor.v && (
-              <>
-                <div className="pointer-events-none absolute left-0 right-0 h-px bg-black/60 z-40" style={{ top: weekCursor.y }} />
-                {weekCursorTime && (
-                  <div
-                    className="pointer-events-none absolute z-50 -translate-y-1/2 px-1.5 py-0.5 bg-black text-white rounded text-[10px] font-medium shadow"
-                    style={{ top: weekCursor.y, left: 4 }}
-                  >
-                    {weekCursorTime}
-                  </div>
-                )}
-              </>
-            )}
           </div>
+          <div
+            ref={weekGridRef}
+            className="relative"
+            style={{ minHeight: totalHeight }}
+            onMouseMove={handleWeekMove}
+            onMouseLeave={handleWeekLeave}
+          >
+            <div className={cn("absolute left-0 top-0 bottom-0 border-r bg-white dark:bg-zinc-900 z-20", GRID_LINE)} style={{ width: TIME_COL_WIDTH }}>
+              {TIME_SLOTS.map(slot => (
+                <div key={slot.minutes} className="relative flex items-center justify-end pr-3" style={{ height: SLOT_HEIGHT }}>
+                  <span className={cn("select-none text-[10px]", slot.isHour ? "font-semibold text-muted-foreground" : "text-muted-foreground/50")}>
+                    {slot.label.replace(':00','')}
+                  </span>
+                </div>
+              ))}
+            </div>
+            <div className="absolute top-0 bottom-0 right-0 grid" style={{ left: TIME_COL_WIDTH, gridTemplateColumns: "repeat(7, 1fr)" }}>
+              {weekDays.map(d => {
+                const dateKey = format(d,'yyyy-MM-dd');
+                const list = weekMap[dateKey] || [];
+                return (
+                  <DroppableDayColumn
+                    key={'week-col-'+dateKey}
+                    dateKey={dateKey}
+                    editMode={editMode}
+                    isDragOver={draggedOverDate === dateKey}
+                    activeDrag={activeDrag}
+                  >
+                    <div
+                      className={cn(
+                        "relative border-r h-full",
+                        isToday(d) && "bg-primary/5 dark:bg-emerald-900/10",
+                        GRID_LINE,
+                        "bg-white dark:bg-zinc-900"
+                      )}
+                    >
+                      {Array.from({ length: DAY_END_HOUR - DAY_START_HOUR }, (_, i) =>
+                        i % 2 === 1 ? (
+                          <div key={'stripe-'+i} className="absolute inset-x-0 bg-muted/15 dark:bg-zinc-800/30" style={{ top: i * 2 * SLOT_HEIGHT, height: SLOT_HEIGHT * 2 }} />
+                        ) : null
+                      )}
+                      {TIME_SLOTS.map((slot,i) => (
+                        <div
+                          key={slot.minutes}
+                          className={cn("absolute left-0 right-0", slot.isHour ? `${GRID_LINE} border-b-2` : `${GRID_LINE} border-b`)}
+                          style={{ top: i * SLOT_HEIGHT }}
+                        />
+                      ))}
+                      {list.map(ev => (
+                        <DraggableWeekEvent
+                          key={ev.id}
+                          event={ev}
+                          editMode={editMode}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (!editMode) {
+                              if (canManage && !ev.defense) {
+                                setEditEvent(ev);
+                              } else {
+                                setSelectedDate(parseISO(ev.date));
+                                setDetailEvent(ev);
+                                setView('day');
+                              }
+                            }
+                          }}
+                        />
+                      ))}
+                    </div>
+                  </DroppableDayColumn>
+                );
+              })}
+              {weekCursor.v && (
+                <>
+                  <div className="pointer-events-none absolute left-0 right-0 h-px bg-black/60 z-40" style={{ top: weekCursor.y }} />
+                  {weekCursorTime && (
+                    <div
+                      className="pointer-events-none absolute z-50 -translate-y-1/2 px-1.5 py-0.5 bg-black text-white rounded text-[10px] font-medium shadow"
+                      style={{ top: weekCursor.y, left: 4 }}
+                    >
+                      {weekCursorTime}
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          </div>
+          <DragOverlay>
+            {activeDrag ? (
+              <div
+                className={cn(
+                  "absolute rounded-md text-[11px] flex flex-col overflow-hidden shadow-lg",
+                  EVENT_BASE
+                )}
+                style={{
+                  backgroundColor: activeDrag.event.defense ? undefined : (activeDrag.event.color || '#34d399'),
+                  color: activeDrag.event.defense ? undefined : getTextColor(activeDrag.event.color),
+                  padding: '4px 8px',
+                  minWidth: '120px',
+                  maxWidth: '200px',
+                }}
+              >
+                <div className="font-semibold leading-tight truncate">
+                  {truncate(activeDrag.event.title, 40)}
+                </div>
+                <div className="font-medium text-[10px]">
+                  {activeDrag.event.start && formatTime(activeDrag.event.start)}
+                  {activeDrag.event.end && ' – ' + formatTime(activeDrag.event.end)}
+                </div>
+              </div>
+            ) : null}
+          </DragOverlay>
         </div>
-      </div>
+      </DndContext>
     );
   };
 
@@ -844,134 +1013,124 @@ const GRID_LINE = `${GRID_LINE_LIGHT} ${GRID_LINE_DARK}`;
       dayCursorTime = `${hour12}:${pad2(minute)} ${ampm}`;
     }
     return (
-      <div className="w-full border border-t-0 bg-white dark:bg-zinc-900 flex flex-col rounded-b-md rounded-t-none">
-        <div className={cn("sticky flex items-center justify-between px-6 py-4 border-b z-40", GLASS_HEADER, GRID_LINE)} style={{ top: VIEW_HEADER_OFFSET }}>
-          <div className="flex items-end gap-4">
-            <div className="flex flex-col leading-none">
-              <span className="text-4xl font-bold tracking-tight">
-                {format(d,'d')}
-              </span>
+      <DndContext
+        collisionDetection={closestCenter}
+        onDragStart={handleDragStart}
+        onDragEnd={handleDragEnd}
+        onDragOver={handleDragOver}
+      >
+        <div className="w-full border border-t-0 bg-white dark:bg-zinc-900 flex flex-col rounded-b-md rounded-t-none">
+          <div className={cn("sticky flex items-center justify-between px-6 py-4 border-b z-40", GLASS_HEADER, GRID_LINE)} style={{ top: VIEW_HEADER_OFFSET }}>
+            <div className="flex items-end gap-4">
+              <div className="flex flex-col leading-none">
+                <span className="text-4xl font-bold tracking-tight">
+                  {format(d,'d')}
+                </span>
+              </div>
+              <div className="flex flex-col">
+                <span className="text-lg font-semibold">{format(d,'MMMM')}</span>
+                <span className="text-sm text-muted-foreground">{format(d,'EEEE, yyyy')}</span>
+              </div>
             </div>
-            <div className="flex flex-col">
-              <span className="text-lg font-semibold">{format(d,'MMMM')}</span>
-              <span className="text-sm text-muted-foreground">{format(d,'EEEE, yyyy')}</span>
-            </div>
+            <Badge variant="secondary" className="text-[11px] px-3 py-1">
+              Approved Defenses
+            </Badge>
           </div>
-          <Badge variant="secondary" className="text-[11px] px-3 py-1">
-            Approved Defenses
-          </Badge>
-        </div>
-        <div
-          ref={dayGridRef}
-          className="relative"
-          onMouseMove={handleDayMove}
-          onMouseLeave={handleDayLeave}
-        >
-          <div className="relative" style={{ minHeight: totalHeight }}>
-            <div className={cn("absolute left-0 top-0 bottom-0 w-[90px] border-r bg-white dark:bg-zinc-900 z-20", GRID_LINE)}>
-              {TIME_SLOTS.map(slot => (
-                <div key={slot.minutes} className="relative flex items-center justify-end pr-3" style={{ height: SLOT_HEIGHT }}>
-                  <span className={cn("text-[11px] select-none", slot.isHour ? "font-semibold text-muted-foreground" : "text-muted-foreground/50")}>
-                    {slot.label.replace(':00','')}
-                  </span>
+          <div
+            ref={dayGridRef}
+            className="relative"
+            onMouseMove={handleDayMove}
+            onMouseLeave={handleDayLeave}
+          >
+            <DroppableDayColumn
+              dateKey={key}
+              editMode={editMode}
+              isDragOver={draggedOverDate === key}
+              activeDrag={activeDrag}
+            >
+              <div className="relative" style={{ minHeight: totalHeight }}>
+                <div className={cn("absolute left-0 top-0 bottom-0 w-[90px] border-r bg-white dark:bg-zinc-900 z-20", GRID_LINE)}>
+                  {TIME_SLOTS.map(slot => (
+                    <div key={slot.minutes} className="relative flex items-center justify-end pr-3" style={{ height: SLOT_HEIGHT }}>
+                      <span className={cn("text-[11px] select-none", slot.isHour ? "font-semibold text-muted-foreground" : "text-muted-foreground/50")}>
+                        {slot.label.replace(':00','')}
+                      </span>
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
-            <div className="absolute left-[90px] right-0 top-0 bottom-0 bg-white dark:bg-zinc-900">
-              {Array.from({length: DAY_END_HOUR - DAY_START_HOUR}, (_,i)=> (
-                i % 2 === 1 ? (
-                  <div key={'stripe-'+i} className="absolute inset-x-0 bg-muted/15 dark:bg-zinc-800/30" style={{ top: i * 2 * SLOT_HEIGHT, height: SLOT_HEIGHT * 2 }} />
-                ) : null
-              ))}
-              {TIME_SLOTS.map((slot,i) => (
-                <div
-                  key={slot.minutes}
-                  className={cn("absolute left-0 right-0", slot.isHour ? `${GRID_LINE} border-b-2` : `${GRID_LINE} border-b`)}
-                  style={{ top: i * SLOT_HEIGHT }}
-                />
-              ))}
-              {list.map(ev => {
-                const startMin = Math.max(0, timeToOffsetMinutes(ev.start));
-                const endMin = Math.min(
-                  MINUTES_IN_DAY_RANGE,
-                  ev.end ? timeToOffsetMinutes(ev.end) : startMin + 60
-                );
-                const topPct = (startMin / MINUTES_IN_DAY_RANGE) * 100;
-                const duration = Math.max(5, (endMin - startMin));
-                const heightPct = (duration / MINUTES_IN_DAY_RANGE) * 100;
-                const l = ev.__layout;
-                return (
-                  <div
-                    key={ev.id}
-                    className={cn(
-                      "absolute rounded-md p-2 text-[11px] flex flex-col overflow-hidden cursor-pointer",
-                      ev.defense ? EVENT_BASE_SOLID : EVENT_BASE,
-                      "hover:ring-2 ring-primary/40",
-                      "bg-white dark:bg-zinc-800", // <-- Ensure card bg for dark
-                      "border border-zinc-200 dark:border-zinc-700" // <-- Card border for dark
-                    )}
-                    style={{
-                      top: `calc(${topPct}% )`,
-                      height: `calc(${heightPct}% )`,
-                      left: `calc(${(l?.leftPct ?? 0)}% )`,
-                      width: `calc(${(l?.widthPct ?? 100)}% )`,
-                      backgroundColor: ev.defense ? undefined : (ev.color || '#34d399'),
-                      color: ev.defense ? undefined : getTextColor(ev.color)
-                    }}
-                    title={ev.title}
-                    // Only allow details in read mode
-                    onClick={(e)=> {
-                      e.stopPropagation();
-                      if (!editMode) {
-                        if (canManage && !ev.defense) {
-                          setEditEvent(ev);
-                        } else {
-                          setDetailEvent(ev);
-                        }
-                      }
-                    }}
-                  >
-                    <div className="flex items-start gap-1">
-                      {ev.defense && <GraduationCap className="h-4 w-4 shrink-0" />}
-                      <div className="font-semibold leading-tight truncate text-[12px]">
-                        {truncate(ev.title, 80)}
-                      </div>
-                    </div>
-                    <div className="text-[11px] font-medium mt-0.5">
-                      {ev.start && formatTime(ev.start)}
-                      {ev.end && ' – ' + formatTime(ev.end)}
-                      {ev.raw.student_name && ev.defense && ' • '+ev.raw.student_name}
-                    </div>
-                    {ev.defense && ev.raw.student_name && (
-                      <div className="text-[10px] truncate">
-                        {ev.raw.student_name} {ev.raw.program && <span className="opacity-70">({ev.raw.program})</span>}
-                      </div>
-                    )}
-                    {ev.defense && ev.raw.defense_type && (
-                      <div className="text-[10px] mt-0.5 uppercase tracking-wide">
-                        {ev.raw.defense_type}
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-              {dayCursor.v && (
-                <>
-                  <div className="pointer-events-none absolute left-0 right-0 h-px bg-black/60 z-40" style={{ top: dayCursor.y }} />
-                  {dayCursorTime && (
+                <div className="absolute left-[90px] right-0 top-0 bottom-0 bg-white dark:bg-zinc-900">
+                  {Array.from({length: DAY_END_HOUR - DAY_START_HOUR}, (_,i)=> (
+                    i % 2 === 1 ? (
+                      <div key={'stripe-'+i} className="absolute inset-x-0 bg-muted/15 dark:bg-zinc-800/30" style={{ top: i * 2 * SLOT_HEIGHT, height: SLOT_HEIGHT * 2 }} />
+                    ) : null
+                  ))}
+                  {TIME_SLOTS.map((slot,i) => (
                     <div
-                      className="pointer-events-none absolute z-50 -translate-y-1/2 px-1.5 py-0.5 bg-black text-white rounded text-[10px] font-medium shadow"
-                      style={{ top: dayCursor.y, left: 4 }}
-                    >
-                      {dayCursorTime}
-                    </div>
+                      key={slot.minutes}
+                      className={cn("absolute left-0 right-0", slot.isHour ? `${GRID_LINE} border-b-2` : `${GRID_LINE} border-b`)}
+                      style={{ top: i * SLOT_HEIGHT }}
+                    />
+                  ))}
+                  {list.map(ev => (
+                    <DraggableDayEvent
+                      key={ev.id}
+                      event={ev}
+                      editMode={editMode}
+                      onClick={(e)=> {
+                        e.stopPropagation();
+                        if (!editMode) {
+                          if (canManage && !ev.defense) {
+                            setEditEvent(ev);
+                          } else {
+                            setDetailEvent(ev);
+                          }
+                        }
+                      }}
+                    />
+                  ))}
+                  {dayCursor.v && (
+                    <>
+                      <div className="pointer-events-none absolute left-0 right-0 h-px bg-black/60 z-40" style={{ top: dayCursor.y }} />
+                      {dayCursorTime && (
+                        <div
+                          className="pointer-events-none absolute z-50 -translate-y-1/2 px-1.5 py-0.5 bg-black text-white rounded text-[10px] font-medium shadow"
+                          style={{ top: dayCursor.y, left: 4 }}
+                        >
+                          {dayCursorTime}
+                        </div>
+                      )}
+                    </>
                   )}
-                </>
-              )}
-            </div>
+                </div>
+              </div>
+            </DroppableDayColumn>
           </div>
+          <DragOverlay>
+            {activeDrag ? (
+              <div
+                className={cn(
+                  "absolute rounded-md p-2 text-[11px] flex flex-col overflow-hidden shadow-lg",
+                  EVENT_BASE_SOLID
+                )}
+                style={{
+                  backgroundColor: activeDrag.event.defense ? undefined : (activeDrag.event.color || '#34d399'),
+                  color: activeDrag.event.defense ? undefined : getTextColor(activeDrag.event.color),
+                  minWidth: '150px',
+                  maxWidth: '250px',
+                }}
+              >
+                <div className="font-semibold leading-tight truncate text-[12px]">
+                  {truncate(activeDrag.event.title, 60)}
+                </div>
+                <div className="text-[11px] font-medium mt-0.5">
+                  {activeDrag.event.start && formatTime(activeDrag.event.start)}
+                  {activeDrag.event.end && ' – ' + formatTime(activeDrag.event.end)}
+                </div>
+              </div>
+            ) : null}
+          </DragOverlay>
         </div>
-      </div>
+      </DndContext>
     );
   };
 
@@ -1293,12 +1452,18 @@ const GRID_LINE = `${GRID_LINE_LIGHT} ${GRID_LINE_DARK}`;
                     value={editMode ? "editing" : "viewing"}
                     onValueChange={val => setEditMode(val === "editing")}
                   >
-                    <SelectTrigger className="w-[110px] h-8">
+                    <SelectTrigger className=" h-8">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="viewing">Viewing</SelectItem>
-                      <SelectItem value="editing">Editing</SelectItem>
+                      <SelectItem value="viewing">
+                        <Eye className="inline-block mr-2 h-4 w-4" />
+                        Viewing
+                      </SelectItem>
+                      <SelectItem value="editing">
+                        <Edit className="inline-block mr-2 h-4 w-4" />
+                        Editing
+                      </SelectItem>
                     </SelectContent>
                   </Select>
                   <Button type="button" size="icon" variant="outline" onClick={handlePrint} title="Print schedules">
@@ -1310,10 +1475,7 @@ const GRID_LINE = `${GRID_LINE_LIGHT} ${GRID_LINE_DARK}`;
                     setAddError(null);
                     if (!o) {
                       setEditEvent(null);
-                      setActiveDrag(null);
-                      setDraggedEvent(null);
-                      setDraggedOverDate(null);
-                      setDragHoverWeekCol(null);
+                      resetDragState(); // Use the new reset function
                     }
                   }}>
                     <DialogTrigger asChild>
@@ -1337,6 +1499,53 @@ const GRID_LINE = `${GRID_LINE_LIGHT} ${GRID_LINE_DARK}`;
                             value={addTitle}
                             onChange={e => setAddTitle(e.target.value)}
                             placeholder="Short description..."
+                          />
+                        </div>
+                        <div className="grid gap-1">
+                          <Label className="text-xs">Date</Label>
+                          <input
+                            type="date"
+                            className="border rounded px-2 py-1 text-sm"
+                            value={addDate}
+                            onChange={e => setAddDate(e.target.value)}
+                          />
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Checkbox
+                            checked={addAllDay}
+                            onCheckedChange={v => setAddAllDay(!!v)}
+                            id="allDay"
+                          />
+                          <Label htmlFor="allDay" className="text-xs">All Day</Label>
+                        </div>
+                        <div className="grid grid-cols-2 gap-2">
+                          <div>
+                            <Label className="text-xs">Start Time</Label>
+                            <input
+                              type="time"
+                              className="border rounded px-2 py-1 text-sm w-full"
+                              value={addStart}
+                              onChange={e => setAddStart(e.target.value)}
+                              disabled={addAllDay}
+                            />
+                          </div>
+                          <div>
+                            <Label className="text-xs">End Time</Label>
+                            <input
+                              type="time"
+                              className="border rounded px-2 py-1 text-sm w-full"
+                              value={addEnd}
+                              onChange={e => setAddEnd(e.target.value)}
+                              disabled={addAllDay}
+                            />
+                          </div>
+                        </div>
+                        <div className="grid gap-1">
+                          <Label className="text-xs">Description</Label>
+                          <Textarea
+                            value={addDesc}
+                            onChange={e => setAddDesc(e.target.value)}
+                            placeholder="Details (optional)..."
                           />
                         </div>
                         <div className="grid gap-1">
@@ -1388,7 +1597,10 @@ const GRID_LINE = `${GRID_LINE_LIGHT} ${GRID_LINE_DARK}`;
                             <Trash2 className="h-4 w-4 mr-1" /> Delete
                           </Button>
                         )}
-                        <Button variant="outline" size="sm" onClick={()=> setShowAdd(false)} disabled={adding}>Cancel</Button>
+                        <Button variant="outline" size="sm" onClick={()=> {
+                          setShowAdd(false);
+                          resetDragState(); // Reset drag state on cancel
+                        }} disabled={adding}>Cancel</Button>
                         <Button
                           size="sm"
                           onClick={async () => {
@@ -1460,6 +1672,7 @@ const GRID_LINE = `${GRID_LINE_LIGHT} ${GRID_LINE_DARK}`;
                               });
                               setShowAdd(false);
                               setEditEvent(null);
+                              resetDragState(); // Reset drag state on successful save
                             } catch(err:any) {
                               setAddError(err.message || 'Error');
                             } finally {
@@ -1546,4 +1759,4 @@ const GRID_LINE = `${GRID_LINE_LIGHT} ${GRID_LINE_DARK}`;
       </div>
     </AppLayout>
   );
-}
+}  

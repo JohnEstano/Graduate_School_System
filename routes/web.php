@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\EmailsController;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
@@ -88,6 +89,10 @@ Route::middleware(['auth','verified'])->group(function () {
             'template'=>$template
         ]);
     })->name('settings.documents.edit');
+
+
+    //Emails Controller
+    Route::get('send-mail',[EmailsController::class,'welcomeEmail']);
 
     // Settings: Signatures (any staff who can sign)
     Route::get('/settings/signatures', function() {
