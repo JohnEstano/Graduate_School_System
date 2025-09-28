@@ -14,12 +14,17 @@ class DashboardController extends Controller
             abort(401);
         }
 
-        // --- ADD THIS BLOCK ---
         $roleName = is_object($user->role) ? $user->role->name : $user->role;
         if (in_array($roleName, ['Faculty', 'Adviser']) && !$user->adviser_code) {
             $user->generateAdviserCode();
         }
-        // --- END BLOCK ---
+
+        // --- Add this block ---
+        $studentsCount = 0;
+        if (in_array($roleName, ['Faculty', 'Adviser'])) {
+            $studentsCount = $user->advisedStudents()->count();
+        }
+        // --- End block ---
 
         // --- compute effective role (from _dev_develop) ---
         $effective = $user->role;
@@ -89,7 +94,7 @@ class DashboardController extends Controller
                     'email' => $user->email,
                     'role' => $effective,
                     'school_id' => $user->school_id,
-                    'avatar' => $user->employee_photo_url ?? null, // or $user->avatar if you have an accessor
+                    'avatar' => $user->employee_photo_url ?? null,
                     // add other fields as needed
                 ],
             ],
@@ -97,6 +102,8 @@ class DashboardController extends Controller
             'defenseRequirement' => $latestRequirement,
             'defenseRequest' => $defenseRequest,
             'defenseRequests' => $defenseRequests,
+            // --- Add this line ---
+            'studentsCount' => $studentsCount,
         ];
 
         return Inertia::render('dashboard/Index', $props);

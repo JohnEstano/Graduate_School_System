@@ -10,6 +10,11 @@ import ExamEligibilityWidget from '../widgets/exam-eligibility-widget';
 import PendingDefenseRequestsWidget from '../widgets/pending-defense-request-widget';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { DefenseRequest } from '@/types';
+import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
+import { GraduationCap, AlertCircle } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Link } from "@inertiajs/react";
 
 type DefenseRequirement = {
     id: number;
@@ -23,14 +28,17 @@ type RecentPayment = {
     // add other fields if needed
 };
 
+type User = {
+    id: number;
+    name: string;
+    role: string;
+    school_id?: string;
+    advisers?: any[]; // Add advisers property, adjust type as needed
+};
+
 type PageProps = {
     auth: {
-        user: {
-            id: number;
-            name: string;
-            role: string;
-            school_id?: string;
-        } | null;
+        user: User | null;
     };
     defenseRequirement?: DefenseRequirement;
     defenseRequest?: DefenseRequest;
@@ -61,6 +69,7 @@ export default function StudentDashboard() {
     const [pendingRequests, setPendingRequests] = useState<DefenseRequest[]>([]);
     const [todayEvents, setTodayEvents] = useState<DefenseRequest[]>([]);
     const [loading, setLoading] = useState(true);
+    const [showWelcome, setShowWelcome] = useState(true);
 
     const [selectedDay, setSelectedDay] = useState<number>(new Date().getDay());
 
@@ -132,6 +141,8 @@ export default function StudentDashboard() {
             icon: <BadgeDollarSign className="size-7" />,
         },
     ];
+
+    const hasAdviser = Array.isArray(user?.advisers) && user.advisers.length > 0;
 
     return (
         <div className="flex h-full flex-1 flex-col gap-4 overflow-auto  bg-white dark:bg-background">
@@ -224,6 +235,48 @@ export default function StudentDashboard() {
                             {/*put here your other widgets if you create one please*/}
                         </div>
                     </div>
+
+                    {/* Welcome Dialog */}
+                    <Dialog open={showWelcome} onOpenChange={setShowWelcome}>
+                        <DialogContent className="max-w-md rounded-xl bg-background dark:bg-zinc-900 px-8 py-7">
+                            <div className="flex flex-col items-center mb-4">
+                                <img
+                                    src="/grad_logo.png"
+                                    alt="Graduate School Logo"
+                                    className="h-14 w-14 mb-2"
+                                    style={{ objectFit: "contain" }}
+                                />
+                                <DialogHeader>
+                                    <DialogTitle className="text-2xl font-bold text-center mb-2 flex items-center justify-center gap-2">
+                                        <GraduationCap className="size-7 text-primary" />
+                                        Welcome to the University of the Immaculate Conception Graduate School
+                                    </DialogTitle>
+                                </DialogHeader>
+                            </div>
+                            {/* Adviser Alert for students without adviser */}
+                            {user?.role === "Student" && !hasAdviser && (
+                                <Alert variant="default" className="mb-4">
+                                    <AlertCircle className="size-5 text-yellow-500" />
+                                    <AlertTitle className="font-semibold text-yellow-700 dark:text-yellow-400">
+                                        You have not registered an adviser yet.
+                                    </AlertTitle>
+                                    <AlertDescription className="text-xs text-muted-foreground">
+                                        Register your adviser to access all features.
+                                    </AlertDescription>
+                                    <Link href="/settings/profile">
+                                        <Button variant="ghost" className="mt-2 flex items-center gap-1 text-yellow-700 dark:text-yellow-400">
+                                            Register Adviser
+                                        </Button>
+                                    </Link>
+                                </Alert>
+                            )}
+                            <DialogFooter>
+                                <Button onClick={() => setShowWelcome(false)} className="w-full mt-2 text-base font-semibold">
+                                    Continue
+                                </Button>
+                            </DialogFooter>
+                        </DialogContent>
+                    </Dialog>
                 </>
             )}
         </div>

@@ -22,6 +22,13 @@ class AdviserStudentController extends Controller
         return response()->json(['success' => true]);
     }
 
+    public function destroy(Request $request, $studentId)
+    {
+        $adviser = $request->user();
+        $adviser->advisedStudents()->detach($studentId);
+        return response()->json(['success' => true]);
+    }
+
     public function getAdviserCode(Request $request)
     {
         $adviser = $request->user();
@@ -39,7 +46,14 @@ class AdviserStudentController extends Controller
         if (!$adviser) {
             return response()->json(['error' => 'Invalid code'], 404);
         }
-        $adviser->advisedStudents()->attach($student->id);
+        if ($adviser->advisedStudents()->where('student_id', $student->id)->exists()) {
+            return response()->json(['error' => 'You are already registered with this adviser.'], 409);
+        }
+        try {
+            $adviser->advisedStudents()->attach($student->id);
+        } catch (\Exception $e) {
+            return response()->json(['error' => $e->getMessage() ?? "Registration failed."], 500);
+        }
         return response()->json(['success' => true]);
     }
 }

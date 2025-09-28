@@ -150,11 +150,15 @@ class User extends Authenticatable
         return $this->coordinatorPrograms()->pluck('program')->all();
     }
 
+    /**
+     * For Adviser: Get all students
+     */
     public function advisedStudents()
     {
         return $this->belongsToMany(User::class, 'adviser_student', 'adviser_id', 'student_id');
     }
 
+    // For Student: Get all advisers
     public function advisers()
     {
         return $this->belongsToMany(User::class, 'adviser_student', 'student_id', 'adviser_id');

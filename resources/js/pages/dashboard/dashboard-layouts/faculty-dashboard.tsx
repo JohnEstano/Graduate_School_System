@@ -37,6 +37,7 @@ function isDaytime() {
 export default function FacultyDashboard() {
     const {
         auth: { user },
+        studentsCount = 0, // <-- get from props
     } = usePage<PageProps>().props;
 
     const [allRequests, setAllRequests] = useState<DefenseRequest[]>([]);
@@ -79,26 +80,32 @@ export default function FacultyDashboard() {
     // Dummy metrics for now
     const totalPanelists = 5;
     const assignedPanelists = 3;
-    const studentsCount = 42; // Dummy value
 
-    const metrics = [
+    type Metric = {
+        title: string;
+        value: React.ReactNode;
+        description: string;
+        icon: React.ReactElement;
+    };
+
+    const metrics: Metric[] = [
         {
             title: "Pending Defense Submissions",
             value: immediateRequests.length,
             description: "Submitted requirements needing your review",
-            icon: <ClipboardList className="size-7" />,
+            icon: <ClipboardList className="text-rose-500 size-7" />,
         },
         {
             title: "Today's Schedules",
             value: todayEvents.length,
             description: "Events scheduled for today",
-            icon: <CalendarDays className="size-7" />,
+            icon: <CalendarDays className="text-rose-500 size-7" />,
         },
         {
             title: "Students",
-            value: studentsCount,
-            description: "Total students (dummy)",
-            icon: <Users className="size-7" />,
+            value: studentsCount as number, // <-- use actual count
+            description: "Total students linked to you",
+            icon: <Users className="text-rose-500 size-7" />,
         },
     ];
 
@@ -160,7 +167,7 @@ export default function FacultyDashboard() {
                                     </CardContent>
                                 </div>
                                 <div className="flex items-center justify-center ml-3 w-[40px] h-[40px]">
-                                    {React.cloneElement(metric.icon, { className: "text-rose-500 size-7" })}
+                                    {metric.icon}
                                 </div>
                             </Card>
                         ))}

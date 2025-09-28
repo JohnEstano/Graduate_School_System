@@ -2,11 +2,13 @@ import { type BreadcrumbItem, type SharedData } from '@/types';
 import { Head, usePage } from '@inertiajs/react';
 import HeadingSmall from '@/components/heading-small';
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
 import AppLayout from '@/layouts/app-layout';
 import SettingsLayout from '@/layouts/settings/layout';
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { Info } from "lucide-react";
 import { useState } from "react";
+import axios from "axios";
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -35,6 +37,25 @@ function getFullName(user: any) {
 export default function Profile({ mustVerifyEmail, status }: { mustVerifyEmail: boolean; status?: string }) {
     const { auth } = usePage<SharedData>().props;
     const user = auth.user;
+
+    type Adviser = { name: string; email: string };
+    const adviser: Adviser | null = Array.isArray(user.advisers) ? user.advisers[0] ?? null : null;
+    const [adviserCode, setAdviserCode] = useState(user.adviser_code ?? ""); // Use from props, not axios
+    const [registerLoading, setRegisterLoading] = useState(false);
+    const [error, setError] = useState("");
+
+    const handleRegisterAdviser = async () => {
+        setRegisterLoading(true);
+        setError("");
+        try {
+            const res = await axios.post("/api/adviser/register-with-code", { adviser_code: adviserCode });
+            window.location.reload();
+        } catch (e: any) {
+            setError(e.response?.data?.error || "Registration failed.");
+        } finally {
+            setRegisterLoading(false);
+        }
+    };
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
@@ -90,7 +111,47 @@ export default function Profile({ mustVerifyEmail, status }: { mustVerifyEmail: 
                                 <div className="font-medium text-base">{user.program}</div>
                             </div>
                         )}
-                        {/* Add other fields as needed, keep all existing ones */}
+                        {/* Show Adviser info for Students */}
+                        {user.role === "Student" && (
+                            <div>
+                                <div className="text-xs text-muted-foreground mb-1">Adviser</div>
+                                {adviser ? (
+                                    <>
+                                        <div className="font-medium text-base">{adviser.name}</div>
+                                        <div className="text-xs text-muted-foreground mt-1">{adviser.email}</div>
+                                    </>
+                                ) : (
+                                    <div className="flex flex-col gap-2 mt-2">
+                                        <input
+                                            type="text"
+                                            placeholder="Paste adviser code here"
+                                            value={typeof adviserCode === "string" ? adviserCode : ""}
+                                            onChange={e => setAdviserCode(e.target.value)}
+                                            className="border px-2 py-1 rounded text-sm"
+                                            disabled={registerLoading}
+                                        />
+                                        <Button
+                                            onClick={handleRegisterAdviser}
+                                            disabled={registerLoading || !adviserCode}
+                                            variant="ghost"
+                                            className="w-fit"
+                                        >
+                                            Register Adviser
+                                        </Button>
+                                        {error && (
+                                            <div className="text-xs text-rose-500 mt-1">{error}</div>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+                        )}
+                        {(user.role === "Adviser" || user.role === "Faculty") && (
+                            <div>
+                                <div className="text-xs text-muted-foreground mb-1">Adviser Code</div>
+                                <div className=" font-medium text-base">{adviserCode ? String(adviserCode) : "—"}</div>
+                                <div className="text-xs text-muted-foreground mt-1">Share this code with your students so they can register you as their adviser.</div>
+                            </div>
+                        )}
                     </div>
                     {mustVerifyEmail && user.email_verified_at === null && (
                         <div className="mt-6">
@@ -101,7 +162,6 @@ export default function Profile({ mustVerifyEmail, status }: { mustVerifyEmail: 
                             )}
                         </div>
                     )}
-                    {/* Add extra space at the bottom */}
                     <div className="h-24" />
                 </div>
             </SettingsLayout>

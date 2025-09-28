@@ -3,9 +3,10 @@ import axios from "axios";
 import { Table, TableHeader, TableRow, TableCell, TableBody, TableHead } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Copy, Check, Users, Search } from "lucide-react";
+import { Copy, Check, Users, Search, Trash } from "lucide-react";
 import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
 type Student = {
   id: number;
@@ -56,6 +57,12 @@ export function AdviserCodeBox() {
   );
 }
 
+function getInitials(student: Student) {
+  const first = student.first_name?.trim()?.[0] ?? "";
+  const last = student.last_name?.trim()?.[0] ?? "";
+  return (first + last).toUpperCase() || "U";
+}
+
 export default function ShowStudents() {
   const [students, setStudents] = useState<Student[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -63,12 +70,11 @@ export default function ShowStudents() {
   const [query, setQuery] = useState("");
 
   // Dialog form state
-  const [studentNumber, setStudentNumber] = useState("");
-  const [firstName, setFirstName] = useState("");
-  const [middleName, setMiddleName] = useState("");
-  const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
-  const [program, setProgram] = useState("");
+
+  // Confirmation dialog state
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [studentToRemove, setStudentToRemove] = useState<Student | null>(null);
 
   useEffect(() => {
     axios.get("/api/adviser/students")
@@ -87,22 +93,20 @@ export default function ShowStudents() {
 
   const handleRegister = async () => {
     await axios.post("/api/adviser/students", {
-      student_number: studentNumber,
-      first_name: firstName,
-      middle_name: middleName,
-      last_name: lastName,
       email,
-      program,
     });
     const res = await axios.get("/api/adviser/students");
     setStudents(res.data);
     setDialogOpen(false);
-    setStudentNumber("");
-    setFirstName("");
-    setMiddleName("");
-    setLastName("");
     setEmail("");
-    setProgram("");
+  };
+
+  const handleRemoveStudent = async () => {
+    if (!studentToRemove) return;
+    await axios.delete(`/api/adviser/students/${studentToRemove.id}`);
+    setStudents(students.filter(stu => stu.id !== studentToRemove.id));
+    setConfirmOpen(false);
+    setStudentToRemove(null);
   };
 
   if (loading) {
@@ -121,11 +125,14 @@ export default function ShowStudents() {
   }
 
   return (
-    <div className="flex h-full flex-1 flex-col gap-4 overflow-auto rounded-xl pt-5 pr-7 pl-7 relative">
+    <div className="flex h-full flex-1 flex-col gap-4 overflow-auto rounded-xl pt-5 pr-7 pl-7 relative
+      bg-white dark:bg-zinc-900 transition-colors">
       {/* Header */}
-      <div className="w-full bg-white border border-border rounded-lg overflow-hidden mb-1">
+      <div className="w-full border border-border rounded-lg overflow-hidden mb-1
+        bg-white dark:bg-zinc-800 dark:border-zinc-700">
         {/* Main header row */}
-        <div className="flex flex-row items-center justify-between w-full p-3 bg-white border-b">
+        <div className="flex flex-row items-center justify-between w-full p-3 border-b
+          bg-white dark:bg-zinc-800 dark:border-zinc-700">
           <div className="flex items-center gap-2">
             <div className="h-10 w-10 flex items-center justify-center rounded-full bg-rose-500/10 border border-rose-500">
               <Users className="h-5 w-5 text-rose-400" />
@@ -151,45 +158,10 @@ export default function ShowStudents() {
               </DialogHeader>
               <div className="flex flex-col gap-3 mt-2">
                 <input
-                  type="text"
-                  placeholder="Student Number"
-                  value={studentNumber}
-                  onChange={e => setStudentNumber(e.target.value)}
-                  className="border px-2 py-1 rounded text-sm"
-                />
-                <input
-                  type="text"
-                  placeholder="First Name"
-                  value={firstName}
-                  onChange={e => setFirstName(e.target.value)}
-                  className="border px-2 py-1 rounded text-sm"
-                />
-                <input
-                  type="text"
-                  placeholder="Middle Name"
-                  value={middleName}
-                  onChange={e => setMiddleName(e.target.value)}
-                  className="border px-2 py-1 rounded text-sm"
-                />
-                <input
-                  type="text"
-                  placeholder="Last Name"
-                  value={lastName}
-                  onChange={e => setLastName(e.target.value)}
-                  className="border px-2 py-1 rounded text-sm"
-                />
-                <input
                   type="email"
-                  placeholder="Email"
+                  placeholder="Student Email"
                   value={email}
                   onChange={e => setEmail(e.target.value)}
-                  className="border px-2 py-1 rounded text-sm"
-                />
-                <input
-                  type="text"
-                  placeholder="Program"
-                  value={program}
-                  onChange={e => setProgram(e.target.value)}
                   className="border px-2 py-1 rounded text-sm"
                 />
               </div>
@@ -200,7 +172,8 @@ export default function ShowStudents() {
           </Dialog>
         </div>
         {/* Shareable code & search row */}
-        <div className="flex flex-row items-center justify-between w-full p-3 bg-white border-t">
+        <div className="flex flex-row items-center justify-between w-full p-3 border-t
+          bg-white dark:bg-zinc-800 dark:border-zinc-700">
           {/* Search input */}
           <Input
             type="text"
@@ -212,45 +185,100 @@ export default function ShowStudents() {
           />
           {/* Shareable code group */}
           <div className="flex items-center gap-3">
-            <div className="flex flex-col text-right">
-              <span className="font-semibold text-sm">
-                Shareable code:
-              </span>
-              <span className="text-xs text-muted-foreground">
-                Give this code to students so they can register under your advisership.
-              </span>
-            </div>
+             <span className="font-semibold text-sm whitespace-nowrap">
+              Shareable Adviser Code:
+            </span>
             <AdviserCodeBox />
           </div>
         </div>
       </div>
       {/* Table */}
-      <div className="rounded-md overflow-x-auto bg-white w-full max-w-full border border-border">
+      <div className="rounded-md overflow-x-auto w-full max-w-full border border-border
+        bg-white dark:bg-zinc-800 dark:border-zinc-700">
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Student #</TableHead>
-              <TableHead>Name</TableHead>
-              <TableHead>Email</TableHead>
-              <TableHead>Program</TableHead>
+              <TableHead className="dark:text-zinc-300">Student #</TableHead>
+              <TableHead className="dark:text-zinc-300">Name</TableHead>
+              <TableHead className="dark:text-zinc-300">Email</TableHead>
+              <TableHead className="dark:text-zinc-300">Program</TableHead>
+              <TableHead className="dark:text-zinc-300">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {filteredStudents.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={4} className="py-8 text-center text-sm text-muted-foreground">
+                <TableCell colSpan={5} className="py-8 text-center text-sm text-muted-foreground dark:text-zinc-400">
                   No students found.
                 </TableCell>
               </TableRow>
             ) : (
               filteredStudents.map(s => (
-                <TableRow key={s.id}>
-                  <TableCell>{s.student_number}</TableCell>
-                  <TableCell>
-                    {s.first_name} {s.middle_name ? s.middle_name[0] + "." : ""} {s.last_name}
+                <TableRow key={s.id} className="dark:hover:bg-zinc-700">
+                  <TableCell className="dark:text-zinc-200">{s.student_number}</TableCell>
+                  <TableCell className="dark:text-zinc-200">
+                    <div className="flex items-center gap-2">
+                      <Avatar className="h-8 w-8">
+                        <AvatarFallback>
+                          {getInitials(s)}
+                        </AvatarFallback>
+                      </Avatar>
+                      <span>
+                        {s.first_name} {s.middle_name ? s.middle_name[0] + "." : ""} {s.last_name}
+                      </span>
+                    </div>
                   </TableCell>
-                  <TableCell>{s.email}</TableCell>
-                  <TableCell>{s.program}</TableCell>
+                  <TableCell className="dark:text-zinc-200">{s.email}</TableCell>
+                  <TableCell className="dark:text-zinc-200">{s.program}</TableCell>
+                  <TableCell>
+                    <Dialog open={confirmOpen && studentToRemove?.id === s.id} onOpenChange={open => {
+                      if (!open) {
+                        setConfirmOpen(false);
+                        setStudentToRemove(null);
+                      }
+                    }}>
+                      <DialogTrigger asChild>
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          className="border-zinc-300 dark:border-zinc-500 dark:text-zinc-300"
+                          aria-label="Remove student"
+                          onClick={() => {
+                            setStudentToRemove(s);
+                            setConfirmOpen(true);
+                          }}
+                        >
+                          <Trash size={18} />
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent>
+                        <DialogHeader>
+                          <DialogTitle>Remove Student</DialogTitle>
+                        </DialogHeader>
+                        <div className="py-2 dark:text-zinc-200">
+                          Are you sure you want to remove <b>{s.first_name} {s.last_name}</b> from your advisership?
+                        </div>
+                        <DialogFooter>
+                          <Button
+                            variant="outline"
+                            onClick={() => {
+                              setConfirmOpen(false);
+                              setStudentToRemove(null);
+                            }}
+                            className="mr-2 bg-white text-zinc-900 border-zinc-300 dark:bg-zinc-900 dark:text-zinc-100 dark:border-zinc-600"
+                          >
+                            Cancel
+                          </Button>
+                          <Button
+                            onClick={handleRemoveStudent}
+                            className="bg-rose-500 hover:bg-rose-600 text-white border-none dark:bg-rose-500 dark:hover:bg-rose-600 dark:text-white"
+                          >
+                            Confirm
+                          </Button>
+                        </DialogFooter>
+                      </DialogContent>
+                    </Dialog>
+                  </TableCell>
                 </TableRow>
               ))
             )}

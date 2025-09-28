@@ -413,3 +413,11 @@ if (file_exists(__DIR__.'/auth.php')) {
     require __DIR__.'/auth.php';
 }
 if (file_exists(__DIR__.'/settings.php')) require __DIR__.'/settings.php';
+
+Route::middleware(['auth'])->group(function () {
+    Route::get('/api/adviser/students', [AdviserStudentController::class, 'index']);
+    Route::post('/api/adviser/students', [AdviserStudentController::class, 'store']);
+    Route::post('/api/adviser/register-with-code', [AdviserStudentController::class, 'registerWithCode']);
+    Route::get('/api/adviser/code', [AdviserStudentController::class, 'getAdviserCode']);
+    Route::delete('/api/adviser/students/{student}', [AdviserStudentController::class, 'destroy']);
+});
