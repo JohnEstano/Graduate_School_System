@@ -6,7 +6,14 @@ use Illuminate\Database\Eloquent\Model;
 
 class UserSignature extends Model
 {
-    protected $fillable = ['user_id', 'label', 'image_path', 'natural_width', 'natural_height', 'active'];
+    protected $fillable = [
+        'user_id',
+        'label',
+        'image_path',
+        'natural_width',
+        'natural_height',
+        'active'
+    ];
 
     public function user()
     {
