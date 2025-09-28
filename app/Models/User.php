@@ -149,4 +149,24 @@ class User extends Authenticatable
         if (! $this->isCoordinator()) return [];
         return $this->coordinatorPrograms()->pluck('program')->all();
     }
+
+    public function advisedStudents()
+    {
+        return $this->belongsToMany(User::class, 'adviser_student', 'adviser_id', 'student_id');
+    }
+
+    public function advisers()
+    {
+        return $this->belongsToMany(User::class, 'adviser_student', 'student_id', 'adviser_id');
+    }
+
+    public function generateAdviserCode(): void
+    {
+        if ($this->adviser_code) return;
+        do {
+            $code = strtoupper(bin2hex(random_bytes(4)));
+        } while (User::where('adviser_code', $code)->exists());
+        $this->adviser_code = $code;
+        $this->save();
+    }
 }

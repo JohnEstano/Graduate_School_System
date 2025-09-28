@@ -95,28 +95,10 @@ const assistantNavItems: MainNavItem[] = [
 ];
 
 const facultyNavItems: MainNavItem[] = [
-    /*
-        
-        { title: 'Dashboard', href: '/dashboard', icon: LayoutGrid },
-    {
-        title: 'Thesis & Dissertations',
-        href: '/defense',
-        icon: GraduationCap,
-        subItems: [
-            { title: 'Assigned Defense Requests', href: '/defense-request' },
-            { title: 'All Defense Requirements', href: '/all-defense-requirements' },
-            { title: 'Panelists', href: '/panelists', icon: SquareUserRound },
-        ],
-    },
-    { title: 'Schedules', href: '/schedules', icon: CalendarFold },
-
-    */
-
-
     { title: 'Dashboard', href: '/dashboard', icon: LayoutGrid },
     { title: 'Defense Requirements', href: '/all-defense-requirements', icon: GraduationCap },
+    { title: 'My Students', href: '/adviser/students-list', icon: Users }, // <-- Add this line
     { title: 'Schedules', href: '/schedules', icon: CalendarFold },
-
 ];
 
 const footerNavItems: NavItem[] = [];

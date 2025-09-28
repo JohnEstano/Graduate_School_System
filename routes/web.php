@@ -24,6 +24,7 @@ use App\Http\Controllers\ScheduleEventController;
 use App\Http\Controllers\DocumentTemplateController;
 use App\Http\Controllers\UserSignatureController;
 use App\Http\Controllers\GeneratedDocumentController;
+use App\Http\Controllers\AdviserStudentController;
 
 /*
 |--------------------------------------------------------------------------
@@ -308,6 +309,14 @@ Route::middleware(['auth','verified'])->group(function () {
     Route::get('/profile', function () {
         return Inertia::render('profile/Edit');
     })->name('profile.edit');
+
+    // Add this route for the adviser students list page
+    Route::get('/adviser/students-list', function () {
+        return Inertia::render('adviser/students-list/Index');
+    })->name('adviser.students-list');
+
+    // Add this line if missing
+    Route::get('/api/adviser/code', [AdviserStudentController::class, 'getAdviserCode']);
 });
 
 /*

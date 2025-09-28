@@ -216,7 +216,7 @@ const DraggableEventCard = ({
       {...attributes}
       {...listeners}
       className={cn(
-        "px-1 py-0.5 rounded text-[10px] font-medium truncate flex items-center gap-1 transition cursor-grab active:cursor-grabbing",
+        "px-1 py-0.5 rounded text-[10px] font-medium truncate flex items-center gap-1 cursor-grab active:cursor-grabbing",
         event.defense ? EVENT_BASE_SOLID : EVENT_BASE,
         isDragging && "opacity-50" // Visual feedback during drag
       )}

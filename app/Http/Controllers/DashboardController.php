@@ -14,6 +14,13 @@ class DashboardController extends Controller
             abort(401);
         }
 
+        // --- ADD THIS BLOCK ---
+        $roleName = is_object($user->role) ? $user->role->name : $user->role;
+        if (in_array($roleName, ['Faculty', 'Adviser']) && !$user->adviser_code) {
+            $user->generateAdviserCode();
+        }
+        // --- END BLOCK ---
+
         // --- compute effective role (from _dev_develop) ---
         $effective = $user->role;
         if (! $effective) {
