@@ -56,12 +56,32 @@ const ADMIN_ACTIONS = [
     },
 ];
 
+const FACULTY_ACTIONS = [
+    {
+        label: "My Students",
+        href: "/adviser/students-list",
+        icon: <User2 className="size-5 text-white" size={20} />,
+        bg: "bg-rose-500",
+    },
+    {
+        label: "Settings",
+        href: "/settings",
+        icon: <Settings className="size-5 text-white" size={20} />,
+        bg: "bg-slate-400",
+    },
+];
+
 const MANAGE_ROLES = ["Coordinator", "Dean", "Administrative Assistant"];
 
 export default function QuickActionsWidget({ userRole }: Props) {
-    const actions = MANAGE_ROLES.includes(userRole || "")
-        ? ADMIN_ACTIONS
-        : STUDENT_ACTIONS;
+    let actions;
+    if (userRole === "Faculty") {
+        actions = FACULTY_ACTIONS;
+    } else if (MANAGE_ROLES.includes(userRole || "")) {
+        actions = ADMIN_ACTIONS;
+    } else {
+        actions = STUDENT_ACTIONS;
+    }
 
     return (
         <div className="dark:bg-zinc-900 rounded-xl p-4">

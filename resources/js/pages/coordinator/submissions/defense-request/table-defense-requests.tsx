@@ -2,8 +2,8 @@ import { Button } from '@/components/ui/button';
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/table';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
-import { ArrowUp, ArrowDown, ChevronsUpDown, Eye, CheckCircle, CircleX, CircleArrowLeft, CalendarX, UserSearch, Check, X, AlertCircle } from 'lucide-react';
-import { format, formatDistanceToNow } from 'date-fns';
+import { ArrowUp, ArrowDown, ChevronsUpDown, Eye, CheckCircle, CircleX, CircleArrowLeft, CalendarX, UserSearch, Check, X, AlertCircle, FileText } from 'lucide-react';
+import { format, formatDistanceToNowStrict } from 'date-fns';
 import { router } from '@inertiajs/react';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@/components/ui/dropdown-menu';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -145,6 +145,7 @@ export default function TableDefenseRequests({
                   <Checkbox checked={headerChecked} onCheckedChange={toggleSelectAll} />
                 </TableHead>
               )}
+              {/* Document icon column - header blank */}
               {columns.title && <TableHead className="px-2">Title</TableHead>}
               {columns.presenter && <TableHead className="px-2">Presenter</TableHead>}
               {tabType !== 'approved' && columns.adviser && <TableHead className="px-2">Adviser</TableHead>}
@@ -223,9 +224,16 @@ export default function TableDefenseRequests({
                         />
                       </TableCell>
                     )}
+                    {/* Document icon cell */}
+                    
                     {columns.title && (
                       <TableCell className="px-2 py-2 font-medium truncate leading-tight" title={r.thesis_title}>
-                        <div className="truncate">{r.thesis_title}</div>
+                        <span className="inline-flex items-center gap-2">
+                          <span className="inline-flex items-center justify-center rounded-md bg-rose-500 text-white h-8 w-8">
+                            <FileText size={20} />
+                          </span>
+                          <span className="truncate align-middle">{r.thesis_title}</span>
+                        </span>
                       </TableCell>
                     )}
                     {columns.presenter && (
@@ -246,7 +254,7 @@ export default function TableDefenseRequests({
                     {tabType !== 'approved' && columns.submitted_at && (
                       <TableCell className="px-2 py-2 text-xs text-muted-foreground whitespace-nowrap">
                         {r.submitted_at
-                          ? `${formatDistanceToNow(new Date(r.submitted_at), { addSuffix: true })}`
+                          ? `${formatDistanceToNowStrict(new Date(r.submitted_at), { addSuffix: true })}`
                           : '—'}
                       </TableCell>
                     )}
@@ -322,7 +330,7 @@ export default function TableDefenseRequests({
                               <Button
                                 size="lg"
                                 variant="outline"
-                                className="h-10 w-12 p-0 text-green-600 action-btn hover:text-green-600 hover:border-green-200 focus:text-green-600 focus:border-green-200"
+                                className="h-8 w-10 p-0 text-green-600 action-btn hover:text-green-600 hover:border-green-200 focus:text-green-600 focus:border-green-200"
                                 title="Approve"
                                 onClick={e => {
                                   e.stopPropagation();
@@ -334,7 +342,7 @@ export default function TableDefenseRequests({
                               <Button
                                 size="lg"
                                 variant="outline"
-                                className="h-10 w-12 p-0 text-red-600 action-btn hover:text-red-600 hover:border-red-200 focus:text-red-600 focus:border-red-200"
+                                className="h-8 w-10 p-0 text-red-600 action-btn hover:text-red-600 hover:border-red-200 focus:text-red-600 focus:border-red-200"
                                 title="Reject"
                                 onClick={e => {
                                   e.stopPropagation();

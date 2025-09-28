@@ -61,7 +61,7 @@ const ImmediateActionDefenseRequestsWidget: React.FC<Props> = ({ requests = [], 
             ) : (
                 <>
                     <a
-                        href="/defense-requests"
+                        href="/all-defense-requirements"
                         className="flex items-center justify-between mb-2 group cursor-pointer select-none"
                         style={{ textDecoration: 'none' }}
                     >
