@@ -95,14 +95,14 @@ class DashboardController extends Controller
                     'role' => $effective,
                     'school_id' => $user->school_id,
                     'avatar' => $user->employee_photo_url ?? null,
-                    // add other fields as needed
+                    // --- Add this line ---
+                    'advisers' => $user->advisers()->get(['id','name','first_name','last_name','email','adviser_code']),
                 ],
             ],
             // student-specific objects (may be null / empty if not applicable)
             'defenseRequirement' => $latestRequirement,
             'defenseRequest' => $defenseRequest,
             'defenseRequests' => $defenseRequests,
-            // --- Add this line ---
             'studentsCount' => $studentsCount,
         ];
 

@@ -161,7 +161,12 @@ class User extends Authenticatable
     // For Student: Get all advisers
     public function advisers()
     {
-        return $this->belongsToMany(User::class, 'adviser_student', 'student_id', 'adviser_id');
+        return $this->belongsToMany(
+            User::class,
+            'adviser_student',
+            'student_id',
+            'adviser_id'
+        )->select('users.id', 'users.first_name', 'users.middle_name', 'users.last_name', 'users.email', 'users.adviser_code');
     }
 
     public function generateAdviserCode(): void

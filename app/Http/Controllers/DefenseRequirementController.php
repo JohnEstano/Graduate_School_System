@@ -11,17 +11,29 @@ class DefenseRequirementController extends Controller
 {
     public function index(Request $request)
     {
+        $user = Auth::user();
         $requirements = DefenseRequest::where('submitted_by', Auth::id())->orderByDesc('created_at')->get();
-        $defenseRequest = DefenseRequest::where('school_id', Auth::user()->school_id)->latest()->first();
+        $defenseRequest = DefenseRequest::where('school_id', $user->school_id)->latest()->first();
 
-        // Read from DB
         $acceptDefense = \DB::table('settings')->where('key', 'accept_defense')->value('value');
-        $acceptDefense = $acceptDefense === null ? true : $acceptDefense === '1'; // <-- FIXED
+        $acceptDefense = $acceptDefense === null ? true : $acceptDefense === '1';
 
         return inertia('student/submissions/defense-requirements/Index', [
             'defenseRequirements' => $requirements,
             'defenseRequest' => $defenseRequest,
             'acceptDefense' => $acceptDefense,
+            'auth' => [
+                'user' => [
+                    'id' => $user->id,
+                    'first_name' => $user->first_name,
+                    'middle_name' => $user->middle_name,
+                    'last_name' => $user->last_name,
+                    'school_id' => $user->school_id,
+                    'program' => $user->program,
+                    'email' => $user->email,
+                    'advisers' => $user->advisers()->get(['id','first_name','middle_name','last_name','email','adviser_code']),
+                ],
+            ],
         ]);
     }
 
@@ -126,6 +138,7 @@ class DefenseRequirementController extends Controller
             'program' => 'required|string',
             'thesis_title' => 'required|string',
             'adviser' => 'required|string',
+            'adviser_id' => 'nullable|integer|exists:users,id',
             'defense_type' => 'required|string',
             'rec_endorsement' => "nullable|file|mimes:{$allowedMimes}|max:{$maxFileSize}",
             'proof_of_payment' => "nullable|file|mimes:{$allowedMimes}|max:{$maxFileSize}",
@@ -162,6 +175,8 @@ class DefenseRequirementController extends Controller
                 'thesis_title' => $data['thesis_title'],
                 'defense_type' => $data['defense_type'],
                 'defense_adviser' => $data['adviser'],
+                'adviser_user_id' => $data['adviser_id'] ?? null,
+                'assigned_to_user_id' => $data['adviser_id'] ?? null,
                 'rec_endorsement' => $data['rec_endorsement'] ?? null,
                 'proof_of_payment' => $data['proof_of_payment'] ?? null,
                 'reference_no' => $data['reference_no'] ?? null,
@@ -174,8 +189,8 @@ class DefenseRequirementController extends Controller
                 'workflow_state' => 'submitted',
             ];
 
-            // Adviser auto-map
-            if ($defenseRequestData['defense_adviser']) {
+            // If adviser_id is not present, fallback to name mapping
+            if (!$defenseRequestData['adviser_user_id'] && $defenseRequestData['defense_adviser']) {
                 $normalized = preg_replace('/\s+/',' ', strtolower($defenseRequestData['defense_adviser']));
                 $match = \App\Models\User::whereIn('role',['Faculty','Adviser'])
                     ->get()

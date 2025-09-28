@@ -198,8 +198,8 @@ export default function ShowStudents() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="dark:text-zinc-300">Student #</TableHead>
               <TableHead className="dark:text-zinc-300">Name</TableHead>
+              <TableHead className="dark:text-zinc-300">Student #</TableHead>
               <TableHead className="dark:text-zinc-300">Email</TableHead>
               <TableHead className="dark:text-zinc-300">Program</TableHead>
               <TableHead className="dark:text-zinc-300">Actions</TableHead>
@@ -215,19 +215,17 @@ export default function ShowStudents() {
             ) : (
               filteredStudents.map(s => (
                 <TableRow key={s.id} className="dark:hover:bg-zinc-700">
-                  <TableCell className="dark:text-zinc-200">{s.student_number}</TableCell>
-                  <TableCell className="dark:text-zinc-200">
-                    <div className="flex items-center gap-2">
-                      <Avatar className="h-8 w-8">
-                        <AvatarFallback>
-                          {getInitials(s)}
-                        </AvatarFallback>
-                      </Avatar>
-                      <span>
-                        {s.first_name} {s.middle_name ? s.middle_name[0] + "." : ""} {s.last_name}
-                      </span>
-                    </div>
+                  <TableCell className="flex items-center gap-3 dark:text-zinc-200">
+                    <Avatar className="h-8 w-8">
+                      <AvatarFallback>
+                        {getInitials(s)}
+                      </AvatarFallback>
+                    </Avatar>
+                    <span>
+                      {s.first_name} {s.middle_name ? s.middle_name[0] + "." : ""} {s.last_name}
+                    </span>
                   </TableCell>
+                  <TableCell className="dark:text-zinc-200">{s.student_number}</TableCell>
                   <TableCell className="dark:text-zinc-200">{s.email}</TableCell>
                   <TableCell className="dark:text-zinc-200">{s.program}</TableCell>
                   <TableCell>

@@ -90,24 +90,27 @@ Route::middleware(['auth','verified'])->group(function () {
         return response()->json(['ok' => true, 'acceptDefense' => $accept]);
     });
 
+    // Adviser code reset
     Route::post('/settings/adviser/reset-code', function (Request $request) {
         $user = Auth::user();
         abort_unless(in_array($user->role, ['Adviser', 'Faculty']), 403);
         $user->adviser_code = null;
         $user->generateAdviserCode();
+        $user->save();
         return response()->json(['adviser_code' => $user->adviser_code]);
     });
 
+    // Adviser auto-accept toggle
     Route::post('/settings/adviser/auto-accept', function (Request $request) {
         $user = Auth::user();
         abort_unless(in_array($user->role, ['Adviser', 'Faculty']), 403);
         $autoAccept = $request->input('autoAccept') ? 1 : 0;
-    \DB::table('adviser_settings')->updateOrInsert(
-        ['adviser_id' => $user->id],
-        ['auto_accept_students' => $autoAccept]
-    );
-    return response()->json(['autoAccept' => $autoAccept]);
-});
+        \DB::table('adviser_settings')->updateOrInsert(
+            ['adviser_id' => $user->id],
+            ['auto_accept_students' => $autoAccept]
+        );
+        return response()->json(['autoAccept' => $autoAccept]);
+    });
 
     Route::get('/settings/adviser', function () {
         $user = Auth::user();

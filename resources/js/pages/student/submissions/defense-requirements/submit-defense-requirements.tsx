@@ -137,6 +137,7 @@ export default function SubmitDefenseRequirements({ onFinish, open, onOpenChange
     // Get logged-in user info from Inertia page props
     const { props } = usePage<any>();
     const user = props?.auth?.user || {};
+    const adviser = Array.isArray(user.advisers) && user.advisers.length > 0 ? user.advisers[0] : null;
 
     const manuscriptRef = useRef<HTMLInputElement>(null);
     const similarityRef = useRef<HTMLInputElement>(null);
@@ -152,6 +153,7 @@ export default function SubmitDefenseRequirements({ onFinish, open, onOpenChange
         program: string;
         thesis_title: string;
         adviser: string;
+        adviser_id: number | null;
         status: string;
         defense_type: string;
         rec_endorsement: File | null;
@@ -166,7 +168,8 @@ export default function SubmitDefenseRequirements({ onFinish, open, onOpenChange
         school_id: user.school_id || '',
         program: user.program || '',
         thesis_title: '',
-        adviser: '',
+        adviser: adviser ? `${adviser.first_name} ${adviser.middle_name ? adviser.middle_name + " " : ""}${adviser.last_name}` : '',
+        adviser_id: adviser ? adviser.id : null,
         status: 'pending',
         defense_type: '',
         rec_endorsement: null,
@@ -318,6 +321,18 @@ export default function SubmitDefenseRequirements({ onFinish, open, onOpenChange
                             className="h-8 text-sm"
                         />
                     </div>
+                    <div>
+                        <Label className="text-xs">Adviser</Label>
+                        <Input
+                            value={adviser
+                                ? `${adviser.first_name} ${adviser.middle_name ? adviser.middle_name + " " : ""}${adviser.last_name}`
+                                : 'No adviser registered'}
+                            readOnly
+                            disabled
+                            placeholder="Adviser"
+                            className="h-8 text-sm"
+                        />
+                    </div>
                 </div>
             ),
         },
@@ -356,13 +371,6 @@ export default function SubmitDefenseRequirements({ onFinish, open, onOpenChange
                             onChange={e => setData('thesis_title', e.target.value)}
                             placeholder="Thesis Title"
                             className="h-8 text-sm"
-                        />
-                    </div>
-                    <div>
-                        <Label className="text-xs">Adviser</Label>
-                        <AdviserSearchInput
-                            value={data.adviser}
-                            onChange={(val: string) => setData('adviser', val)}
                         />
                     </div>
                 </div>
