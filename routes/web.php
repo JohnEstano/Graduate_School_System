@@ -423,6 +423,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::put('/api/document-templates/{template}/fields', [DocumentTemplateController::class, 'updateFields']);
     Route::delete('/api/document-templates/{template}', [DocumentTemplateController::class, 'destroy']);
 });
+Route::post('/api/generate-document', [\App\Http\Controllers\DocumentTemplateController::class, 'generate']);
 
 
 

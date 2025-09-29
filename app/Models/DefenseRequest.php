@@ -31,6 +31,7 @@ class DefenseRequest extends Model
     public function lastStatusUpdater()   { return $this->belongsTo(User::class,'last_status_updated_by'); }
     public function adviserReviewer()     { return $this->belongsTo(User::class,'adviser_reviewed_by'); }
     public function coordinatorReviewer() { return $this->belongsTo(User::class,'coordinator_reviewed_by'); }
+    public function student()              { return $this->belongsTo(User::class, 'submitted_by'); }
 
     public function scopeForAdviser($q, User $user)
     {

@@ -6,10 +6,25 @@ use Illuminate\Support\Facades\Storage;
 use setasign\Fpdi\Fpdi;
 
 class DocumentGenerator {
-  public function generate(DocumentTemplate $tpl, DefenseRequest $req): GeneratedDocument {
-    $payload=$this->payload($req);
+  public function generate(DocumentTemplate $tpl, DefenseRequest $req, array $overrides = []): GeneratedDocument {
+    $payload = $this->payload($req);
+
+    // Apply overrides (key-value pairs)
+    foreach ($overrides as $k => $v) {
+        $segments = explode('.', $k);
+        $ref = &$payload;
+        foreach ($segments as $seg) {
+            if (!isset($ref[$seg])) $ref[$seg] = [];
+            $ref = &$ref[$seg];
+        }
+        $ref = $v;
+    }
+
     $pdf=new Fpdi();
     $src=Storage::path($tpl->file_path);
+    if (!file_exists($src)) {
+        throw new \Exception("PDF template file not found: $src");
+    }
     $pageCount=$pdf->setSourceFile($src);
     $fields=$tpl->fields ?? [];
 
@@ -39,30 +54,31 @@ class DocumentGenerator {
       }
     }
 
-    $out="generated/defense/{$req->id}_{$tpl->code}_".time().".pdf";
-    Storage::put($out,$pdf->Output('S'));
-    $hash=hash('sha256',Storage::get($out));
+    $out = "generated/defense/{$req->id}_{$tpl->code}_" . time() . ".pdf";
+    \Storage::put($out, $pdf->Output('S'));
+    $hash = hash('sha256', \Storage::get($out));
 
     return GeneratedDocument::create([
-      'defense_request_id'=>$req->id,
-      'document_template_id'=>$tpl->id,
-      'template_version_used'=>$tpl->version,
-      'output_path'=>$out,
-      'payload'=>$payload,
-      'sha256'=>$hash
+        'defense_request_id' => $req->id,
+        'document_template_id' => $tpl->id,
+        'template_version_used' => $tpl->version,
+        'output_path' => $out,
+        'payload' => $payload,
+        'status' => 'generated',
+        'sha256' => $hash
     ]);
   }
 
   private function payload(DefenseRequest $r): array {
-    $student=$r->student;
+    $student = $r->student ?? $r; // fallback to $r itself
     return [
       'student'=>[
         'full_name'=>trim(($student->first_name??'').' '.($student->last_name??'')),
-        'program'=>$r->program
+        'program'=>$r->program ?? '',
       ],
       'request'=>[
-        'thesis_title'=>$r->thesis_title,
-        'defense_type'=>$r->defense_type
+        'thesis_title'=>$r->thesis_title ?? '',
+        'defense_type'=>$r->defense_type ?? '',
       ],
       'schedule'=>[
         'date'=>$r->scheduled_date?date('M d, Y',strtotime($r->scheduled_date)):null,

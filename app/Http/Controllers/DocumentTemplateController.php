@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\DocumentTemplate;
+use App\Models\DefenseRequest;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 
@@ -47,5 +48,24 @@ class DocumentTemplateController extends Controller {
     Storage::disk('public')->delete($template->file_path);
     $template->delete();
     return response()->json(['ok'=>true]);
+  }
+  public function generate(Request $r)
+  {
+      $data = $r->validate([
+          'template_id' => 'required|integer|exists:document_templates,id',
+          'defense_request_id' => 'required|integer|exists:defense_requests,id',
+          'fields' => 'nullable|array'
+      ]);
+      $tpl = \App\Models\DocumentTemplate::findOrFail($data['template_id']);
+      $req = \App\Models\DefenseRequest::findOrFail($data['defense_request_id']);
+
+      // Pass key-value overrides to DocumentGenerator
+      $doc = app(\App\Services\DocumentGenerator::class)->generate($tpl, $req, $data['fields'] ?? []);
+
+      // Make sure $doc->output_path is set in DocumentGenerator
+      return response()->json([
+          'ok' => true,
+          'download_url' => \Storage::url($doc->output_path)
+      ]);
   }
 }

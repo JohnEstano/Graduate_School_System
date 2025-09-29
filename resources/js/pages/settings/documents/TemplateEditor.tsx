@@ -5,6 +5,7 @@ import SettingsLayout from '@/layouts/settings/layout';
 import HeadingSmall from '@/components/heading-small';
 import { Button } from '@/components/ui/button';
 import { Rnd } from 'react-rnd';
+import { Plus } from 'lucide-react'; // Add this import for the plus icon
 
 // PDF.js imports for Vite/React
 import * as pdfjsLib from 'pdfjs-dist';
@@ -29,7 +30,8 @@ type Field = {
 const KEYS = [
   'student.full_name', 'student.program', 'request.thesis_title',
   'request.defense_type', 'schedule.date', 'schedule.time',
-  'signature.adviser', 'signature.coordinator', 'signature.dean', 'today.date'
+  'signature.adviser', 'signature.coordinator', 'signature.dean', 'today.date',
+  'coordinator.full_name', 'adviser.full_name', 'dean.full_name'
 ];
 
 interface Props { templateId: number; template: any; }
@@ -74,13 +76,14 @@ export default function TemplateEditorPage({ templateId, template }: Props) {
     })();
   }, [templateId]);
 
-  function add(type: Field['type']) {
+  function add() {
     setFields(f => [...f, {
       id: crypto.randomUUID(), key: KEYS[0], page,
       x: 40, y: 40,
-      width: type === 'signature' ? 180 : 200,
-      height: type === 'signature' ? 60 : (type === 'multiline' ? 70 : 30),
-      type, font_size: 11
+      width: 200,
+      height: 30,
+      type: 'text', // Default type, you can add a dropdown later if needed
+      font_size: 11
     }]);
   }
 
@@ -88,7 +91,10 @@ export default function TemplateEditorPage({ templateId, template }: Props) {
     setSaving(true);
     await fetch(`/api/document-templates/${templateId}/fields`, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRF-TOKEN': (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content || ''
+      },
       body: JSON.stringify({ fields })
     });
     setSaving(false);
@@ -104,9 +110,9 @@ export default function TemplateEditorPage({ templateId, template }: Props) {
           <div className="flex gap-6">
             <div className="w-60 space-y-4">
               <div className="space-y-2">
-                <Button className="w-full" onClick={() => add('text')}>Add Text</Button>
-                <Button className="w-full" onClick={() => add('multiline')} variant="secondary">Add Multiline</Button>
-                <Button className="w-full" onClick={() => add('signature')} variant="outline">Add Signature</Button>
+                <Button className="w-full flex items-center justify-center gap-2" onClick={add}>
+                  <Plus size={16} /> Create Map
+                </Button>
                 <Button className="w-full" onClick={save} disabled={saving} variant="destructive">
                   {saving ? 'Saving...' : 'Save'}
                 </Button>
@@ -171,9 +177,28 @@ export default function TemplateEditorPage({ templateId, template }: Props) {
                       className={`absolute text-[10px] flex items-center justify-center border ${
                         f.type === 'signature'
                           ? 'border-green-600 bg-green-200/30'
-                          : 'border-blue-600 bg-blue-200/30'
-                      }`}>
-                      {f.type}
+                          : f.type === 'multiline'
+                            ? 'border-purple-600 bg-purple-200/30'
+                            : 'border-blue-600 bg-blue-200/30'
+                      }`}
+                    >
+                      <div className="w-full h-full flex flex-col items-center justify-center px-1">
+                        <span className={`font-bold ${
+                          f.type === 'signature' ? 'text-green-700' :
+                          f.type === 'multiline' ? 'text-purple-700' : 'text-blue-700'
+                        }`}>
+                          {f.type.charAt(0).toUpperCase() + f.type.slice(1)}
+                        </span>
+                        <span className="text-[10px] text-neutral-700 break-all">{f.key}</span>
+                        {f.type === 'signature' && (
+                          <span className="text-xs text-green-700">Sign here</span>
+                        )}
+                        {f.type === 'multiline' && (
+                          <div className="text-xs text-purple-700 opacity-70 leading-tight">
+                            Line 1<br />Line 2<br />Line 3
+                          </div>
+                        )}
+                      </div>
                     </Rnd>
                   ))}
                 </div>
