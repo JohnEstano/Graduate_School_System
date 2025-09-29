@@ -5,6 +5,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\PanelistController;
 use App\Http\Controllers\DefenseRequestController;
 use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\DocumentTemplateController;
 
 // Authenticated API routes
 Route::middleware('auth:sanctum')->group(function () {
@@ -31,4 +32,11 @@ Route::middleware('auth:sanctum')->group(function () {
     // Route::get('notifications', [NotificationController::class, 'index']);
     // Route::post('notifications/read/{notification}', [NotificationController::class, 'markAsRead']);
     // Route::post('notifications/read-all', [NotificationController::class, 'markAllAsRead']);
+
+    // Document Templates API
+    Route::get('/document-templates', [DocumentTemplateController::class,'index']);
+    Route::get('/document-templates/{template}', [DocumentTemplateController::class,'show']);
+    Route::post('/document-templates', [DocumentTemplateController::class,'store']);
+    Route::put('/document-templates/{template}/fields', [DocumentTemplateController::class,'updateFields']);
+    Route::delete('/document-templates/{template}', [DocumentTemplateController::class,'destroy']);
 });

@@ -329,12 +329,6 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/adviser/defense-requests', [DefenseRequestController::class,'adviserQueue'])
         ->name('adviser.defense-requests');
 
-    Route::get('/api/document-templates', [DocumentTemplateController::class,'index']);
-    Route::get('/api/document-templates/{template}', [DocumentTemplateController::class,'show']);
-    Route::post('/api/document-templates', [DocumentTemplateController::class,'store']);
-    Route::put('/api/document-templates/{template}/fields', [DocumentTemplateController::class,'updateFields']);
-    Route::delete('/api/document-templates/{template}', [DocumentTemplateController::class,'destroy']);
-
     Route::get('/api/signatures', [UserSignatureController::class,'index']);
     Route::post('/api/signatures', [UserSignatureController::class,'store']);
     Route::patch('/api/signatures/{signature}/activate', [UserSignatureController::class,'activate']);
@@ -421,3 +415,14 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/api/adviser/code', [AdviserStudentController::class, 'getAdviserCode']);
     Route::delete('/api/adviser/students/{student}', [AdviserStudentController::class, 'destroy']);
 });
+
+Route::middleware(['auth', 'verified'])->group(function () {
+    Route::get('/api/document-templates', [DocumentTemplateController::class, 'index']);
+    Route::get('/api/document-templates/{template}', [DocumentTemplateController::class, 'show']);
+    Route::post('/api/document-templates', [DocumentTemplateController::class, 'store']);
+    Route::put('/api/document-templates/{template}/fields', [DocumentTemplateController::class, 'updateFields']);
+    Route::delete('/api/document-templates/{template}', [DocumentTemplateController::class, 'destroy']);
+});
+
+
+

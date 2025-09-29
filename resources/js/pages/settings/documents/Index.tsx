@@ -6,7 +6,7 @@ import HeadingSmall from '@/components/heading-small';
 import { Button } from '@/components/ui/button';
 
 type BreadcrumbItem = { title:string; href:string };
-type Template = { id:number; name:string; code:string; defense_type?:string|null; version:number; };
+type Template = { id:number; name:string; code:string; version:number; };
 
 const breadcrumbs: BreadcrumbItem[] = [
   { title: 'Document Templates', href: '/settings/documents' },
@@ -15,14 +15,22 @@ const breadcrumbs: BreadcrumbItem[] = [
 export default function DocumentTemplatesIndex() {
   const [list,setList]=useState<Template[]>([]);
   const [file,setFile]=useState<File|null>(null);
-  const [form,setForm]=useState({name:'',code:'',defense_type:''});
+  const [form,setForm]=useState({name:''});
   const [busy,setBusy]=useState(false);
 
   async function load(){
-    const r=await fetch('/api/document-templates');
+    const r=await fetch('/api/document-templates', {
+      headers: {
+        'X-CSRF-TOKEN': (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content || ''
+      },
+      credentials: 'include'
+    });
     if(r.ok) setList(await r.json());
   }
-  useEffect(()=>{ load(); },[]);
+
+  useEffect(() => {
+    fetch('/sanctum/csrf-cookie').then(load);
+  }, []);
 
   async function submit(e:React.FormEvent){
     e.preventDefault();
@@ -30,12 +38,17 @@ export default function DocumentTemplatesIndex() {
     setBusy(true);
     const fd=new FormData();
     fd.append('name',form.name);
-    fd.append('code',form.code);
-    if(form.defense_type) fd.append('defense_type',form.defense_type);
     fd.append('file',file);
-    const r=await fetch('/api/document-templates',{method:'POST',body:fd});
+    const r=await fetch('/api/document-templates', {
+      method:'POST',
+      body:fd,
+      headers: {
+        'X-CSRF-TOKEN': (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content || ''
+      },
+      credentials: 'include'
+    });
     setBusy(false);
-    if(r.ok){ setForm({name:'',code:'',defense_type:''}); setFile(null); load(); }
+    if(r.ok){ setForm({name:''}); setFile(null); load(); }
   }
 
   return (
@@ -48,18 +61,9 @@ export default function DocumentTemplatesIndex() {
             <form onSubmit={submit} className="mt-2 grid gap-3 max-w-sm">
               <input className="border rounded px-2 py-1" placeholder="Name"
                 value={form.name} onChange={e=>setForm(f=>({...f,name:e.target.value}))}/>
-              <input className="border rounded px-2 py-1" placeholder="Code (unique)"
-                value={form.code} onChange={e=>setForm(f=>({...f,code:e.target.value}))}/>
-              <select className="border rounded px-2 py-1"
-                value={form.defense_type} onChange={e=>setForm(f=>({...f,defense_type:e.target.value}))}>
-                <option value="">(Any defense type)</option>
-                <option value="Proposal">Proposal</option>
-                <option value="Prefinal">Prefinal</option>
-                <option value="Final">Final</option>
-              </select>
               <input type="file" accept="application/pdf"
                 onChange={e=>setFile(e.target.files?.[0]||null)} />
-              <Button disabled={!file||!form.name||!form.code||busy} type="submit">
+              <Button disabled={!file||!form.name||busy} type="submit">
                 {busy?'Uploading...':'Upload'}
               </Button>
             </form>
@@ -73,7 +77,6 @@ export default function DocumentTemplatesIndex() {
                     <tr>
                       <th className="p-2 text-left">Name</th>
                       <th className="p-2">Code</th>
-                      <th className="p-2">Type</th>
                       <th className="p-2">Version</th>
                       <th className="p-2">Edit</th>
                     </tr>
@@ -83,7 +86,6 @@ export default function DocumentTemplatesIndex() {
                       <tr key={t.id} className="border-t">
                         <td className="p-2">{t.name}</td>
                         <td className="p-2">{t.code}</td>
-                        <td className="p-2">{t.defense_type||'—'}</td>
                         <td className="p-2 text-center">{t.version}</td>
                         <td className="p-2">
                           <a className="text-blue-600 underline"
@@ -91,7 +93,7 @@ export default function DocumentTemplatesIndex() {
                         </td>
                       </tr>
                     ))}
-                    {!list.length && <tr><td className="p-4" colSpan={5}>No templates.</td></tr>}
+                    {!list.length && <tr><td className="p-4" colSpan={4}>No templates.</td></tr>}
                   </tbody>
                 </table>
               </div>

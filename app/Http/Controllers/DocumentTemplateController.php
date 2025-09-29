@@ -13,27 +13,26 @@ class DocumentTemplateController extends Controller {
     return response()->json($list);
   }
 
+  public function show(DocumentTemplate $template) {
+    return response()->json($template);
+  }
+
   public function store(Request $r) {
+    \Log::info('DocumentTemplateController@store called', ['user_id' => $r->user()->id]);
     $data = $r->validate([
       'name'=>'required|string',
-      'code'=>'required|string|unique:document_templates,code',
-      'defense_type'=>'nullable|string',
       'file'=>'required|file|mimes:pdf|max:10240',
     ]);
-    $path = $r->file('file')->store('templates');
+    $code = \Str::slug($data['name']) . '-' . uniqid();
+    $path = $r->file('file')->store('templates', 'public');
     $tpl = DocumentTemplate::create([
       'name'=>$data['name'],
-      'code'=>$data['code'],
-      'defense_type'=>$data['defense_type']??null,
+      'code'=>$code,
       'file_path'=>$path,
       'page_count'=>1,
       'created_by'=>$r->user()->id,
     ]);
     return response()->json($tpl);
-  }
-
-  public function show(DocumentTemplate $template) {
-    return response()->json($template);
   }
 
   public function updateFields(Request $r, DocumentTemplate $template) {
@@ -45,7 +44,7 @@ class DocumentTemplateController extends Controller {
   }
 
   public function destroy(DocumentTemplate $template) {
-    Storage::delete($template->file_path);
+    Storage::disk('public')->delete($template->file_path);
     $template->delete();
     return response()->json(['ok'=>true]);
   }
