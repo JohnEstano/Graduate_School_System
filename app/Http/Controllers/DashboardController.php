@@ -4,24 +4,27 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Inertia\Inertia;
+use App\Models\User;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 
 class DashboardController extends Controller
 {
     public function index(Request $request)
     {
-        $user = auth()->user();
+        $user = Auth::user();
         if (! $user) {
             abort(401);
         }
 
         $roleName = is_object($user->role) ? $user->role->name : $user->role;
-        if (in_array($roleName, ['Faculty', 'Adviser']) && !$user->adviser_code) {
+        if (in_array($roleName, ['Faculty', 'Adviser']) && method_exists($user, 'generateAdviserCode') && !$user->adviser_code) {
             $user->generateAdviserCode();
         }
 
         // --- Add this block ---
         $studentsCount = 0;
-        if (in_array($roleName, ['Faculty', 'Adviser'])) {
+        if (in_array($roleName, ['Faculty', 'Adviser']) && method_exists($user, 'advisedStudents')) {
             $studentsCount = $user->advisedStudents()->count();
         }
         // --- End block ---
@@ -78,7 +81,7 @@ class DashboardController extends Controller
             }
         } catch (\Throwable $e) {
             // don't crash the dashboard for missing models/columns — log if you want
-            \Log::debug('Dashboard student-defense lookup failed: '.$e->getMessage());
+            Log::debug('Dashboard student-defense lookup failed: '.$e->getMessage());
             // keep defaults (null / empty collection)
         }
 
@@ -87,7 +90,7 @@ class DashboardController extends Controller
             'auth' => [
                 'user' => [
                     'id' => $user->id,
-                    'name' => $user->name,
+                    'name' => $user->name ?? trim($user->first_name . ' ' . $user->last_name),
                     'first_name' => $user->first_name,
                     'middle_name' => $user->middle_name,
                     'last_name' => $user->last_name,
@@ -96,7 +99,7 @@ class DashboardController extends Controller
                     'school_id' => $user->school_id,
                     'avatar' => $user->employee_photo_url ?? null,
                     // --- Add this line ---
-                    'advisers' => $user->advisers()->get(['id','name','first_name','last_name','email','adviser_code']),
+                    'advisers' => method_exists($user, 'advisers') ? $user->advisers()->get(['id','name','first_name','last_name','email','adviser_code']) : collect(),
                 ],
             ],
             // student-specific objects (may be null / empty if not applicable)
@@ -106,6 +109,146 @@ class DashboardController extends Controller
             'studentsCount' => $studentsCount,
         ];
 
+        // --- Super Admin specific data ---
+        if ($effective === 'Super Admin') {
+            $props['activeUsers'] = $this->getActiveUsers();
+            $props['allUsers'] = $this->getAllUsers();
+            $props['programs'] = $this->getPrograms();
+            $props['coordinators'] = $this->getCoordinators();
+            $props['stats'] = $this->getSuperAdminStats();
+        }
+
         return Inertia::render('dashboard/Index', $props);
+    }
+
+    /**
+     * Get active users with their last activity
+     */
+    private function getActiveUsers()
+    {
+        try {
+            return User::select('id', 'first_name', 'last_name', 'email', 'role', 'updated_at')
+                ->whereNotNull('email')
+                ->orderBy('updated_at', 'desc')
+                ->limit(50)
+                ->get()
+                ->map(function ($user) {
+                    return [
+                        'id' => $user->id,
+                        'name' => trim($user->first_name . ' ' . $user->last_name),
+                        'email' => $user->email,
+                        'role' => $user->role,
+                        'last_activity' => $user->updated_at ? $user->updated_at->diffForHumans() : 'Unknown',
+                        'is_online' => $user->updated_at && $user->updated_at->gt(now()->subMinutes(15)),
+                    ];
+                });
+        } catch (\Exception $e) {
+            return collect();
+        }
+    }
+
+    /**
+     * Get all users for Super Admin management
+     */
+    private function getAllUsers()
+    {
+        try {
+            return User::select('id', 'first_name', 'last_name', 'email', 'role', 'school_id', 'created_at')
+                ->orderBy('created_at', 'desc')
+                ->get()
+                ->map(function ($user) {
+                    return [
+                        'id' => $user->id,
+                        'name' => trim($user->first_name . ' ' . $user->last_name),
+                        'email' => $user->email,
+                        'role' => $user->role,
+                        'school_id' => $user->school_id,
+                        'created_at' => $user->created_at ? $user->created_at->format('M d, Y') : 'Unknown',
+                    ];
+                });
+        } catch (\Exception $e) {
+            return collect();
+        }
+    }
+
+    /**
+     * Get programs with their coordinators
+     */
+    private function getPrograms()
+    {
+        try {
+            // Since we don't have a programs table yet, let's create a basic structure
+            // This will show coordinators as "programs" for now
+            return User::where('role', 'Coordinator')
+                ->select('id', 'first_name', 'last_name', 'email', 'program', 'created_at')
+                ->get()
+                ->map(function ($coordinator, $index) {
+                    return [
+                        'id' => $coordinator->id,
+                        'name' => $coordinator->program ?? 'Graduate Program ' . ($index + 1),
+                        'code' => 'GP' . str_pad($coordinator->id, 3, '0', STR_PAD_LEFT),
+                        'coordinator_id' => $coordinator->id,
+                        'coordinator_name' => trim($coordinator->first_name . ' ' . $coordinator->last_name),
+                        'status' => 'active',
+                        'students_count' => User::where('role', 'Student')->count(),
+                        'created_at' => $coordinator->created_at ? $coordinator->created_at->format('M d, Y') : 'Unknown',
+                    ];
+                });
+        } catch (\Exception $e) {
+            return collect();
+        }
+    }
+
+    /**
+     * Get coordinators for program assignment
+     */
+    private function getCoordinators()
+    {
+        try {
+            return User::where('role', 'Coordinator')
+                ->select('id', 'first_name', 'last_name', 'email')
+                ->get()
+                ->map(function ($coordinator) {
+                    return [
+                        'id' => $coordinator->id,
+                        'name' => trim($coordinator->first_name . ' ' . $coordinator->last_name),
+                        'email' => $coordinator->email,
+                    ];
+                });
+        } catch (\Exception $e) {
+            return collect();
+        }
+    }
+
+    /**
+     * Get Super Admin statistics
+     */
+    private function getSuperAdminStats()
+    {
+        try {
+            $totalUsers = User::count();
+            $activeSessions = User::where('updated_at', '>', now()->subMinutes(15))->count();
+            $totalPrograms = User::where('role', 'Coordinator')->count();
+            $pendingRequests = 0;
+            
+            // Try to get pending defense requests if the model exists
+            if (class_exists(\App\Models\DefenseRequest::class)) {
+                $pendingRequests = \App\Models\DefenseRequest::whereIn('workflow_state', ['submitted', 'pending', 'adviser-pending'])->count();
+            }
+
+            return [
+                'total_users' => $totalUsers,
+                'active_sessions' => $activeSessions,
+                'total_programs' => $totalPrograms,
+                'pending_requests' => $pendingRequests,
+            ];
+        } catch (\Exception $e) {
+            return [
+                'total_users' => 0,
+                'active_sessions' => 0,
+                'total_programs' => 0,
+                'pending_requests' => 0,
+            ];
+        }
     }
 }

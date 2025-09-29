@@ -831,6 +831,42 @@ class DefenseRequestController extends Controller
         return response()->json($rows);
     }
 
+    /**
+     * API endpoint to get defense request counts
+     */
+    public function count(Request $request)
+    {
+        try {
+            $user = Auth::user();
+            if (!$user) {
+                return response()->json(['error' => 'Unauthorized'], 401);
+            }
+
+            // Get counts based on user role
+            $counts = [
+                'total' => DefenseRequest::count(),
+                'pending' => DefenseRequest::whereIn('workflow_state', ['submitted', 'pending', 'adviser-pending'])->count(),
+                'approved' => DefenseRequest::whereIn('workflow_state', ['adviser-approved', 'coordinator-approved', 'scheduled'])->count(),
+                'completed' => DefenseRequest::where('workflow_state', 'completed')->count(),
+                'rejected' => DefenseRequest::whereIn('workflow_state', ['adviser-rejected', 'coordinator-rejected'])->count(),
+            ];
+
+            // Add role-specific counts
+            if (in_array($user->role, ['Coordinator', 'Administrative Assistant', 'Dean'])) {
+                $counts['coordinator_review'] = DefenseRequest::where('workflow_state', 'coordinator-review')->count();
+            }
+
+            if (in_array($user->role, ['Faculty', 'Adviser'])) {
+                $counts['adviser_review'] = DefenseRequest::where('workflow_state', 'adviser-review')->count();
+            }
+
+            return response()->json($counts);
+        } catch (\Exception $e) {
+            Log::error('Defense request count error: ' . $e->getMessage());
+            return response()->json(['error' => 'Unable to fetch counts'], 500);
+        }
+    }
+
     private function normalizeStatusForCoordinator(DefenseRequest $r): string
     {
         return match($r->workflow_state) {
