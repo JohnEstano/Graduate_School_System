@@ -132,15 +132,16 @@ export default function SignaturesIndex() {
           <div className="space-y-4">
             <HeadingSmall title="E‑Signatures" description="Upload or draw your signature image." />
             <div>
-              <input type="file" accept="image/png" onChange={upload} />
-              <Button className="ml-2" size="sm" onClick={() => setDrawingOpen(true)}>
+            
+              <Button size="sm" onClick={() => setDrawingOpen(true)}>
                 Draw Signature
               </Button>
               {uploading && <span className="ml-2 text-sm">Uploading...</span>}
-              <p className="text-xs text-neutral-500 mt-1">Upload transparent PNG (max 1MB) or draw below.</p>
             </div>
           </div>
-
+          <p className="font-medium">
+            Active Signature
+          </p>
           <div className="grid gap-4 sm:grid-cols-3">
             {list.map(s => (
               <div key={s.id}
@@ -160,7 +161,7 @@ export default function SignaturesIndex() {
 
           {/* Signature Drawing Dialog */}
           <Dialog open={drawingOpen} onOpenChange={setDrawingOpen}>
-            <DialogContent className="max-w-[900px] w-full min-h-[520px] p-8 flex flex-col gap-6">
+            <DialogContent className="max-w-[900px] w-full min-h-[520px] p-8 flex flex-col gap-6" style={{ position: 'relative' }}>
               <DialogHeader>
                 <DialogTitle className="text-xl font-semibold mb-2">Create Your Signature</DialogTitle>
               </DialogHeader>
@@ -254,6 +255,20 @@ export default function SignaturesIndex() {
                   </Button>
                 </div>
               </div>
+              {uploading && (
+    <div
+      className="absolute inset-0 bg-white bg-opacity-70 flex items-center justify-center z-50"
+      style={{ borderRadius: 'inherit' }}
+    >
+      <div className="flex flex-col items-center">
+        <svg className="animate-spin h-8 w-8 text-primary mb-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
+        </svg>
+        <span className="text-sm text-primary">Saving signature...</span>
+      </div>
+    </div>
+  )}
             </DialogContent>
           </Dialog>
         </div>
