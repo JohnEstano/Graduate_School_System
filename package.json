@@ -81,6 +81,7 @@
         "tailwindcss-animate": "^1.0.7",
         "trim-canvas": "^0.1.2",
         "typescript": "^5.7.2",
+        "vaul": "^1.1.2",
         "vite": "^6.0"
     },
     "optionalDependencies": {
