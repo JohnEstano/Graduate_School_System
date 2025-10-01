@@ -36,6 +36,42 @@ function isDaytime() {
     return hour >= 6 && hour < 18;
 }
 
+// Helper: Get unique panelists from defense requests
+function getPanelistStats(defenseRequests: DefenseRequest[]) {
+    const panelistSet = new Set<string>();
+    let assignedCount = 0;
+
+    defenseRequests.forEach((req: any) => {
+        if (Array.isArray(req.panelists)) {
+            req.panelists.forEach((p: any) => {
+                if (p?.id) {
+                    panelistSet.add(p.id);
+                    assignedCount++;
+                }
+            });
+        }
+    });
+
+    return {
+        totalPanelists: panelistSet.size,
+        assignedPanelists: assignedCount,
+    };
+}
+
+// Helper: Count today's scheduled defenses
+function getTodaysSchedules(defenseRequests: DefenseRequest[]) {
+    const today = new Date();
+    return defenseRequests.filter((dr: any) => {
+        if (!dr.scheduled_date) return false;
+        const eventDate = new Date(dr.scheduled_date);
+        return (
+            eventDate.getFullYear() === today.getFullYear() &&
+            eventDate.getMonth() === today.getMonth() &&
+            eventDate.getDate() === today.getDate()
+        );
+    }).length;
+}
+
 export default function CoordinatorDashboard() {
     const {
         auth: { user },
@@ -45,6 +81,11 @@ export default function CoordinatorDashboard() {
     const [pendingRequests, setPendingRequests] = useState<DefenseRequest[]>([]);
     const [todayEvents, setTodayEvents] = useState<DefenseRequest[]>([]);
     const [loading, setLoading] = useState(true);
+
+    // Add this state for real panelists count
+    const [realPanelistsCount, setRealPanelistsCount] = useState<number>(0);
+
+    const [assignedPanelists, setAssignedPanelists] = useState<number>(0);
 
     const [selectedDay, setSelectedDay] = useState<number>(new Date().getDay());
 
@@ -95,19 +136,39 @@ export default function CoordinatorDashboard() {
                 setTodayEvents([]);
             })
             .finally(() => setLoading(false));
+
+        // Fetch real panelists count from API
+        fetch('/api/panelists/count', {
+            headers: { 'Accept': 'application/json' }
+        })
+            .then(res => res.ok ? res.json() : { count: 0 })
+            .then((data) => {
+                setRealPanelistsCount(data.count ?? 0);
+            })
+            .catch(() => setRealPanelistsCount(0));
+
+        // Fetch assigned panelists count
+        fetch('/api/assigned-panelists/count', {
+            headers: { 'Accept': 'application/json' }
+        })
+            .then(res => res.ok ? res.json() : { assignedPanelists: 0 })
+            .then((data) => {
+                setAssignedPanelists(data.assignedPanelists ?? 0);
+            })
+            .catch(() => setAssignedPanelists(0));
     }, []);
 
-    // Dummy metrics for now
-    const totalPanelists = 5;
-    const assignedPanelists = 3;
+    // Dynamic metrics
+    const { assignedPanelists: assignedPanelistsCount } = getPanelistStats(allRequests);
+    const todaysSchedules = getTodaysSchedules(allRequests);
 
     const metrics = [
         {
             title: "Panelists Assignment",
             value: (
                 <span>
-                    <span className="text-3xl font-bold text-gray-900 dark:text-white">{assignedPanelists}</span>
-                    <span className="text-base font-semibold text-gray-400 dark:text-gray-500 ml-1">/ {totalPanelists}</span>
+                    <span className="text-3xl font-bold text-gray-900 dark:text-white">{assignedPanelistsCount}</span>
+                    <span className="text-base font-semibold text-gray-400 dark:text-gray-500 ml-1">/ {realPanelistsCount}</span>
                 </span>
             ),
             description: "Panelists assigned",
@@ -115,7 +176,7 @@ export default function CoordinatorDashboard() {
         },
         {
             title: "Today's Schedules",
-            value: 3,
+            value: todaysSchedules,
             description: "Defenses scheduled for today",
             icon: <CalendarDays className="size-7" />,
         },
@@ -127,7 +188,7 @@ export default function CoordinatorDashboard() {
         },
         {
             title: "Pending Honorariums",
-            value: 7,
+            value: 7, // leave static for now
             description: "Honorariums not yet processed",
             icon: <BadgeDollarSign className="size-7" />,
         },

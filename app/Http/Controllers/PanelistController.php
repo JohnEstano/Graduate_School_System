@@ -112,4 +112,12 @@ class PanelistController extends Controller
 
         return response()->json($faculty->concat($panelists)->values());
     }
+
+    // Add this method
+    public function count()
+    {
+        return response()->json([
+            'count' => \App\Models\Panelist::count()
+        ]);
+    }
 }

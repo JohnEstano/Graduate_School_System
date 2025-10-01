@@ -27,6 +27,25 @@ import { Input } from '@/components/ui/input';
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { Info as InfoIcon } from "lucide-react";
+import { DocumentGeneratorDialog } from "@/components/DocumentGeneratorDialog"; // <-- ADD THIS IMPORT
+
+// Add this helper function to map the request data for document generation
+function mapToTemplateData(req: any) {
+  return {
+    ...req,
+    student: {
+      full_name: `${req.first_name || ''} ${req.last_name || ''}`.trim(),
+      program: req.program || '',
+      school_id: req.school_id || '',
+    },
+    request: {
+      thesis_title: req.thesis_title || '',
+      defense_type: req.defense_type || req.status || '',
+    },
+    adviser: req.adviser || req.defense_adviser || '',
+    // Add more mappings as needed
+  };
+}
 
 dayjs.extend(relativeTime);
 
@@ -132,6 +151,10 @@ export default function DefenseRequestIndex() {
 
     const [open, setOpen] = useState(false);
     const [showSuccessPanel, setShowSuccessPanel] = useState(false);
+
+    // Document generation dialog states
+    const [docGenOpen, setDocGenOpen] = useState(false);
+    const [docGenRequest, setDocGenRequest] = useState<any>(null);
 
     // Unsubmit dialog states
     const [unsubmitDialogOpen, setUnsubmitDialogOpen] = useState(false);
@@ -1152,12 +1175,24 @@ export default function DefenseRequestIndex() {
                                                                         >
                                                                             Unsubmit
                                                                         </DropdownMenuItem>
+                                                                        {/* --- ADD THIS ITEM BELOW UNSUBMIT --- */}
+                                                                        <DropdownMenuItem
+                                                                            onSelect={e => {
+                                                                                e.preventDefault();
+                                                                                setDocGenRequest(mapToTemplateData({
+                                                                                  ...req,
+                                                                                  ...(defenseRequest && defenseRequest.thesis_title === req.thesis_title ? defenseRequest : {})
+                                                                                }));
+                                                                                setDocGenOpen(true);
+                                                                            }}
+                                                                        >
+                                                                          Generate Document
+                                                                        </DropdownMenuItem>
+                                                                        {/* --- END ADD --- */}
                                                                         <DropdownMenuItem>
-                                                                            {/* Example: View Details */}
                                                                             View Details
                                                                         </DropdownMenuItem>
                                                                         <DropdownMenuItem>
-                                                                            {/* Example: Download */}
                                                                             Download
                                                                         </DropdownMenuItem>
                                                                     </DropdownMenuContent>
@@ -1287,6 +1322,14 @@ export default function DefenseRequestIndex() {
                             </div>
                         </DialogContent>
                     </Dialog>
+                    {/* --- ADD THIS AT THE BOTTOM, OUTSIDE THE MAP, INSIDE AppLayout --- */}
+            {docGenRequest && (
+                <DocumentGeneratorDialog
+                    open={docGenOpen}
+                    onOpenChange={setDocGenOpen}
+                    defenseRequest={docGenRequest}
+                />
+            )}
                 </div>
             )}
         </AppLayout>

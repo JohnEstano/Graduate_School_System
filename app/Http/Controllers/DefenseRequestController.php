@@ -61,8 +61,29 @@ class DefenseRequestController extends Controller
                     'thesis_title','defense_type','status','priority','workflow_state',
                     'scheduled_date','scheduled_time','scheduled_end_time',
                     'defense_mode','defense_venue','panels_assigned_at',
-                    'defense_adviser','adviser_reviewed_at' // <-- ADD THESE
+                    'defense_adviser','adviser_reviewed_at',
+                    'defense_chairperson','defense_panelist1','defense_panelist2','defense_panelist3','defense_panelist4'
                 ])->map(function($r){
+                    // Helper to resolve panelist info
+                    $panelistFields = [
+                        $r->defense_chairperson,
+                        $r->defense_panelist1,
+                        $r->defense_panelist2,
+                        $r->defense_panelist3,
+                        $r->defense_panelist4,
+                    ];
+                    $panelists = collect($panelistFields)
+                        ->filter()
+                        ->map(function($panelistIdOrName) {
+                            // Try to resolve by ID first
+                            if (is_numeric($panelistIdOrName)) {
+                                $p = \App\Models\Panelist::find($panelistIdOrName);
+                                if ($p) return ['id' => $p->id, 'name' => $p->name];
+                            }
+                            // Fallback: treat as name string
+                            return ['id' => null, 'name' => $panelistIdOrName];
+                        })->values()->all();
+
                     return [
                         'id' => $r->id,
                         'first_name' => $r->first_name,
@@ -90,13 +111,7 @@ class DefenseRequestController extends Controller
                                 : date('Y-m-d H:i:s', strtotime($r->adviser_reviewed_at)))
                             : '—',
                         // ADD THIS LINE:
-                        'panelists' => collect([
-                            $r->defense_chairperson ?? null,
-                            $r->defense_panelist1 ?? null,
-                            $r->defense_panelist2 ?? null,
-                            $r->defense_panelist3 ?? null,
-                            $r->defense_panelist4 ?? null,
-                        ])->filter()->values()->all(),
+                        'panelists' => $panelists,
                     ];
                 });
 
@@ -838,5 +853,27 @@ class DefenseRequestController extends Controller
             'coordinator-approved','scheduled','completed' => 'Approved',
             default => 'Pending',
         };
+    }
+
+    public function assignedPanelistsCount()
+    {
+        $fields = [
+            'defense_chairperson',
+            'defense_panelist1',
+            'defense_panelist2',
+            'defense_panelist3',
+            'defense_panelist4',
+        ];
+
+        $count = 0;
+        foreach (\App\Models\DefenseRequest::all() as $dr) {
+            foreach ($fields as $field) {
+                if (!empty($dr->$field)) {
+                    $count++;
+                }
+            }
+        }
+
+        return response()->json(['assignedPanelists' => $count]);
     }
 }

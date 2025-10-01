@@ -88,8 +88,7 @@ export default function DocumentTemplatesIndex() {
                         <td className="p-2">{t.code}</td>
                         <td className="p-2 text-center">{t.version}</td>
                         <td className="p-2">
-                          <a className="text-blue-600 underline"
-                             href={`/settings/documents/${t.id}/edit`}>Fields</a>
+                          <a href={`/settings/documents/${t.id}/edit`} target="_blank" rel="noopener noreferrer">Fields</a>
                         </td>
                       </tr>
                     ))}

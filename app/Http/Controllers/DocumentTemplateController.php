@@ -6,6 +6,7 @@ use App\Models\DocumentTemplate;
 use App\Models\DefenseRequest;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Log;
 
 class DocumentTemplateController extends Controller {
 
@@ -19,7 +20,7 @@ class DocumentTemplateController extends Controller {
   }
 
   public function store(Request $r) {
-    \Log::info('DocumentTemplateController@store called', ['user_id' => $r->user()->id]);
+    Log::info('DocumentTemplateController@store called', ['user_id' => $r->user()->id]);
     $data = $r->validate([
       'name'=>'required|string',
       'file'=>'required|file|mimes:pdf|max:10240',
@@ -49,23 +50,38 @@ class DocumentTemplateController extends Controller {
     $template->delete();
     return response()->json(['ok'=>true]);
   }
-  public function generate(Request $r)
+
+  public function generate(Request $request)
   {
-      $data = $r->validate([
+      $request->validate([
           'template_id' => 'required|integer|exists:document_templates,id',
           'defense_request_id' => 'required|integer|exists:defense_requests,id',
-          'fields' => 'nullable|array'
+          'fields' => 'array',
       ]);
-      $tpl = \App\Models\DocumentTemplate::findOrFail($data['template_id']);
-      $req = \App\Models\DefenseRequest::findOrFail($data['defense_request_id']);
 
-      // Pass key-value overrides to DocumentGenerator
-      $doc = app(\App\Services\DocumentGenerator::class)->generate($tpl, $req, $data['fields'] ?? []);
+      $template = \App\Models\DocumentTemplate::findOrFail($request->template_id);
+      $defenseRequest = \App\Models\DefenseRequest::findOrFail($request->defense_request_id);
 
-      // Make sure $doc->output_path is set in DocumentGenerator
+      // You may want to merge $request->fields into the defenseRequest data for the generator
+      $generator = new \App\Services\DocumentGenerator();
+      try {
+          $generated = $generator->generate($template, $defenseRequest, $request->fields ?? []);
+      } catch (\Throwable $e) {
+          \Log::error('Document generation failed: '.$e->getMessage());
+          return response()->json([
+              'ok' => false,
+              'error' => 'Document generation failed: '.$e->getMessage(),
+          ], 500);
+      }
+
+      // Assume $generated is a GeneratedDocument model with output_path
+      $url = $generated->output_path
+          ? \Storage::disk('public')->url($generated->output_path)
+          : null;
+
       return response()->json([
           'ok' => true,
-          'download_url' => \Storage::url($doc->output_path)
+          'download_url' => $url,
       ]);
   }
 }

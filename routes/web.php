@@ -335,6 +335,8 @@ Route::middleware(['auth'])->group(function () {
 
     Route::get('/generated-documents/{doc}',[GeneratedDocumentController::class,'show'])
         ->name('generated-documents.show');
+    Route::get('/api/panelists/count', [PanelistController::class, 'count']);
+    Route::get('/api/assigned-panelists/count', [DefenseRequestController::class, 'assignedPanelistsCount']);
 });
 
 /*
