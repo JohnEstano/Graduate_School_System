@@ -136,243 +136,110 @@ export default function TableDefenseRequests({
         <Table className="w-full text-sm table-auto">
           <TableHeader>
             <TableRow>
-              {/* Approved tab: add indicator column at the start */}
-              {tabType === 'approved' && (
-                <TableHead className="w-[48px] text-center">Status</TableHead>
-              )}
               {!hideSelect && (
                 <TableHead className="w-[40px] py-2">
                   <Checkbox checked={headerChecked} onCheckedChange={toggleSelectAll} />
                 </TableHead>
               )}
-              {/* Document icon column - header blank */}
-              {columns.title && <TableHead className="px-2">Title</TableHead>}
-              {columns.presenter && <TableHead className="px-2">Presenter</TableHead>}
-              {tabType !== 'approved' && columns.adviser && <TableHead className="px-2">Adviser</TableHead>}
-              {tabType !== 'approved' && columns.program && <TableHead className="px-2">Program</TableHead>}
-              {tabType !== 'approved' && columns.submitted_at && <TableHead className="px-2">Submitted</TableHead>}
-              {/* Approved: Date & Mode */}
-              {tabType === 'approved' && columns.date && (
-                <TableHead
-                  className="text-center cursor-pointer px-1 py-2"
-                  onClick={toggleSort}
-                >
-                  <div className="flex justify-center items-center gap-1">
-                    <span>Date</span>
-                    {sortDir === 'asc' && <ArrowUp size={12} />}
-                    {sortDir === 'desc' && <ArrowDown size={12} />}
-                    {!sortDir && <ChevronsUpDown size={12} className="opacity-60" />}
-                  </div>
-                </TableHead>
-              )}
-              {tabType === 'approved' && columns.mode && <TableHead className="text-center px-1 py-2">Mode</TableHead>}
-              {columns.type && <TableHead className="text-center px-1 py-2">Type</TableHead>}
-              {columns.priority && <TableHead className="text-center px-1 py-2">Priority</TableHead>}
-              {!hideActions && <TableHead className="text-center px-1 py-2">Actions</TableHead>}
+              {columns.title && <TableHead className="px-3 min-w-[180px]">Title</TableHead>}
+              {columns.presenter && <TableHead className="px-2 min-w-[120px]">Presenter</TableHead>}
+              {columns.adviser && <TableHead className="px-2 min-w-[120px]">Adviser</TableHead>}
+              {columns.program && <TableHead className="px-2 min-w-[100px]">Program</TableHead>}
+              {columns.type && <TableHead className="text-center px-2 min-w-[90px]">Type</TableHead>}
+              {columns.submitted_at && <TableHead className="px-2 min-w-[130px] text-center">Submitted</TableHead>}
+              {columns.status && <TableHead className="px-2 min-w-[100px] text-center">Status</TableHead>}
             </TableRow>
           </TableHeader>
           <TableBody>
-            {paged
-              .slice()
-              .sort((a, b) => {
-                const daStr = a.date_of_defense || a.scheduled_date;
-                const dbStr = b.date_of_defense || b.scheduled_date;
-                const da = daStr ? new Date(daStr).getTime() : 0;
-                const db = dbStr ? new Date(dbStr).getTime() : 0;
-                return db - da;
-              })
-              .map(r => {
-                const isSelected = selected.includes(r.id);
-                const highlightRow =
-                  highlightMissingDateMode &&
-                  tabType === 'approved' &&
-                  (!r.date_of_defense && !r.scheduled_date || !(r.mode_defense || r.defense_mode));
-                const handleRowClick = (e: React.MouseEvent) => {
-                  const tag = (e.target as HTMLElement).tagName;
-                  if (
-                    tag === 'BUTTON' ||
-                    tag === 'INPUT' ||
-                    tag === 'SELECT' ||
-                    (e.target as HTMLElement).closest('.action-btn') ||
-                    (e.target as HTMLElement).closest('.priority-dropdown')
-                  ) {
-                    return;
-                  }
-                  if (onViewDetails) onViewDetails(r.id);
-                  else router.visit(`/coordinator/defense-requests/${r.id}/details`);
-                };
+            {paged.map(r => {
+              const isSelected = selected.includes(r.id);
+              const handleRowClick = (e: React.MouseEvent) => {
+                const tag = (e.target as HTMLElement).tagName;
+                if (
+                  tag === 'BUTTON' ||
+                  tag === 'INPUT' ||
+                  tag === 'SELECT' ||
+                  (e.target as HTMLElement).closest('.action-btn') ||
+                  (e.target as HTMLElement).closest('.priority-dropdown')
+                ) {
+                  return;
+                }
+                if (onViewDetails) onViewDetails(r.id);
+                else router.visit(`/coordinator/defense-requests/${r.id}/details`);
+              };
 
-                return (
-                  <TableRow
-                    key={r.id}
-                    className={`hover:bg-muted/40 ${highlightRow ? 'bg-yellow-50 dark:bg-yellow-900/20' : ''} cursor-pointer`}
-                    onClick={handleRowClick}
-                  >
-                    {/* Approved tab: indicator column */}
-                    {tabType === 'approved' && (
-                      <TableCell className="text-center">
-                        {getIndicator(r)}
-                      </TableCell>
-                    )}
-                    {!hideSelect && (
-                      <TableCell className="px-2 py-2">
-                        <Checkbox
-                          checked={isSelected}
-                          onCheckedChange={() => toggleSelectOne(r.id)}
-                          className="action-btn"
-                          onClick={e => e.stopPropagation()}
-                        />
-                      </TableCell>
-                    )}
-                    {/* Document icon cell */}
-                    
-                    {columns.title && (
-                      <TableCell className="px-2 py-2 font-medium truncate leading-tight" title={r.thesis_title}>
-                        <span className="inline-flex items-center gap-2">
-                          <span className="inline-flex items-center justify-center rounded-md bg-rose-500 text-white h-8 w-8">
-                            <FileText size={20} />
-                          </span>
-                          <span className="truncate align-middle">{r.thesis_title}</span>
-                        </span>
-                      </TableCell>
-                    )}
-                    {columns.presenter && (
-                      <TableCell className="px-2 py-2 text-xs text-muted-foreground whitespace-nowrap" title={`${r.first_name} ${r.middle_name ? r.middle_name + ' ' : ''}${r.last_name}`}>
-                        {r.first_name} {r.middle_name ? r.middle_name[0] + '. ' : ''}{r.last_name}
-                      </TableCell>
-                    )}
-                    {tabType !== 'approved' && columns.adviser && (
-                      <TableCell className="px-2 py-2 text-xs text-muted-foreground whitespace-nowrap">
-                        {r.adviser || '—'}
-                      </TableCell>
-                    )}
-                    {tabType !== 'approved' && columns.program && (
-                      <TableCell className="px-2 py-2 text-xs text-muted-foreground whitespace-nowrap">
-                        {r.program || '—'}
-                      </TableCell>
-                    )}
-                    {tabType !== 'approved' && columns.submitted_at && (
-                      <TableCell className="px-2 py-2 text-xs text-muted-foreground whitespace-nowrap">
-                        {r.submitted_at
-                          ? `${formatDistanceToNowStrict(new Date(r.submitted_at), { addSuffix: true })}`
-                          : '—'}
-                      </TableCell>
-                    )}
-                    {tabType === 'approved' && columns.date && (
-                      <TableCell className="px-1 py-2 text-center whitespace-nowrap">
-                        {(() => {
-                          const raw = r.date_of_defense || r.scheduled_date;
-                          return raw && !isNaN(new Date(raw).getTime())
-                            ? format(new Date(raw), 'MMM dd, yyyy')
-                            : <span className="text-amber-600 font-semibold">Missing</span>;
-                        })()}
-                      </TableCell>
-                    )}
-                    {tabType === 'approved' && columns.mode && (
-                      <TableCell className="px-1 py-2 text-center capitalize">
-                        {(r.mode_defense || r.defense_mode)
-                          ? (r.mode_defense || r.defense_mode)?.replace('-', ' ')
-                          : <span className="text-amber-600 font-semibold">Missing</span>}
-                      </TableCell>
-                    )}
-                    {columns.type && (
-                      <TableCell className="px-1 py-2 text-center">
-                        <Badge variant="outline">{r.defense_type || '—'}</Badge>
-                      </TableCell>
-                    )}
-                    {columns.priority && (
-                      <TableCell className="px-1 py-2 text-center priority-dropdown">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Badge
-                              className={
-                                'cursor-pointer select-none ' +
-                                (r.priority === 'High'
-                                  ? 'bg-rose-100 text-rose-700 border-rose-200'
-                                  : r.priority === 'Low'
-                                  ? 'bg-sky-100 text-sky-700 border-sky-200'
-                                  : 'bg-amber-100 text-amber-700 border-amber-200')
-                              }
-                              variant="outline"
-                              onClick={e => e.stopPropagation()}
-                            >
-                              {r.priority}
-                            </Badge>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="center" onClick={e => e.stopPropagation()}>
-                            <DropdownMenuItem
-                              onClick={() => onPriorityChange(r.id, 'High')}
-                              className={r.priority === 'High' ? 'font-bold text-rose-700' : ''}
-                            >
-                              High
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={() => onPriorityChange(r.id, 'Medium')}
-                              className={r.priority === 'Medium' ? 'font-bold text-amber-700' : ''}
-                            >
-                              Medium
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={() => onPriorityChange(r.id, 'Low')}
-                              className={r.priority === 'Low' ? 'font-bold text-sky-700' : ''}
-                            >
-                              Low
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell>
-                    )}
-                    {!hideActions && (
-                      <TableCell className="px-1 py-2">
-                        <div className="flex items-center justify-center gap-2">
-                          {tabType === 'pending' && (
-                            <>
-                              <Button
-                                size="lg"
-                                variant="outline"
-                                className="h-8 w-10 p-0 text-green-600 action-btn hover:text-green-600 hover:border-green-200 focus:text-green-600 focus:border-green-200"
-                                title="Approve"
-                                onClick={e => {
-                                  e.stopPropagation();
-                                  onRowApprove && onRowApprove(r.id);
-                                }}
-                              >
-                                <CheckCircle className="h-5 w-5" />
-                              </Button>
-                              <Button
-                                size="lg"
-                                variant="outline"
-                                className="h-8 w-10 p-0 text-red-600 action-btn hover:text-red-600 hover:border-red-200 focus:text-red-600 focus:border-red-200"
-                                title="Reject"
-                                onClick={e => {
-                                  e.stopPropagation();
-                                  onRowReject && onRowReject(r.id);
-                                }}
-                              >
-                                <CircleX className="h-5 w-5" />
-                              </Button>
-                            </>
-                          )}
-                          {tabType === 'rejected' && (
-                            <Button
-                              size="lg"
-                              variant="outline"
-                              className="h-10 w-12 p-0 text-blue-600 action-btn hover:text-blue-600 hover:border-blue-200 focus:text-blue-600 focus:border-blue-200"
-                              title="Retrieve (set back to Pending)"
-                              onClick={e => {
-                                e.stopPropagation();
-                                onRowRetrieve && onRowRetrieve(r.id);
-                              }}
-                            >
-                              <CircleArrowLeft className="h-5 w-5" />
-                            </Button>
-                          )}
-                        </div>
-                      </TableCell>
-                    )}
-                  </TableRow>
-                );
-              })}
+              return (
+                <TableRow
+                  key={r.id}
+                  className="hover:bg-muted/40 cursor-pointer"
+                  onClick={handleRowClick}
+                >
+                  {!hideSelect && (
+                    <TableCell className="px-2 py-2">
+                      <Checkbox
+                        checked={isSelected}
+                        onCheckedChange={() => toggleSelectOne(r.id)}
+                        className="action-btn"
+                        onClick={e => e.stopPropagation()}
+                      />
+                    </TableCell>
+                  )}
+                  {columns.title && (
+                    <TableCell className="px-3 py-2 font-medium truncate leading-tight align-middle" title={r.thesis_title}>
+                      {r.thesis_title}
+                    </TableCell>
+                  )}
+                  {columns.presenter && (
+                    <TableCell className="px-2 py-2 text-xs text-muted-foreground whitespace-nowrap align-middle" title={`${r.first_name} ${r.middle_name ? r.middle_name + ' ' : ''}${r.last_name}`}>
+                      {r.first_name} {r.middle_name ? r.middle_name[0] + '. ' : ''}{r.last_name}
+                    </TableCell>
+                  )}
+                  {columns.adviser && (
+                    <TableCell className="px-2 py-2 text-xs text-muted-foreground whitespace-nowrap align-middle">
+                      {r.adviser || '—'}
+                    </TableCell>
+                  )}
+                  {columns.program && (
+                    <TableCell className="px-2 py-2 text-xs text-muted-foreground whitespace-nowrap align-middle">
+                      {r.program || '—'}
+                    </TableCell>
+                  )}
+                  {columns.type && (
+                    <TableCell className="px-2 py-2 text-center align-middle">
+                      <Badge variant="outline">{r.defense_type || '—'}</Badge>
+                    </TableCell>
+                  )}
+                  {columns.submitted_at && (
+                    <TableCell className="px-2 py-2 text-xs text-muted-foreground whitespace-nowrap text-center align-middle">
+                      {r.submitted_at
+                        ? format(new Date(r.submitted_at), 'yyyy-MM-dd hh:mm a')
+                        : '—'}
+                    </TableCell>
+                  )}
+                  {columns.status && (
+                    <TableCell className="px-2 py-2 text-xs whitespace-nowrap text-center align-middle">
+                      <Badge
+                        className={
+                          r.status === 'Approved'
+                            ? 'bg-green-100 text-green-700 border-green-200'
+                            : r.status === 'Rejected'
+                            ? 'bg-red-100 text-red-700 border-red-200'
+                            : r.status === 'Pending'
+                            ? 'bg-yellow-100 text-yellow-700 border-yellow-200'
+                            : r.status === 'Needs-info'
+                            ? 'bg-blue-100 text-blue-700 border-blue-200'
+                            : r.status === 'In progress'
+                            ? 'bg-purple-100 text-purple-700 border-purple-200'
+                            : 'bg-gray-100 text-gray-700 border-gray-200'
+                        }
+                      >
+                        {r.status}
+                      </Badge>
+                    </TableCell>
+                  )}
+                </TableRow>
+              );
+            })}
             {paged.length === 0 && (
               <TableRow>
                 <TableCell
@@ -380,14 +247,11 @@ export default function TableDefenseRequests({
                     (hideSelect ? 0 : 1) +
                     (columns.title ? 1 : 0) +
                     (columns.presenter ? 1 : 0) +
-                    (tabType !== 'approved' && columns.adviser ? 1 : 0) +
-                    (tabType !== 'approved' && columns.submitted_at ? 1 : 0) +
-                    (tabType !== 'approved' && columns.program ? 1 : 0) +
-                    (tabType === 'approved' && columns.date ? 1 : 0) +
-                    (tabType === 'approved' && columns.mode ? 1 : 0) +
+                    (columns.adviser ? 1 : 0) +
+                    (columns.program ? 1 : 0) +
                     (columns.type ? 1 : 0) +
-                    (columns.priority ? 1 : 0) +
-                    (hideActions ? 0 : 1)
+                    (columns.submitted_at ? 1 : 0) +
+                    (columns.status ? 1 : 0)
                   }
                   className="text-center py-10 text-muted-foreground"
                 >

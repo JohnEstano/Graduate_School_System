@@ -832,4 +832,74 @@ class CoordinatorDefenseController extends Controller
             'last_status_updated_by'=>$r->last_status_updated_by
         ];
     }
+
+    public function updateStatus(Request $request, DefenseRequest $defenseRequest)
+    {
+        $this->authorizeRole();
+
+        $validated = $request->validate([
+            'status' => 'required|in:Pending,Approved,Rejected'
+        ]);
+        $user = Auth::user();
+
+        $origState = $defenseRequest->workflow_state;
+        $newStatus = $validated['status'];
+
+        DB::beginTransaction();
+        try {
+            if ($newStatus === 'Approved') {
+                // Only allow approval from certain states
+                if (!in_array($origState, ['adviser-approved','coordinator-review','submitted', null])) {
+                    return response()->json(['error'=>'Cannot approve in current state.'], 422);
+                }
+                $defenseRequest->approveByCoordinator(null, $user->id);
+                // approveByCoordinator should already add a workflow entry
+            } elseif ($newStatus === 'Rejected') {
+                // Allow rejection from any state except already rejected
+                if ($origState === 'rejected') {
+                    return response()->json(['error'=>'Already rejected.'], 422);
+                }
+                $defenseRequest->status = 'Rejected';
+                $defenseRequest->workflow_state = 'rejected';
+                $defenseRequest->last_status_updated_at = now();
+                $defenseRequest->last_status_updated_by = $user->id;
+                $defenseRequest->addWorkflowEntry(
+                    'rejected',
+                    'Request rejected by coordinator',
+                    $user->id,
+                    $origState,
+                    'rejected'
+                );
+                $defenseRequest->save();
+            } elseif ($newStatus === 'Pending') {
+                // "Retrieve" action: set back to pending
+                $defenseRequest->status = 'Pending';
+                $defenseRequest->workflow_state = 'coordinator-review';
+                $defenseRequest->last_status_updated_at = now();
+                $defenseRequest->last_status_updated_by = $user->id;
+                $defenseRequest->addWorkflowEntry(
+                    'retrieved',
+                    'Request retrieved (set to pending) by coordinator',
+                    $user->id,
+                    $origState,
+                    'coordinator-review'
+                );
+                $defenseRequest->save();
+            }
+
+            DB::commit();
+
+            return response()->json([
+                'ok' => true,
+                'request' => $this->mapForDetails($defenseRequest)
+            ]);
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            \Log::error('updateStatus error', [
+                'id' => $defenseRequest->id,
+                'error' => $e->getMessage()
+            ]);
+            return response()->json(['error' => 'Failed to update status.'], 500);
+        }
+    }
 }

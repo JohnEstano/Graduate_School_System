@@ -20,7 +20,10 @@ import {
   UserCheck,
   Send,
   Users as UsersIcon,
-  Clock
+  Clock,
+  XCircle,
+  CircleArrowLeft,
+  Signature
 } from 'lucide-react';
 import { useRef } from 'react';
 
@@ -45,6 +48,7 @@ import {
   SelectValue
 } from '@/components/ui/select';
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
@@ -262,6 +266,13 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
 
   const [request, setRequest] = useState<DefenseRequestFull>(requestProp);
 
+  // Confirmation dialog state for approve/reject/retrieve
+  const [confirm, setConfirm] = useState<{ open: boolean; action: 'approve' | 'reject' | 'retrieve' | null }>({
+    open: false,
+    action: null,
+  });
+  const [isLoading, setIsLoading] = useState(false);
+
   // Panel members simple load
   const [panelMembers, setPanelMembers] = useState<PanelMemberOption[]>([]);
   const [loadingMembers, setLoadingMembers] = useState(false);
@@ -443,6 +454,49 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
     }
   }
 
+  // --- Approve/Reject/Retrieve logic ---
+  async function handleStatusChange(action: 'approve' | 'reject' | 'retrieve') {
+    if (!request.id) return;
+    setIsLoading(true);
+    let newStatus: DefenseRequestFull['status'] = 'Pending';
+    if (action === 'approve') newStatus = 'Approved';
+    else if (action === 'reject') newStatus = 'Rejected';
+    else if (action === 'retrieve') newStatus = 'Pending';
+
+    try {
+      const res = await fetch(`/defense-requests/${request.id}/status`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRF-TOKEN': csrf(),
+          Accept: 'application/json'
+        },
+        body: JSON.stringify({ status: newStatus }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        // Use the updated request from the backend if available
+        if (data.request) {
+          setRequest(data.request);
+        } else {
+          setRequest(r => ({
+            ...r,
+            status: newStatus,
+            workflow_history: data.workflow_history || r.workflow_history,
+          }));
+        }
+        toast.success(`Request set to ${newStatus}`);
+      } else {
+        toast.error(data?.error || 'Failed to update status');
+      }
+    } catch {
+      toast.error('Network error updating status');
+    } finally {
+      setIsLoading(false);
+      setConfirm({ open: false, action: null });
+    }
+  }
+
   function formatDate(d?: string) {
     if (!d) return '—';
     try {
@@ -538,36 +592,48 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
     {
       key: 'submitted',
       label: 'Submitted',
-      icon: <Send className="h-5 w-5 text-gray-500" />,
+      icon: <Send className="h-5 w-5" />,
     },
     {
       key: 'adviser-approved',
       label: 'Approved by Adviser',
-      icon: <UserCheck className="h-5 w-5 text-gray-500" />,
+      icon: <UserCheck className="h-5 w-5" />,
     },
     {
       key: 'coordinator-approved',
       label: 'Approved by Coordinator',
-      icon: <UsersIcon className="h-5 w-5 text-gray-500" />,
+      icon: <Signature className="h-5 w-5" />, // Use Signature (e-sign) icon here
+    },
+    {
+      key: 'rejected',
+      label: 'Rejected by Coordinator',
+      icon: <XCircle className="h-5 w-5" />,
+    },
+    {
+      key: 'retrieved',
+      label: 'Retrieved (Set to Pending)',
+      icon: <CircleArrowLeft className="h-5 w-5" />,
     },
     {
       key: 'panels-assigned',
       label: 'Panels Assigned',
-      icon: <CheckCircle className="h-5 w-5 text-gray-500" />,
+      icon: <CheckCircle className="h-5 w-5" />,
     },
     {
       key: 'scheduled',
       label: 'Scheduled',
-      icon: <Clock className="h-5 w-5 text-gray-500" />,
+      icon: <Clock className="h-5 w-5" />,
     },
     // Add more steps as needed
   ];
 
-  // Helper to match event to step
+  // Update this function:
   function getStepForEvent(event: string) {
     event = (event || '').toLowerCase();
     if (event.includes('submit')) return 'submitted';
     if (event.includes('adviser')) return 'adviser-approved';
+    if (event.includes('rejected')) return 'rejected';
+    if (event.includes('retrieved')) return 'retrieved';
     if (event.includes('coordinator')) return 'coordinator-approved';
     if (event.includes('panel')) return 'panels-assigned';
     if (event.includes('schedule')) return 'scheduled'; 
@@ -587,7 +653,7 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
       <Toaster position="bottom-right" richColors closeButton />
       <div className="p-5 space-y-6">
         <Head title={request.thesis_title || `Defense Request #${request.id}`} />
-        <div className="flex items-center gap-3 flex-wrap">
+        <div className="flex items-center justify-between gap-3 flex-wrap">
           <Button
             variant="outline"
             onClick={() => router.visit('/defense-request')}
@@ -595,6 +661,37 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
           >
             <ArrowLeft className="h-4 w-4" />
           </Button>
+          {canEdit && (
+            <div className="flex gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setConfirm({ open: true, action: 'approve' })}
+                disabled={isLoading || request.status === 'Approved'}
+              >
+                <CheckCircle className="h-4 w-4 mr-1 text-green-600" />
+                Approve
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setConfirm({ open: true, action: 'reject' })}
+                disabled={isLoading || request.status === 'Rejected'}
+              >
+                <XCircle className="h-4 w-4 mr-1 text-red-600" />
+                Reject
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setConfirm({ open: true, action: 'retrieve' })}
+                disabled={isLoading || request.status === 'Pending'}
+              >
+                <CircleArrowLeft className="h-4 w-4 mr-1 text-blue-600" />
+                Retrieve
+              </Button>
+            </div>
+          )}
         </div>
 
         {/* Submission section and Workflow Progress side by side */}
@@ -644,12 +741,10 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
                   <div className="font-medium text-base">{request.program}</div>
                 </div>
                 <div>
-                  <div className="text-xs text-muted-foreground mb-1">Priority</div>
-                  <div className="font-medium text-base">{request.priority ?? '—'}</div>
-                </div>
-                <div>
-                  <div className="text-xs text-muted-foreground mb-1">Defense Type</div>
-                  <div className="font-medium text-base">{request.defense_type ?? '—'}</div>
+                  <div className="text-xs text-muted-foreground  mb-1">Defense Type</div>
+
+                    <div className="font-medium text-base">{request.defense_type ?? '—'}</div>
+
                 </div>
                 <div>
                   <div className="text-xs text-muted-foreground mb-1">Scheduled Date</div>
@@ -955,6 +1050,50 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
             : ''}
         </div>
       </div>
+
+      {/* Confirmation Dialog for Approve/Reject/Retrieve */}
+      <Dialog open={confirm.open} onOpenChange={o => { if (!o) setConfirm({ open: false, action: null }); }}>
+        <DialogContent>
+          <DialogTitle>Confirm Action</DialogTitle>
+          <DialogDescription>
+            {confirm.action === 'approve'
+              ? 'Please review before approving.'
+              : 'Apply this status change?'}
+          </DialogDescription>
+          <div className="mt-3 text-sm space-y-3">
+            <p>
+              Set request to{' '}
+              <span className="font-semibold">
+                {confirm.action === 'approve'
+                  ? 'Approved'
+                  : confirm.action === 'reject'
+                  ? 'Rejected'
+                  : 'Pending'}
+              </span>?
+            </p>
+            {confirm.action === 'approve' && (
+              <div className="flex flex-col items-center gap-3 rounded-md border bg-muted/40 p-5">
+                <div className="rounded-full bg-primary/10 p-4">
+                  <Signature className="h-14 w-14 text-primary" />
+                </div>
+                <p className="text-center text-sm leading-relaxed">
+                  Approving this defense request authorizes the use of your signature
+                  on the official defense documents.
+                </p>
+              </div>
+            )}
+          </div>
+          <div className="flex justify-end gap-2 mt-4">
+            <Button variant="ghost" onClick={() => setConfirm({ open: false, action: null })}>Cancel</Button>
+            <Button
+              onClick={() => confirm.action && handleStatusChange(confirm.action)}
+              disabled={isLoading}
+            >
+              Confirm
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </AppLayout>
   );
 }
