@@ -39,7 +39,8 @@ class CoordinatorDefenseController extends Controller
         }
 
         $defenseRequests = DefenseRequest::with(['user','adviserUser','panelsAssignedBy','scheduleSetBy'])
-            ->whereIn('workflow_state', ['adviser-approved','coordinator-review','coordinator-approved','panels-assigned','scheduled'])
+            ->whereIn('workflow_state', ['adviser-approved','coordinator-review','coordinator-approved','coordinator-rejected','panels-assigned','scheduled','completed'])
+            ->where('coordinator_user_id', $user->id) // <-- Only show requests for this coordinator
             ->orderBy('adviser_reviewed_at','desc')
             ->orderBy('created_at','desc')
             ->get()

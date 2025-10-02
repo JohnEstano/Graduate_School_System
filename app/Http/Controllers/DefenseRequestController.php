@@ -298,6 +298,13 @@ class DefenseRequestController extends Controller
                 $defenseRequest->workflow_state = 'adviser-approved';
                 $defenseRequest->status = 'Pending';
                 $defenseRequest->adviser_comments = null;
+
+                // --- Assign coordinator_user_id here ---
+                $coordinator = $user->coordinators()->first();
+                if ($coordinator) {
+                    $defenseRequest->coordinator_user_id = $coordinator->id;
+                }
+                // ---------------------------------------
             } else {
                 $defenseRequest->workflow_state = 'adviser-rejected';
                 $defenseRequest->adviser_comments = $comment;

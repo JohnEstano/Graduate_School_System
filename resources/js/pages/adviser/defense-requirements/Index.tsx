@@ -19,9 +19,11 @@ function getStatus(workflow_state: string) {
 export default function Index({
     defenseRequirements,
     defenseRequests,
+    coordinator, // <-- accept coordinator prop
 }: {
     defenseRequirements: any[];
     defenseRequests: any[];
+    coordinator?: { name: string; email: string } | null;
 }) {
     // Attach status for display
     const allRequests = (defenseRequests || []).map((r: any) => ({
@@ -35,6 +37,7 @@ export default function Index({
             <div className="flex h-full flex-1 flex-col gap-4 overflow-auto rounded-xl pt-5 pr-7 pl-7">
                 <ShowAllDefenseRequests 
                     defenseRequests={allRequests}
+                    coordinator={coordinator} // <-- pass coordinator prop
                     title="Defense Requirements"
                     description="Defense requirements submitted by your students. Review and manage their submissions here."
                 />

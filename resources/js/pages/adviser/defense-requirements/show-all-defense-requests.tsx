@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import dayjs from 'dayjs';
-import { Paperclip, Search, CheckCircle, XCircle, CircleArrowLeft, Trash2, Printer, X, Signature, Filter, CirclePlus, File } from "lucide-react";
+import { Paperclip, Search, CheckCircle, XCircle, CircleArrowLeft, Trash2, Printer, X, Signature, Filter, CirclePlus, File, Users, ArrowRightLeft } from "lucide-react";
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
 import { Input } from "@/components/ui/input";
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/table';
@@ -73,12 +73,19 @@ function AttachmentLinks(req: DefenseRequest) {
     );
 }
 
+type Coordinator = {
+    name: string;
+    email: string;
+};
+
 export default function ShowAllDefenseRequests({
     defenseRequests = [],
+    coordinator,
     title = "All Defense Requirements",
     description = "Review, approve, or reject defense requests from your advisees"
 }: {
     defenseRequests: DefenseRequest[];
+    coordinator?: Coordinator | null;
     title?: string;
     description?: string;
 }) {
@@ -170,9 +177,26 @@ export default function ShowAllDefenseRequests({
 
     return (
         <div className="flex flex-col pb-5 w-full">
-            {/* Header Card - copied style from coordinator */}
+            {/* Relationship Card - now above the header */}
+            <div className="flex justify-end mb-2">
+                <div className="flex items-center gap-2 bg-black text-white rounded px-3 py-2 text-xs font-medium">
+                    <span className="flex items-center gap-1">
+                        Adviser <span className="font-semibold">(You)</span>
+                    </span>
+                    <ArrowRightLeft className="h-4 w-4 mx-2" />
+                    <span className="flex items-center gap-1">
+                        <Users className="h-4 w-4 mr-1" />
+                        Coordinator
+                        <span className="font-semibold ml-1">
+                            {coordinator ? coordinator.name : <span className="italic text-zinc-300">No coordinator registered</span>}
+                        </span>
+                    </span>
+                </div>
+            </div>
+            {/* Header Card */}
             <div className="w-full bg-white border border-zinc-200 rounded-lg overflow-hidden mb-4">
                 <div className="flex flex-row items-center justify-between w-full p-3 border-b bg-white">
+                    {/* Left: Title & Description */}
                     <div className="flex items-center gap-2">
                         <div className="h-10 w-10 flex items-center justify-center rounded-full bg-blue-500/10 border border-blue-500">
                             <File className="h-5 w-5 text-blue-400" />
@@ -189,6 +213,7 @@ export default function ShowAllDefenseRequests({
                 </div>
                 {/* Search and Filters Row */}
                 <div className="flex items-center justify-between gap-2 px-4 py-3 border-b bg-white">
+                    {/* Search input left */}
                     <div className="flex items-center gap-2">
                         <Input
                             type="text"

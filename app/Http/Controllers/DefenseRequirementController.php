@@ -52,6 +52,7 @@ class DefenseRequirementController extends Controller
             return inertia('adviser/defense-requirements/Index', [
                 'defenseRequirements' => [],
                 'defenseRequests' => $requests,
+                'coordinator' => null, // Not needed for coordinators
             ]);
         }
 
@@ -59,6 +60,7 @@ class DefenseRequirementController extends Controller
             return inertia('adviser/defense-requirements/Index', [
                 'defenseRequirements' => [],
                 'defenseRequests' => [],
+                'coordinator' => null,
             ]);
         }
 
@@ -101,9 +103,17 @@ class DefenseRequirementController extends Controller
 
         $requests = $baseQuery->orderByDesc('created_at')->get();
 
+        // --- Get the registered coordinator ---
+        $coordinator = $user->coordinators()->first();
+        $coordinatorData = $coordinator ? [
+            'name' => trim($coordinator->first_name . ' ' . ($coordinator->middle_name ? strtoupper($coordinator->middle_name[0]) . '. ' : '') . $coordinator->last_name),
+            'email' => $coordinator->email,
+        ] : null;
+
         return inertia('adviser/defense-requirements/Index', [
             'defenseRequirements' => [],
             'defenseRequests' => $requests,
+            'coordinator' => $coordinatorData,
         ]);
     }
 
