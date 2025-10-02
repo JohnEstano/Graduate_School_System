@@ -884,4 +884,121 @@ class DefenseRequestController extends Controller
 
         return response()->json(['assignedPanelists' => $count]);
     }
+
+    public function bulkApprove(Request $request)
+    {
+        $user = Auth::user();
+        if (!$user || !in_array($user->role, ['Faculty', 'Adviser'])) {
+            return response()->json(['error' => 'Unauthorized'], 403);
+        }
+
+        $data = $request->validate([
+            'ids' => 'required|array|min:1',
+            'ids.*' => 'integer|exists:defense_requests,id',
+        ]);
+
+        $coordinator = $user->coordinators()->first();
+        if (!$coordinator) {
+            return response()->json(['error' => 'No coordinator registered.'], 422);
+        }
+
+        $updated = [];
+        foreach ($data['ids'] as $id) {
+            $defenseRequest = DefenseRequest::find($id);
+            if (!$defenseRequest) continue;
+
+            // Only allow if in correct state
+            if (!in_array($defenseRequest->workflow_state, ['submitted', 'adviser-review', 'adviser-rejected'])) continue;
+
+            $defenseRequest->workflow_state = 'adviser-approved';
+            $defenseRequest->status = 'Pending';
+            $defenseRequest->adviser_comments = null;
+            $defenseRequest->adviser_reviewed_at = now();
+            $defenseRequest->adviser_reviewed_by = $user->id;
+            $defenseRequest->last_status_updated_at = now();
+            $defenseRequest->last_status_updated_by = $user->id;
+            $defenseRequest->coordinator_user_id = $coordinator->id;
+
+            // Optionally add workflow entry here...
+
+            $defenseRequest->save();
+            $updated[] = $id;
+        }
+
+        return response()->json([
+            'ok' => true,
+            'updated_ids' => $updated,
+        ]);
+    }
+
+    public function bulkReject(Request $request)
+    {
+        $user = Auth::user();
+        if (!$user || !in_array($user->role, ['Faculty', 'Adviser'])) {
+            return response()->json(['error' => 'Unauthorized'], 403);
+        }
+
+        $data = $request->validate([
+            'ids' => 'required|array|min:1',
+            'ids.*' => 'integer|exists:defense_requests,id',
+        ]);
+
+        $updated = [];
+        foreach ($data['ids'] as $id) {
+            $defenseRequest = DefenseRequest::find($id);
+            if (!$defenseRequest) continue;
+
+            // Only allow if in correct state
+            if (!in_array($defenseRequest->workflow_state, ['submitted', 'adviser-review', 'adviser-approved'])) continue;
+
+            $defenseRequest->workflow_state = 'adviser-rejected';
+            $defenseRequest->status = 'Rejected';
+            $defenseRequest->adviser_reviewed_at = now();
+            $defenseRequest->adviser_reviewed_by = $user->id;
+            $defenseRequest->last_status_updated_at = now();
+            $defenseRequest->last_status_updated_by = $user->id;
+            $defenseRequest->coordinator_user_id = null;
+
+            $defenseRequest->save();
+            $updated[] = $id;
+        }
+
+        return response()->json([
+            'ok' => true,
+            'updated_ids' => $updated,
+        ]);
+    }
+
+    public function bulkRetrieve(Request $request)
+    {
+        $user = Auth::user();
+        if (!$user || !in_array($user->role, ['Faculty', 'Adviser'])) {
+            return response()->json(['error' => 'Unauthorized'], 403);
+        }
+
+        $data = $request->validate([
+            'ids' => 'required|array|min:1',
+            'ids.*' => 'integer|exists:defense_requests,id',
+        ]);
+
+        $updated = [];
+        foreach ($data['ids'] as $id) {
+            $defenseRequest = DefenseRequest::find($id);
+            if (!$defenseRequest) continue;
+
+            // Only allow if in correct state
+            if (!in_array($defenseRequest->workflow_state, ['adviser-approved', 'adviser-rejected'])) continue;
+
+            $defenseRequest->workflow_state = 'adviser-review';
+            $defenseRequest->status = 'Pending';
+            $defenseRequest->coordinator_user_id = null;
+            $defenseRequest->save();
+            $updated[] = $id;
+        }
+
+        return response()->json([
+            'ok' => true,
+            'updated_ids' => $updated,
+        ]);
+    }
 }

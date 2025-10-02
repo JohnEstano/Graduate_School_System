@@ -9,6 +9,11 @@ import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
+import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
+import axios from "axios";
+import { toast } from "sonner";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 
 type DefenseRequest = {
     id: number;
@@ -47,29 +52,35 @@ function AttachmentLinks(req: DefenseRequest) {
         { key: 'avisee_adviser_attachment', label: 'Avisee-Adviser File' },
     ];
     return (
-        <div className="flex flex-wrap gap-2">
-            {files.map(f =>
-                req[f.key as keyof DefenseRequest] ? (
-                    <a
-                        key={f.key}
-                        href={`/storage/${req[f.key as keyof DefenseRequest]}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center gap-1 px-2 py-1 rounded bg-zinc-50 border text-xs hover:bg-zinc-100 truncate max-w-[120px]"
-                        onClick={e => e.stopPropagation()}
-                        title={req[f.key as keyof DefenseRequest]?.toString().split('/').pop()}
-                    >
-                        <Paperclip className="h-3 w-3 text-rose-500" />
-                        <span className="truncate">
-                            {f.label}
-                        </span>
-                        <span className="text-[10px] text-zinc-400 truncate max-w-[60px]">
-                            {req[f.key as keyof DefenseRequest]?.toString().split('/').pop()}
-                        </span>
-                    </a>
-                ) : null
-            )}
-        </div>
+        <TooltipProvider>
+            <div className="flex gap-1">
+                {files.map(f =>
+                    req[f.key as keyof DefenseRequest] ? (
+                        <Tooltip key={f.key}>
+                            <TooltipTrigger asChild>
+                                <a
+                                    href={`/storage/${req[f.key as keyof DefenseRequest]}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="group"
+                                    onClick={e => e.stopPropagation()}
+                                >
+                                    <span className="inline-flex items-center justify-center rounded bg-rose-500 hover:bg-rose-600 transition-colors w-7 h-7">
+                                        <Paperclip className="h-4 w-4 text-white" />
+                                    </span>
+                                </a>
+                            </TooltipTrigger>
+                            <TooltipContent
+                                side="top"
+                                className="text-xs bg-black text-white border-none shadow-lg"
+                            >
+                                {f.label}
+                            </TooltipContent>
+                        </Tooltip>
+                    ) : null
+                )}
+            </div>
+        </TooltipProvider>
     );
 }
 
@@ -96,8 +107,10 @@ export default function ShowAllDefenseRequests({
     const [priorityFilter, setPriorityFilter] = useState<string[]>([]);
     const [typeFilter, setTypeFilter] = useState<string[]>([]);
     const [filtersOpen, setFiltersOpen] = useState<false | 'priority' | 'type'>(false);
+    const [processing, setProcessing] = useState(false);
+    const [confirmAction, setConfirmAction] = useState<null | 'approve' | 'reject'>(null);
 
-    // Filtered requests by search
+    // Filtered requests by search and filters
     const filteredRequests = defenseRequests.filter(req => {
         const name = getDisplayName(req).toLowerCase();
         const thesis = req.thesis_title?.toLowerCase() || "";
@@ -107,6 +120,9 @@ export default function ShowAllDefenseRequests({
         if (typeFilter.length) match = match && typeFilter.includes(req.defense_type || '');
         return match;
     });
+
+    // Endorsed submissions (status === 'Approved')
+    const endorsedRequests = filteredRequests.filter(req => req.status === 'Approved');
 
     // Bulk select helpers
     const headerChecked = selected.length === filteredRequests.length && filteredRequests.length > 0;
@@ -152,10 +168,40 @@ export default function ShowAllDefenseRequests({
         w.document.close();
     }
 
-    // Bulk approve/reject handlers (replace with your actual API logic)
+    // Bulk approve/reject handler
     const handleBulkAction = async (action: 'approve' | 'reject' | 'retrieve') => {
-        setBulkAction(null);
-        setSelected([]);
+        setProcessing(true);
+        const toastId = toast.loading(
+            action === 'approve'
+                ? 'Approving selected...'
+                : action === 'reject'
+                ? 'Rejecting selected...'
+                : 'Retrieving selected...'
+        );
+        try {
+            let url = '';
+            if (action === 'approve') url = '/defense-requests/bulk-approve';
+            else if (action === 'reject') url = '/defense-requests/bulk-reject';
+            else if (action === 'retrieve') url = '/defense-requests/bulk-retrieve';
+
+            await axios.post(url, { ids: selected });
+            toast.success(
+                action === 'approve'
+                    ? "Requests approved and sent to your coordinator!"
+                    : action === 'reject'
+                    ? "Requests rejected."
+                    : "Requests retrieved for review.",
+                { id: toastId }
+            );
+            setSelected([]);
+            setConfirmAction(null);
+            setBulkAction(null);
+            window.location.reload();
+        } catch (e: any) {
+            toast.error(e.response?.data?.error || `Bulk ${action} failed.`, { id: toastId });
+        } finally {
+            setProcessing(false);
+        }
     };
 
     // Bulk delete handler (replace with your actual API logic)
@@ -177,9 +223,17 @@ export default function ShowAllDefenseRequests({
 
     return (
         <div className="flex flex-col pb-5 w-full">
-            {/* Relationship Card - now above the header */}
-            <div className="flex justify-end mb-2">
-                <div className="flex items-center gap-2 bg-black text-white rounded px-3 py-2 text-xs font-medium">
+            {/* Tabs and Relationship Card Row - OUTSIDE and ABOVE the header card */}
+            <div className="flex items-center justify-between mb-2">
+                {/* Tabs left */}
+                <Tabs defaultValue="all" className="w-auto">
+                    <TabsList className="bg-zinc-100">
+                        <TabsTrigger value="all" className="px-4 py-1 font-medium">All</TabsTrigger>
+                        <TabsTrigger value="endorsed" className="px-4 py-1 font-medium">Endorsed Submissions</TabsTrigger>
+                    </TabsList>
+                </Tabs>
+                {/* Relationship card right */}
+                <div className="flex items-center gap-2 bg-black text-white rounded px-3 py-2 text-xs font-medium shadow-sm">
                     <span className="flex items-center gap-1">
                         Adviser <span className="font-semibold">(You)</span>
                     </span>
@@ -195,8 +249,8 @@ export default function ShowAllDefenseRequests({
             </div>
             {/* Header Card */}
             <div className="w-full bg-white border border-zinc-200 rounded-lg overflow-hidden mb-4">
+                {/* Title & Description */}
                 <div className="flex flex-row items-center justify-between w-full p-3 border-b bg-white">
-                    {/* Left: Title & Description */}
                     <div className="flex items-center gap-2">
                         <div className="h-10 w-10 flex items-center justify-center rounded-full bg-blue-500/10 border border-blue-500">
                             <File className="h-5 w-5 text-blue-400" />
@@ -308,91 +362,181 @@ export default function ShowAllDefenseRequests({
                     </div>
                 </div>
             </div>
-
-            {/* Responsive Table */}
-            <div className="relative w-full max-w-full">
-                <div className="overflow-x-auto w-full rounded-md border border-border bg-background">
-                    <Table className="min-w-[900px] w-full text-sm table-auto">
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead className="w-[40px] py-2">
-                                    <Checkbox
-                                        checked={headerChecked}
-                                        onCheckedChange={toggleSelectAll}
-                                        aria-label="Select all"
-                                    />
-                                </TableHead>
-                                <TableHead className="px-3 min-w-[180px] whitespace-nowrap">Title</TableHead>
-                                <TableHead className="px-2 min-w-[120px] whitespace-nowrap">Presenter</TableHead>
-                                <TableHead className="px-2 min-w-[100px] whitespace-nowrap">Program</TableHead>
-                                <TableHead className="text-center px-2 min-w-[90px] whitespace-nowrap">Type</TableHead>
-                                <TableHead className="px-2 min-w-[130px] text-center whitespace-nowrap">Submitted</TableHead>
-                                <TableHead className="px-2 min-w-[180px] whitespace-nowrap">Attachments</TableHead>
-                                <TableHead className="px-2 min-w-[100px] text-center whitespace-nowrap">Status</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {filteredRequests.map(req => {
-                                const isSelected = selected.includes(req.id);
-                                return (
-                                    <TableRow key={req.id} className="hover:bg-muted/40">
-                                        <TableCell className="px-2 py-2">
+            {/* Tabs content below (outside the header card) */}
+            <Tabs defaultValue="all" className="w-full mb-2">
+                <TabsContent value="all" className="w-full">
+                    {/* ...table for filteredRequests... */}
+                    <div className="relative w-full max-w-full">
+                        <div className="overflow-x-auto w-full rounded-md border border-border bg-background">
+                            <Table className="min-w-[900px] w-full text-sm table-auto">
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead className="w-[40px] py-2">
                                             <Checkbox
-                                                checked={isSelected}
-                                                onCheckedChange={() => toggleSelectOne(req.id)}
-                                                className="action-btn"
-                                                onClick={e => e.stopPropagation()}
+                                                checked={headerChecked}
+                                                onCheckedChange={toggleSelectAll}
+                                                aria-label="Select all"
                                             />
-                                        </TableCell>
-                                        <TableCell className="px-3 py-2 font-medium truncate leading-tight align-middle whitespace-nowrap max-w-[220px]" title={req.thesis_title}>
-                                            {req.thesis_title}
-                                        </TableCell>
-                                        <TableCell className="px-2 py-2 text-xs text-muted-foreground whitespace-nowrap align-middle max-w-[140px] truncate" title={getDisplayName(req)}>
-                                            {getDisplayName(req)}
-                                        </TableCell>
-                                        <TableCell className="px-2 py-2 text-xs text-muted-foreground whitespace-nowrap align-middle max-w-[100px] truncate">
-                                            {req.program || '—'}
-                                        </TableCell>
-                                        <TableCell className="px-2 py-2 text-center align-middle whitespace-nowrap">
-                                            <Badge variant="outline">{req.defense_type || '—'}</Badge>
-                                        </TableCell>
-                                        <TableCell className="px-2 py-2 text-xs text-muted-foreground whitespace-nowrap text-center align-middle max-w-[120px] truncate">
-                                            {req.created_at
-                                                ? dayjs(req.created_at).format('YYYY-MM-DD hh:mm A')
-                                                : '—'}
-                                        </TableCell>
-                                        <TableCell className="px-2 py-2 max-w-[180px] truncate">
-                                            <AttachmentLinks {...req} />
-                                        </TableCell>
-                                        <TableCell className="px-2 py-2 text-xs whitespace-nowrap text-center align-middle">
-                                            <Badge
-                                                className={
-                                                    req.status === 'Approved'
-                                                        ? 'bg-green-100 text-green-700 border-green-200'
-                                                        : req.status === 'Rejected'
-                                                        ? 'bg-red-100 text-red-700 border-red-200'
-                                                        : req.status === 'Pending'
-                                                        ? 'bg-yellow-100 text-yellow-700 border-yellow-200'
-                                                        : 'bg-gray-100 text-gray-700 border-gray-200'
-                                                }
-                                            >
-                                                {req.status}
-                                            </Badge>
-                                        </TableCell>
+                                        </TableHead>
+                                        <TableHead className="px-3 min-w-[180px] whitespace-nowrap">Title</TableHead>
+                                        <TableHead className="px-2 min-w-[120px] whitespace-nowrap">Presenter</TableHead>
+                                        <TableHead className="px-2 min-w-[100px] whitespace-nowrap">Program</TableHead>
+                                        <TableHead className="text-center px-2 min-w-[90px] whitespace-nowrap">Type</TableHead>
+                                        <TableHead className="px-2 min-w-[130px] text-center whitespace-nowrap">Submitted</TableHead>
+                                        <TableHead className="px-2 min-w-[180px] whitespace-nowrap">Attachments</TableHead>
+                                        <TableHead className="px-2 min-w-[100px] text-center whitespace-nowrap">Status</TableHead>
                                     </TableRow>
-                                );
-                            })}
-                            {filteredRequests.length === 0 && (
-                                <TableRow>
-                                    <TableCell colSpan={8} className="text-center py-10 text-muted-foreground">
-                                        No defense requests found.
-                                    </TableCell>
-                                </TableRow>
-                            )}
-                        </TableBody>
-                    </Table>
-                </div>
-            </div>
+                                </TableHeader>
+                                <TableBody>
+                                    {filteredRequests.map(req => {
+                                        const isSelected = selected.includes(req.id);
+                                        return (
+                                            <TableRow key={req.id} className="hover:bg-muted/40">
+                                                <TableCell className="px-2 py-2">
+                                                    <Checkbox
+                                                        checked={isSelected}
+                                                        onCheckedChange={() => toggleSelectOne(req.id)}
+                                                        className="action-btn"
+                                                        onClick={e => e.stopPropagation()}
+                                                    />
+                                                </TableCell>
+                                                <TableCell className="px-3 py-2 font-medium truncate leading-tight align-middle whitespace-nowrap max-w-[220px]" title={req.thesis_title}>
+                                                    {req.thesis_title}
+                                                </TableCell>
+                                                <TableCell className="px-2 py-2 text-xs text-muted-foreground whitespace-nowrap align-middle max-w-[140px] truncate" title={getDisplayName(req)}>
+                                                    {getDisplayName(req)}
+                                                </TableCell>
+                                                <TableCell className="px-2 py-2 text-xs text-muted-foreground whitespace-nowrap align-middle max-w-[100px] truncate">
+                                                    {req.program || '—'}
+                                                </TableCell>
+                                                <TableCell className="px-2 py-2 text-center align-middle whitespace-nowrap">
+                                                    <Badge variant="outline">{req.defense_type || '—'}</Badge>
+                                                </TableCell>
+                                                <TableCell className="px-2 py-2 text-xs text-muted-foreground whitespace-nowrap text-center align-middle max-w-[120px] truncate">
+                                                    {req.created_at
+                                                        ? dayjs(req.created_at).format('YYYY-MM-DD hh:mm A')
+                                                        : '—'}
+                                                </TableCell>
+                                                <TableCell className="px-2 py-2 max-w-[180px] truncate">
+                                                    <AttachmentLinks {...req} />
+                                                </TableCell>
+                                                <TableCell className="px-2 py-2 text-xs whitespace-nowrap text-center align-middle">
+                                                    <Badge
+                                                        className={
+                                                            req.status === 'Approved'
+                                                                ? 'bg-green-100 text-green-700 border-green-200'
+                                                                : req.status === 'Rejected'
+                                                                ? 'bg-red-100 text-red-700 border-red-200'
+                                                                : req.status === 'Pending'
+                                                                ? 'bg-yellow-100 text-yellow-700 border-yellow-200'
+                                                                : 'bg-gray-100 text-gray-700 border-gray-200'
+                                                        }
+                                                    >
+                                                        {req.status}
+                                                    </Badge>
+                                                </TableCell>
+                                            </TableRow>
+                                        );
+                                    })}
+                                    {filteredRequests.length === 0 && (
+                                        <TableRow>
+                                            <TableCell colSpan={8} className="text-center py-10 text-muted-foreground">
+                                                No defense requests found.
+                                            </TableCell>
+                                        </TableRow>
+                                    )}
+                                </TableBody>
+                            </Table>
+                        </div>
+                    </div>
+                </TabsContent>
+                <TabsContent value="endorsed" className="w-full">
+                    {/* ...table for endorsedRequests... */}
+                    <div className="relative w-full max-w-full">
+                        <div className="overflow-x-auto w-full rounded-md border border-border bg-background">
+                            <Table className="min-w-[900px] w-full text-sm table-auto">
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead className="w-[40px] py-2">
+                                            <Checkbox
+                                                checked={headerChecked}
+                                                onCheckedChange={toggleSelectAll}
+                                                aria-label="Select all"
+                                            />
+                                        </TableHead>
+                                        <TableHead className="px-3 min-w-[180px] whitespace-nowrap">Title</TableHead>
+                                        <TableHead className="px-2 min-w-[120px] whitespace-nowrap">Presenter</TableHead>
+                                        <TableHead className="px-2 min-w-[100px] whitespace-nowrap">Program</TableHead>
+                                        <TableHead className="text-center px-2 min-w-[90px] whitespace-nowrap">Type</TableHead>
+                                        <TableHead className="px-2 min-w-[130px] text-center whitespace-nowrap">Submitted</TableHead>
+                                        <TableHead className="px-2 min-w-[180px] whitespace-nowrap">Attachments</TableHead>
+                                        <TableHead className="px-2 min-w-[100px] text-center whitespace-nowrap">Status</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {endorsedRequests.map(req => {
+                                        const isSelected = selected.includes(req.id);
+                                        return (
+                                            <TableRow key={req.id} className="hover:bg-muted/40">
+                                                <TableCell className="px-2 py-2">
+                                                    <Checkbox
+                                                        checked={isSelected}
+                                                        onCheckedChange={() => toggleSelectOne(req.id)}
+                                                        className="action-btn"
+                                                        onClick={e => e.stopPropagation()}
+                                                    />
+                                                </TableCell>
+                                                <TableCell className="px-3 py-2 font-medium truncate leading-tight align-middle whitespace-nowrap max-w-[220px]" title={req.thesis_title}>
+                                                    {req.thesis_title}
+                                                </TableCell>
+                                                <TableCell className="px-2 py-2 text-xs text-muted-foreground whitespace-nowrap align-middle max-w-[140px] truncate" title={getDisplayName(req)}>
+                                                    {getDisplayName(req)}
+                                                </TableCell>
+                                                <TableCell className="px-2 py-2 text-xs text-muted-foreground whitespace-nowrap align-middle max-w-[100px] truncate">
+                                                    {req.program || '—'}
+                                                </TableCell>
+                                                <TableCell className="px-2 py-2 text-center align-middle whitespace-nowrap">
+                                                    <Badge variant="outline">{req.defense_type || '—'}</Badge>
+                                                </TableCell>
+                                                <TableCell className="px-2 py-2 text-xs text-muted-foreground whitespace-nowrap text-center align-middle max-w-[120px] truncate">
+                                                    {req.created_at
+                                                        ? dayjs(req.created_at).format('YYYY-MM-DD hh:mm A')
+                                                        : '—'}
+                                                </TableCell>
+                                                <TableCell className="px-2 py-2 max-w-[180px] truncate">
+                                                    <AttachmentLinks {...req} />
+                                                </TableCell>
+                                                <TableCell className="px-2 py-2 text-xs whitespace-nowrap text-center align-middle">
+                                                    <Badge
+                                                        className={
+                                                            req.status === 'Approved'
+                                                                ? 'bg-green-100 text-green-700 border-green-200'
+                                                                : req.status === 'Rejected'
+                                                                ? 'bg-red-100 text-red-700 border-red-200'
+                                                                : req.status === 'Pending'
+                                                                ? 'bg-yellow-100 text-yellow-700 border-yellow-200'
+                                                                : 'bg-gray-100 text-gray-700 border-gray-200'
+                                                        }
+                                                    >
+                                                        {req.status}
+                                                    </Badge>
+                                                </TableCell>
+                                            </TableRow>
+                                        );
+                                    })}
+                                    {endorsedRequests.length === 0 && (
+                                        <TableRow>
+                                            <TableCell colSpan={8} className="text-center py-10 text-muted-foreground">
+                                                No endorsed submissions found.
+                                            </TableCell>
+                                        </TableRow>
+                                    )}
+                                </TableBody>
+                            </Table>
+                        </div>
+                    </div>
+                </TabsContent>
+            </Tabs>
 
             {/* --- Floating Bulk Action Bar --- */}
             {selected.length > 0 && (
@@ -403,8 +547,9 @@ export default function ShowAllDefenseRequests({
                             variant="ghost"
                             size="icon"
                             className="px-2 py-1 h-7 w-auto text-xs flex items-center gap-1"
-                            onClick={() => setBulkAction('approve')}
+                            onClick={() => setConfirmAction('approve')}
                             aria-label="Approve"
+                            disabled={processing}
                         >
                             <CheckCircle size={13} className="text-green-500" />
                             <span className="hidden sm:inline">Approve</span>
@@ -413,8 +558,9 @@ export default function ShowAllDefenseRequests({
                             variant="ghost"
                             size="icon"
                             className="px-2 py-1 h-7 w-auto text-xs flex items-center gap-1"
-                            onClick={() => setBulkAction('reject')}
+                            onClick={() => setConfirmAction('reject')}
                             aria-label="Reject"
+                            disabled={processing}
                         >
                             <XCircle size={13} className="text-red-500" />
                             <span className="hidden sm:inline">Reject</span>
@@ -462,6 +608,43 @@ export default function ShowAllDefenseRequests({
                 </div>
             )}
             {/* --- End Floating Bulk Action Bar --- */}
+
+            {/* --- Confirmation Dialog --- */}
+            <Dialog open={!!confirmAction} onOpenChange={v => !processing && setConfirmAction(null)}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>
+                            {confirmAction === 'approve'
+                                ? "Approve selected requests?"
+                                : "Reject selected requests?"}
+                        </DialogTitle>
+                    </DialogHeader>
+                    <div className="text-sm mb-2">
+                        {confirmAction === 'approve'
+                            ? "Are you sure you want to approve and forward these requests to your coordinator?"
+                            : "Are you sure you want to reject these requests? This cannot be undone."}
+                    </div>
+                    <DialogFooter>
+                        <Button
+                            variant="outline"
+                            onClick={() => setConfirmAction(null)}
+                            disabled={processing}
+                        >
+                            Cancel
+                        </Button>
+                        <Button
+                            onClick={() => handleBulkAction(confirmAction!)}
+                            disabled={processing}
+                            className="bg-rose-500 hover:bg-rose-600 text-white"
+                        >
+                            {processing
+                                ? (confirmAction === 'approve' ? "Approving..." : "Rejecting...")
+                                : (confirmAction === 'approve' ? "Approve" : "Reject")}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+            {/* --- End Confirmation Dialog --- */}
         </div>
     );
 }
