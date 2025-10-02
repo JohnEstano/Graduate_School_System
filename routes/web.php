@@ -26,6 +26,7 @@ use App\Http\Controllers\UserSignatureController;
 use App\Http\Controllers\GeneratedDocumentController;
 use App\Http\Controllers\AdviserStudentController;
 use App\Http\Controllers\PanelistHonorariumSpecController;
+use App\Http\Controllers\CoordinatorAdviserController;
 
 /*
 |--------------------------------------------------------------------------
@@ -318,6 +319,10 @@ Route::middleware(['auth','verified'])->group(function () {
 
     // Add this line if missing
     Route::get('/api/adviser/code', [AdviserStudentController::class, 'getAdviserCode']);
+
+    Route::get('/coordinator/adviser-list', function () {
+        return Inertia::render('coordinator/adviser-list/Index');
+    })->name('coordinator.adviser-list');
 });
 
 /*
@@ -433,6 +438,18 @@ Route::middleware(['auth','verified'])->group(function () {
     Route::get('/panelists/honorarium-specs', [PanelistHonorariumSpecController::class, 'index'])->name('panelists.honorarium-specs');
     Route::post('/panelists/honorarium-specs', [PanelistController::class, 'saveHonorariumSpecs']);
 });
+
+/* Coordinator Advisers */
+Route::middleware(['auth','verified'])->group(function () {
+    Route::get('/api/coordinator/advisers', [CoordinatorAdviserController::class, 'index']);
+    Route::post('/api/coordinator/advisers', [CoordinatorAdviserController::class, 'store']);
+    Route::delete('/api/coordinator/advisers/{adviserId}', [CoordinatorAdviserController::class, 'destroy']);
+});
+
+/* Coordinator code endpoints */
+Route::get('/api/coordinator/code', [CoordinatorAdviserController::class, 'getCoordinatorCode']);
+Route::post('/api/coordinator/reset-code', [CoordinatorAdviserController::class, 'resetCoordinatorCode']);
+Route::post('/api/adviser/register-with-coordinator-code', [CoordinatorAdviserController::class, 'registerWithCode']);
 
 
 

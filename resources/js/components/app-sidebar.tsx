@@ -92,6 +92,11 @@ const assistantNavItems: MainNavItem[] = [
     { title: 'Student Records', href: '/student-records', icon: Users },
     { title: 'Schedules', href: '/schedules', icon: CalendarFold },
     //{ title: 'Messages', href: '/messages', icon: MessageSquareText },
+    {
+        title: 'Adviser List',
+        href: '/coordinator/adviser-list',
+        icon: Users,
+    },
 ];
 
 const facultyNavItems: MainNavItem[] = [

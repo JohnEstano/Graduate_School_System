@@ -178,4 +178,22 @@ class User extends Authenticatable
         $this->adviser_code = $code;
         $this->save();
     }
+
+    public function generateCoordinatorCode()
+    {
+        $this->coordinator_code = strtoupper(bin2hex(random_bytes(4)));
+        $this->save();
+    }
+
+    // Relationship: Advisers assigned to this coordinator
+    public function coordinatedAdvisers()
+    {
+        return $this->belongsToMany(User::class, 'adviser_coordinator', 'coordinator_id', 'adviser_id');
+    }
+
+    // Relationship: Coordinator(s) for this adviser
+    public function coordinators()
+    {
+        return $this->belongsToMany(User::class, 'adviser_coordinator', 'adviser_id', 'coordinator_id');
+    }
 }

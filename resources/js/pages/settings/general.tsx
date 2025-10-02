@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -13,11 +13,13 @@ export default function GeneralSettings({
   initialAcceptDefense,
   initialAutoAccept,
   initialAdviserCode,
+  initialCoordinatorCode,
 }: {
   role: string;
   initialAcceptDefense?: boolean;
   initialAutoAccept?: boolean;
   initialAdviserCode?: string;
+  initialCoordinatorCode?: string;
 }) {
   // Coordinator state
   const [acceptDefense, setAcceptDefense] = useState(initialAcceptDefense ?? false);
@@ -32,6 +34,19 @@ export default function GeneralSettings({
   const [adviserLoading, setAdviserLoading] = useState(false);
   const [adviserCode, setAdviserCode] = useState(initialAdviserCode ?? "");
   const [resetLoading, setResetLoading] = useState(false);
+
+  // Coordinator code state
+  const [coordinatorCode, setCoordinatorCode] = useState(initialCoordinatorCode ?? "");
+  const [resetCoordinatorLoading, setResetCoordinatorLoading] = useState(false);
+
+  // Fetch coordinator code on mount if role is Coordinator
+  useEffect(() => {
+    if (role === "Coordinator" && !coordinatorCode) {
+      fetch('/api/coordinator/code')
+        .then(res => res.json())
+        .then(data => setCoordinatorCode(data.coordinator_code));
+    }
+  }, [role, coordinatorCode]);
 
   // Coordinator logic
   function handleSwitchChange(value: boolean) {
@@ -90,54 +105,91 @@ export default function GeneralSettings({
     toast.success("Adviser code reset!");
     setResetLoading(false);
   }
+  async function handleResetCoordinatorCode() {
+    setResetCoordinatorLoading(true);
+    const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+    const res = await fetch('/api/coordinator/reset-code', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRF-TOKEN': token || '',
+      },
+    });
+    const data = await res.json();
+    setCoordinatorCode(data.coordinator_code);
+    toast.success("Coordinator code reset!");
+    setResetCoordinatorLoading(false);
+  }
 
   return (
     <AppLayout breadcrumbs={[{ title: "General", href: "/settings/general" }]}>
       <Head title="General Settings" />
       <SettingsLayout>
         <div className="space-y-8">
-         
           {role === "Coordinator" && (
             <>
-              <div className="flex items-center gap-4">
-                <Switch
-                  checked={acceptDefense}
-                  onCheckedChange={handleSwitchChange}
-                  disabled={loading}
-                  aria-label="Accept defense submissions"
-                />
-                <span className="text-base font-normal">Accept defense submissions</span>
+              {/* --- Coordinator Code Section --- */}
+              <div>
+
+                <div className="text-base font-medium mb-1">Your Coordinator Code</div>
+                <div className="flex items-center gap-3">
+                  <Input value={coordinatorCode} disabled className="w-40 font-mono text-base" />
+                  <Button
+                    onClick={handleResetCoordinatorCode}
+                    disabled={resetCoordinatorLoading}
+                    className="bg-rose-500 hover:bg-rose-600 text-white transition-colors px-4 py-2 rounded-md font-medium"
+                  >
+                    {resetCoordinatorLoading ? "Resetting..." : "Reset Code"}
+                  </Button>
+                </div>
+                <div className="text-sm text-muted-foreground mt-1">
+                  Share this code with your advisers so they can register you as their coordinator. If you suspect your code is compromised, reset it here.
+                </div>
               </div>
-              <div className="text-sm text-muted-foreground max-w-lg">
-                When enabled, students can submit defense requirements. When disabled, submissions are blocked. Only applicable to your program.
+              {/* --- Accept Defense Submissions Section --- */}
+              <div className="mt-20">
+
+                <div className="flex items-center gap-4">
+                  <Switch
+                    checked={acceptDefense}
+                    onCheckedChange={handleSwitchChange}
+                    disabled={loading}
+                    aria-label="Accept defense submissions"
+                  />
+                  <span className="text-base font-medium">Accept defense submissions</span>
+                </div>
+                <div className="text-sm text-muted-foreground max-w-lg">
+                  When enabled, students can submit defense requirements. When disabled, submissions are blocked. Only applicable to your program.
+                </div>
+                <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle className="text-base font-semibold">
+                        {pendingValue ? "Enable Defense Submissions?" : "Disable Defense Submissions?"}
+                      </DialogTitle>
+                      <DialogDescription className="text-sm">
+                        {pendingValue
+                          ? "Enabling this will allow students to submit defense requirements."
+                          : "Disabling this will block all new defense requirement submissions from students. Existing workflows will not be affected."}
+                      </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter>
+                      <Button variant="outline" onClick={() => setDialogOpen(false)}>
+                        Cancel
+                      </Button>
+                      <Button onClick={confirmChange} disabled={loading}>
+                        Confirm
+                      </Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
               </div>
-              <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle className="text-base font-semibold">
-                      {pendingValue ? "Enable Defense Submissions?" : "Disable Defense Submissions?"}
-                    </DialogTitle>
-                    <DialogDescription className="text-sm">
-                      {pendingValue
-                        ? "Enabling this will allow students to submit defense requirements."
-                        : "Disabling this will block all new defense requirement submissions from students. Existing workflows will not be affected."}
-                    </DialogDescription>
-                  </DialogHeader>
-                  <DialogFooter>
-                    <Button variant="outline" onClick={() => setDialogOpen(false)}>
-                      Cancel
-                    </Button>
-                    <Button onClick={confirmChange} disabled={loading}>
-                      Confirm
-                    </Button>
-                  </DialogFooter>
-                </DialogContent>
-              </Dialog>
             </>
           )}
           {(role === "Adviser" || role === "Faculty") && (
             <>
               <div>
+                <div className="text-lg font-semibold mb-2">Adviser Code</div>
                 <div className="text-base font-medium mb-1">Your Adviser Code</div>
                 <div className="flex items-center gap-3">
                   <Input value={adviserCode} disabled className="w-40 font-mono text-base" />
@@ -164,7 +216,7 @@ export default function GeneralSettings({
                   <span className="text-base font-medium">Auto-accept students who enter your adviser code</span>
                 </div>
                 <div className="text-sm text-muted-foreground max-w-lg">
-                  When enabled, students who enter your code are automatically registered as your students. When disabled, you must manually approve each student.
+                  When enabled, students who enter your adviser code are automatically registered as your students. When disabled, you must manually approve each student.
                 </div>
               </div>
               <Dialog open={adviserDialogOpen} onOpenChange={setAdviserDialogOpen}>

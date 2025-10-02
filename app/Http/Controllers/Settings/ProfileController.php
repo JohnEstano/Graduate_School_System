@@ -35,6 +35,20 @@ class ProfileController extends Controller
                 });
         }
 
+        // If adviser/faculty, include coordinator info
+        $coordinators = [];
+        if (in_array($user->role, ['Adviser', 'Faculty'])) {
+            $coordinators = $user->coordinators()
+                ->select('first_name', 'middle_name', 'last_name', 'email')
+                ->get()
+                ->map(function ($c) {
+                    return [
+                        'name' => trim($c->first_name . ' ' . ($c->middle_name ? strtoupper($c->middle_name[0]) . '. ' : '') . $c->last_name),
+                        'email' => $c->email,
+                    ];
+                });
+        }
+
         // For Adviser/Faculty, ensure adviser_code is generated and returned
         $adviserCode = null;
         if (in_array($user->role, ['Adviser', 'Faculty'])) {
@@ -54,6 +68,7 @@ class ProfileController extends Controller
                     [
                         'advisers' => $advisers,
                         'adviser_code' => $adviserCode,
+                        'coordinators' => $coordinators, // <-- ADD THIS LINE
                     ]
                 ),
             ],

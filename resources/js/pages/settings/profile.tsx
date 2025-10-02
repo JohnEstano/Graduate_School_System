@@ -1,6 +1,5 @@
 import { type BreadcrumbItem, type SharedData } from '@/types';
 import { Head, usePage } from '@inertiajs/react';
-import HeadingSmall from '@/components/heading-small';
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import AppLayout from '@/layouts/app-layout';
@@ -26,7 +25,6 @@ function getInitials(user: any) {
 }
 
 function getFullName(user: any) {
-    // Use the display name from backend if available, else fallback
     return user.display_name
         ?? user.name
         ?? [
@@ -42,9 +40,51 @@ export default function Profile({ mustVerifyEmail, status }: { mustVerifyEmail: 
 
     type Adviser = { name: string; email: string };
     const adviser: Adviser | null = Array.isArray(user.advisers) ? user.advisers[0] ?? null : null;
-    const [adviserCode, setAdviserCode] = useState(user.adviser_code ?? ""); // Use from props, not axios
+    const [adviserCode, setAdviserCode] = useState(user.adviser_code ?? "");
     const [registerLoading, setRegisterLoading] = useState(false);
     const [error, setError] = useState("");
+
+    // --- Coordinator registration for Adviser/Faculty ---
+    const [coordinatorCode, setCoordinatorCode] = useState("");
+    const [coordinatorRegisterLoading, setCoordinatorRegisterLoading] = useState(false);
+    const [coordinatorError, setCoordinatorError] = useState("");
+    // Always use { name, email } for coordinator state
+    const [coordinator, setCoordinator] = useState(() => {
+        const arr = Array.isArray(user.coordinators) ? user.coordinators : [];
+        if (arr.length > 0) {
+            const c = arr[0];
+            return {
+                name: c.name
+                    || [c.first_name, c.middle_name ? `${c.middle_name[0]}.` : '', c.last_name].filter(Boolean).join(' '),
+                email: c.email,
+            };
+        }
+        return null;
+    });
+
+    const handleRegisterCoordinator = async () => {
+        setCoordinatorRegisterLoading(true);
+        setCoordinatorError("");
+        const toastId = toast.loading("Registering coordinator...");
+        try {
+            const res = await axios.post("/api/adviser/register-with-coordinator-code", { coordinator_code: coordinatorCode });
+            toast.success("Coordinator registered successfully!", { id: toastId });
+            if (res.data?.coordinator) {
+                const c = res.data.coordinator;
+                setCoordinator({
+                    name: c.name
+                        || [c.first_name, c.middle_name ? `${c.middle_name[0]}.` : '', c.last_name].filter(Boolean).join(' '),
+                    email: c.email,
+                });
+                setCoordinatorCode("");
+            }
+        } catch (e: any) {
+            toast.dismiss(toastId);
+            setCoordinatorError(e.response?.data?.error || "Registration failed.");
+        } finally {
+            setCoordinatorRegisterLoading(false);
+        }
+    };
 
     const handleRegisterAdviser = async () => {
         setRegisterLoading(true);
@@ -151,11 +191,44 @@ export default function Profile({ mustVerifyEmail, status }: { mustVerifyEmail: 
                             </div>
                         )}
                         {(user.role === "Adviser" || user.role === "Faculty") && (
-                            <div>
-                                <div className="text-xs text-muted-foreground mb-1">Adviser Code</div>
-                                <div className=" font-medium text-base">{adviserCode ? String(adviserCode) : "—"}</div>
-                                <div className="text-xs text-muted-foreground mt-1">Share this code with your students so they can register you as their adviser.</div>
-                            </div>
+                            <>
+                                <div>
+                                    <div className="text-xs text-muted-foreground mb-1">Adviser Code</div>
+                                    <div className=" font-medium text-base">{adviserCode ? String(adviserCode) : "—"}</div>
+                                    <div className="text-xs text-muted-foreground mt-1">Share this code with your students so they can register you as their adviser.</div>
+                                </div>
+                                <div>
+                                    <div className="text-xs text-muted-foreground mb-1">Coordinator</div>
+                                    {coordinator ? (
+                                        <>
+                                            <div className="font-medium text-base">{coordinator.name}</div>
+                                            <div className="text-xs text-muted-foreground mt-1">{coordinator.email}</div>
+                                        </>
+                                    ) : (
+                                        <div className="flex flex-row gap-2 mt-2 items-center">
+                                            <Input
+                                                type="text"
+                                                placeholder="Paste coordinator code here"
+                                                value={coordinatorCode}
+                                                onChange={e => setCoordinatorCode(e.target.value)}
+                                                disabled={coordinatorRegisterLoading}
+                                                className="w-48"
+                                            />
+                                            <Button
+                                                onClick={handleRegisterCoordinator}
+                                                disabled={coordinatorRegisterLoading || !coordinatorCode}
+                                                variant="default"
+                                                className="px-4"
+                                            >
+                                                Register Coordinator
+                                            </Button>
+                                            {coordinatorError && (
+                                                <div className="text-xs text-rose-500 mt-1">{coordinatorError}</div>
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
+                            </>
                         )}
                     </div>
                     {mustVerifyEmail && user.email_verified_at === null && (
@@ -173,3 +246,4 @@ export default function Profile({ mustVerifyEmail, status }: { mustVerifyEmail: 
         </AppLayout>
     );
 }
+
