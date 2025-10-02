@@ -14,6 +14,7 @@ import axios from "axios";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { router } from '@inertiajs/react';
 
 type DefenseRequest = {
     id: number;
@@ -391,7 +392,11 @@ export default function ShowAllDefenseRequests({
                                     {filteredRequests.map(req => {
                                         const isSelected = selected.includes(req.id);
                                         return (
-                                            <TableRow key={req.id} className="hover:bg-muted/40">
+                                            <TableRow
+                                                key={req.id}
+                                                className="hover:bg-muted/40 cursor-pointer"
+                                                onClick={() => router.visit(`/adviser/defense-requirements/${req.id}/details`)}
+                                            >
                                                 <TableCell className="px-2 py-2">
                                                     <Checkbox
                                                         checked={isSelected}
@@ -477,7 +482,11 @@ export default function ShowAllDefenseRequests({
                                     {endorsedRequests.map(req => {
                                         const isSelected = selected.includes(req.id);
                                         return (
-                                            <TableRow key={req.id} className="hover:bg-muted/40">
+                                            <TableRow
+                                                key={req.id}
+                                                className="hover:bg-muted/40 cursor-pointer"
+                                                onClick={() => router.visit(`/adviser/defense-requirements/${req.id}/details`)}
+                                            >
                                                 <TableCell className="px-2 py-2">
                                                     <Checkbox
                                                         checked={isSelected}

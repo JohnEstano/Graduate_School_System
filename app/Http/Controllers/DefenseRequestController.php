@@ -561,10 +561,12 @@ class DefenseRequestController extends Controller
                 'ok'=>true,
                 'id'=>$defenseRequest->id,
                 'status'=>$defenseRequest->status,
-                'workflow_state'=>$defenseRequest->workflow_state
+                'workflow_state'=>$defenseRequest->workflow_state,
+                'workflow_history'=>$defenseRequest->workflow_history // <-- ADD THIS
             ]);
         } catch (\Throwable $e) {
             \Log::error('updateStatus error',[
+
                 'id'=>$defenseRequest->id,
                 'error'=>$e->getMessage()
             ]);
@@ -910,6 +912,7 @@ class DefenseRequestController extends Controller
             // Only allow if in correct state
             if (!in_array($defenseRequest->workflow_state, ['submitted', 'adviser-review', 'adviser-rejected'])) continue;
 
+            $fromState = $defenseRequest->workflow_state;
             $defenseRequest->workflow_state = 'adviser-approved';
             $defenseRequest->status = 'Pending';
             $defenseRequest->adviser_comments = null;
@@ -919,7 +922,17 @@ class DefenseRequestController extends Controller
             $defenseRequest->last_status_updated_by = $user->id;
             $defenseRequest->coordinator_user_id = $coordinator->id;
 
-            // Optionally add workflow entry here...
+            // Add workflow entry
+            $hist = $defenseRequest->workflow_history ?? [];
+            $hist[] = [
+                'action'=>'adviser-approved',
+                'timestamp'=>now()->toISOString(),
+                'user_id'=>$user->id,
+                'user_name'=>$user->first_name.' '.$user->last_name,
+                'from_state'=>$fromState,
+                'to_state'=>'adviser-approved'
+            ];
+            $defenseRequest->workflow_history = $hist;
 
             $defenseRequest->save();
             $updated[] = $id;

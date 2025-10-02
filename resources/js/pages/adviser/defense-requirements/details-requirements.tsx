@@ -116,7 +116,7 @@ export default function DetailsRequirementsPage(rawProps: any) {
     else if (action === 'retrieve') newStatus = 'Pending';
 
     try {
-      const res = await fetch(`/defense-requests/${request.id}/status`, {
+      const res = await fetch(`/adviser/defense-requirements/${request.id}/status`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -310,155 +310,163 @@ export default function DetailsRequirementsPage(rawProps: any) {
           </div>
         </div>
 
-        {/* Submission summary card */}
-        <div className="rounded-xl border p-8 bg-white dark:bg-zinc-900">
-          {/* Thesis Title Header with Status */}
-          <div className="mb-1 flex flex-col md:flex-row md:items-center md:justify-between gap-2">
-            <div>
-              <div className="text-2xl font-semibold">{request.thesis_title}</div>
-              <div className="text-xs text-muted-foreground font-medium mt-0.5">Thesis Title</div>
-            </div>
-            {request.status && (
-              <span
-                className={`text-xs font-semibold px-2 py-0.5 rounded-full mt-2 md:mt-0 ${statusBadgeColor(
-                  request.status
-                )}`}
-              >
-                {request.status}
-              </span>
-            )}
-          </div>
-          {/* Info Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-6 mt-6">
-            <div>
-              <div className="text-xs text-muted-foreground mb-1">Presenter</div>
-              <div className="flex items-center gap-3">
-                <Avatar className="h-8 w-8">
-                  <AvatarFallback className="text-base font-bold bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-200">
-                    {getInitials(request)}
-                  </AvatarFallback>
-                </Avatar>
+        {/* Main content and sidebar layout */}
+        <div className="flex flex-col md:flex-row gap-5 mb-2">
+          {/* Main column: all cards stacked, fixed width */}
+          <div className="w-full md:max-w-3xl mx-auto flex flex-col gap-5">
+            {/* Submission summary card */}
+            <div className="rounded-xl border p-8 bg-white dark:bg-zinc-900">
+              {/* Thesis Title Header with Status */}
+              <div className="mb-1 flex flex-col md:flex-row md:items-center md:justify-between gap-2">
                 <div>
-                  <div className="font-medium text-sm leading-tight">
-                    {request.first_name} {request.middle_name ? `${request.middle_name} ` : ''}{request.last_name}
+                  <div className="text-2xl font-semibold">{request.thesis_title}</div>
+                  <div className="text-xs text-muted-foreground font-medium mt-0.5">Thesis Title</div>
+                </div>
+                {request.status && (
+                  <span
+                    className={`text-xs font-semibold px-2 py-0.5 rounded-full mt-2 md:mt-0 ${statusBadgeColor(
+                      request.status
+                    )}`}
+                  >
+                    {request.status}
+                  </span>
+                )}
+              </div>
+              {/* Info Grid */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-6 mt-6">
+                <div>
+                  <div className="text-xs text-muted-foreground mb-1">Presenter</div>
+                  <div className="flex items-center gap-3">
+                    <Avatar className="h-8 w-8">
+                      <AvatarFallback className="text-base font-bold bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-200">
+                        {getInitials(request)}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div>
+                      <div className="font-medium text-sm leading-tight">
+                        {request.first_name} {request.middle_name ? `${request.middle_name} ` : ''}{request.last_name}
+                      </div>
+                      <div className="text-xs text-muted-foreground mt-0.5">
+                        {request.school_id}
+                      </div>
+                    </div>
                   </div>
-                  <div className="text-xs text-muted-foreground mt-0.5">
-                    {request.school_id}
+                </div>
+                <div>
+                  <div className="text-xs text-muted-foreground mb-1">Program</div>
+                  <div className="font-medium text-sm">{request.program}</div>
+                </div>
+                <div>
+                  <div className="text-xs text-muted-foreground mb-1">Defense Type</div>
+                  <Badge variant="secondary" className="text-xs font-medium">
+                    {request.defense_type ?? '—'}
+                  </Badge>
+                </div>
+                <div>
+                  <div className="text-xs text-muted-foreground mb-1">Submitted At</div>
+                  <div className="font-medium text-sm">{formatDate(request.submitted_at)}</div>
+                </div>
+              </div>
+            </div>
+
+            {/* Attachments */}
+            <div className={sectionClass}>
+              <h2 className="text-sm font-semibold flex items-center gap-2">
+                <FileText className="h-4 w-4" /> Attachments
+              </h2>
+              <Separator />
+              <div className="space-y-2 text-sm">
+                {attachments.map(a =>
+                  a.url ? (
+                    <a
+                      key={a.label}
+                      href={a.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-2 px-3 py-2 rounded-md border hover:bg-muted transition"
+                    >
+                      <FileText className="h-4 w-4" />
+                      <span className="font-medium">{a.label}</span>
+                      <span className="text-xs text-muted-foreground ml-auto truncate max-w-[180px]">
+                        {typeof a.url === 'string' ? a.url.split('/').pop() : ''}
+                      </span>
+                    </a>
+                  ) : null
+                )}
+                {!attachments.some(a => a.url) && (
+                  <p className="text-sm text-muted-foreground">
+                    No attachments.
+                  </p>
+                )}
+              </div>
+            </div>
+
+            {/* Committee (read-only summary) */}
+            <div className={sectionClass}>
+              <h2 className="text-sm font-semibold flex items-center gap-2">
+                <Users className="h-4 w-4" /> Committee
+              </h2>
+              <Separator />
+              <div className="grid md:grid-cols-2 gap-4 text-sm">
+                <div>
+                  <div className="text-[11px] text-muted-foreground uppercase tracking-wide">
+                    Adviser
+                  </div>
+                  <div className="font-medium">
+                    {request.defense_adviser || '—'}
                   </div>
                 </div>
               </div>
             </div>
-            <div>
-              <div className="text-xs text-muted-foreground mb-1">Program</div>
-              <div className="font-medium text-sm">{request.program}</div>
-            </div>
-            <div>
-              <div className="text-xs text-muted-foreground mb-1">Defense Type</div>
-              <Badge variant="secondary" className="text-xs font-medium">
-                {request.defense_type ?? '—'}
-              </Badge>
-            </div>
-            <div>
-              <div className="text-xs text-muted-foreground mb-1">Submitted At</div>
-              <div className="font-medium text-sm">{formatDate(request.submitted_at)}</div>
-            </div>
           </div>
-        </div>
 
-        {/* Attachments */}
-        <div className={sectionClass}>
-          <h2 className="text-sm font-semibold flex items-center gap-2">
-            <FileText className="h-4 w-4" /> Attachments
-          </h2>
-          <Separator />
-          <div className="space-y-2 text-sm">
-            {attachments.map(a =>
-              a.url ? (
-                <a
-                  key={a.label}
-                  href={a.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-2 px-3 py-2 rounded-md border hover:bg-muted transition"
-                >
-                  <FileText className="h-4 w-4" />
-                  <span className="font-medium">{a.label}</span>
-                  <span className="text-xs text-muted-foreground ml-auto truncate max-w-[180px]">
-                    {typeof a.url === 'string' ? a.url.split('/').pop() : ''}
-                  </span>
-                </a>
-              ) : null
-            )}
-            {!attachments.some(a => a.url) && (
-              <p className="text-sm text-muted-foreground">
-                No attachments.
-              </p>
-            )}
-          </div>
-        </div>
-
-        {/* Committee (read-only summary) */}
-        <div className={sectionClass}>
-          <h2 className="text-sm font-semibold flex items-center gap-2">
-            <Users className="h-4 w-4" /> Committee
-          </h2>
-          <Separator />
-          <div className="grid md:grid-cols-2 gap-4 text-sm">
-            <div>
-              <div className="text-[11px] text-muted-foreground uppercase tracking-wide">
-                Adviser
-              </div>
-              <div className="font-medium">
-                {request.defense_adviser || '—'}
+          {/* Workflow Progress Stepper sidebar */}
+          <div className="w-full md:w-[340px] flex-shrink-0">
+            <div className="rounded-xl border p-5 bg-white dark:bg-zinc-900 sticky top-24 h-fit">
+              <h2 className="text-xs font-semibold mb-8 flex items-center gap-2">
+                <Clock className="h-4 w-4" /> Workflow Progress
+              </h2>
+              <div className="flex flex-col gap-0 relative">
+                {Array.isArray(request.workflow_history) && request.workflow_history.length > 0 ? (
+                  request.workflow_history.map((item: any, idx: number) => {
+                    const { event, created, userName } = resolveHistoryFields(item);
+                    const stepKey = getStepForEvent(event);
+                    const step = workflowSteps.find(s => s.key === stepKey) || {
+                      label: event.charAt(0).toUpperCase() + event.slice(1),
+                      icon: <Clock className="h-5 w-5 text-gray-500" />,
+                    };
+                    const isLast = Array.isArray(request.workflow_history) && idx === request.workflow_history.length - 1;
+                    const iconBoxColor = 'bg-gray-100 text-gray-500';
+                    return (
+                      <div key={idx} className="flex items-start gap-3 relative">
+                        <div className="flex flex-col items-center">
+                          <div className={`w-9 h-9 rounded-md flex items-center justify-center ${iconBoxColor}`}>
+                            {step.icon}
+                          </div>
+                          {!isLast && (
+                            <div className="h-8 border-l-2 border-dotted border-gray-300 dark:border-zinc-700 mx-auto"></div>
+                          )}
+                        </div>
+                        <div className="pb-4">
+                          <div className="font-semibold text-xs">{step.label}</div>
+                          <div className="text-[11px] text-muted-foreground">
+                            {userName && <span>{userName}</span>}
+                            {created && (
+                              <span>
+                                {' '}
+                                &middot; {formatReadableDate(created)}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })
+                ) : (
+                  <div className="text-xs text-muted-foreground">No workflow history yet.</div>
+                )}
               </div>
             </div>
-          </div>
-        </div>
-
-        {/* Workflow Progress Stepper */}
-        <div className="rounded-xl border p-5 bg-white dark:bg-zinc-900">
-          <h2 className="text-xs font-semibold mb-8 flex items-center gap-2">
-            <Clock className="h-4 w-4" /> Workflow Progress
-          </h2>
-          <div className="flex flex-col gap-0 relative">
-            {Array.isArray(request.workflow_history) && request.workflow_history.length > 0 ? (
-              request.workflow_history.map((item: any, idx: number) => {
-                const { event, created, userName } = resolveHistoryFields(item);
-                const stepKey = getStepForEvent(event);
-                const step = workflowSteps.find(s => s.key === stepKey) || {
-                  label: event.charAt(0).toUpperCase() + event.slice(1),
-                  icon: <Clock className="h-5 w-5 text-gray-500" />,
-                };
-                const isLast = Array.isArray(request.workflow_history) && idx === request.workflow_history.length - 1;
-                const iconBoxColor = 'bg-gray-100 text-gray-500';
-                return (
-                  <div key={idx} className="flex items-start gap-3 relative">
-                    <div className="flex flex-col items-center">
-                      <div className={`w-9 h-9 rounded-md flex items-center justify-center ${iconBoxColor}`}>
-                        {step.icon}
-                      </div>
-                      {!isLast && (
-                        <div className="h-8 border-l-2 border-dotted border-gray-300 dark:border-zinc-700 mx-auto"></div>
-                      )}
-                    </div>
-                    <div className="pb-4">
-                      <div className="font-semibold text-xs">{step.label}</div>
-                      <div className="text-[11px] text-muted-foreground">
-                        {userName && <span>{userName}</span>}
-                        {created && (
-                          <span>
-                            {' '}
-                            &middot; {formatReadableDate(created)}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                );
-              })
-            ) : (
-              <div className="text-xs text-muted-foreground">No workflow history yet.</div>
-            )}
           </div>
         </div>
 
