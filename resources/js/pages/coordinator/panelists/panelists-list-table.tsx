@@ -17,11 +17,12 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import type { Panelist } from "@/types/index";
+import type { PanelistWithAssignments, PanelistHonorariumSpec } from "@/types";
 
 type Props = {
-  panelists: Panelist[];
-  onEdit: (panelist: Panelist) => void;
+  panelists: PanelistWithAssignments[];
+  honorariumSpecs: PanelistHonorariumSpec[];
+  onEdit: (panelist: PanelistWithAssignments) => void;
   onDelete: (id: number) => void;
   selected: number[];
   setSelected: (ids: number[]) => void;
@@ -30,6 +31,7 @@ type Props = {
 
 export default function PanelistsListTable({
   panelists,
+  honorariumSpecs,
   onEdit,
   onDelete,
   selected,
@@ -72,7 +74,7 @@ export default function PanelistsListTable({
   return (
     <>
       <div className="rounded-md overflow-x-auto border border-border bg-white w-full max-w-full">
-        <Table className=" ">
+        <Table>
           <TableHeader>
             <TableRow>
               <TableHead className="w-12">
@@ -86,9 +88,11 @@ export default function PanelistsListTable({
               </TableHead>
               <TableHead>Name</TableHead>
               <TableHead>Email</TableHead>
+              <TableHead>Role</TableHead>
               <TableHead>Status</TableHead>
-              <TableHead>Date Available</TableHead>
-              <TableHead className="text-center" >Actions</TableHead>
+              <TableHead>Type</TableHead>
+              <TableHead>Receivables</TableHead>
+              <TableHead className="text-center">Actions</TableHead>
             </TableRow>
           </TableHeader>
 
@@ -96,7 +100,7 @@ export default function PanelistsListTable({
             {panelists.length === 0 ? (
               <TableRow>
                 <TableCell
-                  colSpan={6}
+                  colSpan={8}
                   className="py-8 text-center text-sm text-muted-foreground"
                 >
                   No panelists found.
@@ -114,35 +118,80 @@ export default function PanelistsListTable({
                       disabled={loading}
                     />
                   </TableCell>
-
                   <TableCell>{panelist.name}</TableCell>
                   <TableCell>{panelist.email}</TableCell>
-                  <TableCell>{panelist.status}</TableCell>
+        
                   <TableCell>
-                    {panelist.date_available
-                      ? new Date(panelist.date_available).toLocaleDateString()
-                      : "-"}
+                    {panelist.assignments && panelist.assignments.length > 0 ? (
+                      <ul>
+                        {panelist.assignments.map((a) => (
+                          <li key={a.id}>{a.role ?? panelist.role ?? "-"}</li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <span className="text-muted-foreground">-</span>
+                    )}
                   </TableCell>
-                  <TableCell className="">
+                  {/* Status */}
+                  <TableCell>
+                    {panelist.assignments && panelist.assignments.length > 0
+                      ? "Assigned"
+                      : "Not Assigned"}
+                  </TableCell>
+                  {/* Type column (no thesis title) */}
+                  <TableCell>
+                    {panelist.assignments && panelist.assignments.length > 0 ? (
+                      <ul>
+                        {panelist.assignments.map((a) => (
+                          <li key={a.id}>{a.defense_type}</li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <span className="text-muted-foreground">-</span>
+                    )}
+                  </TableCell>
+                  {/* Receivables column: just the amount, no thesis title */}
+                  <TableCell>
+                    {panelist.assignments && panelist.assignments.length > 0 ? (
+                      <ul>
+                        {panelist.assignments.map((a) => {
+                          const spec = honorariumSpecs.find(
+                            (s) => s.defense_type === a.defense_type && s.role === a.role
+                          );
+                          return (
+                            <li key={a.id}>
+                              {spec && spec.amount !== undefined && spec.amount !== null && spec.amount !== ""
+                                ? `₱${spec.amount}`
+                                : "-"}
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    ) : (
+                      <span className="text-muted-foreground">-</span>
+                    )}
+                  </TableCell>
+                  <TableCell>
                     <div className="flex justify-center gap-1">
                       <Button
-                      variant="outline"
-                      size="icon"
-                      className="h-7 w-7 p-1"
-                      onClick={() => onEdit(panelist)}
-                      disabled={loading}
-                      aria-label="Edit"
+                        variant="outline"
+                        size="icon"
+                        className="h-7 w-7 p-1 cursor-pointer"
+                        onClick={() => onEdit(panelist)}
+                        disabled={loading}
+                        aria-label="Edit"
                       >
-                      <Pencil size={14} />
+                        <Pencil size={14} />
                       </Button>
                       <Button
-                      size="icon"
-                      className="h-7 w-7 p-1"
-                      onClick={() => openDeleteDialog(panelist.id)}
-                      disabled={loading}
-                      aria-label="Delete"
+                        variant="outline"
+                        size="icon"
+                        className="h-7 w-7 p-1 cursor-pointer"
+                        onClick={() => openDeleteDialog(panelist.id)}
+                        disabled={loading}
+                        aria-label="Delete"
                       >
-                      <Trash2 size={14} />
+                        <Trash2 size={14} />
                       </Button>
                     </div>
                   </TableCell>
@@ -153,7 +202,6 @@ export default function PanelistsListTable({
         </Table>
       </div>
 
-
       {/* Shadcn Dialog for Delete Confirmation */}
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <DialogContent>
@@ -161,9 +209,7 @@ export default function PanelistsListTable({
             <DialogTitle>Confirm Delete</DialogTitle>
           </DialogHeader>
           <div className="text-muted-foreground text-sm">
-            This will delete the panelist.
-            This action cannot be
-            undone.
+            This will delete the panelist. This action cannot be undone.
           </div>
           <DialogFooter>
             <Button
@@ -174,7 +220,6 @@ export default function PanelistsListTable({
               Cancel
             </Button>
             <Button
-
               onClick={confirmDelete}
               disabled={loading}
               className=" text-white"

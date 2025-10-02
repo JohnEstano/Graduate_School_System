@@ -9,10 +9,5 @@ class Panelist extends Model
 {
     use HasFactory;
 
-    protected $fillable = [
-        'name',
-        'email',
-        'status',
-        'date_available',
-    ];
+    protected $fillable = ['name', 'email', 'role', 'status'];
 }

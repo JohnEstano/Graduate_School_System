@@ -83,13 +83,27 @@ export interface DefenseRequest {
     defense_adviser?: string;
 }
 export type Panelist = {
+  id: number;
+  name: string;
+  email: string;
+  role: "Chairperson" | "Panel Member";
+  status: "Assigned" | "Not Assigned";
+  assignments?: {
     id: number;
-    name: string;
-    email: string;
-    status: 'Available' | 'Not Available';
-    date_available: string | null;
-    created_at: string;
-    updated_at: string;
+    defense_type: "Proposal" | "Prefinal" | "Final";
+    thesis_title: string;
+    role?: "Chairperson" | "Panel Member"; // <-- add this
+    receivable?: string | number | null;   // <-- add this
+  }[];
+  created_at: string;
+  updated_at: string;
+};
+
+export type PanelistHonorariumSpec = {
+  id: number;
+  role: "Chairperson" | "Panel Member";
+  defense_type: "Proposal" | "Prefinal" | "Final";
+  amount: string;
 };
 
 export type DefenseRequestSummary = {
@@ -116,3 +130,21 @@ export interface Notification {
   read: boolean;
   created_at: string;
 }
+
+type DefaultReceivable = {
+  defense_type: string;
+  receivable: number | string | null;
+};
+
+type Assignment = {
+  id: number;
+  defense_type: string;
+  thesis_title?: string | null;
+  role?: string | null;
+  receivable?: number | string | null;
+};
+
+type PanelistWithAssignments = Panelist & {
+  assignments?: Assignment[];
+  default_receivables?: DefaultReceivable[];
+};

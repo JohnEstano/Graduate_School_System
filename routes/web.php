@@ -25,6 +25,7 @@ use App\Http\Controllers\DocumentTemplateController;
 use App\Http\Controllers\UserSignatureController;
 use App\Http\Controllers\GeneratedDocumentController;
 use App\Http\Controllers\AdviserStudentController;
+use App\Http\Controllers\PanelistHonorariumSpecController;
 
 /*
 |--------------------------------------------------------------------------
@@ -426,6 +427,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::delete('/api/document-templates/{template}', [DocumentTemplateController::class, 'destroy']);
 });
 Route::post('/api/generate-document', [\App\Http\Controllers\DocumentTemplateController::class, 'generate']);
+
+/* Honorarium Specs */
+Route::middleware(['auth','verified'])->group(function () {
+    Route::get('/panelists/honorarium-specs', [PanelistHonorariumSpecController::class, 'index'])->name('panelists.honorarium-specs');
+    Route::post('/panelists/honorarium-specs', [PanelistController::class, 'saveHonorariumSpecs']);
+});
 
 
 

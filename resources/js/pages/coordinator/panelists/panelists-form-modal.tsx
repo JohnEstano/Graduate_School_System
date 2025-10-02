@@ -12,26 +12,29 @@ type Props = {
   editing: Panelist | null;
   onClose: () => void;
   onSubmit: (data: Omit<Panelist, "id" | "created_at" | "updated_at">, id?: number) => void;
-  loading?: boolean; // NEW: loading prop
+  loading?: boolean;
 };
+
+const ROLES = ["Chairperson", "Panel Member"] as const;
+const STATUSES = ["Assigned", "Not Assigned"] as const;
 
 export default function PanelistFormModal({ open, editing, onClose, onSubmit, loading = false }: Props) {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
-  const [status, setStatus] = useState<Panelist["status"]>("Available");
-  const [dateAvailable, setDateAvailable] = useState<string>("");
+  const [role, setRole] = useState<Panelist["role"]>("Panel Member");
+  const [status, setStatus] = useState<Panelist["status"]>("Not Assigned");
 
   useEffect(() => {
     if (editing) {
       setName(editing.name || "");
       setEmail(editing.email || "");
-      setStatus(editing.status || "Available");
-      setDateAvailable(editing.date_available ? editing.date_available.split("T")[0] : "");
+      setRole(editing.role || "Panel Member");
+      setStatus(editing.status || "Not Assigned");
     } else {
       setName("");
       setEmail("");
-      setStatus("Available");
-      setDateAvailable("");
+      setRole("Panel Member");
+      setStatus("Not Assigned");
     }
   }, [editing, open]);
 
@@ -41,13 +44,13 @@ export default function PanelistFormModal({ open, editing, onClose, onSubmit, lo
       alert("Name and email are required");
       return;
     }
-    if (loading) return; // Prevent double submit
+    if (loading) return;
     onSubmit(
       {
         name: name.trim(),
         email: email.trim(),
+        role,
         status,
-        date_available: dateAvailable ? dateAvailable : null,
       },
       editing?.id,
     );
@@ -72,17 +75,21 @@ export default function PanelistFormModal({ open, editing, onClose, onSubmit, lo
           </div>
 
           <div>
-            <Label>Status</Label>
-            <Select value={status} onValueChange={(value: Panelist["status"]) => setStatus(value)} disabled={loading}>
-              <option value="Available">Available</option>
-              <option value="Not Available">Not Available</option>
+            <Label>Role</Label>
+            <Select value={role} onValueChange={(value: Panelist["role"]) => setRole(value)} disabled={loading}>
+              {ROLES.map((r) => (
+                <option key={r} value={r}>{r}</option>
+              ))}
             </Select>
           </div>
 
           <div>
-            <Label>Date Available</Label>
-            <Input type="date" value={dateAvailable} onChange={(e) => setDateAvailable(e.target.value)} disabled={loading} />
-            <p className="text-sm text-muted-foreground mt-1">Leave empty if not applicable.</p>
+            <Label>Status</Label>
+            <Select value={status} onValueChange={(value: Panelist["status"]) => setStatus(value)} disabled={loading}>
+              {STATUSES.map((s) => (
+                <option key={s} value={s}>{s}</option>
+              ))}
+            </Select>
           </div>
 
           <DialogFooter>

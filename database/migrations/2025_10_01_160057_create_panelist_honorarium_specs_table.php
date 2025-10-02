@@ -11,13 +11,13 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('panelists', function (Blueprint $table) {
+        Schema::create('panelist_honorarium_specs', function (Blueprint $table) {
             $table->id();
-            $table->string('name');
-            $table->string('email')->unique();
-            $table->enum('role', ['Chairperson', 'Panel Member'])->default('Panel Member');
-            $table->enum('status', ['Assigned', 'Not Assigned'])->default('Not Assigned');
+            $table->enum('role', ['Chairperson', 'Panel Member']);
+            $table->enum('defense_type', ['Proposal', 'Prefinal', 'Final']);
+            $table->decimal('amount', 10, 2)->default(0);
             $table->timestamps();
+            $table->unique(['role', 'defense_type']);
         });
     }
 
@@ -26,6 +26,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('panelists');
+        Schema::dropIfExists('panelist_honorarium_specs');
     }
 };
