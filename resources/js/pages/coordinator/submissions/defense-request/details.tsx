@@ -15,7 +15,12 @@ import {
   Loader2,
   ChevronsUpDown,
   Check,
-  User as UserIcon
+  User as UserIcon,
+  CheckCircle,
+  UserCheck,
+  Send,
+  Users as UsersIcon,
+  Clock
 } from 'lucide-react';
 import { useRef } from 'react';
 
@@ -41,12 +46,14 @@ import {
 } from '@/components/ui/select';
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
 type PanelMemberOption = {
   id: string;
   name: string;
   email?: string;
   type?: string;
+  status?: string;
 };
 
 export type DefenseRequestFull = {
@@ -190,11 +197,6 @@ function PanelMemberCombobox({
                         }
                       />
                       <span className="text-sm truncate">{o.name}</span>
-                      {o.type && (
-                        <span className="ml-auto text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground uppercase">
-                          {o.type}
-                        </span>
-                      )}
                     </div>
                     {o.email && (
                       <span className="pl-5 text-[11px] text-muted-foreground truncate max-w-[250px]">
@@ -284,13 +286,8 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
           }
           const data = await r.json();
           if (alive) {
-            setPanelMembers(Array.isArray(data) ? data : []);
-            console.log(
-              'Loaded panel members from',
-              url,
-              'count:',
-              Array.isArray(data) ? data.length : 0
-            );
+            // Only keep Panelists
+            setPanelMembers(Array.isArray(data) ? data.filter((m: any) => m.type === 'Panelist') : []);
             loaded = true;
           }
           break;
@@ -401,6 +398,16 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
   }
 
   async function saveSchedule() {
+    if (
+      !schedule.scheduled_date ||
+      !schedule.scheduled_time ||
+      !schedule.scheduled_end_time ||
+      !schedule.defense_mode ||
+      !schedule.defense_venue
+    ) {
+      toast.error('Please fill in all required scheduling fields.');
+      return;
+    }
     const toastId = toast.loading('Saving schedule...');
     setSavingSchedule(true);
     try {
@@ -509,6 +516,72 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
 
   const sectionClass = 'rounded-lg border p-5 space-y-3'; // increased padding
 
+  // Helper to get initials for avatar
+  function getInitials(user: { first_name?: string; last_name?: string }) {
+    const first = user.first_name?.trim()?.[0] ?? '';
+    const last = user.last_name?.trim()?.[0] ?? '';
+    return (first + last).toUpperCase() || 'U';
+  }
+
+  // Helper for readable date
+  function formatReadableDate(d?: string) {
+    if (!d) return '';
+    try {
+      return format(new Date(d), 'PPpp');
+    } catch {
+      return d;
+    }
+  }
+
+  // Workflow stepper config
+  const workflowSteps = [
+    {
+      key: 'submitted',
+      label: 'Submitted',
+      icon: <Send className="h-5 w-5 text-gray-500" />,
+    },
+    {
+      key: 'adviser-approved',
+      label: 'Approved by Adviser',
+      icon: <UserCheck className="h-5 w-5 text-gray-500" />,
+    },
+    {
+      key: 'coordinator-approved',
+      label: 'Approved by Coordinator',
+      icon: <UsersIcon className="h-5 w-5 text-gray-500" />,
+    },
+    {
+      key: 'panels-assigned',
+      label: 'Panels Assigned',
+      icon: <CheckCircle className="h-5 w-5 text-gray-500" />,
+    },
+    {
+      key: 'scheduled',
+      label: 'Scheduled',
+      icon: <Clock className="h-5 w-5 text-gray-500" />,
+    },
+    // Add more steps as needed
+  ];
+
+  // Helper to match event to step
+  function getStepForEvent(event: string) {
+    event = (event || '').toLowerCase();
+    if (event.includes('submit')) return 'submitted';
+    if (event.includes('adviser')) return 'adviser-approved';
+    if (event.includes('coordinator')) return 'coordinator-approved';
+    if (event.includes('panel')) return 'panels-assigned';
+    if (event.includes('schedule')) return 'scheduled'; 
+    return '';
+  }
+
+  function formatTime12h(time?: string) {
+    if (!time) return '';
+    const [h, m] = time.split(':');
+    const date = new Date();
+    date.setHours(Number(h), Number(m));
+    return format(date, 'hh:mm a');
+  }
+
   return (
     <AppLayout breadcrumbs={breadcrumbs}>
       <Toaster position="bottom-right" richColors closeButton />
@@ -522,88 +595,85 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
           >
             <ArrowLeft className="h-4 w-4" />
           </Button>
-          <h1 className="text-xl font-semibold">Defense Request Details</h1>
-          {request.status && (
-            <span
-              className={`ml-2 text-xs font-semibold px-2 py-0.5 rounded-full ${statusBadgeColor(
-                request.status
-              )}`}
-            >
-              {request.status}
-            </span>
-          )}
-          {request.priority && (
-            <Badge variant="outline" className="ml-1 text-xs">
-              {request.priority}
-            </Badge>
-          )}
-          {request.defense_type && (
-            <Badge className="ml-1 text-xs" variant="secondary">
-              {request.defense_type}
-            </Badge>
-          )}
         </div>
 
-        <div className="grid gap-5 md:grid-cols-3">
-          <div className="col-span-2 space-y-5">
-            {/* Submission */}
-            <div className={sectionClass}>
-              <h2 className="text-sm font-semibold flex items-center gap-2">
-                <FileText className="h-4 w-4" /> Submission
-              </h2>
-              <Separator />
-              <div className="grid md:grid-cols-2 gap-4 text-sm">
+        {/* Submission section and Workflow Progress side by side */}
+        <div className="flex flex-col md:flex-row gap-5 mb-2">
+          {/* Main column: all cards stacked, fixed width */}
+          <div className="w-full md:max-w-3xl mx-auto flex flex-col gap-5">
+            {/* Submission summary card */}
+            <div className="rounded-xl border p-8 bg-white dark:bg-zinc-900">
+              {/* Thesis Title Header with Status */}
+              <div className="mb-1 flex flex-col md:flex-row md:items-center md:justify-between gap-2">
                 <div>
-                  <div className="text-muted-foreground text-[11px] uppercase tracking-wide">
-                    Thesis Title
-                  </div>
-                  <div className="font-medium">{request.thesis_title}</div>
+                  <div className="text-2xl font-semibold">{request.thesis_title}</div>
+                  <div className="text-xs text-muted-foreground font-medium mt-0.5">Thesis Title</div>
                 </div>
+                {request.status && (
+                  <span
+                    className={`text-xs font-semibold px-2 py-0.5 rounded-full mt-2 md:mt-0 ${statusBadgeColor(
+                      request.status
+                    )}`}
+                  >
+                    {request.status}
+                  </span>
+                )}
+              </div>
+              {/* Info Grid */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-6 mt-6">
                 <div>
-                  <div className="text-muted-foreground text-[11px] uppercase tracking-wide">
-                    Presenter
-                  </div>
-                  <div className="font-medium">
-                    {request.first_name} {request.middle_name || ''}{' '}
-                    {request.last_name}
-                  </div>
-                  <div className="text-xs text-muted-foreground">
-                    {request.school_id}
-                  </div>
-                </div>
-                <div>
-                  <div className="text-muted-foreground text-[11px] uppercase tracking-wide">
-                    Program
-                  </div>
-                  <div className="font-medium">{request.program}</div>
-                </div>
-                <div>
-                  <div className="text-muted-foreground text-[11px] uppercase tracking-wide">
-                    Workflow State
-                  </div>
-                  <div className="font-medium">
-                    {request.workflow_state || '—'}
-                  </div>
-                </div>
-                <div>
-                  <div className="text-muted-foreground text-[11px] uppercase tracking-wide">
-                    Scheduled Date
-                  </div>
-                  <div className="font-medium">
-                    {formatDate(request.scheduled_date)}
+                  <div className="text-xs text-muted-foreground mb-1">Presenter</div>
+                  <div className="flex items-center gap-3">
+                    <Avatar className="h-8 w-8">
+                      <AvatarFallback className="text-base font-bold bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-200">
+                        {getInitials(request)}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div>
+                      <div className="font-medium text-base leading-tight">
+                        {request.first_name} {request.middle_name ? `${request.middle_name} ` : ''}{request.last_name}
+                      </div>
+                      <div className="text-xs text-muted-foreground mt-0.5">
+                        {request.school_id}
+                      </div>
+                    </div>
                   </div>
                 </div>
                 <div>
-                  <div className="text-muted-foreground text-[11px] uppercase tracking-wide">
-                    Time
-                  </div>
-                  <div className="font-medium">
+                  <div className="text-xs text-muted-foreground mb-1">Program</div>
+                  <div className="font-medium text-base">{request.program}</div>
+                </div>
+                <div>
+                  <div className="text-xs text-muted-foreground mb-1">Priority</div>
+                  <div className="font-medium text-base">{request.priority ?? '—'}</div>
+                </div>
+                <div>
+                  <div className="text-xs text-muted-foreground mb-1">Defense Type</div>
+                  <div className="font-medium text-base">{request.defense_type ?? '—'}</div>
+                </div>
+                <div>
+                  <div className="text-xs text-muted-foreground mb-1">Scheduled Date</div>
+                  <div className="font-medium text-base">{formatDate(request.scheduled_date)}</div>
+                </div>
+                <div>
+                  <div className="text-xs text-muted-foreground mb-1">Time</div>
+                  <div className="font-medium text-base">
                     {request.scheduled_time
-                      ? `${request.scheduled_time} - ${
-                          request.scheduled_end_time || ''
-                        }`
+                      ? `${formatTime12h(request.scheduled_time)}${request.scheduled_end_time ? ' - ' + formatTime12h(request.scheduled_end_time) : ''}`
                       : '—'}
                   </div>
+                </div>
+                <div>
+                  <div className="text-xs text-muted-foreground mb-1">Venue</div>
+                  <div className="font-medium text-base">{request.defense_venue || '—'}</div>
+                </div>
+                <div>
+                  <div className="text-xs text-muted-foreground mb-1">Mode</div>
+                  <div className="font-medium text-base">{request.defense_mode ? (request.defense_mode === 'face-to-face' ? 'Face-to-Face' : 'Online') : '—'}</div>
+                </div>
+                <div className="md:col-span-2">
+                  <div className="text-xs text-muted-foreground mb-1">Notes</div>
+                  <div className="font-medium text-base">{request.scheduling_notes || '—'}</div>
                 </div>
               </div>
             </div>
@@ -687,325 +757,190 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
               </div>
             </div>
 
-            {/* Workflow History */}
+            {/* Panel Assignment */}
             <div className={sectionClass}>
-              <h2 className="text-sm font-semibold">Workflow History</h2>
+              <h2 className="text-sm font-semibold flex items-center gap-2">
+                <Users className="h-4 w-4" /> Panel Assignment
+              </h2>
               <Separator />
-              {Array.isArray(request.workflow_history) &&
-              request.workflow_history.length > 0 ? (
-                <ScrollArea className="h-60">
-                  <ul className="space-y-3 text-xs pr-2">
-                    {request.workflow_history.map((e: any, i: number) => {
-                      const { event, desc, from, to, created, userName } =
-                        resolveHistoryFields(e);
-                      return (
-                        <li key={i} className="border rounded-md p-3 bg-background">
-                          <div className="flex items-center gap-2 mb-1">
-                            <span className="font-semibold">{event}</span>
-                            {from || to ? (
-                              <span className="text-[10px] text-muted-foreground">
-                                {from ? from : '—'} ➜ {to ? to : '—'}
-                              </span>
-                            ) : null}
-                          </div>
-                          {desc && (
-                            <div className="text-muted-foreground mb-2 leading-snug">
-                              {desc}
-                            </div>
-                          )}
-                          <div className="flex items-center gap-3 text-[10px] text-muted-foreground">
-                            {userName && (
-                              <span className="inline-flex items-center gap-1">
-                                <UserIcon className="h-3 w-3" />
-                                {userName}
-                              </span>
-                            )}
-                            {created && (
-                              <span>
-                                {created}
-                              </span>
-                            )}
-                          </div>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                </ScrollArea>
-              ) : (
-                <p className="text-xs text-muted-foreground">
-                  No workflow history yet.
-                </p>
-              )}
-            </div>
-          </div>
-
-            {/* Right Column */}
-          <div className="space-y-6">
-            <div className="rounded-lg border p-5 space-y-4">
-              <div className="flex items-center gap-2">
-                <Users className="h-4 w-4" />
-                <h2 className="text-sm font-semibold">Panel Assignment</h2>
-                {loadingMembers && (
-                  <Loader2 className="h-4 w-4 animate-spin ml-auto" />
-                )}
-              </div>
-              <Separator />
-              <div className="space-y-3">
-                {panelLoadError && (
-                  <div className="text-[11px] text-red-500">
-                    {panelLoadError}
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="ml-2 h-6 px-2"
-                      onClick={() => {
-                        // retry
-                        setPanelMembers([]);
-                        setPanelLoadError(null);
-                        (async () => {
-                          setLoadingMembers(true);
-                          try {
-                            const r = await fetch(
-                              '/coordinator/defense/panel-members-all'
-                            );
-                            if (!r.ok) throw 0;
-                            const data = await r.json();
-                            setPanelMembers(Array.isArray(data) ? data : []);
-                          } catch {
-                            setPanelLoadError('Could not load panel members.');
-                          } finally {
-                            setLoadingMembers(false);
-                          }
-                        })();
-                      }}
-                    >
-                      Retry
-                    </Button>
-                  </div>
-                )}
+              <div className="grid md:grid-cols-2 gap-4">
                 {[
-                  { key: 'defense_chairperson', label: 'Chairperson *' },
-                  { key: 'defense_panelist1', label: 'Panelist 1 *' },
-                  { key: 'defense_panelist2', label: 'Panelist 2' },
-                  { key: 'defense_panelist3', label: 'Panelist 3' },
-                  { key: 'defense_panelist4', label: 'Panelist 4' }
-                ].map(f => (
+                  { label: 'Chairperson', key: 'defense_chairperson' },
+                  { label: 'Panelist 1', key: 'defense_panelist1' },
+                  { label: 'Panelist 2', key: 'defense_panelist2' },
+                  { label: 'Panelist 3', key: 'defense_panelist3' },
+                  { label: 'Panelist 4', key: 'defense_panelist4' }
+                ].map(({ label, key }) => (
                   <PanelMemberCombobox
-                    key={f.key}
-                    label={f.label}
-                    value={(panels as any)[f.key]}
-                    onChange={v =>
-                      setPanels(p => ({ ...p, [f.key]: v }))
-                    }
+                    key={key}
+                    label={label}
+                    value={panels[key as keyof typeof panels]}
+                    onChange={v => setPanels(p => ({ ...p, [key]: v }))}
                     options={panelMembers}
                     disabled={!canEdit || loadingMembers}
                     taken={taken}
                   />
                 ))}
               </div>
-              {canEdit && (
+              <div className="flex justify-end mt-4">
                 <Button
-                  size="sm"
-                  className="w-full"
                   onClick={savePanels}
-                  disabled={
-                    savingPanels ||
-                    !panels.defense_chairperson ||
-                    !panels.defense_panelist1
-                  }
+                  disabled={!canEdit || savingPanels}
+                  className="gap-2"
                 >
-                  {savingPanels && (
-                    <Loader2 className="h-4 w-4 animate-spin mr-1" />
-                  )}
-                  <Save className="h-4 w-4 mr-1" /> Save Panels
+                  {savingPanels && <Loader2 className="animate-spin h-4 w-4" />}
+                  <Save className="h-4 w-4" />
+                  Save Panel Assignment
                 </Button>
-              )}
-              <div className="text-[11px] text-muted-foreground">
-                Adviser: {request.defense_adviser || '—'}
               </div>
+              {panelLoadError && (
+                <div className="text-xs text-red-500 mt-2">{panelLoadError}</div>
+              )}
             </div>
 
-            <div className="rounded-lg border p-5 space-y-4">
-              <div className="flex items-center gap-2">
-                <Calendar className="h-4 w-4" />
-                <h2 className="text-sm font-semibold">Scheduling</h2>
-              </div>
+            {/* Scheduling */}
+            <div className={sectionClass}>
+              <h2 className="text-sm font-semibold flex items-center gap-2">
+                <Calendar className="h-4 w-4" /> Scheduling
+              </h2>
               <Separator />
-              <div className="space-y-2 text-xs">
-                <div className="grid grid-cols-2 gap-2">
-                  {/* Date Picker */}
-                  <div className="space-y-1 col-span-2 sm:col-span-1">
-                    <label className="text-[10px] font-medium">Date *</label>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <Button
-                          variant="outline"
-                          className={cn(
-                            'w-full justify-start text-left h-8 px-2 text-xs',
-                            !schedule.scheduled_date && 'text-muted-foreground'
-                          )}
-                          disabled={!canEdit}
-                        >
-                          {schedule.scheduled_date
-                            ? format(
-                                parseISODate(schedule.scheduled_date),
-                                'PPP'
-                              )
-                            : 'Pick a date'}
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="p-0 w-auto" align="start">
-                        <CalendarCmp
-                          mode="single"
-                          selected={
-                            schedule.scheduled_date
-                              ? parseISODate(schedule.scheduled_date)
-                              : undefined
-                          }
-                          onSelect={d =>
-                            d &&
-                            setSchedule(s => ({
-                              ...s,
-                              scheduled_date: formatISODate(d)
-                            }))
-                          }
-                          initialFocus
-                        />
-                      </PopoverContent>
-                    </Popover>
-                  </div>
-
-                  {/* Mode Select */}
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-medium">Mode *</label>
-                    <Select
-                      value={schedule.defense_mode}
-                      onValueChange={v =>
-                        setSchedule(s => ({ ...s, defense_mode: v }))
-                      }
-                      disabled={!canEdit}
-                    >
-                      <SelectTrigger className="h-8 text-xs px-2">
-                        <SelectValue placeholder="Select mode" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="face-to-face">Face-to-Face</SelectItem>
-                        <SelectItem value="online">Online</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  {/* Start Time */}
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-medium">Start *</label>
-                    <Input
-                      type="time"
-                      value={schedule.scheduled_time}
-                      onChange={e =>
-                        setSchedule(s => ({ ...s, scheduled_time: e.target.value }))
-                      }
-                      disabled={!canEdit}
-                      className="h-8 text-xs"
-                    />
-                  </div>
-
-                  {/* End Time */}
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-medium">End *</label>
-                    <Input
-                      type="time"
-                      value={schedule.scheduled_end_time}
-                      onChange={e =>
-                        setSchedule(s => ({
-                          ...s,
-                          scheduled_end_time: e.target.value
-                        }))
-                      }
-                      disabled={!canEdit}
-                      className="h-8 text-xs"
-                    />
-                  </div>
+              <div className="grid md:grid-cols-2 gap-4">
+                <div>
+                  <div className="text-xs text-muted-foreground mb-1">Date</div>
+                  <Input
+                    type="date"
+                    value={schedule.scheduled_date}
+                    onChange={e =>
+                      setSchedule(s => ({ ...s, scheduled_date: e.target.value }))
+                    }
+                    disabled={!canEdit}
+                  />
                 </div>
-
-                {/* Venue */}
-                <div className="space-y-1">
-                  <label className="text-[10px] font-medium">
-                    Venue / Link *
-                  </label>
+                <div>
+                  <div className="text-xs text-muted-foreground mb-1">Start Time</div>
+                  <Input
+                    type="time"
+                    value={schedule.scheduled_time}
+                    onChange={e =>
+                      setSchedule(s => ({ ...s, scheduled_time: e.target.value }))
+                    }
+                    disabled={!canEdit}
+                  />
+                </div>
+                <div>
+                  <div className="text-xs text-muted-foreground mb-1">End Time</div>
+                  <Input
+                    type="time"
+                    value={schedule.scheduled_end_time}
+                    onChange={e =>
+                      setSchedule(s => ({ ...s, scheduled_end_time: e.target.value }))
+                    }
+                    disabled={!canEdit}
+                  />
+                </div>
+                <div>
+                  <div className="text-xs text-muted-foreground mb-1">Mode</div>
+                  <Select
+                    value={schedule.defense_mode}
+                    onValueChange={v =>
+                      setSchedule(s => ({ ...s, defense_mode: v }))
+                    }
+                    disabled={!canEdit}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select mode" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="face-to-face">Face-to-Face</SelectItem>
+                      <SelectItem value="online">Online</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="md:col-span-2">
+                  <div className="text-xs text-muted-foreground mb-1">Venue</div>
                   <Input
                     value={schedule.defense_venue}
                     onChange={e =>
-                      setSchedule(s => ({
-                        ...s,
-                        defense_venue: e.target.value
-                      }))
+                      setSchedule(s => ({ ...s, defense_venue: e.target.value }))
                     }
                     disabled={!canEdit}
-                    className="h-8 text-xs"
-                    placeholder="Room or URL"
                   />
                 </div>
-
-                {/* Notes */}
-                <div className="space-y-1">
-                  <label className="text-[10px] font-medium">Notes</label>
-                  <textarea
-                    rows={3}
-                    className="w-full border rounded p-2 text-xs bg-background"
+                <div className="md:col-span-2">
+                  <div className="text-xs text-muted-foreground mb-1">Notes</div>
+                  <Input
                     value={schedule.scheduling_notes}
-                    disabled={!canEdit}
                     onChange={e =>
-                      setSchedule(s => ({
-                        ...s,
-                        scheduling_notes: e.target.value
-                      }))
+                      setSchedule(s => ({ ...s, scheduling_notes: e.target.value }))
                     }
-                    placeholder="Optional notes..."
+                    disabled={!canEdit}
                   />
                 </div>
-
-                {/* Duration */}
-                {schedule.scheduled_time && schedule.scheduled_end_time && (
-                  <p className="text-[10px] text-muted-foreground">
-                    Duration:{' '}
-                    {(() => {
-                      try {
-                        const [h1, m1] = schedule.scheduled_time
-                          .split(':')
-                          .map(Number);
-                        const [h2, m2] = schedule.scheduled_end_time
-                          .split(':')
-                          .map(Number);
-                        const mins = h2 * 60 + m2 - (h1 * 60 + m1);
-                        return mins > 0 ? `${mins} mins` : '—';
-                      } catch {
-                        return '—';
-                      }
-                    })()}
-                  </p>
-                )}
               </div>
-              {canEdit && (
+              <div className="flex justify-end mt-4">
                 <Button
-                  size="sm"
-                  className="w-full"
-                  disabled={
-                    savingSchedule ||
-                    !schedule.scheduled_date ||
-                    !schedule.scheduled_time ||
-                    !schedule.scheduled_end_time ||
-                    !schedule.defense_mode ||
-                    !schedule.defense_venue
-                  }
                   onClick={saveSchedule}
+                  disabled={!canEdit || savingSchedule}
+                  className="gap-2"
                 >
-                  {savingSchedule && (
-                    <Loader2 className="h-4 w-4 animate-spin mr-1" />
-                  )}
-                  <Save className="h-4 w-4 mr-1" />
+                  {savingSchedule && <Loader2 className="animate-spin h-4 w-4" />}
+                  <Save className="h-4 w-4" />
                   Save Schedule
                 </Button>
-              )}
+              </div>
+            </div>
+          </div>
+
+          {/* Workflow Progress Stepper sidebar */}
+          <div className="w-full md:w-[340px] flex-shrink-0">
+            <div className="rounded-xl border p-5 bg-white dark:bg-zinc-900 sticky top-24 h-fit">
+              <h2 className="text-xs font-semibold mb-8 flex items-center gap-2">
+                <Clock className="h-4 w-4" /> Workflow Progress
+              </h2>
+              {/* Stepper */}
+              <div className="flex flex-col gap-0 relative">
+                {Array.isArray(request.workflow_history) && request.workflow_history.length > 0 ? (
+                  request.workflow_history.map((item: any, idx: number) => {
+                    const { event, created, userName } = resolveHistoryFields(item);
+                    const stepKey = getStepForEvent(event);
+                    const step = workflowSteps.find(s => s.key === stepKey) || {
+                      label: event.charAt(0).toUpperCase() + event.slice(1), // Capitalize fallback
+                      icon: <Clock className="h-5 w-5 text-gray-500" />, // Use consistent gray
+                    };
+                    const isLast = Array.isArray(request.workflow_history) && idx === request.workflow_history.length - 1;
+                    // Icon color and box
+                    const iconBoxColor = 'bg-gray-100 text-gray-500'; // or use 'bg-secondary text-secondary-foreground'
+                    return (
+                      <div key={idx} className="flex items-start gap-3 relative">
+                        {/* Step Icon in a square box and Dotted Line */}
+                        <div className="flex flex-col items-center">
+                          <div className={`w-9 h-9 rounded-md flex items-center justify-center ${iconBoxColor}`}>
+                            {step.icon}
+                          </div>
+                          {!isLast && (
+                            <div className="h-8 border-l-2 border-dotted border-gray-300 dark:border-zinc-700 mx-auto"></div>
+                          )}
+                        </div>
+                        {/* Step Content */}
+                        <div className="pb-4">
+                          <div className="font-semibold text-xs">{step.label}</div>
+                          <div className="text-[11px] text-muted-foreground">
+                            {userName && <span>{userName}</span>}
+                            {created && (
+                              <span>
+                                {' '}
+                                &middot; {formatReadableDate(created)}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })
+                ) : (
+                  <div className="text-xs text-muted-foreground">No workflow history yet.</div>
+                )}
+              </div>
             </div>
           </div>
         </div>
