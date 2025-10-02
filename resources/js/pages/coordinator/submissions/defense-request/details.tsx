@@ -727,7 +727,7 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
                       </AvatarFallback>
                     </Avatar>
                     <div>
-                      <div className="font-medium text-base leading-tight">
+                      <div className="font-medium text-sm leading-tight">
                         {request.first_name} {request.middle_name ? `${request.middle_name} ` : ''}{request.last_name}
                       </div>
                       <div className="text-xs text-muted-foreground mt-0.5">
@@ -738,21 +738,21 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
                 </div>
                 <div>
                   <div className="text-xs text-muted-foreground mb-1">Program</div>
-                  <div className="font-medium text-base">{request.program}</div>
+                  <div className="font-medium text-sm">{request.program}</div>
                 </div>
                 <div>
-                  <div className="text-xs text-muted-foreground  mb-1">Defense Type</div>
-
-                    <div className="font-medium text-base">{request.defense_type ?? '—'}</div>
-
+                  <div className="text-xs text-muted-foreground mb-1">Defense Type</div>
+                  <Badge variant="secondary" className="text-xs font-medium">
+                    {request.defense_type ?? '—'}
+                  </Badge>
                 </div>
                 <div>
                   <div className="text-xs text-muted-foreground mb-1">Scheduled Date</div>
-                  <div className="font-medium text-base">{formatDate(request.scheduled_date)}</div>
+                  <div className="font-medium text-sm">{formatDate(request.scheduled_date)}</div>
                 </div>
                 <div>
                   <div className="text-xs text-muted-foreground mb-1">Time</div>
-                  <div className="font-medium text-base">
+                  <div className="font-medium text-sm">
                     {request.scheduled_time
                       ? `${formatTime12h(request.scheduled_time)}${request.scheduled_end_time ? ' - ' + formatTime12h(request.scheduled_end_time) : ''}`
                       : '—'}
@@ -760,15 +760,15 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
                 </div>
                 <div>
                   <div className="text-xs text-muted-foreground mb-1">Venue</div>
-                  <div className="font-medium text-base">{request.defense_venue || '—'}</div>
+                  <div className="font-medium text-sm">{request.defense_venue || '—'}</div>
                 </div>
                 <div>
                   <div className="text-xs text-muted-foreground mb-1">Mode</div>
-                  <div className="font-medium text-base">{request.defense_mode ? (request.defense_mode === 'face-to-face' ? 'Face-to-Face' : 'Online') : '—'}</div>
+                  <div className="font-medium text-sm">{request.defense_mode ? (request.defense_mode === 'face-to-face' ? 'Face-to-Face' : 'Online') : '—'}</div>
                 </div>
                 <div className="md:col-span-2">
                   <div className="text-xs text-muted-foreground mb-1">Notes</div>
-                  <div className="font-medium text-base">{request.scheduling_notes || '—'}</div>
+                  <div className="font-medium text-sm">{request.scheduling_notes || '—'}</div>
                 </div>
               </div>
             </div>

@@ -143,6 +143,7 @@ export default function SubmitDefenseRequirements({ onFinish, open, onOpenChange
     const similarityRef = useRef<HTMLInputElement>(null);
     const recEndorsementRef = useRef<HTMLInputElement>(null);
     const proofOfPaymentRef = useRef<HTMLInputElement>(null);
+    const aviseeAdviserAttachmentRef = useRef<HTMLInputElement>(null);
 
     // Add defense_type to form data
     const { data, setData, post, processing, reset } = useForm<{
@@ -161,6 +162,7 @@ export default function SubmitDefenseRequirements({ onFinish, open, onOpenChange
         reference_no: string;
         manuscript_proposal: File | null;
         similarity_index: File | null;
+        avisee_adviser_attachment: File | null;
     }>({
         first_name: user.first_name || '',
         middle_name: user.middle_name || '',
@@ -177,6 +179,7 @@ export default function SubmitDefenseRequirements({ onFinish, open, onOpenChange
         reference_no: '',
         manuscript_proposal: null,
         similarity_index: null,
+        avisee_adviser_attachment: null,
     });
 
     const [openDialog, setOpenDialog] = useState(false);
@@ -339,7 +342,7 @@ export default function SubmitDefenseRequirements({ onFinish, open, onOpenChange
         {
             title: 'Defense Type & Thesis Information',
             content: (
-                <div className="space-y-4">
+                <div className="space-y-4 pb-10">
                     <div>
                         <Label className="text-xs mb-2 block">Type of Defense</Label>
                         <div className="flex gap-2 mb-4">
@@ -373,59 +376,60 @@ export default function SubmitDefenseRequirements({ onFinish, open, onOpenChange
                             className="h-8 text-sm"
                         />
                     </div>
-                </div>
-            ),
-        },
-        {
-            title: 'Attachments',
-            content: (
-                <div className="space-y-4 mb-4">
-                    <Label className="text-xs">Reference No.</Label>
-                    <Input
-                        value={data.reference_no}
-                        onChange={e => setData('reference_no', e.target.value)}
-                        placeholder="Reference No."
-                        className="h-8 text-sm"
-                    />
-                    <Label className="text-xs">REC Endorsement</Label>
-                    <div className="flex items-center gap-2">
+                    <div>
+                        <Label className="text-xs mb-1">Reference No.</Label>
                         <Input
-                            readOnly
-                            value={data.rec_endorsement ? data.rec_endorsement.name : ''}
-                            placeholder="No file chosen"
-                            className="flex-1 h-8 text-sm"
-                        />
-                        <Button variant="outline" type="button" onClick={() => recEndorsementRef.current?.click()} className="h-8 px-2 text-xs">
-                            <Paperclip className="mr-1 h-4 w-4" />
-                            Choose File
-                        </Button>
-                        <input
-                            type="file"
-                            ref={recEndorsementRef}
-                            className="hidden"
-                            onChange={handleFile('rec_endorsement')}
+                            value={data.reference_no}
+                            onChange={e => setData('reference_no', e.target.value)}
+                            placeholder="Reference No."
+                            className="h-8 text-sm"
                         />
                     </div>
-                    <Label className="text-xs">Proof of Payment</Label>
-                    <div className="flex items-center gap-2">
-                        <Input
-                            readOnly
-                            value={data.proof_of_payment ? data.proof_of_payment.name : ''}
-                            placeholder="No file chosen"
-                            className="flex-1 h-8 text-sm"
-                        />
-                        <Button variant="outline" type="button" onClick={() => proofOfPaymentRef.current?.click()} className="h-8 px-2 text-xs">
-                            <Paperclip className="mr-1 h-4 w-4" />
-                            Choose File
-                        </Button>
-                        <input
-                            type="file"
-                            ref={proofOfPaymentRef}
-                            className="hidden"
-                            onChange={handleFile('proof_of_payment')}
-                        />
+                    <div>
+                        <Label className="text-xs mb-1">Proof of Payment</Label>
+                        <div className="flex items-center gap-2">
+                            <Input
+                                readOnly
+                                value={data.proof_of_payment ? data.proof_of_payment.name : ''}
+                                placeholder="No file chosen"
+                                className="flex-1 h-8 text-sm"
+                            />
+                            <Button variant="outline" type="button" onClick={() => proofOfPaymentRef.current?.click()} className="h-8 px-2 text-xs">
+                                <Paperclip className="mr-1 h-4 w-4" />
+                                Choose File
+                            </Button>
+                            <input
+                                type="file"
+                                ref={proofOfPaymentRef}
+                                className="hidden"
+                                onChange={handleFile('proof_of_payment')}
+                            />
+                        </div>
                     </div>
-                    <Label className="text-xs">Manuscript for Proposal</Label>
+                    {(data.defense_type === 'Prefinal' || data.defense_type === 'Final') && (
+                        <div>
+                            <Label className="text-xs">REC Endorsement</Label>
+                            <div className="flex items-center gap-2">
+                                <Input
+                                    readOnly
+                                    value={data.rec_endorsement ? data.rec_endorsement.name : ''}
+                                    placeholder="No file chosen"
+                                    className="flex-1 h-8 text-sm"
+                                />
+                                <Button variant="outline" type="button" onClick={() => recEndorsementRef.current?.click()} className="h-8 px-2 text-xs">
+                                    <Paperclip className="mr-1 h-4 w-4" />
+                                    Choose File
+                                </Button>
+                                <input
+                                    type="file"
+                                    ref={recEndorsementRef}
+                                    className="hidden"
+                                    onChange={handleFile('rec_endorsement')}
+                                />
+                            </div>
+                        </div>
+                    )}
+                    <Label className="text-xs">Manuscript</Label>
                     <div className="flex items-center gap-2">
                         <Input
                             readOnly
@@ -463,6 +467,29 @@ export default function SubmitDefenseRequirements({ onFinish, open, onOpenChange
                             onChange={handleFile('similarity_index')}
                         />
                     </div>
+                    {data.defense_type === 'Proposal' && (
+                        <div>
+                            <Label className="text-xs mb-1">Avisee-Adviser Attachment</Label>
+                            <div className="flex items-center gap-2">
+                                <Input
+                                    readOnly
+                                    value={data.avisee_adviser_attachment ? data.avisee_adviser_attachment.name : ''}
+                                    placeholder="No file chosen"
+                                    className="flex-1 h-8 text-sm"
+                                />
+                                <Button variant="outline" type="button" onClick={() => aviseeAdviserAttachmentRef.current?.click()} className="h-8 px-2 text-xs">
+                                    <Paperclip className="mr-1 h-4 w-4" />
+                                    Choose File
+                                </Button>
+                                <input
+                                    type="file"
+                                    ref={aviseeAdviserAttachmentRef}
+                                    className="hidden"
+                                    onChange={handleFile('avisee_adviser_attachment')}
+                                />
+                            </div>
+                        </div>
+                    )}
                 </div>
             ),
         },

@@ -145,9 +145,10 @@ class DefenseRequirementController extends Controller
             'reference_no' => 'nullable|string|max:150',
             'manuscript_proposal' => "nullable|file|mimes:pdf,doc,docx|max:{$maxFileSize}",
             'similarity_index' => "nullable|file|mimes:{$allowedMimes}|max:{$maxFileSize}",
+            'avisee_adviser_attachment' => "nullable|file|mimes:pdf,doc,docx,jpg,jpeg,png|max:{$maxFileSize}",
         ]);
 
-        foreach (['rec_endorsement','proof_of_payment','manuscript_proposal','similarity_index'] as $f) {
+        foreach (['rec_endorsement','proof_of_payment','manuscript_proposal','similarity_index','avisee_adviser_attachment'] as $f) {
             if ($request->hasFile($f)) {
                 try {
                     $uploaded = $request->file($f);
@@ -182,6 +183,7 @@ class DefenseRequirementController extends Controller
                 'reference_no' => $data['reference_no'] ?? null,
                 'manuscript_proposal' => $data['manuscript_proposal'] ?? null,
                 'similarity_index' => $data['similarity_index'] ?? null,
+                'avisee_adviser_attachment' => $data['avisee_adviser_attachment'] ?? null,
                 'submitted_by' => Auth::id(),
                 'submitted_at' => now(),
                 'status' => 'Pending',

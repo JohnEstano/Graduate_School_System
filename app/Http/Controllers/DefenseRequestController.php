@@ -195,6 +195,7 @@ class DefenseRequestController extends Controller
             'recEndorsement' => 'required|file|mimes:pdf,doc,docx,jpg,jpeg,png|max:204800',
             'proofOfPayment' => 'required|file|mimes:pdf,doc,docx,jpg,jpeg,png|max:204800',
             'referenceNo' => 'required|string|max:100',
+            'avisee_adviser_attachment' => "nullable|file|mimes:pdf,doc,docx,jpg,jpeg,png|max:204800",
         ]);
 
         foreach (['advisersEndorsement','recEndorsement','proofOfPayment'] as $f) {

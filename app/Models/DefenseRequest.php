@@ -10,6 +10,8 @@ use Carbon\Carbon;
 class DefenseRequest extends Model
 {
     protected $guarded = [];
+    // If you use $fillable, add:
+    // protected $fillable = [..., 'avisee_adviser_attachment'];
 
     protected $casts = [
         'workflow_history'        => 'array',
