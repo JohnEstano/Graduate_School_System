@@ -52,22 +52,8 @@ export default function UserSearch({
                 return;
             }
 
-            setIsSearching(true);
-            try {
-                let url = `/messages/search-users?query=${encodeURIComponent(searchQuery)}`;
-                if (roleFilter !== 'all') {
-                    url += `&role=${encodeURIComponent(roleFilter)}`;
-                }
-
-                const response = await fetch(url);
-                const data = await response.json();
-                setSearchResults(data.users || []);
-            } catch (error) {
-                console.error('Failed to search users:', error);
-                setSearchResults([]);
-            } finally {
-                setIsSearching(false);
-            }
+            // Messaging feature removed: no remote search; keep empty results
+            setIsSearching(false);
         };
 
         const timeoutId = setTimeout(searchUsers, 300);

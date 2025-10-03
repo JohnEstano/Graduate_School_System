@@ -35,4 +35,20 @@ return [
         ],
     ],
 
+    // School SSO (custom OAuth2 / OIDC) configuration
+    'school' => [
+        'client_id' => env('SCHOOL_CLIENT_ID'),
+        'client_secret' => env('SCHOOL_CLIENT_SECRET'),
+        'redirect' => env('SCHOOL_REDIRECT_URI'), // e.g. https://your-domain.com/auth/school/callback
+        // Optional OIDC issuer / discovery URL (set if using OpenID Connect)
+        'issuer' => env('SCHOOL_OIDC_ISSUER'),
+    ],
+
+    // Google OAuth (restricted to @uic.edu.ph domain in controller logic)
+    'google' => [
+        'client_id' => env('GOOGLE_CLIENT_ID'),
+        'client_secret' => env('GOOGLE_CLIENT_SECRET'),
+        'redirect' => env('GOOGLE_REDIRECT_URI'), // e.g. https://your-domain.com/auth/google/callback
+    ],
+
 ];

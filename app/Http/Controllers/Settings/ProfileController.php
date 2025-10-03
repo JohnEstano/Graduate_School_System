@@ -19,9 +19,59 @@ class ProfileController extends Controller
      */
     public function edit(Request $request): Response
     {
+        $user = $request->user();
+
+        // If student, include adviser info
+        $advisers = [];
+        if ($user->role === 'Student') {
+            $advisers = $user->advisers()
+                ->select('first_name', 'last_name', 'email')
+                ->get()
+                ->map(function ($a) {
+                    return [
+                        'name' => trim($a->first_name . ' ' . $a->last_name),
+                        'email' => $a->email,
+                    ];
+                });
+        }
+
+        // If adviser/faculty, include coordinator info
+        $coordinators = [];
+        if (in_array($user->role, ['Adviser', 'Faculty'])) {
+            $coordinators = $user->coordinators()
+                ->select('first_name', 'middle_name', 'last_name', 'email')
+                ->get()
+                ->map(function ($c) {
+                    return [
+                        'name' => trim($c->first_name . ' ' . ($c->middle_name ? strtoupper($c->middle_name[0]) . '. ' : '') . $c->last_name),
+                        'email' => $c->email,
+                    ];
+                });
+        }
+
+        // For Adviser/Faculty, ensure adviser_code is generated and returned
+        $adviserCode = null;
+        if (in_array($user->role, ['Adviser', 'Faculty'])) {
+            if (!$user->adviser_code) {
+                $user->generateAdviserCode();
+                $user->refresh();
+            }
+            $adviserCode = $user->adviser_code;
+        }
+
         return Inertia::render('settings/profile', [
-            'mustVerifyEmail' => $request->user() instanceof MustVerifyEmail,
+            'mustVerifyEmail' => $user instanceof MustVerifyEmail,
             'status' => $request->session()->get('status'),
+            'auth' => [
+                'user' => array_merge(
+                    $user->toArray(),
+                    [
+                        'advisers' => $advisers,
+                        'adviser_code' => $adviserCode,
+                        'coordinators' => $coordinators, // <-- ADD THIS LINE
+                    ]
+                ),
+            ],
         ]);
     }
 

@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Models\Role; // FIX: import Role
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -25,35 +26,37 @@ class RegisteredUserController extends Controller
 
     /**
      * Handle an incoming registration request.
-     *
-     * @throws \Illuminate\Validation\ValidationException
      */
     public function store(Request $request): RedirectResponse
     {
-        $request->validate([
+        $validated = $request->validate([
             'first_name' => 'required|string|max:255',
             'middle_name' => 'required|string|max:255',
             'last_name' => 'required|string|max:255',
-            'email' => 'required|string|lowercase|email|max:255|unique:'.User::class,
+            'email' => 'required|string|lowercase|email|max:255|unique:' . User::class,
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
-            'role' => 'required|string|in:Student,Administrative Assistant,Coordinator,Dean',
+            'role' => 'required|string|in:Student,Administrative Assistant,Coordinator,Dean,Registrar', // include Registrar
             'school_id' => 'required|string|max:255',
             'program' => 'nullable|string|max:255',
         ]);
 
+        $roleName = $validated['role'] ?? 'Student';
+        $roleId = Role::where('name', $roleName)->value('id')
+            ?? Role::where('name', 'Student')->value('id'); // fallback
+
         $user = User::create([
-            'first_name' => $request->first_name,
-            'middle_name' => $request->middle_name,
-            'last_name' => $request->last_name,
-            'email' => $request->email,
-            'password' => Hash::make($request->password),
-            'role' => $request->role,
-            'school_id' => $request->school_id,
-            'program' => $request->program ?? null,
+            'first_name' => $validated['first_name'],
+            'middle_name' => $validated['middle_name'],
+            'last_name' => $validated['last_name'],
+            'email' => $validated['email'],
+            'password' => Hash::make($validated['password']),
+            'school_id' => $validated['school_id'],
+            'program' => $validated['program'] ?? null,
+            'role_id' => $roleId,     // FK to roles table
+            'role' => $roleName,      // optional legacy column; remove when not needed
         ]);
 
         event(new Registered($user));
-
         Auth::login($user);
 
         return to_route('dashboard');

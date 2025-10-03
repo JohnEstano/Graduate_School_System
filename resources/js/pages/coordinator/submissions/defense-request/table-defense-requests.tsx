@@ -1,23 +1,36 @@
-import {
-  Table,
-  TableHeader,
-  TableRow,
-  TableHead,
-  TableBody,
-  TableCell,
-} from '@/components/ui/table';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Info, ArrowUp, ArrowDown, ChevronsUpDown } from 'lucide-react';
-import { format } from 'date-fns';
-import Details from './details';
-import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@/components/ui/dropdown-menu';
+import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/table';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
-import { Clock, Check, CircleCheckBig, CircleX, BadgeInfo, Circle } from 'lucide-react';
-import type { DefenseRequestSummary } from './show-all-requests';
+import { ArrowUp, ArrowDown, ChevronsUpDown, Eye, CheckCircle, CircleX, CircleArrowLeft, CalendarX, UserSearch, Check, X, AlertCircle, FileText } from 'lucide-react';
+import { format, formatDistanceToNowStrict } from 'date-fns';
+import { router } from '@inertiajs/react';
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@/components/ui/dropdown-menu';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
-type TableDefenseRequestsProps = {
+export type DefenseRequestSummary = {
+  id: number;
+  first_name: string;
+  middle_name: string | null;
+  last_name: string;
+  program: string;
+  thesis_title: string;
+  date_of_defense?: string;
+  scheduled_date?: string;
+  defense_type: string;
+  mode_defense?: string;
+  defense_mode?: string;
+  status: 'Pending' | 'In progress' | 'Approved' | 'Rejected' | 'Needs-info';
+  priority: 'Low' | 'Medium' | 'High';
+  last_status_updated_by?: string;
+  last_status_updated_at?: string;
+  workflow_state?: string;
+  adviser?: string; // Add adviser field if not present
+  submitted_at?: string; // Add submitted_at field if not present
+  panelists?: any[]; // Add panelists field (adjust type as needed)
+};
+
+export type TableDefenseRequestsProps = {
   paged: DefenseRequestSummary[];
   columns: Record<string, boolean>;
   selected: number[];
@@ -26,13 +39,15 @@ type TableDefenseRequestsProps = {
   toggleSelectAll: () => void;
   toggleSort: () => void;
   sortDir: 'asc' | 'desc' | null | undefined;
-  setSelectedRequest: (r: DefenseRequestSummary) => void;
-  setSelectedIndex: (i: number) => void;
-  sorted: DefenseRequestSummary[];
-  selectedRequest: DefenseRequestSummary | null;
-  selectedIndex: number;
-  onStatusChange: (id: number, status: string) => void;
-  onPriorityChange: (id: number, priority: string) => void;
+  onPriorityChange: (id: number, priority: string) => Promise<void>;
+  tabType?: 'pending' | 'rejected' | 'approved';
+  onViewDetails?: (id: number) => void;
+  onRowApprove?: (id: number) => void;
+  onRowReject?: (id: number) => void;
+  onRowRetrieve?: (id: number) => void;
+  highlightMissingDateMode?: boolean;
+  hideActions?: boolean; // <-- Add this prop
+  hideSelect?: boolean;  // <-- Add this prop
 };
 
 export default function TableDefenseRequests({
@@ -44,215 +59,209 @@ export default function TableDefenseRequests({
   toggleSelectAll,
   toggleSort,
   sortDir,
-  setSelectedRequest,
-  setSelectedIndex,
-  sorted,
-  selectedRequest,
-  selectedIndex,
-  onStatusChange,
   onPriorityChange,
+  tabType,
+  onViewDetails,
+  onRowApprove,
+  onRowReject,
+  onRowRetrieve,
+  highlightMissingDateMode,
+  hideActions,
+  hideSelect
 }: TableDefenseRequestsProps) {
-  const statusIcon = (status: string) => {
-    switch (status) {
-      case 'In progress':
-        return <Clock size={16} className="mr-1" />;
-      case 'Approved':
-        return <CircleCheckBig size={16} className="mr-1 text-green-500" />;
-      case 'Rejected':
-        return <CircleX size={16} className="mr-1 text-red-500" />;
-      case 'Needs-info':
-        return <BadgeInfo size={16} className="mr-1 text-blue-500" />;
-      default:
-        return <Circle size={16} className="mr-1" />; 
+  // Helper for status indicator with checklist tooltip
+  function getIndicator(r: DefenseRequestSummary) {
+    // Only count as assigned if at least one non-empty string in panelists array
+    const hasPanelists =
+      Array.isArray(r.panelists) &&
+      r.panelists.filter(p => typeof p === 'string' && p.trim().length > 0).length > 0;
+
+    const hasDate = !!(r.date_of_defense || r.scheduled_date);
+
+    let icon, color;
+    if (hasPanelists && hasDate) {
+      icon = <CheckCircle size={18} />;
+      color = 'bg-green-500';
+    } else {
+      icon = <AlertCircle size={18} />;
+      color = 'bg-red-500';
     }
-  };
+
+    const checklist = [
+      {
+        label: 'Approved',
+        checked: true,
+      },
+      {
+        label: 'Assigned panelists',
+        checked: hasPanelists,
+      },
+      {
+        label: 'Scheduled date',
+        checked: hasDate,
+      },
+    ];
+
+    return (
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <span className={`inline-flex items-center justify-center rounded-full ${color} text-white h-7 w-7 cursor-pointer`}>
+              {icon}
+            </span>
+          </TooltipTrigger>
+          <TooltipContent
+            side="right"
+            className="bg-white text-black border border-border shadow-lg p-2 min-w-[160px]"
+          >
+            <div className="flex flex-col gap-1">
+              {checklist.map(item => (
+                <div key={item.label} className="flex items-center gap-2 text-xs">
+                  <span className={`inline-flex items-center justify-center rounded-full ${item.checked ? 'bg-green-500' : 'bg-red-500'} text-white w-4 h-4`}>
+                    {item.checked ? <Check size={12} /> : <X size={12} />}
+                  </span>
+                  <span>{item.label}</span>
+                </div>
+              ))}
+            </div>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+    );
+  }
 
   return (
-    <div className="rounded-lg overflow-x-auto border border-border">
-      <Table className="min-w-full text-sm">
-        <TableHeader>
-          <TableRow>
-            <TableHead className="w-[5%] px-2 py-2">
-              <Checkbox
-                checked={headerChecked}
-                onCheckedChange={toggleSelectAll}
-              />
-            </TableHead>
-            {columns.title && (
-              <TableHead className="w-[30%] px-2 py-2">Title</TableHead>
-            )}
-            {columns.presenter && (
-              <TableHead className="w-[20%] px-2 py-2">Presenter</TableHead>
-            )}
-            {columns.date && (
-              <TableHead
-                className="w-[15%] text-center cursor-pointer px-2 py-2"
-                onClick={toggleSort}
-              >
-                <div className="flex justify-center items-center gap-1">
-                  <span>Scheduled Date</span>
-                  {sortDir === 'asc' && <ArrowUp size={12} />}
-                  {sortDir === 'desc' && <ArrowDown size={12} />}
-                  {!sortDir && (
-                    <ChevronsUpDown size={12} className="opacity-50" />
-                  )}
-                </div>
-              </TableHead>
-            )}
-            {columns.mode && (
-              <TableHead className="w-[10%] text-center px-2 py-2">Mode</TableHead>
-            )}
-            {columns.status && (
-              <TableHead className="w-[10%] text-center px-2 py-2">Status</TableHead>
-            )}
-            {columns.priority && (
-              <TableHead className="w-[10%] text-center px-2 py-2">Priority</TableHead>
-            )}
-            <TableHead className="w-[5%] text-center px-2 py-2" />
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {paged.map((r, i) => (
-            <TableRow key={r.id} className="hover:bg-muted/50">
-              <TableCell className="px-2 py-2">
-                <Checkbox
-                  checked={selected.includes(r.id)}
-                  onCheckedChange={() => toggleSelectOne(r.id)}
-                />
-              </TableCell>
-              {columns.title && (
-                <TableCell
-                  className="px-2 py-2 font-semibold truncate cursor-pointer"
-                  style={{ maxWidth: '300px' }}
-                  onClick={() => toggleSelectOne(r.id)}
+    <div className="relative w-full">
+      <div className="overflow-x-auto w-full rounded-md border border-border bg-background">
+        <Table className="w-full text-sm table-auto">
+          <TableHeader>
+            <TableRow>
+              {!hideSelect && (
+                <TableHead className="w-[40px] py-2">
+                  <Checkbox checked={headerChecked} onCheckedChange={toggleSelectAll} />
+                </TableHead>
+              )}
+              {columns.title && <TableHead className="px-3 min-w-[180px]">Title</TableHead>}
+              {columns.presenter && <TableHead className="px-2 min-w-[120px]">Presenter</TableHead>}
+              {columns.adviser && <TableHead className="px-2 min-w-[120px]">Adviser</TableHead>}
+              {columns.program && <TableHead className="px-2 min-w-[100px]">Program</TableHead>}
+              {columns.type && <TableHead className="text-center px-2 min-w-[90px]">Type</TableHead>}
+              {columns.submitted_at && <TableHead className="px-2 min-w-[130px] text-center">Submitted</TableHead>}
+              {columns.status && <TableHead className="px-2 min-w-[100px] text-center">Status</TableHead>}
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {paged.map(r => {
+              const isSelected = selected.includes(r.id);
+              const handleRowClick = (e: React.MouseEvent) => {
+                const tag = (e.target as HTMLElement).tagName;
+                if (
+                  tag === 'BUTTON' ||
+                  tag === 'INPUT' ||
+                  tag === 'SELECT' ||
+                  (e.target as HTMLElement).closest('.action-btn') ||
+                  (e.target as HTMLElement).closest('.priority-dropdown')
+                ) {
+                  return;
+                }
+                if (onViewDetails) onViewDetails(r.id);
+                else router.visit(`/coordinator/defense-requests/${r.id}/details`);
+              };
+
+              return (
+                <TableRow
+                  key={r.id}
+                  className="hover:bg-muted/40 cursor-pointer"
+                  onClick={handleRowClick}
                 >
-                  {r.thesis_title}
-                </TableCell>
-              )}
-              {columns.presenter && (
-                <TableCell className="px-2 py-2 truncate">
-                  {r.first_name}{' '}
-                  {r.middle_name ? `${r.middle_name[0]}. ` : ''}
-                  {r.last_name}
-                </TableCell>
-              )}
-              {columns.date && (
-                <TableCell className="px-2 py-2 text-center whitespace-nowrap">
-                  {format(new Date(r.date_of_defense), 'MMM dd, yyyy')}
-                </TableCell>
-              )}
-              {columns.mode && (
-                <TableCell className="px-2 py-2 text-center capitalize">
-                  {r.mode_defense.replace('-', ' ')}
-                </TableCell>
-              )}
-              {columns.status && (
-                <TableCell className="px-2 py-2 text-center">
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Badge
-                        variant="outline"
-                        className="cursor-pointer"
-                      >
-                        <div className="flex items-center justify-center gap-1">
-                          {statusIcon(r.status)}
-                          {(r.status || 'Pending').replace('-', ' ')}
-                        </div>
-                      </Badge>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent>
-                      {['Pending', 'In progress', 'Approved', 'Rejected', 'Needs-info'].map((status) => (
-                        <DropdownMenuItem
-                          key={status}
-                          onClick={() => onStatusChange(r.id, status)}
-                          className="flex items-center justify-between"
-                        >
-                          <span className="flex items-center gap-1">
-                            {statusIcon(status)}
-                            {status.replace('-', ' ')}
-                          </span>
-                          {r.status === status && <Check size={16} />}
-                        </DropdownMenuItem>
-                      ))}
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </TableCell>
-              )}
-              {columns.priority && (
-                <TableCell className="px-2 py-2 text-center">
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
+                  {!hideSelect && (
+                    <TableCell className="px-2 py-2">
+                      <Checkbox
+                        checked={isSelected}
+                        onCheckedChange={() => toggleSelectOne(r.id)}
+                        className="action-btn"
+                        onClick={e => e.stopPropagation()}
+                      />
+                    </TableCell>
+                  )}
+                  {columns.title && (
+                    <TableCell className="px-3 py-2 font-medium truncate leading-tight align-middle" title={r.thesis_title}>
+                      {r.thesis_title}
+                    </TableCell>
+                  )}
+                  {columns.presenter && (
+                    <TableCell className="px-2 py-2 text-xs text-muted-foreground whitespace-nowrap align-middle" title={`${r.first_name} ${r.middle_name ? r.middle_name + ' ' : ''}${r.last_name}`}>
+                      {r.first_name} {r.middle_name ? r.middle_name[0] + '. ' : ''}{r.last_name}
+                    </TableCell>
+                  )}
+                  {columns.adviser && (
+                    <TableCell className="px-2 py-2 text-xs text-muted-foreground whitespace-nowrap align-middle">
+                      {r.adviser || '—'}
+                    </TableCell>
+                  )}
+                  {columns.program && (
+                    <TableCell className="px-2 py-2 text-xs text-muted-foreground whitespace-nowrap align-middle">
+                      {r.program || '—'}
+                    </TableCell>
+                  )}
+                  {columns.type && (
+                    <TableCell className="px-2 py-2 text-center align-middle">
+                      <Badge variant="outline">{r.defense_type || '—'}</Badge>
+                    </TableCell>
+                  )}
+                  {columns.submitted_at && (
+                    <TableCell className="px-2 py-2 text-xs text-muted-foreground whitespace-nowrap text-center align-middle">
+                      {r.submitted_at
+                        ? format(new Date(r.submitted_at), 'yyyy-MM-dd hh:mm a')
+                        : '—'}
+                    </TableCell>
+                  )}
+                  {columns.status && (
+                    <TableCell className="px-2 py-2 text-xs whitespace-nowrap text-center align-middle">
                       <Badge
                         className={
-                          "cursor-pointer rounded-full " +
-                          (r.priority === 'High'
-                            ? "bg-rose-100 text-rose-700 border border-rose-200"
-                            : r.priority === 'Low'
-                            ? "bg-sky-100 text-sky-700 border border-sky-200"
-                            : "bg-amber-100 text-amber-700 border border-amber-200")
+                          r.status === 'Approved'
+                            ? 'bg-green-100 text-green-700 border-green-200'
+                            : r.status === 'Rejected'
+                            ? 'bg-red-100 text-red-700 border-red-200'
+                            : r.status === 'Pending'
+                            ? 'bg-yellow-100 text-yellow-700 border-yellow-200'
+                            : r.status === 'Needs-info'
+                            ? 'bg-blue-100 text-blue-700 border-blue-200'
+                            : r.status === 'In progress'
+                            ? 'bg-purple-100 text-purple-700 border-purple-200'
+                            : 'bg-gray-100 text-gray-700 border-gray-200'
                         }
-                        variant="outline"
                       >
-                        {r.priority || 'Medium'}
+                        {r.status}
                       </Badge>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent>
-                      {['Low', 'Medium', 'High'].map((priority) => (
-                        <DropdownMenuItem
-                          key={priority}
-                          onClick={() => onPriorityChange(r.id, priority)}
-                          className="flex items-center justify-between"
-                        >
-                          <span>{priority}</span>
-                          {r.priority === priority && <Check size={16}/>}
-                        </DropdownMenuItem>
-                      ))}
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                    </TableCell>
+                  )}
+                </TableRow>
+              );
+            })}
+            {paged.length === 0 && (
+              <TableRow>
+                <TableCell
+                  colSpan={
+                    (hideSelect ? 0 : 1) +
+                    (columns.title ? 1 : 0) +
+                    (columns.presenter ? 1 : 0) +
+                    (columns.adviser ? 1 : 0) +
+                    (columns.program ? 1 : 0) +
+                    (columns.type ? 1 : 0) +
+                    (columns.submitted_at ? 1 : 0) +
+                    (columns.status ? 1 : 0)
+                  }
+                  className="text-center py-10 text-muted-foreground"
+                >
+                  No requests found.
                 </TableCell>
-              )}
-              <TableCell className="px-2 py-2 text-center">
-                <Dialog>
-                  <DialogTrigger asChild>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => {
-                        setSelectedRequest(r);
-                        setSelectedIndex(i);
-                      }}
-                    >
-                      <Info />
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent className="max-w-5xl min-w-260 w-full max-h-[90vh]">
-                    <div className="max-h-[80vh] overflow-y-auto px-1">
-                      {selectedRequest && (
-                         
-                        <Details
-                          request={selectedRequest as unknown as import('./details').DefenseRequestFull}
-                          onNavigate={(dir) => {
-                            const ni =
-                              dir === 'next'
-                                ? selectedIndex + 1
-                                : selectedIndex - 1;
-                            if (ni >= 0 && ni < sorted.length) {
-                              setSelectedRequest(sorted[ni]);
-                              setSelectedIndex(ni);
-                            }
-                          }}
-                          disablePrev={selectedIndex === 0}
-                          disableNext={selectedIndex === sorted.length - 1}
-                        />
-                      )}
-                    </div>
-                  </DialogContent>
-                </Dialog>
-              </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
+      </div>
     </div>
   );
 }

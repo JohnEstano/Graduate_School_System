@@ -1,6 +1,16 @@
+import React, { useEffect, useState } from 'react';
 import { usePage } from '@inertiajs/react';
-import { CircleEllipsis, Ellipsis, EllipsisVertical } from 'lucide-react';
-import MessagingWidget from '@/components/messaging-widget';
+import { Sun, Moon } from 'lucide-react';
+import RemindersWidget from '../widgets/reminders-widget';
+import UpcomingSchedulesWidget from '../widgets/upcomming-schedules-widget';
+import PendingDefenseRequestsWidget from '../widgets/pending-defense-request-widget';
+import WeeklyDefenseSchedulesWidget from '../widgets/weekly-defense-schedule-widget';
+import QuickActionsWidget from '../widgets/quick-actions-widget';
+import { Separator } from "@/components/ui/separator";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import type { DefenseRequest } from '@/types';
+import { Users, CalendarDays, ClipboardList, BadgeDollarSign } from 'lucide-react';
+import { Skeleton } from "@/components/ui/skeleton";
 
 type PageProps = {
     auth: {
@@ -12,56 +22,263 @@ type PageProps = {
     };
 };
 
+function getFormattedDate() {
+    const now = new Date();
+    return now.toLocaleDateString('en-US', {
+        weekday: 'long',
+        month: 'long',
+        day: 'numeric',
+    });
+}
+
+function isDaytime() {
+    const hour = new Date().getHours();
+    return hour >= 6 && hour < 18;
+}
+
+// Helper: Get unique panelists from defense requests
+function getPanelistStats(defenseRequests: DefenseRequest[]) {
+    const panelistSet = new Set<string>();
+    let assignedCount = 0;
+
+    defenseRequests.forEach((req: any) => {
+        if (Array.isArray(req.panelists)) {
+            req.panelists.forEach((p: any) => {
+                if (p?.id) {
+                    panelistSet.add(p.id);
+                    assignedCount++;
+                }
+            });
+        }
+    });
+
+    return {
+        totalPanelists: panelistSet.size,
+        assignedPanelists: assignedCount,
+    };
+}
+
+// Helper: Count today's scheduled defenses
+function getTodaysSchedules(defenseRequests: DefenseRequest[]) {
+    const today = new Date();
+    return defenseRequests.filter((dr: any) => {
+        if (!dr.scheduled_date) return false;
+        const eventDate = new Date(dr.scheduled_date);
+        return (
+            eventDate.getFullYear() === today.getFullYear() &&
+            eventDate.getMonth() === today.getMonth() &&
+            eventDate.getDate() === today.getDate()
+        );
+    }).length;
+}
+
 export default function CoordinatorDashboard() {
     const {
         auth: { user },
     } = usePage<PageProps>().props;
 
+    const [allRequests, setAllRequests] = useState<DefenseRequest[]>([]);
+    const [pendingRequests, setPendingRequests] = useState<DefenseRequest[]>([]);
+    const [todayEvents, setTodayEvents] = useState<DefenseRequest[]>([]);
+    const [loading, setLoading] = useState(true);
+
+    // Add this state for real panelists count
+    const [realPanelistsCount, setRealPanelistsCount] = useState<number>(0);
+
+    const [assignedPanelists, setAssignedPanelists] = useState<number>(0);
+
+    const [selectedDay, setSelectedDay] = useState<number>(new Date().getDay());
+
+    const weekDays = [
+        { label: 'Sun', value: 0 },
+        { label: 'Mon', value: 1 },
+        { label: 'Tue', value: 2 },
+        { label: 'Wed', value: 3 },
+        { label: 'Thu', value: 4 },
+        { label: 'Fri', value: 5 },
+        { label: 'Sat', value: 6 },
+    ];
+
+    useEffect(() => {
+        fetch('/defense-requests', {
+            headers: {
+                'Accept': 'application/json'
+            }
+        })
+            .then(res => {
+                if (!res.ok) throw new Error('Failed');
+                return res.json();
+            })
+            .then((data) => {
+                const requests = Array.isArray(data)
+                    ? data
+                    : (data.defenseRequests ?? []);
+                setAllRequests(requests);
+
+                // Prefer normalized_status when available, fallback to status
+                const pending = requests.filter(
+                    (r: any) => (r.normalized_status || r.status) === 'Pending'
+                );
+                setPendingRequests(pending);
+
+                const today = new Date();
+                const closeEvents = requests.filter((dr: any) => {
+                    if (!dr.scheduled_date) return false;
+                    const eventDate = new Date(dr.scheduled_date);
+                    const diff = (eventDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24);
+                    return diff >= 0 && diff < 3;
+                });
+                setTodayEvents(closeEvents);
+            })
+            .catch(() => {
+                setAllRequests([]);
+                setPendingRequests([]);
+                setTodayEvents([]);
+            })
+            .finally(() => setLoading(false));
+
+        // Fetch real panelists count from API
+        fetch('/api/panelists/count', {
+            headers: { 'Accept': 'application/json' }
+        })
+            .then(res => res.ok ? res.json() : { count: 0 })
+            .then((data) => {
+                setRealPanelistsCount(data.count ?? 0);
+            })
+            .catch(() => setRealPanelistsCount(0));
+
+        // Fetch assigned panelists count
+        fetch('/api/assigned-panelists/count', {
+            headers: { 'Accept': 'application/json' }
+        })
+            .then(res => res.ok ? res.json() : { assignedPanelists: 0 })
+            .then((data) => {
+                setAssignedPanelists(data.assignedPanelists ?? 0);
+            })
+            .catch(() => setAssignedPanelists(0));
+    }, []);
+
+    // Dynamic metrics
+    const { assignedPanelists: assignedPanelistsCount } = getPanelistStats(allRequests);
+    const todaysSchedules = getTodaysSchedules(allRequests);
+
+    const metrics = [
+        {
+            title: "Panelists Assignment",
+            value: (
+                <span>
+                    <span className="text-3xl font-bold text-gray-900 dark:text-white">{assignedPanelistsCount}</span>
+                    <span className="text-base font-semibold text-gray-400 dark:text-gray-500 ml-1">/ {realPanelistsCount}</span>
+                </span>
+            ),
+            description: "Panelists assigned",
+            icon: <Users className="size-7" />,
+        },
+        {
+            title: "Today's Schedules",
+            value: todaysSchedules,
+            description: "Defenses scheduled for today",
+            icon: <CalendarDays className="size-7" />,
+        },
+        {
+            title: "Pending Defense Requests",
+            value: pendingRequests.length,
+            description: "Awaiting coordinator action",
+            icon: <ClipboardList className="size-7" />,
+        },
+        {
+            title: "Pending Honorariums",
+            value: 7, // leave static for now
+            description: "Honorariums not yet processed",
+            icon: <BadgeDollarSign className="size-7" />,
+        },
+    ];
+
     return (
-        <div className="flex h-full flex-1 flex-col gap-4 overflow-auto rounded-xl pt-5 pr-7 pl-7">
-            <div className="flex flex-col gap-1">
-                <h1 className="text-3xl font-bold">{user?.name ?? 'Guest'}</h1>
-                <p className="text-sm text-gray-400">{user?.role ?? 'Student'}</p>
-            </div>
-
-            <div className="grid auto-rows-min gap-4 md:grid-cols-4">
-                <div className="border-sidebar-border/70 dark:border-sidebar-border relative aspect-video overflow-hidden rounded-xl border p-5">
-                    <div className="flex items-start justify-between">
-                        <h3 className="text-[13px] font-medium">Pending Applications:</h3>
-                        <Ellipsis className="size-4 text-zinc-700" />
+        <div className="flex h-full flex-1 flex-col gap-4 overflow-auto  bg-white dark:bg-background">
+            {/* Skeleton Loader */}
+            {loading ? (
+                <div className="w-full min-h-[70vh] bg-zinc-100 dark:bg-zinc-900 flex flex-col gap-4 p-0 m-0">
+                    {/* Top short row */}
+                    <Skeleton className="h-6 w-1/6 rounded bg-zinc-300 dark:bg-zinc-800 mt-8 mx-8" />
+                    {/* Main rows */}
+                    <Skeleton className="h-12 w-3/4 rounded bg-zinc-300 dark:bg-zinc-800 mx-8" />
+                    <Skeleton className="h-12 w-2/3 rounded bg-zinc-300 dark:bg-zinc-800 mx-8" />
+                    {/* Big rectangle for dashboard body */}
+                    <Skeleton className="h-[500px] w-full rounded bg-zinc-300 dark:bg-zinc-800 mt-4" />
+                </div>
+            ) : (
+                <>
+                    {/* Header */}
+                    <div className="mb-7 mt-3 pt-3 flex flex-row justify-between items-center relative overflow-hidden" style={{ minHeight: '120px' }}>
+                        <div className="flex flex-col pr-8 pl-7">
+                            <span className="flex items-center text-xs font-semibold text-gray-700 dark:text-gray-200 mb-1 relative z-10">
+                                {isDaytime() ? (
+                                    <Sun className="mr-1 size-4 text-yellow-500" />
+                                ) : (
+                                    <Moon className="mr-1 size-4 text-blue-500" />
+                                )}
+                                {getFormattedDate()}
+                            </span>
+                            <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white relative z-10">
+                                Hi, {user?.name}!
+                            </h1>
+                            <span className="text-xs text-gray-400 dark:text-gray-500 mt-1 relative z-10">
+                                {user?.role ?? 'Student'}
+                            </span>
+                        </div>
+                        <div className="flex items-center">
+                            <div className="h-12 w-px mx-4 bg-gray-300 dark:bg-gray-700 opacity-60" />
+                            <div className="mr-8"> 
+                                <QuickActionsWidget userRole={user?.role} />
+                            </div>
+                        </div>
                     </div>
-                </div>
 
-                <div className="border-sidebar-border/70 dark:border-sidebar-border relative aspect-video overflow-hidden rounded-xl border p-5">
-                    <div className="flex items-start justify-between">
-                        <h3 className="text-[13px] font-medium">Pending Defense Requests:</h3>
-                        <EllipsisVertical className="size-4 text-zinc-700" />
+                    {/* Metrics Cards */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 px-7">
+                        {metrics.map((metric, idx) => (
+                            <Card key={idx} className="border border-1 bg-white dark:bg-muted rounded-xl shadow-none flex flex-row items-center min-h-[70px] py-4 px-5">
+                                <div className="flex flex-col justify-center flex-1">
+                                    <CardHeader className="pb-1 px-0">
+                                        <CardTitle className="text-xs font-semibold text-gray-600 dark:text-gray-300">{metric.title}</CardTitle>
+                                    </CardHeader>
+                                    <CardContent className="px-0 py-0">
+                                        <div className="mb-0.5">
+                                            {idx === 0 ? metric.value : (
+                                                <span className="text-2xl font-bold text-gray-900 dark:text-white leading-tight">{metric.value}</span>
+                                            )}
+                                        </div>
+                                        <div className="text-[11px] text-gray-400 dark:text-gray-500 mt-0.5">{metric.description}</div>
+                                    </CardContent>
+                                </div>
+                                <div className="flex items-center justify-center ml-3 w-[40px] h-[40px]">
+                                    {React.cloneElement(metric.icon, { className: "text-rose-500 dark:text-rose-400 size-7" })}
+                                </div>
+                            </Card>
+                        ))}
                     </div>
-                </div>
-                <div className="border-sidebar-border/70 dark:border-sidebar-border relative aspect-video overflow-hidden rounded-xl border p-5">
-                    <div className="flex items-start justify-between">
-                        <h3 className="text-[13px] font-medium">Pending Payment Confirmations:</h3>
-                        <CircleEllipsis className="size-4 text-zinc-700" />
-                    </div>
-                </div>
-                <div className="border-sidebar-border/70 dark:border-sidebar-border relative aspect-video overflow-hidden rounded-xl border p-5">
-                    <div className="flex items-start justify-between">
-                        <h3 className="text-[13px] font-medium">Application Deadline:</h3>
-                        <CircleEllipsis className="size-4 text-zinc-700" />
-                    </div>
-                </div>
-            </div>
 
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-                <div className="border-sidebar-border/70 dark:border-sidebar-border relative overflow-hidden rounded-xl border md:col-span-1">
-                    <MessagingWidget />
-                </div>
+                    {/* Widgets Body */}
+                    <div className="flex flex-col gap-6 bg-gray-100 dark:bg-muted ms-4 me-4 rounded-xl mt-2 mb-2 px-5 py-8">
+                        <div className="w-full mb-2 flex flex-col md:flex-row gap-4">
+                            <WeeklyDefenseSchedulesWidget
+                                weekDays={weekDays}
+                                selectedDay={selectedDay}
+                                setSelectedDay={setSelectedDay}
+                                approvedDefenses={allRequests}
+                                referenceDate={new Date()}
+                                loading={loading}
+                            />
+                            <PendingDefenseRequestsWidget pendingRequests={pendingRequests} loading={loading} />
+                        </div>
 
-                <div className="border-sidebar-border/70 flex-cols dark:border-sidebar-border relative flex min-h-[100vh] grid-cols-2 justify-between gap-2 overflow-hidden rounded-xl border p-5 md:col-span-2">
-                    <h3 className="text-[14px] font-medium">Recent Exam Applications</h3>
-                    <p className="text-[13px] text-pink-500">View All</p>
-                </div>
-            </div>
+                        <div className="grid gap-4 md:grid-cols-2">
+                            
+                        </div>
+                    </div>
+                </>
+            )}
         </div>
     );
 }
