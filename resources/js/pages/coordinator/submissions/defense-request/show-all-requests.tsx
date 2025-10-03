@@ -91,12 +91,10 @@ function ShowAllRequestsInner({ defenseRequests: initial, onStatusChange }: Show
       mode_defense: r.mode_defense || r.defense_mode || undefined
     }));
 
-  // 1. Initialize from props
   const [defenseRequests, setDefenseRequests] = useState<DefenseRequestSummary[]>(() =>
     initial ? normalizeRequests(initial) : []
   );
 
-  // 2. Update local state if props change (e.g., after Inertia navigation)
   useEffect(() => {
     if (initial) setDefenseRequests(normalizeRequests(initial));
   }, [initial]);
@@ -432,12 +430,12 @@ function ShowAllRequestsInner({ defenseRequests: initial, onStatusChange }: Show
     <>
       <Head title="Defense Requests" />
       <Toaster richColors position="bottom-right" />
-      <div className="flex h-full flex-1 flex-col gap-2 overflow-auto rounded-xl pt-6 pr-3 pl-3 relative">
+      <div className="flex h-full flex-1 flex-col gap-2 overflow-auto rounded-xl pt-5 pr-3 pl-3 relative">
 
         {/* Header row */}
-        <div className="w-full bg-white border border-border rounded-lg overflow-hidden">
-          <div className="flex flex-row items-center justify-between w-full p-3 border-b bg-white">
-            <div className="flex items-center gap-2">
+        <div className="w-full bg-white dark:bg-zinc-900 border border-border rounded-lg overflow-hidden mb-2">
+          <div className="flex flex-row dark:bg-zinc-900 items-center justify-between w-full p-3 border-b bg-white">
+            <div className="flex dark:bg-zinc-900 items-center gap-2">
               <div className="h-10 w-10 flex items-center justify-center rounded-full bg-blue-500/10 border border-blue-500">
                 <Signature className="h-5 w-5 text-blue-400" />
               </div>
@@ -453,7 +451,7 @@ function ShowAllRequestsInner({ defenseRequests: initial, onStatusChange }: Show
             {/* You can add a button here if needed */}
           </div>
           {/* Search bar row with filters */}
-          <div className="flex items-center justify-between gap-2 px-4 py-3 border-b bg-white">
+          <div className="flex dark:bg-zinc-900 items-center justify-between gap-2 px-4 py-3 border-b bg-white">
             <div className="flex items-center gap-2">
               <Input
                 type="text"

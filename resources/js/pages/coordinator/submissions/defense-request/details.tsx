@@ -23,7 +23,8 @@ import {
   Clock,
   XCircle,
   CircleArrowLeft,
-  Signature
+  Signature,
+  User
 } from 'lucide-react';
 import { useRef } from 'react';
 
@@ -602,7 +603,7 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
     {
       key: 'coordinator-approved',
       label: 'Approved by Coordinator',
-      icon: <Signature className="h-5 w-5" />, // Use Signature (e-sign) icon here
+      icon: <Signature className="h-5 w-5" />, 
     },
     {
       key: 'rejected',
@@ -617,7 +618,7 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
     {
       key: 'panels-assigned',
       label: 'Panels Assigned',
-      icon: <CheckCircle className="h-5 w-5" />,
+      icon: <User className="h-5 w-5" />,
     },
     {
       key: 'scheduled',
@@ -881,7 +882,7 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
                 <Button
                   onClick={savePanels}
                   disabled={!canEdit || savingPanels}
-                  className="gap-2"
+                  className="gap-2 dark:bg-rose-500 text-white hover:cursor-pointer"
                 >
                   {savingPanels && <Loader2 className="animate-spin h-4 w-4" />}
                   <Save className="h-4 w-4" />
@@ -976,7 +977,7 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
                 <Button
                   onClick={saveSchedule}
                   disabled={!canEdit || savingSchedule}
-                  className="gap-2"
+                  className="gap-2 dark:bg-rose-500 dark:text-white hover:cursor-pointer"
                 >
                   {savingSchedule && <Loader2 className="animate-spin h-4 w-4" />}
                   <Save className="h-4 w-4" />

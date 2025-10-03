@@ -17,6 +17,11 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
+import {
+  HoverCard,
+  HoverCardContent,
+  HoverCardTrigger,
+} from "@/components/ui/hover-card";
 import type { PanelistWithAssignments, PanelistHonorariumSpec } from "@/types";
 
 type Props = {
@@ -108,7 +113,7 @@ export default function PanelistsListTable({
               </TableRow>
             ) : (
               panelists.map((panelist) => (
-                <TableRow key={panelist.id}>
+                <TableRow className="hover:bg-muted/40 transition" key={panelist.id}>
                   <TableCell>
                     <Checkbox
                       checked={selected.includes(panelist.id)}
@@ -120,7 +125,6 @@ export default function PanelistsListTable({
                   </TableCell>
                   <TableCell>{panelist.name}</TableCell>
                   <TableCell>{panelist.email}</TableCell>
-        
                   <TableCell>
                     {panelist.assignments && panelist.assignments.length > 0 ? (
                       <ul>
@@ -134,9 +138,65 @@ export default function PanelistsListTable({
                   </TableCell>
                   {/* Status */}
                   <TableCell>
-                    {panelist.assignments && panelist.assignments.length > 0
-                      ? "Assigned"
-                      : "Not Assigned"}
+                    <HoverCard>
+                      <HoverCardTrigger asChild>
+                        <span
+                          className={
+                            panelist.assignments && panelist.assignments.length > 0
+                              ? "inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-green-100 text-green-700 text-xs font-medium cursor-pointer"
+                              : "inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-gray-100 text-gray-500 text-xs font-medium cursor-pointer"
+                          }
+                        >
+                          {panelist.assignments && panelist.assignments.length > 0
+                            ? (
+                              <>
+                                <span className="w-1.5 h-1.5 rounded-full bg-green-500 inline-block" />
+                                Assigned
+                              </>
+                            )
+                            : (
+                              <>
+                                <span className="w-1.5 h-1.5 rounded-full bg-gray-400 inline-block" />
+                                Not Assigned
+                              </>
+                            )
+                          }
+                        </span>
+                      </HoverCardTrigger>
+                      <HoverCardContent className="w-64 p-3">
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <Avatar name={panelist.name} />
+                            <div className="font-semibold text-sm">{panelist.name}</div>
+                          </div>
+                          <div className="my-2">
+                            <div className="h-px bg-muted" />
+                          </div>
+                          {panelist.assignments && panelist.assignments.length > 0 ? (
+                            <ul className="space-y-0.5">
+                              {panelist.assignments
+                                .filter((a) => a.thesis_title)
+                                .map((a) => (
+                                  <li
+                                    key={a.id}
+                                    className="flex items-center gap-2 text-xs italic truncate max-w-[180px]"
+                                  >
+                                    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-green-100 text-green-700 font-medium">
+                                      <span className="w-1.5 h-1.5 rounded-full bg-green-500 inline-block" />
+                                      Active
+                                    </span>
+                                    <span className="text-muted-foreground">{a.thesis_title}</span>
+                                  </li>
+                                ))}
+                            </ul>
+                          ) : (
+                            <div className="text-xs text-muted-foreground mt-1">
+                              No active defenses.
+                            </div>
+                          )}
+                        </div>
+                      </HoverCardContent>
+                    </HoverCard>
                   </TableCell>
                   {/* Type column (no thesis title) */}
                   <TableCell>
@@ -230,5 +290,20 @@ export default function PanelistsListTable({
         </DialogContent>
       </Dialog>
     </>
+  );
+}
+
+function Avatar({ name }: { name: string }) {
+  const initials = name
+    .split(" ")
+    .map((n) => n[0])
+    .join("")
+    .toUpperCase()
+    .slice(0, 2);
+
+  return (
+    <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 font-semibold text-sm">
+      {initials}
+    </div>
   );
 }
