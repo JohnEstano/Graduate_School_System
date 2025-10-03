@@ -42,18 +42,12 @@ Route::get('/', function () {
         : redirect()->route('login');
 })->name('home');
 
-
- 
-   
-    
-
 Route::middleware('guest')->group(function () {
     // BASIC login page (adjust Inertia component path to what you actually have)
     Route::get('/login', fn() => Inertia::render('auth/Login'))->name('login');
     // Uncomment if you allow registration
     // Route::get('/register', fn() => Inertia::render('auth/Register'))->name('register');
 });
-
 
 /*
 |--------------------------------------------------------------------------
@@ -364,12 +358,95 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/adviser/defense-requests', [DefenseRequestController::class,'adviserQueue'])
         ->name('adviser.defense-requests');
 
+    Route::get('/api/document-templates', [DocumentTemplateController::class,'index']);
+    Route::get('/api/document-templates/{template}', [DocumentTemplateController::class,'show']);
+    Route::post('/api/document-templates', [DocumentTemplateController::class,'store']);
+    Route::put('/api/document-templates/{template}/fields', [DocumentTemplateController::class,'updateFields']);
+    Route::delete('/api/document-templates/{template}', [DocumentTemplateController::class,'destroy']);
+
     Route::get('/api/signatures', [UserSignatureController::class,'index']);
     Route::post('/api/signatures', [UserSignatureController::class,'store']);
     Route::patch('/api/signatures/{signature}/activate', [UserSignatureController::class,'activate']);
 
     Route::get('/generated-documents/{doc}',[GeneratedDocumentController::class,'show'])
         ->name('generated-documents.show');
-    Route::get('/api/panelists/count', [PanelistController::class, 'count']);
-    Route::get('/api/assigned-panelists/count', [DefenseRequestController::class, 'assignedPanelistsCount']);
+});
+
+/*
+|--------------------------------------------------------------------------
+| Public / Shared API
+|--------------------------------------------------------------------------
+*/
+Route::get('/api/faculty-search', function (\Illuminate\Http\Request $request) {
+    $q = $request->input('q','');
+    return User::where(function($query) use ($q) {
+            $query->where('first_name','like',"%$q%")
+                  ->orWhere('last_name','like',"%$q%");
+        })
+        ->where(function($query) {
+            $query->where('role','Faculty')
+                  ->orWhereHas('roles', fn($q) => $q->where('name','Faculty'));
+        })
+        ->limit(10)
+        ->get(['id','first_name','middle_name','last_name']);
+})->name('api.faculty-search');
+
+Route::get('/api/coordinator/defense-requests', function () {
+    $user = Auth::user();
+    $roles = ['Coordinator','Administrative Assistant','Dean'];
+    if (!$user || !in_array($user->role,$roles)) abort(403);
+
+    $records = DefenseRequest::query()
+        ->whereIn('workflow_state',[
+            'adviser-approved',
+            'coordinator-review',
+            'coordinator-approved',
+            'coordinator-rejected',
+            'panels-assigned',
+            'scheduled'
+        ])
+        ->orderBy('adviser_reviewed_at','desc')
+        ->get();
+
+    return $records->map(fn($r)=>[
+        'id'=>$r->id,
+        'thesis_title'=>$r->thesis_title,
+        'workflow_state'=>$r->workflow_state,
+        'status'=>$r->status,
+    ]);
+})->name('api.coordinator.defense-requests');
+
+/*
+|--------------------------------------------------------------------------
+| Legacy / Extra
+|--------------------------------------------------------------------------
+*/
+Route::get('/legacy/academic-records', [AcademicRecordController::class,'index'])
+    ->name('legacy.academic-records.index');
+Route::get('/legacy/academic-records/dashboard', fn() => Inertia::render('legacy/AcademicRecordsDashboard'))
+    ->name('legacy.academic-records.dashboard');
+Route::get('/legacy/link', [\App\Http\Controllers\LegacyLinkController::class,'form'])->name('legacy.link.form');
+Route::post('/legacy/link', [\App\Http\Controllers\LegacyLinkController::class,'link'])->name('legacy.link.submit');
+Route::delete('/legacy/link', [\App\Http\Controllers\LegacyLinkController::class,'unlink'])->name('legacy.link.unlink');
+Route::get('/faculty/class-list', [\App\Http\Controllers\InstructorClassListController::class,'page'])
+    ->name('faculty.class-list.page');
+Route::get('/legacy/faculty/class-list', [\App\Http\Controllers\InstructorClassListController::class,'index'])
+    ->name('legacy.faculty.class-list');
+
+/*
+|--------------------------------------------------------------------------
+| Include default auth scaffolding (login, password, etc.)
+|--------------------------------------------------------------------------
+*/
+if (file_exists(__DIR__.'/auth.php')) {
+    require __DIR__.'/auth.php';
+}
+if (file_exists(__DIR__.'/settings.php')) require __DIR__.'/settings.php';
+
+Route::middleware(['auth'])->group(function () {
+    Route::get('/api/adviser/students', [AdviserStudentController::class, 'index']);
+    Route::post('/api/adviser/students', [AdviserStudentController::class, 'store']);
+    Route::post('/api/adviser/register-with-code', [AdviserStudentController::class, 'registerWithCode']);
+    Route::get('/api/adviser/code', [AdviserStudentController::class, 'getAdviserCode']);
+    Route::delete('/api/adviser/students/{student}', [AdviserStudentController::class, 'destroy']);
 });
