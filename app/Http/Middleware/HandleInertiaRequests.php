@@ -37,34 +37,22 @@ class HandleInertiaRequests extends Middleware
      */
     public function share(Request $request): array
     {
-        [$message, $author] = str(Inspiring::quotes()->random())->explode('-');
+        $u = $request->user();
 
-        return [
-            ...parent::share($request),
-            'name' => config('app.name'),
-            'quote' => ['message' => trim($message), 'author' => trim($author)],
-            'auth' => [
-                'user' => $request->user()
-                    ? array_merge(
-                        $request->user()->only([
-                            'id',
-                            'first_name',
-                            'middle_name',
-                            'last_name',
-                            'email',
-                            'role',
-                            'school_id',
-                            'program',
-                        ]),
-                        ['name' => $request->user()->name]
-                    )
-                    : null,
-            ],
-            'ziggy' => fn (): array => [
-                ...(new Ziggy)->toArray(),
-                'location' => $request->url(),
-            ],
-            'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
-        ];
+        $sharedUser = $u ? [
+            'id'         => $u->id,
+            'name'       => $u->name,
+            'first_name' => $u->first_name ?? '',
+            'last_name'  => $u->last_name ?? '',
+            'email'      => $u->email,
+            'role'       => $u->role,
+            'school_id'  => $u->school_id ?? '',
+            'program'    => $u->program ?? '',
+        ] : null;
+
+        return array_merge(parent::share($request), [
+            'auth' => ['user' => $sharedUser],
+            'user' => $sharedUser, // legacy
+        ]);
     }
 }

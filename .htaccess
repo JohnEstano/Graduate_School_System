@@ -1,0 +1,47 @@
+# Graduate School System - Professional File Upload Configuration
+# Optimized for academic documents (theses, manuscripts, etc.)
+
+<IfModule mod_rewrite.c>
+    <IfModule mod_negotiation.c>
+        Options -MultiViews -Indexes
+    </IfModule>
+
+    RewriteEngine On
+
+    # Handle Authorization Header
+    RewriteCond %{HTTP:Authorization} .
+    RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+
+    # Redirect Trailing Slashes If Not A Folder...
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteCond %{REQUEST_URI} (.+)/$
+    RewriteRule ^ %1 [L,R=301]
+
+    # Send Requests To Front Controller...
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteRule ^ index.php [L]
+</IfModule>
+
+# Professional File Upload Limits for Graduate School Documents
+<IfModule mod_php.c>
+    # Increase upload limits for academic documents (manuscripts, theses, etc.)
+    php_value upload_max_filesize 200M
+    php_value post_max_size 200M
+    php_value max_execution_time 300
+    php_value max_input_time 300
+    php_value memory_limit 512M
+    php_value max_file_uploads 20
+</IfModule>
+
+# Security for uploaded files
+<FilesMatch "\.(php|phtml|php3|php4|php5|pl|py|jsp|asp|sh|cgi)$">
+    Order Deny,Allow
+    Deny from all
+</FilesMatch>
+
+# Allow common academic file types
+<FilesMatch "\.(pdf|doc|docx|txt|rtf|odt|png|jpg|jpeg|gif)$">
+    Order Allow,Deny
+    Allow from all
+</FilesMatch>

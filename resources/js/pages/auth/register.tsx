@@ -22,6 +22,57 @@ type RegisterForm = {
     school_id: string;
 };
 
+
+export const UIC_PROGRAMS: string[] = [
+    // Doctorate Programs
+    "Doctor of Philosophy in Education major in Educational Leadership",
+    "Doctor of Philosophy in Education major in Applied Linguistics",
+    "Doctor of Philosophy in Education major in Physical Education",
+    "Doctor of Philosophy in Pharmacy",
+    "Doctor of Philosophy in Education major in Mathematics",
+    "Doctor in Business Management with specialization in Information Systems",
+    "Doctor in Business Management",
+    "Doctor of Philosophy in Education major in Filipino",
+    "Doctor of Philosophy in Education major in Counseling",
+    "Doctor of Philosophy in Education major in Information Technology Integration",
+    "Doctor of Philosphy in Pharmacy",
+
+    // Master’s Programs
+    "Master of Arts in Religious Education",
+    "Master in Counseling",
+    "Master in Business Administration (with Thesis)",
+    "Master in Business Administration for Health Professionals (Non-Thesis)",
+    "Master of Arts in Values Education",
+    "Master of Arts in Educational Management",
+    "Master of Arts in Education major in Sociology",
+    "Master in Business Administration (Non-Thesis)",
+    "Master of Arts in Teaching Chemistry",
+    "Master of Arts in Engineering Education major in Electronics and Communications Engineering",
+    "Master of Arts in Education major in Physical Education",
+    "Master of Arts in Teaching Physics",
+    "Master of Arts in Elementary Education",
+    "Master of Arts in Engineering Education major in Civil Engineering",
+    "Master of Arts in Education major in Mathematics",
+    "Master of Arts in Education major in Information Technology Integration",
+    "Master of Arts in Education major in Filipino",
+    "Master of Arts in Education major in English",
+    "Master of Arts in Education major in Music Education",
+    "Master of Arts in Counseling",
+    "Master in Information Systems",
+    "Master in Information Technology",
+    "Master of Science in Pharmacy",
+    "Master of Science in Medical Technology",
+  ];
+
+  // simple split logic
+  const DOCTORATE_PROGRAMS = UIC_PROGRAMS.filter((p) =>
+    p.startsWith("Doctor")
+  );
+  const MASTER_PROGRAMS = UIC_PROGRAMS.filter((p) =>
+    p.startsWith("Master")
+  );
+
+
 export default function Register() {
     const { data, setData, post, processing, errors, reset } = useForm<Required<RegisterForm>>({
         first_name: '',
@@ -171,84 +222,43 @@ export default function Register() {
                     </div>
                     <div className="grid gap-2">
                         <Label htmlFor="program">Program (if applicable)</Label>
-                        <Select value={data.program} onValueChange={(value) => setData('program', value)} disabled={processing}>
+
+                        <Select
+                            value={data.program}
+                            onValueChange={(value) => setData("program", value)}
+                            disabled={processing}
+                        >
                             <SelectTrigger className="w-full">
-                                <SelectValue placeholder="Select your program" />
+                            <SelectValue placeholder="Select your program" />
                             </SelectTrigger>
+
                             <SelectContent className="max-h-[300px] overflow-auto">
-                                <SelectGroup>
-                                    <SelectItem value="Master of Arts in Education major in English">
-                                        Master of Arts in Education major in English
-                                    </SelectItem>
-                                    <SelectItem value="Master of Arts in Education major in Sociology">
-                                        Master of Arts in Education major in Sociology
-                                    </SelectItem>
-                                    <SelectItem value="Master of Arts in Education major in Mathematics">
-                                        Master of Arts in Education major in Mathematics
-                                    </SelectItem>
-                                    <SelectItem value="Master of Arts in Education major in Physical Education">
-                                        Master of Arts in Education major in Physical Education
-                                    </SelectItem>
-                                    <SelectItem value="Master of Arts in Educational Management">Master of Arts in Educational Management</SelectItem>
-                                    <SelectItem value="Master of Arts in Elementary Education">Master of Arts in Elementary Education</SelectItem>
-                                    <SelectItem value="Master of Arts in Teaching College Chemistry">
-                                        Master of Arts in Teaching College Chemistry
-                                    </SelectItem>
-                                    <SelectItem value="Master of Arts in Teaching College Physics">
-                                        Master of Arts in Teaching College Physics
-                                    </SelectItem>
-                                    <SelectItem value="Master of Arts in Engineering Education with majors in Civil Engineering">
-                                        Master of Arts in Engineering Education with majors in Civil Engineering
-                                    </SelectItem>
-                                    <SelectItem value="Master of Arts in Engineering Education with majors in Electronics Communications Engineering">
-                                        Master of Arts in Engineering Education with majors in Electronics Communications Engineering
-                                    </SelectItem>
-                                    <SelectItem value="Master of Arts in Values Education">Master of Arts in Values Education</SelectItem>
-                                    <SelectItem value="Master in Business Administration">Master in Business Administration</SelectItem>
-                                    <SelectItem value="Master of Information Technology">Master of Information Technology</SelectItem>
-                                    <SelectItem value="Master in Information Systems">Master in Information Systems</SelectItem>
-                                    <SelectItem value="Master of Science in Pharmacy">Master of Science in Pharmacy</SelectItem>
-                                    <SelectItem value="Master of Science in Medical Technology/ Medical Laboratory Science">
-                                        Master of Science in Medical Technology/ Medical Laboratory Science
-                                    </SelectItem>
-                                    <SelectItem value="Master of Arts in Education major in Filipino">
-                                        Master of Arts in Education major in Filipino
-                                    </SelectItem>
-                                    <SelectItem value="Master of Arts in Education major in Music Education">
-                                        Master of Arts in Education major in Music Education
-                                    </SelectItem>
-                                    <SelectItem value="Master of Arts in Education major in Information Technology Integration">
-                                        Master of Arts in Education major in Information Technology Integration
-                                    </SelectItem>
-                                    <SelectItem value="Master in Counseling">Master in Counseling</SelectItem>
-                                    <SelectItem value="Doctor in Business Management">Doctor in Business Management</SelectItem>
-                                    <SelectItem value="Doctor of Philosophy in Education major in Applied Linguistics">
-                                        Doctor of Philosophy in Education major in Applied Linguistics
-                                    </SelectItem>
-                                    <SelectItem value="Doctor of Philosophy in Education major in Educational Leadership">
-                                        Doctor of Philosophy in Education major in Educational Leadership
-                                    </SelectItem>
-                                    <SelectItem value="Doctor of Philosophy in Education major in Filipino">
-                                        Doctor of Philosophy in Education major in Filipino
-                                    </SelectItem>
-                                    <SelectItem value="Doctor of Philosophy in Education major in Mathematics">
-                                        Doctor of Philosophy in Education major in Mathematics
-                                    </SelectItem>
-                                    <SelectItem value="Doctor of Philosophy in Education major in Counseling">
-                                        Doctor of Philosophy in Education major in Counseling
-                                    </SelectItem>
-                                    <SelectItem value="Doctor of Philosophy in Education major in Information Technology Integration">
-                                        Doctor of Philosophy in Education major in Information Technology Integration
-                                    </SelectItem>
-                                    <SelectItem value="Doctor of Philosophy in Education major in Physical Education">
-                                        Doctor of Philosophy in Education major in Physical Education
-                                    </SelectItem>
-                                    <SelectItem value="Doctor of Philosophy in Pharmacy">Doctor of Philosophy in Pharmacy</SelectItem>
-                                </SelectGroup>
+                            <SelectGroup>
+                                <span className="px-2 py-1 text-xs font-semibold text-gray-500">
+                                Doctorate Programs
+                                </span>
+                                {DOCTORATE_PROGRAMS.map((name) => (
+                                <SelectItem key={name} value={name}>
+                                    {name}
+                                </SelectItem>
+                                ))}
+                            </SelectGroup>
+
+                            <SelectGroup>
+                                <span className="px-2 py-1 text-xs font-semibold text-gray-500">
+                                Master’s Programs
+                                </span>
+                                {MASTER_PROGRAMS.map((name) => (
+                                <SelectItem key={name} value={name}>
+                                    {name}
+                                </SelectItem>
+                                ))}
+                            </SelectGroup>
                             </SelectContent>
                         </Select>
+
                         <InputError message={errors.program} />
-                    </div>
+                        </div>
 
                     <Button type="submit" className="mt-4 w-full" tabIndex={6} disabled={processing}>
                         {processing && <LoaderCircle className="h-4 w-4 animate-spin" />}

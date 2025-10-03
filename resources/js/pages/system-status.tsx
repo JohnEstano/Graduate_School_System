@@ -9,7 +9,6 @@ import {
     XCircle, 
     AlertCircle,
     Database,
-    MessageSquare,
     Users,
     Zap
 } from 'lucide-react';
@@ -42,12 +41,6 @@ export default function SystemStatus() {
             icon: Database,
         },
         {
-            name: 'Messaging System',
-            status: 'checking',
-            message: 'Testing messaging endpoints...',
-            icon: MessageSquare,
-        },
-        {
             name: 'User Authentication',
             status: 'checking',
             message: 'Verifying authentication system...',
@@ -68,7 +61,6 @@ export default function SystemStatus() {
     const runSystemChecks = async () => {
         const checkPromises = [
             checkDatabase(),
-            checkMessaging(),
             checkAuthentication(),
             checkRealtime(),
         ];
@@ -92,19 +84,6 @@ export default function SystemStatus() {
         }
     };
 
-    const checkMessaging = async () => {
-        try {
-            const response = await fetch('/messages/unread-count');
-            if (response.ok) {
-                const data = await response.json();
-                updateCheck(1, 'success', `Messaging system operational (${data.count || 0} unread messages)`);
-            } else {
-                updateCheck(1, 'error', 'Messaging API not responding');
-            }
-        } catch (error) {
-            updateCheck(1, 'error', 'Failed to connect to messaging system');
-        }
-    };
 
     const checkAuthentication = async () => {
         try {
@@ -281,10 +260,6 @@ export default function SystemStatus() {
                 <Card className="p-6">
                     <h3 className="text-lg font-semibold mb-4">Quick Actions</h3>
                     <div className="flex flex-wrap gap-3">
-                        <Button variant="outline" onClick={() => window.open('/messages', '_blank')}>
-                            <MessageSquare className="h-4 w-4 mr-2" />
-                            Open Messages
-                        </Button>
                         <Button variant="outline" onClick={() => window.location.reload()}>
                             <AlertCircle className="h-4 w-4 mr-2" />
                             Refresh Status

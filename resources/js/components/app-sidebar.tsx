@@ -4,11 +4,9 @@ import { NavUser } from '@/components/nav-user';
 import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '@/components/ui/sidebar';
 import { MainNavItem, type NavItem } from '@/types';
 import { Link, usePage } from '@inertiajs/react';
-import { CalendarFold, CreditCard, DollarSign, FileText, GraduationCap, LayoutGrid, MessageSquareText, ScrollText, SquareUserRound, Users } from 'lucide-react';
+import { CalendarFold, Calendar, CreditCard, DollarSign, FileText, GraduationCap, LayoutGrid, MessageSquareText, ScrollText, SquareUserRound, Users, Box, LibraryBig, Send } from 'lucide-react';
 import AppLogo from './app-logo';
 import { useEffect, useState } from "react";
-
-
 
 type PageProps = {
     auth: {
@@ -29,11 +27,16 @@ const studentNavItems: MainNavItem[] = [
     {
         title: 'Submissions',
         href: '/submission',
-        icon: FileText,
+        icon: Send,
         subItems: [
             { title: 'Comprehensive Exam', href: '/comprehensive-exam' },
-            { title: 'Defense Requirements', href: '/defense-requirements' }, 
+            { title: 'Defense Requirements', href: '/defense-requirements' },
         ],
+    },
+    {
+        title: 'Academic Records',
+        href: '/academic-records',
+        icon: LibraryBig,
     },
     {
         title: 'Payments',
@@ -46,33 +49,35 @@ const studentNavItems: MainNavItem[] = [
         icon: CalendarFold,
 
     },
-    {
-        title: 'Messages',
-        href: '/messages',
-        icon: MessageSquareText,
-    },
+    
 
 ];
 
 const assistantNavItems: MainNavItem[] = [
     { title: 'Dashboard', href: '/dashboard', icon: LayoutGrid },
-    {
-        title: 'Requests',
-        href: '/requests',
-        icon: ScrollText,
+
+
+     {
+        title: 'Applications',
+        href: '/defense',
+        icon: FileText,
         subItems: [
-            { title: 'Comprehensive Exams', href: '/comprehensive-exam' },
-            { title: 'Payment Receipt', href: '/payment-receipt' },
+        { title: 'Comprehensive Exams', href: '/coordinator/compre-exam' },
+         { title: 'Payment Receipt', href: '/coordinator/compre-payment'},
+
         ],
     },
+   
+
     {
         title: 'Thesis & Dissertations',
         href: '/defense',
         icon: GraduationCap,
         subItems: [
             { title: 'Defense Request', href: '/defense-request' },
-             { title: 'Defense Requirements', href: '/all-defense-requirements', icon: FileText },
-             { title: 'Panelists', href: '/panelists', icon: SquareUserRound },
+
+          //  { title: 'Defense Management', href: '/coordinator/defense-management', icon: Calendar },
+            { title: 'Panelists', href: '/panelists', icon: SquareUserRound },
         ],
     },
     {
@@ -86,11 +91,19 @@ const assistantNavItems: MainNavItem[] = [
     },
     { title: 'Student Records', href: '/student-records', icon: Users },
     { title: 'Schedules', href: '/schedules', icon: CalendarFold },
-    { title: 'Messages', href: '/messages', icon: MessageSquareText },
+    //{ title: 'Messages', href: '/messages', icon: MessageSquareText },
+    {
+        title: 'Adviser List',
+        href: '/coordinator/adviser-list',
+        icon: Users,
+    },
+];
 
-
-
-
+const facultyNavItems: MainNavItem[] = [
+    { title: 'Dashboard', href: '/dashboard', icon: LayoutGrid },
+    { title: 'Defense Requirements', href: '/all-defense-requirements', icon: GraduationCap },
+    { title: 'My Students', href: '/adviser/students-list', icon: Users }, // <-- Add this line
+    { title: 'Schedules', href: '/schedules', icon: CalendarFold },
 ];
 
 const footerNavItems: NavItem[] = [];
@@ -102,37 +115,46 @@ export function AppSidebar() {
 
     const staffRoles = ['Administrative Assistant', 'Coordinator', 'Dean'];
     const isStaff = staffRoles.includes(user.role);
-    const items = isStaff ? assistantNavItems : studentNavItems;
+    const isFaculty = user.role === 'Faculty' || user.role === 'Adviser';
+    const items = isStaff ? assistantNavItems : (isFaculty ? facultyNavItems : studentNavItems);
 
     const [defenseRequestCount, setDefenseRequestCount] = useState<number>(0);
 
     useEffect(() => {
+        let isMounted = true;
+
         async function fetchCount() {
             try {
                 const res = await fetch('/api/defense-requests/count');
                 if (res.ok) {
                     const data = await res.json();
-                    setDefenseRequestCount(data.count);
+                    if (isMounted) setDefenseRequestCount(data.count);
                 }
             } catch {
-
-                //errrrroorror
+                // error handling (ignore for now)
             }
         }
+
         fetchCount();
-        const interval = setInterval(fetchCount, 1000);
-        return () => clearInterval(interval);
+        // Poll every 60 seconds
+        const pollInterval = setInterval(fetchCount, 60000);
+        return () => {
+            isMounted = false;
+            clearInterval(pollInterval);
+        };
     }, []);
 
     let navItems = items;
+
     if (isStaff) {
+        // FIX: badge mapping should target "Thesis & Dissertations" (where Defense Request lives)
         navItems = assistantNavItems.map(item => {
-            if (item.title === 'Requests') {
+            if (item.title === 'Thesis & Dissertations') {
                 return {
                     ...item,
                     indicator: defenseRequestCount > 0,
                     subItems: item.subItems?.map(sub =>
-                        sub.title === 'Defense Requests'
+                        sub.title === 'Defense Request'
                             ? { ...sub, count: defenseRequestCount }
                             : sub
                     ),
@@ -141,6 +163,22 @@ export function AppSidebar() {
             return item;
         });
     }
+
+    // Add state for expanded menus
+    const [expandedMenus, setExpandedMenus] = useState<string[]>(() => {
+        // Restore from localStorage
+        try {
+            const saved = localStorage.getItem("sidebar.expandedMenus");
+            return saved ? JSON.parse(saved) : [];
+        } catch {
+            return [];
+        }
+    });
+
+    // Save to localStorage whenever expandedMenus changes
+    useEffect(() => {
+        localStorage.setItem("sidebar.expandedMenus", JSON.stringify(expandedMenus));
+    }, [expandedMenus]);
 
     return (
         <Sidebar collapsible="offcanvas" className="px-3 pt-5" variant="inset">
@@ -157,7 +195,11 @@ export function AppSidebar() {
             </SidebarHeader>
 
             <SidebarContent>
-                <NavMain items={navItems} />
+                <NavMain
+                    items={navItems}
+                    expandedMenus={expandedMenus}
+                    setExpandedMenus={setExpandedMenus}
+                />
             </SidebarContent>
 
             <SidebarFooter>

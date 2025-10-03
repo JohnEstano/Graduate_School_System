@@ -17,11 +17,17 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import type { Panelist } from "@/types/index";
+import {
+  HoverCard,
+  HoverCardContent,
+  HoverCardTrigger,
+} from "@/components/ui/hover-card";
+import type { PanelistWithAssignments, PanelistHonorariumSpec } from "@/types";
 
 type Props = {
-  panelists: Panelist[];
-  onEdit: (panelist: Panelist) => void;
+  panelists: PanelistWithAssignments[];
+  honorariumSpecs: PanelistHonorariumSpec[];
+  onEdit: (panelist: PanelistWithAssignments) => void;
   onDelete: (id: number) => void;
   selected: number[];
   setSelected: (ids: number[]) => void;
@@ -30,6 +36,7 @@ type Props = {
 
 export default function PanelistsListTable({
   panelists,
+  honorariumSpecs,
   onEdit,
   onDelete,
   selected,
@@ -72,7 +79,7 @@ export default function PanelistsListTable({
   return (
     <>
       <div className="rounded-md overflow-x-auto border border-border bg-white w-full max-w-full">
-        <Table className=" ">
+        <Table>
           <TableHeader>
             <TableRow>
               <TableHead className="w-12">
@@ -86,9 +93,11 @@ export default function PanelistsListTable({
               </TableHead>
               <TableHead>Name</TableHead>
               <TableHead>Email</TableHead>
+              <TableHead>Role</TableHead>
               <TableHead>Status</TableHead>
-              <TableHead>Date Available</TableHead>
-              <TableHead className="text-center" >Actions</TableHead>
+              <TableHead>Type</TableHead>
+              <TableHead>Receivables</TableHead>
+              <TableHead className="text-center">Actions</TableHead>
             </TableRow>
           </TableHeader>
 
@@ -96,7 +105,7 @@ export default function PanelistsListTable({
             {panelists.length === 0 ? (
               <TableRow>
                 <TableCell
-                  colSpan={6}
+                  colSpan={8}
                   className="py-8 text-center text-sm text-muted-foreground"
                 >
                   No panelists found.
@@ -104,7 +113,7 @@ export default function PanelistsListTable({
               </TableRow>
             ) : (
               panelists.map((panelist) => (
-                <TableRow key={panelist.id}>
+                <TableRow className="hover:bg-muted/40 transition" key={panelist.id}>
                   <TableCell>
                     <Checkbox
                       checked={selected.includes(panelist.id)}
@@ -114,35 +123,135 @@ export default function PanelistsListTable({
                       disabled={loading}
                     />
                   </TableCell>
-
                   <TableCell>{panelist.name}</TableCell>
                   <TableCell>{panelist.email}</TableCell>
-                  <TableCell>{panelist.status}</TableCell>
                   <TableCell>
-                    {panelist.date_available
-                      ? new Date(panelist.date_available).toLocaleDateString()
-                      : "-"}
+                    {panelist.assignments && panelist.assignments.length > 0 ? (
+                      <ul>
+                        {panelist.assignments.map((a) => (
+                          <li key={a.id}>{a.role ?? panelist.role ?? "-"}</li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <span className="text-muted-foreground">-</span>
+                    )}
                   </TableCell>
-                  <TableCell className="">
+                  {/* Status */}
+                  <TableCell>
+                    <HoverCard>
+                      <HoverCardTrigger asChild>
+                        <span
+                          className={
+                            panelist.assignments && panelist.assignments.length > 0
+                              ? "inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-green-100 text-green-700 text-xs font-medium cursor-pointer"
+                              : "inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-gray-100 text-gray-500 text-xs font-medium cursor-pointer"
+                          }
+                        >
+                          {panelist.assignments && panelist.assignments.length > 0
+                            ? (
+                              <>
+                                <span className="w-1.5 h-1.5 rounded-full bg-green-500 inline-block" />
+                                Assigned
+                              </>
+                            )
+                            : (
+                              <>
+                                <span className="w-1.5 h-1.5 rounded-full bg-gray-400 inline-block" />
+                                Not Assigned
+                              </>
+                            )
+                          }
+                        </span>
+                      </HoverCardTrigger>
+                      <HoverCardContent className="w-64 p-3">
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <Avatar name={panelist.name} />
+                            <div className="font-semibold text-sm">{panelist.name}</div>
+                          </div>
+                          <div className="my-2">
+                            <div className="h-px bg-muted" />
+                          </div>
+                          {panelist.assignments && panelist.assignments.length > 0 ? (
+                            <ul className="space-y-0.5">
+                              {panelist.assignments
+                                .filter((a) => a.thesis_title)
+                                .map((a) => (
+                                  <li
+                                    key={a.id}
+                                    className="flex items-center gap-2 text-xs italic truncate max-w-[180px]"
+                                  >
+                                    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-green-100 text-green-700 font-medium">
+                                      <span className="w-1.5 h-1.5 rounded-full bg-green-500 inline-block" />
+                                      Active
+                                    </span>
+                                    <span className="text-muted-foreground">{a.thesis_title}</span>
+                                  </li>
+                                ))}
+                            </ul>
+                          ) : (
+                            <div className="text-xs text-muted-foreground mt-1">
+                              No active defenses.
+                            </div>
+                          )}
+                        </div>
+                      </HoverCardContent>
+                    </HoverCard>
+                  </TableCell>
+                  {/* Type column (no thesis title) */}
+                  <TableCell>
+                    {panelist.assignments && panelist.assignments.length > 0 ? (
+                      <ul>
+                        {panelist.assignments.map((a) => (
+                          <li key={a.id}>{a.defense_type}</li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <span className="text-muted-foreground">-</span>
+                    )}
+                  </TableCell>
+                  {/* Receivables column: just the amount, no thesis title */}
+                  <TableCell>
+                    {panelist.assignments && panelist.assignments.length > 0 ? (
+                      <ul>
+                        {panelist.assignments.map((a) => {
+                          const spec = honorariumSpecs.find(
+                            (s) => s.defense_type === a.defense_type && s.role === a.role
+                          );
+                          return (
+                            <li key={a.id}>
+                              {spec && spec.amount !== undefined && spec.amount !== null && spec.amount !== ""
+                                ? `₱${spec.amount}`
+                                : "-"}
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    ) : (
+                      <span className="text-muted-foreground">-</span>
+                    )}
+                  </TableCell>
+                  <TableCell>
                     <div className="flex justify-center gap-1">
                       <Button
-                      variant="outline"
-                      size="icon"
-                      className="h-7 w-7 p-1"
-                      onClick={() => onEdit(panelist)}
-                      disabled={loading}
-                      aria-label="Edit"
+                        variant="outline"
+                        size="icon"
+                        className="h-7 w-7 p-1 cursor-pointer"
+                        onClick={() => onEdit(panelist)}
+                        disabled={loading}
+                        aria-label="Edit"
                       >
-                      <Pencil size={14} />
+                        <Pencil size={14} />
                       </Button>
                       <Button
-                      size="icon"
-                      className="h-7 w-7 p-1"
-                      onClick={() => openDeleteDialog(panelist.id)}
-                      disabled={loading}
-                      aria-label="Delete"
+                        variant="outline"
+                        size="icon"
+                        className="h-7 w-7 p-1 cursor-pointer"
+                        onClick={() => openDeleteDialog(panelist.id)}
+                        disabled={loading}
+                        aria-label="Delete"
                       >
-                      <Trash2 size={14} />
+                        <Trash2 size={14} />
                       </Button>
                     </div>
                   </TableCell>
@@ -153,7 +262,6 @@ export default function PanelistsListTable({
         </Table>
       </div>
 
-
       {/* Shadcn Dialog for Delete Confirmation */}
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <DialogContent>
@@ -161,9 +269,7 @@ export default function PanelistsListTable({
             <DialogTitle>Confirm Delete</DialogTitle>
           </DialogHeader>
           <div className="text-muted-foreground text-sm">
-            This will delete the panelist.
-            This action cannot be
-            undone.
+            This will delete the panelist. This action cannot be undone.
           </div>
           <DialogFooter>
             <Button
@@ -174,7 +280,6 @@ export default function PanelistsListTable({
               Cancel
             </Button>
             <Button
-
               onClick={confirmDelete}
               disabled={loading}
               className=" text-white"
@@ -185,5 +290,20 @@ export default function PanelistsListTable({
         </DialogContent>
       </Dialog>
     </>
+  );
+}
+
+function Avatar({ name }: { name: string }) {
+  const initials = name
+    .split(" ")
+    .map((n) => n[0])
+    .join("")
+    .toUpperCase()
+    .slice(0, 2);
+
+  return (
+    <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 font-semibold text-sm">
+      {initials}
+    </div>
   );
 }

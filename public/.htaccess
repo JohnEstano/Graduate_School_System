@@ -23,3 +23,25 @@
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteRule ^ index.php [L]
 </IfModule>
+
+# Professional File Upload Configuration for Academic Documents
+# Support for large manuscripts, theses, and academic PDFs (up to 200MB)
+<IfModule mod_php.c>
+    php_value upload_max_filesize 200M
+    php_value post_max_size 200M
+    php_value memory_limit 512M
+    php_value max_execution_time 300
+    php_value max_input_time 300
+    php_value max_input_vars 3000
+</IfModule>
+
+# Security headers for file uploads
+<FilesMatch "\.(php|phtml|php3|php4|php5|pl|py|jsp|asp|sh|cgi)$">
+    Order Deny,Allow
+    Deny from all
+</FilesMatch>
+
+<FilesMatch "^(index\.php|css|js|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot|pdf|doc|docx)$">
+    Order Allow,Deny
+    Allow from all
+</FilesMatch>

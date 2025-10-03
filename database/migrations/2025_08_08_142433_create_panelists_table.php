@@ -15,8 +15,8 @@ return new class extends Migration
             $table->id();
             $table->string('name');
             $table->string('email')->unique();
-            $table->enum('status', ['Available', 'Not Available'])->default('Available');
-            $table->date('date_available')->nullable();
+            $table->enum('role', ['Chairperson', 'Panel Member'])->default('Panel Member');
+            $table->enum('status', ['Assigned', 'Not Assigned'])->default('Not Assigned');
             $table->timestamps();
         });
     }

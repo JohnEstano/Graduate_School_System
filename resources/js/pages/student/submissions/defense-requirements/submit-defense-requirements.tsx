@@ -1,7 +1,8 @@
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Paperclip, Check, Plus } from 'lucide-react';
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+
 import React, { useRef, useState } from 'react';
 import { useForm } from '@inertiajs/react';
 import { Stepper } from '@/components/ui/Stepper';
@@ -14,24 +15,135 @@ import {
     DialogTrigger,
 } from '@/components/ui/dialog';
 import { usePage } from '@inertiajs/react';
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import clsx from "clsx";
+import { Check, Paperclip } from 'lucide-react';
+
+
+type FacultyUser = {
+    id: number;
+    first_name: string;
+    middle_name: string | null;
+    last_name: string;
+};
+
+type AdviserSearchInputProps = {
+    value: string;
+    onChange: (val: string) => void;
+};
+
+function AdviserSearchInput({ value, onChange }: AdviserSearchInputProps) {
+    const [open, setOpen] = useState(false);
+    const [query, setQuery] = useState(value);
+    const [results, setResults] = useState<FacultyUser[]>([]);
+    const [loading, setLoading] = useState(false);
+    const inputRef = useRef<HTMLInputElement>(null);
+
+    // Keep query in sync with parent value
+    React.useEffect(() => {
+        setQuery(value);
+    }, [value]);
+
+    // Fetch faculty when query changes
+    React.useEffect(() => {
+        if (query.length < 4) {
+            setResults([]);
+            setOpen(false);
+            return;
+        }
+        setLoading(true);
+        fetch(`/api/faculty-search?q=${encodeURIComponent(query)}`)
+            .then(res => res.json())
+            .then((data: FacultyUser[]) => {
+                setResults(data);
+                setOpen(true);
+            })
+            .catch(() => setResults([]))
+            .finally(() => setLoading(false));
+    }, [query]);
+
+    // Handle input change
+    function handleInputChange(e: React.ChangeEvent<HTMLInputElement>) {
+        const val: string = e.target.value;
+        setQuery(val);
+        onChange(val);
+        if (val.length >= 4) setOpen(true);
+        else setOpen(false);
+    }
+
+    // Handle selection from dropdown
+    function handleSelect(user: FacultyUser) {
+        const fullName = `${user.first_name} ${user.middle_name ? user.middle_name + " " : ""}${user.last_name}`;
+        onChange(fullName);
+        setQuery(fullName);
+        setOpen(false);
+        inputRef.current?.blur();
+    }
+
+    // Close dropdown if clicked outside
+    function handleBlur() {
+        setTimeout(() => setOpen(false), 100);
+    }
+
+    return (
+        <div style={{ position: "relative" }}>
+            <Input
+                ref={inputRef}
+                value={query}
+                onChange={handleInputChange}
+                placeholder="Your adviser's name"
+                className="h-8 text-sm"
+                autoComplete="off"
+                onFocus={() => { if (query.length >= 4) setOpen(true); }}
+                onBlur={handleBlur}
+            />
+            {open && (
+                <div
+                    className="absolute z-10 mt-1 w-full bg-white border border-gray-200 rounded shadow"
+                    style={{ maxHeight: 200, overflowY: "auto" }}
+                >
+                    {loading && (
+                        <div className="px-2 py-1 text-xs text-muted-foreground">Searching...</div>
+                    )}
+                    {!loading && results.length === 0 && query.length >= 4 && (
+                        <div className="px-2 py-1 text-xs text-muted-foreground">No faculty found.</div>
+                    )}
+                    <ul>
+                        {results.map(user => {
+                            const fullName = `${user.first_name} ${user.middle_name ? user.middle_name + " " : ""}${user.last_name}`;
+                            return (
+                                <li
+                                    key={user.id}
+                                    className="px-2 py-2 cursor-pointer hover:bg-rose-100 text-sm"
+                                    onMouseDown={() => handleSelect(user)}
+                                >
+                                    {fullName}
+                                </li>
+                            );
+                        })}
+                    </ul>
+                </div>
+            )}
+        </div>
+    );
+}
 
 type Props = {
     onFinish?: () => void;
     open: boolean;
     onOpenChange: (open: boolean) => void;
+    acceptDefense?: boolean; // <-- add prop
 };
 
-export default function SubmitDefenseRequirements({ onFinish, open, onOpenChange }: Props) {
+export default function SubmitDefenseRequirements({ onFinish, open, onOpenChange, acceptDefense = true }: Props) {
     // Get logged-in user info from Inertia page props
     const { props } = usePage<any>();
     const user = props?.auth?.user || {};
+    const adviser = Array.isArray(user.advisers) && user.advisers.length > 0 ? user.advisers[0] : null;
 
     const manuscriptRef = useRef<HTMLInputElement>(null);
     const similarityRef = useRef<HTMLInputElement>(null);
     const recEndorsementRef = useRef<HTMLInputElement>(null);
     const proofOfPaymentRef = useRef<HTMLInputElement>(null);
+    const aviseeAdviserAttachmentRef = useRef<HTMLInputElement>(null);
 
     // Add defense_type to form data
     const { data, setData, post, processing, reset } = useForm<{
@@ -42,13 +154,15 @@ export default function SubmitDefenseRequirements({ onFinish, open, onOpenChange
         program: string;
         thesis_title: string;
         adviser: string;
+        adviser_id: number | null;
         status: string;
-        defense_type: string; // <-- added
+        defense_type: string;
         rec_endorsement: File | null;
         proof_of_payment: File | null;
         reference_no: string;
         manuscript_proposal: File | null;
         similarity_index: File | null;
+        avisee_adviser_attachment: File | null;
     }>({
         first_name: user.first_name || '',
         middle_name: user.middle_name || '',
@@ -56,14 +170,16 @@ export default function SubmitDefenseRequirements({ onFinish, open, onOpenChange
         school_id: user.school_id || '',
         program: user.program || '',
         thesis_title: '',
-        adviser: '',
+        adviser: adviser ? `${adviser.first_name} ${adviser.middle_name ? adviser.middle_name + " " : ""}${adviser.last_name}` : '',
+        adviser_id: adviser ? adviser.id : null,
         status: 'pending',
-        defense_type: '', // <-- added
+        defense_type: '',
         rec_endorsement: null,
         proof_of_payment: null,
         reference_no: '',
         manuscript_proposal: null,
         similarity_index: null,
+        avisee_adviser_attachment: null,
     });
 
     const [openDialog, setOpenDialog] = useState(false);
@@ -73,7 +189,34 @@ export default function SubmitDefenseRequirements({ onFinish, open, onOpenChange
     function handleFile(field: keyof typeof data) {
         return (e: React.ChangeEvent<HTMLInputElement>) => {
             if (e.target.files?.[0]) {
-                setData(field, e.target.files[0]);
+                const file = e.target.files[0];
+                
+                // Professional file validation
+                const maxSize = 200 * 1024 * 1024; // 200MB
+                const allowedTypes = [
+                    'application/pdf',
+                    'application/msword',
+                    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                    'image/jpeg',
+                    'image/png',
+                    'image/jpg'
+                ];
+
+                // Check file size
+                if (file.size > maxSize) {
+                    alert(`File size too large. Maximum allowed size is 200MB. Your file is ${(file.size / (1024 * 1024)).toFixed(2)}MB.`);
+                    e.target.value = '';
+                    return;
+                }
+
+                // Check file type
+                if (!allowedTypes.includes(file.type)) {
+                    alert(`File type not allowed. Please upload PDF, Word documents, or images (JPEG, PNG).`);
+                    e.target.value = '';
+                    return;
+                }
+
+                setData(field, file);
             }
         };
     }
@@ -85,6 +228,21 @@ export default function SubmitDefenseRequirements({ onFinish, open, onOpenChange
                 setShowSuccessPanel(true);
                 if (onFinish) onFinish();
             },
+            onError: (errors) => {
+                console.error('Submission failed:', errors);
+                
+                if (errors.message && errors.message.includes('POST Content-Length')) {
+                    alert('File upload failed: Files are too large. Please ensure each file is under 200MB and try again.');
+                } else if (errors.message && errors.message.includes('PostTooLargeException')) {
+                    alert('Upload size limit exceeded. Please reduce file sizes and try again.');
+                } else {
+                    const errorMessages = Object.values(errors).flat().join('\n');
+                    alert(`Submission failed:\n${errorMessages}`);
+                }
+            },
+            onProgress: (progress) => {
+                console.log('Upload progress:', progress);
+            }
         });
     }
 
@@ -166,13 +324,25 @@ export default function SubmitDefenseRequirements({ onFinish, open, onOpenChange
                             className="h-8 text-sm"
                         />
                     </div>
+                    <div>
+                        <Label className="text-xs">Adviser</Label>
+                        <Input
+                            value={adviser
+                                ? `${adviser.first_name} ${adviser.middle_name ? adviser.middle_name + " " : ""}${adviser.last_name}`
+                                : 'No adviser registered'}
+                            readOnly
+                            disabled
+                            placeholder="Adviser"
+                            className="h-8 text-sm"
+                        />
+                    </div>
                 </div>
             ),
         },
         {
             title: 'Defense Type & Thesis Information',
             content: (
-                <div className="space-y-4">
+                <div className="space-y-4 pb-10">
                     <div>
                         <Label className="text-xs mb-2 block">Type of Defense</Label>
                         <div className="flex gap-2 mb-4">
@@ -207,67 +377,59 @@ export default function SubmitDefenseRequirements({ onFinish, open, onOpenChange
                         />
                     </div>
                     <div>
-                        <Label className="text-xs">Adviser</Label>
+                        <Label className="text-xs mb-1">Reference No.</Label>
                         <Input
-                            value={data.adviser}
-                            onChange={e => setData('adviser', e.target.value)}
-                            placeholder="Adviser"
+                            value={data.reference_no}
+                            onChange={e => setData('reference_no', e.target.value)}
+                            placeholder="Reference No."
                             className="h-8 text-sm"
                         />
                     </div>
-                </div>
-            ),
-        },
-        {
-            title: 'Attachments',
-            content: (
-                <div className="space-y-4 mb-4">
-                    <Label className="text-xs">Reference No.</Label>
-                    <Input
-                        value={data.reference_no}
-                        onChange={e => setData('reference_no', e.target.value)}
-                        placeholder="Reference No."
-                        className="h-8 text-sm"
-                    />
-                    <Label className="text-xs">REC Endorsement</Label>
-                    <div className="flex items-center gap-2">
-                        <Input
-                            readOnly
-                            value={data.rec_endorsement ? data.rec_endorsement.name : ''}
-                            placeholder="No file chosen"
-                            className="flex-1 h-8 text-sm"
-                        />
-                        <Button variant="outline" type="button" onClick={() => recEndorsementRef.current?.click()} className="h-8 px-2 text-xs">
-                            <Paperclip className="mr-1 h-4 w-4" />
-                            Choose File
-                        </Button>
-                        <input
-                            type="file"
-                            ref={recEndorsementRef}
-                            className="hidden"
-                            onChange={handleFile('rec_endorsement')}
-                        />
+                    <div>
+                        <Label className="text-xs mb-1">Proof of Payment</Label>
+                        <div className="flex items-center gap-2">
+                            <Input
+                                readOnly
+                                value={data.proof_of_payment ? data.proof_of_payment.name : ''}
+                                placeholder="No file chosen"
+                                className="flex-1 h-8 text-sm"
+                            />
+                            <Button variant="outline" type="button" onClick={() => proofOfPaymentRef.current?.click()} className="h-8 px-2 text-xs">
+                                <Paperclip className="mr-1 h-4 w-4" />
+                                Choose File
+                            </Button>
+                            <input
+                                type="file"
+                                ref={proofOfPaymentRef}
+                                className="hidden"
+                                onChange={handleFile('proof_of_payment')}
+                            />
+                        </div>
                     </div>
-                    <Label className="text-xs">Proof of Payment</Label>
-                    <div className="flex items-center gap-2">
-                        <Input
-                            readOnly
-                            value={data.proof_of_payment ? data.proof_of_payment.name : ''}
-                            placeholder="No file chosen"
-                            className="flex-1 h-8 text-sm"
-                        />
-                        <Button variant="outline" type="button" onClick={() => proofOfPaymentRef.current?.click()} className="h-8 px-2 text-xs">
-                            <Paperclip className="mr-1 h-4 w-4" />
-                            Choose File
-                        </Button>
-                        <input
-                            type="file"
-                            ref={proofOfPaymentRef}
-                            className="hidden"
-                            onChange={handleFile('proof_of_payment')}
-                        />
-                    </div>
-                    <Label className="text-xs">Manuscript for Proposal</Label>
+                    {(data.defense_type === 'Prefinal' || data.defense_type === 'Final') && (
+                        <div>
+                            <Label className="text-xs">REC Endorsement</Label>
+                            <div className="flex items-center gap-2">
+                                <Input
+                                    readOnly
+                                    value={data.rec_endorsement ? data.rec_endorsement.name : ''}
+                                    placeholder="No file chosen"
+                                    className="flex-1 h-8 text-sm"
+                                />
+                                <Button variant="outline" type="button" onClick={() => recEndorsementRef.current?.click()} className="h-8 px-2 text-xs">
+                                    <Paperclip className="mr-1 h-4 w-4" />
+                                    Choose File
+                                </Button>
+                                <input
+                                    type="file"
+                                    ref={recEndorsementRef}
+                                    className="hidden"
+                                    onChange={handleFile('rec_endorsement')}
+                                />
+                            </div>
+                        </div>
+                    )}
+                    <Label className="text-xs">Manuscript</Label>
                     <div className="flex items-center gap-2">
                         <Input
                             readOnly
@@ -305,6 +467,29 @@ export default function SubmitDefenseRequirements({ onFinish, open, onOpenChange
                             onChange={handleFile('similarity_index')}
                         />
                     </div>
+                    {data.defense_type === 'Proposal' && (
+                        <div>
+                            <Label className="text-xs mb-1">Avisee-Adviser Attachment</Label>
+                            <div className="flex items-center gap-2">
+                                <Input
+                                    readOnly
+                                    value={data.avisee_adviser_attachment ? data.avisee_adviser_attachment.name : ''}
+                                    placeholder="No file chosen"
+                                    className="flex-1 h-8 text-sm"
+                                />
+                                <Button variant="outline" type="button" onClick={() => aviseeAdviserAttachmentRef.current?.click()} className="h-8 px-2 text-xs">
+                                    <Paperclip className="mr-1 h-4 w-4" />
+                                    Choose File
+                                </Button>
+                                <input
+                                    type="file"
+                                    ref={aviseeAdviserAttachmentRef}
+                                    className="hidden"
+                                    onChange={handleFile('avisee_adviser_attachment')}
+                                />
+                            </div>
+                        </div>
+                    )}
                 </div>
             ),
         },
@@ -331,9 +516,26 @@ export default function SubmitDefenseRequirements({ onFinish, open, onOpenChange
         },
     ];
 
+    // If submissions are closed, show a blocking message
+    if (!acceptDefense) {
+        return (
+            <Dialog open={open} onOpenChange={onOpenChange}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Defense Requirement Submission Closed</DialogTitle>
+                        <DialogDescription>
+                            The coordinator has disabled defense requirement submissions. Please try again later or contact your coordinator.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <Button onClick={() => onOpenChange(false)}>Close</Button>
+                </DialogContent>
+            </Dialog>
+        );
+    }
+
     return (
         <Dialog open={open} onOpenChange={handleDialogChange}>
-            <DialogContent className="flex h-[95vh] w-full max-w-3xl flex-col"> {/* wider dialog */}
+            <DialogContent className="flex h-[95vh] w-full max-w-3xl flex-col">
                 <DialogHeader>
                     <DialogTitle>Submit Defense Requirements</DialogTitle>
                     <DialogDescription>Fill up all necessary information</DialogDescription>
