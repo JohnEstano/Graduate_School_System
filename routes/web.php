@@ -1,5 +1,8 @@
 <?php
 
+
+use App\Http\Controllers\HonorariumSummaryController;
+use App\Http\Controllers\StudentRecordController;
 use App\Http\Controllers\EmailsController;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Auth;
@@ -39,12 +42,18 @@ Route::get('/', function () {
         : redirect()->route('login');
 })->name('home');
 
+
+ 
+   
+    
+
 Route::middleware('guest')->group(function () {
     // BASIC login page (adjust Inertia component path to what you actually have)
     Route::get('/login', fn() => Inertia::render('auth/Login'))->name('login');
     // Uncomment if you allow registration
     // Route::get('/register', fn() => Inertia::render('auth/Register'))->name('register');
 });
+
 
 /*
 |--------------------------------------------------------------------------
@@ -94,6 +103,20 @@ Route::middleware(['auth','verified'])->group(function () {
     })->name('settings.documents.edit');
 
 
+  
+   //Honorarium route
+    // honorarium-summary route
+    Route::get('/honorarium-summary', [HonorariumSummaryController::class, 'Index'])
+    ->name('honorarium-summary.index');
+    Route::get('/honorarium-summary/{record}/download', [HonorariumSummaryController::class, 'download'])
+    ->name('honorarium-summary.download');
+    //student-records route
+    Route::get('/student-records', [StudentRecordController::class, 'index'])->name('student-records.index');
+    Route::put('/student-records/{studentRecord}', [StudentRecordController::class, 'update'])->name('student-records.update');
+    Route::delete('/student-records/{studentRecord}', [StudentRecordController::class, 'destroy'])->name('student-records.destroy');
+    
+   
+  
     //Emails Controller
     Route::get('send-mail',[EmailsController::class,'welcomeEmail']);
 
