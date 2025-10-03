@@ -52,7 +52,7 @@ function generateYearRange(start: number, end: number): number[] {
   return years;
 }
 
-export default function Index({ records }: { records: ProgramRecord[] }) {
+export default function Index({ records = [] }: { records?: ProgramRecord[] }) {
   const [allRecords] = useState<ProgramRecord[]>(records);
   const [selectedYear, setSelectedYear] = useState<string | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
