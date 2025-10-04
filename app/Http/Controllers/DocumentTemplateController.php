@@ -37,12 +37,13 @@ class DocumentTemplateController extends Controller {
     return response()->json($tpl);
   }
 
-  public function updateFields(Request $r, DocumentTemplate $template) {
-    $payload = $r->validate(['fields'=>'required|array']);
-    $template->fields = $payload['fields'];
-    $template->version++;
-    $template->save();
-    return response()->json(['ok'=>true,'version'=>$template->version]);
+  public function updateFields(Request $request, DocumentTemplate $template)
+  {
+      $template->fields = $request->input('fields', []);
+      $template->fields_meta = $request->input('fields_meta', []);
+      $template->save();
+
+      return response()->json(['ok' => true]);
   }
 
   public function destroy(DocumentTemplate $template) {

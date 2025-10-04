@@ -475,7 +475,13 @@ Route::post('/adviser/defense-requirements/{id}/endorsement-form', function($id)
     if (!$url) {
         return response()->json(['error' => 'No URL provided'], 422);
     }
-    $req->endorsement_form = $url;
+    // Extract the relative path if a full URL is provided
+    if (preg_match('#/storage/(.+)$#', $url, $m)) {
+        $relative = $m[1];
+    } else {
+        $relative = $url;
+    }
+    $req->endorsement_form = $relative;
     $req->save();
     return response()->json(['ok' => true]);
 });

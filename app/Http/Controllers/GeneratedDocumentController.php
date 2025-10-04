@@ -42,11 +42,8 @@ class GeneratedDocumentController extends Controller {
       $generator = new \App\Services\DocumentGenerator();
       $generated = $generator->generate($tpl, $defenseRequest, $request->fields ?? []);
 
-      $url = \Storage::disk('public')->url($generated->output_path);
+      $pdfPath = storage_path('app/public/' . $generated->output_path);
 
-      return response()->json([
-          'ok' => true,
-          'download_url' => $url,
-      ]);
+      return response()->download($pdfPath, 'endorsement_form.pdf')->deleteFileAfterSend(false);
   }
 }

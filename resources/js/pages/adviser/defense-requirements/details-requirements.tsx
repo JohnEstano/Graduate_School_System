@@ -114,6 +114,7 @@ export default function DetailsRequirementsPage(rawProps: any) {
   const [endorsementFormFile, setEndorsementFormFile] = useState<File | null>(null);
   const [aiDetectionCertUploading, setAiDetectionCertUploading] = useState(false);
   const [endorsementFormUploading, setEndorsementFormUploading] = useState(false);
+  const [autoGenerating, setAutoGenerating] = useState(false);
 
   const aiDetectionInputRef = useRef<HTMLInputElement>(null);
   const endorsementInputRef = useRef<HTMLInputElement>(null);
@@ -341,11 +342,14 @@ export default function DetailsRequirementsPage(rawProps: any) {
 
   // Add state for templates
   const [templates, setTemplates] = useState<any[]>([]);
+  const [templatesLoading, setTemplatesLoading] = useState(true);
+
   useEffect(() => {
-    // Fetch templates on mount
+    setTemplatesLoading(true);
     fetch('/api/document-templates')
       .then(r => r.json())
-      .then(setTemplates);
+      .then(setTemplates)
+      .finally(() => setTemplatesLoading(false));
   }, []);
 
   // Helper to get template name by defense type
@@ -365,57 +369,33 @@ export default function DetailsRequirementsPage(rawProps: any) {
       return;
     }
     try {
-      // Generate document
       const res = await fetch("/api/generate-document", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Accept": "application/json",
+          "Accept": "application/pdf",
           "X-CSRF-TOKEN": csrf(),
         },
         body: JSON.stringify({
           template_id: template.id,
           defense_request_id: request.id,
-          fields: {}, // Use default fields from backend
+          fields: {},
         }),
       });
-      const data = await res.json();
-      if (!res.ok || !data.download_url) {
-        toast.error(data.error || "Failed to generate document.");
+      if (!res.ok) {
+        toast.error("Failed to generate document.");
         return;
       }
-
-      // Save the generated PDF as endorsement_form
-      const saveRes = await fetch(`/adviser/defense-requirements/${request.id}/endorsement-form`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Accept": "application/json",
-          "X-CSRF-TOKEN": csrf(),
-        },
-        body: JSON.stringify({
-          url: data.download_url,
-        }),
-      });
-      const saveData = await saveRes.json();
-      if (!saveRes.ok) {
-        toast.error(saveData.error || "Failed to save generated document.");
-        return;
-      }
-
-      setRequest(r => ({
-        ...r,
-        endorsement_form: data.download_url,
-      }));
-      toast.success("Endorsement Form generated and linked!");
-
-      // Automatically download the file
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
-      link.href = data.download_url;
-      link.download = data.download_url.split('/').pop() || 'endorsement_form.pdf';
+      link.href = url;
+      link.download = 'endorsement_form.pdf';
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      toast.success("Endorsement Form generated and downloaded!");
     } catch (e) {
       toast.error("Network error generating document.");
     }
