@@ -2,7 +2,7 @@
 
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Head, router } from '@inertiajs/react';
 import dayjs from 'dayjs';
 import { toast, Toaster } from 'sonner';
@@ -15,12 +15,18 @@ import {
   CircleArrowLeft,
   Signature,
   Clock,
+  Link2,
+  FileCheck2,
+  FileScan,
+  FileSignature,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { Input } from '@/components/ui/input';
 
 type DefenseRequestFull = {
   id: number;
@@ -46,6 +52,8 @@ type DefenseRequestFull = {
   workflow_history?: any[];
   last_status_updated_by?: string;
   last_status_updated_at?: string;
+  ai_detection_certificate?: string;
+  endorsement_form?: string; 
 };
 
 interface PageProps {
@@ -57,6 +65,8 @@ export default function DetailsRequirementsPage(rawProps: any) {
   const props: PageProps = rawProps || {};
   const requestProp: DefenseRequestFull | null = props.defenseRequest || null;
   const userRole: string = props.userRole || '';
+
+  const [tab, setTab] = useState<'details' | 'link-documents'>('details');
 
   const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Dashboard', href: '/dashboard' },
@@ -98,6 +108,15 @@ export default function DetailsRequirementsPage(rawProps: any) {
     action: null,
   });
   const [isLoading, setIsLoading] = useState(false);
+
+  // For document linking form
+  const [aiDetectionCertFile, setAiDetectionCertFile] = useState<File | null>(null);
+  const [endorsementFormFile, setEndorsementFormFile] = useState<File | null>(null);
+  const [aiDetectionCertUploading, setAiDetectionCertUploading] = useState(false);
+  const [endorsementFormUploading, setEndorsementFormUploading] = useState(false);
+
+  const aiDetectionInputRef = useRef<HTMLInputElement>(null);
+  const endorsementInputRef = useRef<HTMLInputElement>(null);
 
   function csrf() {
     return (
@@ -170,15 +189,22 @@ export default function DetailsRequirementsPage(rawProps: any) {
     return 'bg-amber-100 text-amber-600';
   }
 
+  // Helper to resolve file URLs (add /storage/ if not already absolute)
+  function resolveFileUrl(url?: string | null) {
+    if (!url) return null;
+    if (/^https?:\/\//i.test(url) || url.startsWith('/storage/')) return url;
+    return `/storage/${url.replace(/^\/?storage\//, '')}`;
+  }
+
   // Attachments
   const attachments = [
-    { label: "Adviser’s Endorsement", url: request.advisers_endorsement },
-    { label: 'REC Endorsement', url: request.rec_endorsement },
-    { label: 'Proof of Payment', url: request.proof_of_payment },
-    { label: 'Reference No.', url: request.reference_no },
-    { label: 'Manuscript', url: request.manuscript_proposal },
-    { label: 'Similarity Index', url: request.similarity_index },
-    { label: 'Avisee-Adviser File', url: request.avisee_adviser_attachment },
+    { label: "Adviser’s Endorsement", url: resolveFileUrl(request.advisers_endorsement) },
+    { label: 'REC Endorsement', url: resolveFileUrl(request.rec_endorsement) },
+    { label: 'Proof of Payment', url: resolveFileUrl(request.proof_of_payment) },
+    { label: 'Reference No.', url: request.reference_no }, // Not a file, keep as is
+    { label: 'Manuscript', url: resolveFileUrl(request.manuscript_proposal) },
+    { label: 'Similarity Index', url: resolveFileUrl(request.similarity_index) },
+    { label: 'Avisee-Adviser File', url: resolveFileUrl(request.avisee_adviser_attachment) },
   ];
 
   // Workflow stepper config
@@ -264,6 +290,137 @@ export default function DetailsRequirementsPage(rawProps: any) {
     return { event, desc, from, to, created, userName };
   }
 
+  // Handle document submission for the "Link Documents" tab
+  async function handleDocumentsSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    if (!request.id) return;
+    if (!aiDetectionCertFile && !endorsementFormFile) {
+      toast.error('Please select at least one document to upload.');
+      return;
+    }
+
+    const formData = new FormData();
+    if (aiDetectionCertFile) {
+      formData.append('ai_detection_certificate', aiDetectionCertFile);
+    }
+    if (endorsementFormFile) {
+      formData.append('endorsement_form', endorsementFormFile);
+    }
+
+    try {
+      if (aiDetectionCertFile) setAiDetectionCertUploading(true);
+      if (endorsementFormFile) setEndorsementFormUploading(true);
+
+      const res = await fetch(`/adviser/defense-requirements/${request.id}/documents`, {
+        method: 'POST',
+        headers: {
+          'X-CSRF-TOKEN': csrf(),
+        },
+        body: formData,
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setRequest(r => ({
+          ...r,
+          ai_detection_certificate: data.ai_detection_certificate || r.ai_detection_certificate,
+          advisers_endorsement: data.advisers_endorsement || r.advisers_endorsement,
+        }));
+        setAiDetectionCertFile(null);
+        setEndorsementFormFile(null);
+        toast.success('Documents uploaded successfully.');
+      } else {
+        toast.error(data?.error || 'Failed to upload documents.');
+      }
+    } catch {
+      toast.error('Network error uploading documents.');
+    } finally {
+      setAiDetectionCertUploading(false);
+      setEndorsementFormUploading(false);
+    }
+  }
+
+  // Add state for templates
+  const [templates, setTemplates] = useState<any[]>([]);
+  useEffect(() => {
+    // Fetch templates on mount
+    fetch('/api/document-templates')
+      .then(r => r.json())
+      .then(setTemplates);
+  }, []);
+
+  // Helper to get template name by defense type
+  function getTemplateNameForDefenseType(defenseType: string) {
+    if (/proposal/i.test(defenseType)) return "Endorsement Form (Proposal)";
+    if (/prefinal/i.test(defenseType)) return "Endorsement Form (Prefinal)";
+    if (/final/i.test(defenseType)) return "Endorsement (Final)";
+    return null;
+  }
+
+  // Auto Generate handler
+  async function handleAutoGenerate() {
+    const templateName = getTemplateNameForDefenseType(request.defense_type || "");
+    const template = templates.find(t => t.name === templateName);
+    if (!template) {
+      toast.error("No template found for this defense type.");
+      return;
+    }
+    try {
+      // Generate document
+      const res = await fetch("/api/generate-document", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Accept": "application/json",
+          "X-CSRF-TOKEN": csrf(),
+        },
+        body: JSON.stringify({
+          template_id: template.id,
+          defense_request_id: request.id,
+          fields: {}, // Use default fields from backend
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.download_url) {
+        toast.error(data.error || "Failed to generate document.");
+        return;
+      }
+
+      // Save the generated PDF as endorsement_form
+      const saveRes = await fetch(`/adviser/defense-requirements/${request.id}/endorsement-form`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Accept": "application/json",
+          "X-CSRF-TOKEN": csrf(),
+        },
+        body: JSON.stringify({
+          url: data.download_url,
+        }),
+      });
+      const saveData = await saveRes.json();
+      if (!saveRes.ok) {
+        toast.error(saveData.error || "Failed to save generated document.");
+        return;
+      }
+
+      setRequest(r => ({
+        ...r,
+        endorsement_form: data.download_url,
+      }));
+      toast.success("Endorsement Form generated and linked!");
+
+      // Automatically download the file
+      const link = document.createElement('a');
+      link.href = data.download_url;
+      link.download = data.download_url.split('/').pop() || 'endorsement_form.pdf';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (e) {
+      toast.error("Network error generating document.");
+    }
+  }
+
   const sectionClass = 'rounded-lg border p-5 space-y-3';
 
   return (
@@ -272,13 +429,25 @@ export default function DetailsRequirementsPage(rawProps: any) {
       <div className="p-5 space-y-6">
         <Head title={request.thesis_title || `Defense Request #${request.id}`} />
         <div className="flex items-center justify-between gap-3 flex-wrap">
-          <Button
-            variant="outline"
-            onClick={() => router.visit('/all-defense-requirements')}
-            className="h-8 px-2"
-          >
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              onClick={() => router.visit('/all-defense-requirements')}
+              className="h-8 px-2"
+            >
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+            <Tabs value={tab} onValueChange={v => setTab(v as typeof tab)}>
+              <TabsList className="h-8">
+                <TabsTrigger value="details" className="flex items-center gap-1 text-sm font-medium px-3">
+                  <FileText className="h-4 w-4" /> Details
+                </TabsTrigger>
+                <TabsTrigger value="link-documents" className="flex items-center gap-1 text-sm font-medium px-3">
+                  <Link2 className="h-4 w-4" /> Link Documents
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
+          </div>
           <div className="flex gap-2">
             <Button
               size="sm"
@@ -314,110 +483,231 @@ export default function DetailsRequirementsPage(rawProps: any) {
         <div className="flex flex-col md:flex-row gap-5 mb-2">
           {/* Main column: all cards stacked, fixed width */}
           <div className="w-full md:max-w-3xl mx-auto flex flex-col gap-5">
-            {/* Submission summary card */}
-            <div className="rounded-xl border p-8 bg-white dark:bg-zinc-900">
-              {/* Thesis Title Header with Status */}
-              <div className="mb-1 flex flex-col md:flex-row md:items-center md:justify-between gap-2">
-                <div>
-                  <div className="text-2xl font-semibold">{request.thesis_title}</div>
-                  <div className="text-xs text-muted-foreground font-medium mt-0.5">Thesis Title</div>
-                </div>
-                {request.status && (
-                  <span
-                    className={`text-xs font-semibold px-2 py-0.5 rounded-full mt-2 md:mt-0 ${statusBadgeColor(
-                      request.status
-                    )}`}
-                  >
-                    {request.status}
-                  </span>
-                )}
-              </div>
-              {/* Info Grid */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-6 mt-6">
-                <div>
-                  <div className="text-xs text-muted-foreground mb-1">Presenter</div>
-                  <div className="flex items-center gap-3">
-                    <Avatar className="h-8 w-8">
-                      <AvatarFallback className="text-base font-bold bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-200">
-                        {getInitials(request)}
-                      </AvatarFallback>
-                    </Avatar>
+            <Tabs value={tab} onValueChange={v => setTab(v as typeof tab)} className="w-full">
+              {/* DETAILS TAB */}
+              <TabsContent value="details" className="space-y-5">
+                {/* Submission summary card */}
+                <div className="rounded-xl border p-8 bg-white dark:bg-zinc-900">
+                  {/* Thesis Title Header with Status */}
+                  <div className="mb-1 flex flex-col md:flex-row md:items-center md:justify-between gap-2">
                     <div>
-                      <div className="font-medium text-sm leading-tight">
-                        {request.first_name} {request.middle_name ? `${request.middle_name} ` : ''}{request.last_name}
+                      <div className="text-2xl font-semibold">{request.thesis_title}</div>
+                      <div className="text-xs text-muted-foreground font-medium mt-0.5">Thesis Title</div>
+                    </div>
+                    {request.status && (
+                      <span
+                        className={`text-xs font-semibold px-2 py-0.5 rounded-full mt-2 md:mt-0 ${statusBadgeColor(
+                          request.status
+                        )}`}
+                      >
+                        {request.status}
+                      </span>
+                    )}
+                  </div>
+                  {/* Info Grid */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-6 mt-6">
+                    <div>
+                      <div className="text-xs text-muted-foreground mb-1">Presenter</div>
+                      <div className="flex items-center gap-3">
+                        <Avatar className="h-8 w-8">
+                          <AvatarFallback className="text-base font-bold bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-200">
+                            {getInitials(request)}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div>
+                          <div className="font-medium text-sm leading-tight">
+                            {request.first_name} {request.middle_name ? `${request.middle_name} ` : ''}{request.last_name}
+                          </div>
+                          <div className="text-xs text-muted-foreground mt-0.5">
+                            {request.school_id}
+                          </div>
+                        </div>
                       </div>
-                      <div className="text-xs text-muted-foreground mt-0.5">
-                        {request.school_id}
+                    </div>
+                    <div>
+                      <div className="text-xs text-muted-foreground mb-1">Program</div>
+                      <div className="font-medium text-sm">{request.program}</div>
+                    </div>
+                    <div>
+                      <div className="text-xs text-muted-foreground mb-1">Defense Type</div>
+                      <Badge variant="secondary" className="text-xs font-medium">
+                        {request.defense_type ?? '—'}
+                      </Badge>
+                    </div>
+                    <div>
+                      <div className="text-xs text-muted-foreground mb-1">Submitted At</div>
+                      <div className="font-medium text-sm">{formatDate(request.submitted_at)}</div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Attachments */}
+                <div className={sectionClass}>
+                  <h2 className="text-sm font-semibold flex items-center gap-2">
+                    <FileText className="h-4 w-4" /> Attachments
+                  </h2>
+                  <Separator />
+                  <div className="space-y-2 text-sm">
+                    {/* Standard attachments */}
+                    {attachments
+                      .filter(a => a.label !== 'AI Detection Certificate' && a.label !== 'Endorsement Form')
+                      .map(a =>
+                        a.url ? (
+                          <a
+                            key={a.label}
+                            href={a.label === 'Reference No.' ? undefined : a.url}
+                            target={a.label === 'Reference No.' ? undefined : "_blank"}
+                            rel={a.label === 'Reference No.' ? undefined : "noopener noreferrer"}
+                            className="flex items-center gap-2 px-3 py-2 rounded-md border bg-white dark:bg-zinc-900 hover:bg-muted transition"
+                          >
+                            <FileText className="h-4 w-4" />
+                            <span className="font-medium">{a.label}</span>
+                            <span className="text-xs text-muted-foreground ml-auto truncate max-w-[180px]">
+                              {typeof a.url === 'string' && a.label !== 'Reference No.' ? a.url.split('/').pop() : (a.url || '')}
+                            </span>
+                          </a>
+                        ) : null
+                      )}
+
+                    {/* AI Detection Certificate (linked by adviser) */}
+                    <div className="flex items-center gap-2 px-3 py-2 rounded-md border bg-white dark:bg-zinc-900">
+                      <FileScan className="h-4 w-4" />
+                      <span className="font-medium">AI Detection Certificate</span>
+                      {request.ai_detection_certificate ? (
+                        <a
+                          href={request.ai_detection_certificate}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="ml-auto text-xs underline truncate max-w-[180px]"
+                        >
+                          {request.ai_detection_certificate.split('/').pop()}
+                        </a>
+                      ) : (
+                        <span className="ml-auto text-xs text-muted-foreground">Not uploaded</span>
+                      )}
+                    </div>
+
+                    {/* Endorsement Form (linked by adviser) */}
+                    <div className="flex items-center gap-2 px-3 py-2 rounded-md border bg-white dark:bg-zinc-900">
+                      <FileSignature className="h-4 w-4" />
+                      <span className="font-medium">Endorsement Form</span>
+                      {request.endorsement_form ? (
+                        <a
+                          href={request.endorsement_form}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="ml-auto text-xs underline truncate max-w-[180px]"
+                        >
+                          {request.endorsement_form.split('/').pop()}
+                        </a>
+                      ) : (
+                        <span className="ml-auto text-xs text-muted-foreground">Not uploaded</span>
+                      )}
+                    </div>
+
+                    {/* If no attachments at all */}
+                    {!attachments.some(a => a.url) &&
+                      !request.ai_detection_certificate &&
+                      !request.endorsement_form && (
+                        <p className="text-sm text-muted-foreground">
+                          No attachments.
+                        </p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Committee (read-only summary) */}
+                <div className={sectionClass}>
+                  <h2 className="text-sm font-semibold flex items-center gap-2">
+                    <Users className="h-4 w-4" /> Committee
+                  </h2>
+                  <Separator />
+                  <div className="grid md:grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <div className="text-[11px] text-muted-foreground uppercase tracking-wide">
+                        Adviser
+                      </div>
+                      <div className="font-medium">
+                        {request.defense_adviser || '—'}
                       </div>
                     </div>
                   </div>
                 </div>
-                <div>
-                  <div className="text-xs text-muted-foreground mb-1">Program</div>
-                  <div className="font-medium text-sm">{request.program}</div>
-                </div>
-                <div>
-                  <div className="text-xs text-muted-foreground mb-1">Defense Type</div>
-                  <Badge variant="secondary" className="text-xs font-medium">
-                    {request.defense_type ?? '—'}
-                  </Badge>
-                </div>
-                <div>
-                  <div className="text-xs text-muted-foreground mb-1">Submitted At</div>
-                  <div className="font-medium text-sm">{formatDate(request.submitted_at)}</div>
-                </div>
-              </div>
-            </div>
+              </TabsContent>
 
-            {/* Attachments */}
-            <div className={sectionClass}>
-              <h2 className="text-sm font-semibold flex items-center gap-2">
-                <FileText className="h-4 w-4" /> Attachments
-              </h2>
-              <Separator />
-              <div className="space-y-2 text-sm">
-                {attachments.map(a =>
-                  a.url ? (
-                    <a
-                      key={a.label}
-                      href={a.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center gap-2 px-3 py-2 rounded-md border hover:bg-muted transition"
+              {/* LINK DOCUMENTS TAB */}
+              <TabsContent value="link-documents" className="space-y-5">
+                <form onSubmit={handleDocumentsSubmit} className="space-y-5">
+                  {/* AI Detection Certificate Section */}
+                  <div className={sectionClass}>
+                    <h2 className="text-base font-semibold flex items-center gap-2">
+                      <FileScan className="h-5 w-5" /> AI Detection Certificate
+                    </h2>
+                    <Separator />
+                    <div className="flex flex-col gap-3 mt-2">
+                      <input
+                        ref={aiDetectionInputRef}
+                        type="file"
+                        accept=".pdf,.jpg,.jpeg,.png"
+                        className="block w-full text-sm file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary"
+                        onChange={e => setAiDetectionCertFile(e.target.files?.[0] || null)}
+                        disabled={aiDetectionCertUploading}
+                      />
+                      {aiDetectionCertFile && (
+                        <div className="text-xs text-muted-foreground">
+                          Selected: {aiDetectionCertFile.name}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  {/* Endorsement Form Section */}
+                  <div className={sectionClass}>
+                    <h2 className="text-base font-semibold flex items-center gap-2">
+                      <FileSignature className="h-5 w-5" /> Endorsement Form
+                    </h2>
+                    <Separator />
+                    <div className="flex flex-col gap-3 mt-2">
+                      <div className="flex gap-2">
+                        <Button
+                          type="button"
+                          variant="secondary"
+                          onClick={handleAutoGenerate}
+                          disabled={endorsementFormUploading}
+                        >
+                          Auto Generate
+                        </Button>
+                        <input
+                          ref={endorsementInputRef}
+                          type="file"
+                          accept=".pdf,.jpg,.jpeg,.png"
+                          className="block w-full text-sm file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary"
+                          onChange={e => setEndorsementFormFile(e.target.files?.[0] || null)}
+                          disabled={endorsementFormUploading}
+                        />
+                      </div>
+                      {endorsementFormFile && (
+                        <div className="text-xs text-muted-foreground">
+                          Selected: {endorsementFormFile.name}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex justify-end">
+                    <Button
+                      type="submit"
+                      disabled={aiDetectionCertUploading || endorsementFormUploading}
+                      className="gap-2"
                     >
-                      <FileText className="h-4 w-4" />
-                      <span className="font-medium">{a.label}</span>
-                      <span className="text-xs text-muted-foreground ml-auto truncate max-w-[180px]">
-                        {typeof a.url === 'string' ? a.url.split('/').pop() : ''}
-                      </span>
-                    </a>
-                  ) : null
-                )}
-                {!attachments.some(a => a.url) && (
-                  <p className="text-sm text-muted-foreground">
-                    No attachments.
-                  </p>
-                )}
-              </div>
-            </div>
-
-            {/* Committee (read-only summary) */}
-            <div className={sectionClass}>
-              <h2 className="text-sm font-semibold flex items-center gap-2">
-                <Users className="h-4 w-4" /> Committee
-              </h2>
-              <Separator />
-              <div className="grid md:grid-cols-2 gap-4 text-sm">
-                <div>
-                  <div className="text-[11px] text-muted-foreground uppercase tracking-wide">
-                    Adviser
+                      {aiDetectionCertUploading || endorsementFormUploading ? (
+                        <span>Uploading...</span>
+                      ) : (
+                        <span>Submit Documents</span>
+                      )}
+                    </Button>
                   </div>
-                  <div className="font-medium">
-                    {request.defense_adviser || '—'}
-                  </div>
-                </div>
-              </div>
-            </div>
+                </form>
+              </TabsContent>
+            </Tabs>
           </div>
 
           {/* Workflow Progress Stepper sidebar */}

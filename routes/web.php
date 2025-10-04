@@ -450,3 +450,35 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/api/adviser/code', [AdviserStudentController::class, 'getAdviserCode']);
     Route::delete('/api/adviser/students/{student}', [AdviserStudentController::class, 'destroy']);
 });
+
+// Adviser view: Defense Requirement Details (for /adviser/defense-requirements/{id}/details)
+Route::get('/adviser/defense-requirements/{id}/details', function($id) {
+    $user = Auth::user();
+    if (!$user || !in_array($user->role, ['Adviser', 'Faculty'])) abort(403);
+
+    $defenseRequest = \App\Models\DefenseRequest::findOrFail($id);
+
+    // You may want to add more mapping/logic here as needed
+    return Inertia::render('adviser/defense-requirements/details-requirements', [
+        'defenseRequest' => $defenseRequest,
+        'userRole' => $user->role,
+    ]);
+})->name('adviser.defense-requirements.details');
+
+/* Adviser: Upload documents for defense requirements */
+Route::post('/adviser/defense-requirements/{defenseRequest}/documents', [DefenseRequestController::class, 'uploadDocuments'])
+    ->name('adviser.defense-requirements.upload-documents');
+
+Route::post('/adviser/defense-requirements/{id}/endorsement-form', function($id) {
+    $req = \App\Models\DefenseRequest::findOrFail($id);
+    $url = request('url');
+    if (!$url) {
+        return response()->json(['error' => 'No URL provided'], 422);
+    }
+    $req->endorsement_form = $url;
+    $req->save();
+    return response()->json(['ok' => true]);
+});
+
+/* Document Generation API */
+Route::post('/api/generate-document', [GeneratedDocumentController::class, 'generateDocument']);

@@ -52,6 +52,12 @@ import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import {
+  Tabs,
+  TabsList,
+  TabsTrigger,
+  TabsContent,
+} from '@/components/ui/tabs';
 
 type PanelMemberOption = {
   id: string;
@@ -89,6 +95,11 @@ export type DefenseRequestFull = {
   rec_endorsement?: string;
   proof_of_payment?: string;
   reference_no?: string;
+  endorsement_form?: string | null;
+  manuscript_proposal?: string | null;
+  similarity_index?: string | null;
+  avisee_adviser_attachment?: string | null;
+  ai_detection_certificate?: string | null;
   last_status_updated_by?: string;          // could be an id
   last_status_updated_by_name?: string;     // added: friendly name if backend provides
   last_status_updated_at?: string;
@@ -514,25 +525,24 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
     return 'bg-amber-100 text-amber-600';
   }
 
-  const attachments = [
-    { label: "Adviser’s Endorsement", url: request.advisers_endorsement },
-    { label: 'REC Endorsement', url: request.rec_endorsement },
-    { label: 'Proof of Payment', url: request.proof_of_payment },
-    { label: 'Reference No.', url: request.reference_no }
-  ];
+  // Helper to resolve file URLs (add /storage/ if not already absolute)
+  function resolveFileUrl(url?: string | null) {
+    if (!url) return null;
+    if (/^https?:\/\//i.test(url) || url.startsWith('/storage/')) return url;
+    return `/storage/${url.replace(/^\/?storage\//, '')}`;
+  }
 
-  function parseISODate(d: string) {
-    const parts = d.split('-').map(Number);
-    if (parts.length === 3) {
-      return new Date(parts[0], parts[1] - 1, parts[2]);
-    }
-    return new Date(NaN);
-  }
-  function formatISODate(d: Date) {
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(
-      d.getDate()
-    ).padStart(2, '0')}`;
-  }
+  // Attachments (show all, including manuscript, similarity, avisee, etc.)
+  const attachments = [
+    { label: "Adviser’s Endorsement", url: resolveFileUrl(request.advisers_endorsement) },
+    { label: 'REC Endorsement', url: resolveFileUrl(request.rec_endorsement) },
+    { label: 'Proof of Payment', url: resolveFileUrl(request.proof_of_payment) },
+    { label: 'Manuscript', url: resolveFileUrl(request.manuscript_proposal) },
+    { label: 'Similarity Index', url: resolveFileUrl(request.similarity_index) },
+    { label: 'Avisee-Adviser File', url: resolveFileUrl(request.avisee_adviser_attachment) },
+    { label: 'AI Detection Certificate', url: resolveFileUrl(request.ai_detection_certificate) },
+    { label: 'Endorsement Form', url: resolveFileUrl(request.endorsement_form) },
+  ];
 
   // Helper for workflow history rendering robustness
   function resolveHistoryFields(item: any) {
@@ -649,26 +659,47 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
     return format(date, 'hh:mm a');
   }
 
+  // Tabs: "details" and "assign-schedule"
+  const [tab, setTab] = useState<'details' | 'assign-schedule'>('details');
+
   return (
     <AppLayout breadcrumbs={breadcrumbs}>
       <Toaster position="bottom-right" richColors closeButton />
       <div className="p-5 space-y-6">
         <Head title={request.thesis_title || `Defense Request #${request.id}`} />
         <div className="flex items-center justify-between gap-3 flex-wrap">
-          <Button
-            variant="outline"
-            onClick={() => router.visit('/defense-request')}
-            className="h-8 px-2"
-          >
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              onClick={() => router.visit('/defense-request')}
+              className="h-8 px-2"
+            >
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+            {/* Tabs beside back arrow */}
+            <Tabs value={tab} onValueChange={v => setTab(v as 'details' | 'assign-schedule')}>
+              <TabsList className="h-8">
+                <TabsTrigger value="details" className="flex items-center gap-1 text-sm px-3">
+                  <FileText className="h-4 w-4" /> Details
+                </TabsTrigger>
+                <TabsTrigger value="assign-schedule" className="flex items-center gap-1 text-sm font-medium px-3">
+                  <Calendar className="h-4 w-4" />
+                  Assign &amp; Schedule
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
+          </div>
           {canEdit && (
             <div className="flex gap-2">
               <Button
                 size="sm"
                 variant="outline"
                 onClick={() => setConfirm({ open: true, action: 'approve' })}
-                disabled={isLoading || request.status === 'Approved'}
+                disabled={
+                  isLoading ||
+                  request.status === 'Approved' ||
+                  request.workflow_state === 'completed'
+                }
               >
                 <CheckCircle className="h-4 w-4 mr-1 text-green-600" />
                 Approve
@@ -677,7 +708,11 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
                 size="sm"
                 variant="outline"
                 onClick={() => setConfirm({ open: true, action: 'reject' })}
-                disabled={isLoading || request.status === 'Rejected'}
+                disabled={
+                  isLoading ||
+                  request.status === 'Rejected' ||
+                  request.workflow_state === 'completed'
+                }
               >
                 <XCircle className="h-4 w-4 mr-1 text-red-600" />
                 Reject
@@ -686,7 +721,11 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
                 size="sm"
                 variant="outline"
                 onClick={() => setConfirm({ open: true, action: 'retrieve' })}
-                disabled={isLoading || request.status === 'Pending'}
+                disabled={
+                  isLoading ||
+                  request.status === 'Pending' ||
+                  request.workflow_state === 'completed'
+                }
               >
                 <CircleArrowLeft className="h-4 w-4 mr-1 text-blue-600" />
                 Retrieve
@@ -695,296 +734,309 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
           )}
         </div>
 
-        {/* Submission section and Workflow Progress side by side */}
+        {/* Main content and Workflow Progress */}
         <div className="flex flex-col md:flex-row gap-5 mb-2">
-          {/* Main column: all cards stacked, fixed width */}
+          {/* Main column */}
           <div className="w-full md:max-w-3xl mx-auto flex flex-col gap-5">
-            {/* Submission summary card */}
-            <div className="rounded-xl border p-8 bg-white dark:bg-zinc-900">
-              {/* Thesis Title Header with Status */}
-              <div className="mb-1 flex flex-col md:flex-row md:items-center md:justify-between gap-2">
-                <div>
-                  <div className="text-2xl font-semibold">{request.thesis_title}</div>
-                  <div className="text-xs text-muted-foreground font-medium mt-0.5">Thesis Title</div>
-                </div>
-                {request.status && (
-                  <span
-                    className={`text-xs font-semibold px-2 py-0.5 rounded-full mt-2 md:mt-0 ${statusBadgeColor(
-                      request.status
-                    )}`}
-                  >
-                    {request.status}
-                  </span>
-                )}
-              </div>
-              {/* Info Grid */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-6 mt-6">
-                <div>
-                  <div className="text-xs text-muted-foreground mb-1">Presenter</div>
-                  <div className="flex items-center gap-3">
-                    <Avatar className="h-8 w-8">
-                      <AvatarFallback className="text-base font-bold bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-200">
-                        {getInitials(request)}
-                      </AvatarFallback>
-                    </Avatar>
+            <Tabs value={tab} onValueChange={v => setTab(v as 'details' | 'assign-schedule')} className="w-full">
+              {/* DETAILS TAB */}
+              <TabsContent value="details" className="space-y-5">
+                {/* Submission summary card */}
+                <div className="rounded-xl border p-8 bg-white dark:bg-zinc-900">
+                  {/* Thesis Title Header with Status */}
+                  <div className="mb-1 flex flex-col md:flex-row md:items-center md:justify-between gap-2">
                     <div>
-                      <div className="font-medium text-sm leading-tight">
-                        {request.first_name} {request.middle_name ? `${request.middle_name} ` : ''}{request.last_name}
-                      </div>
-                      <div className="text-xs text-muted-foreground mt-0.5">
-                        {request.school_id}
-                      </div>
+                      <div className="text-2xl font-semibold">{request.thesis_title}</div>
+                      <div className="text-xs text-muted-foreground font-medium mt-0.5">Thesis Title</div>
                     </div>
-                  </div>
-                </div>
-                <div>
-                  <div className="text-xs text-muted-foreground mb-1">Program</div>
-                  <div className="font-medium text-sm">{request.program}</div>
-                </div>
-                <div>
-                  <div className="text-xs text-muted-foreground mb-1">Defense Type</div>
-                  <Badge variant="secondary" className="text-xs font-medium">
-                    {request.defense_type ?? '—'}
-                  </Badge>
-                </div>
-                <div>
-                  <div className="text-xs text-muted-foreground mb-1">Scheduled Date</div>
-                  <div className="font-medium text-sm">{formatDate(request.scheduled_date)}</div>
-                </div>
-                <div>
-                  <div className="text-xs text-muted-foreground mb-1">Time</div>
-                  <div className="font-medium text-sm">
-                    {request.scheduled_time
-                      ? `${formatTime12h(request.scheduled_time)}${request.scheduled_end_time ? ' - ' + formatTime12h(request.scheduled_end_time) : ''}`
-                      : '—'}
-                  </div>
-                </div>
-                <div>
-                  <div className="text-xs text-muted-foreground mb-1">Venue</div>
-                  <div className="font-medium text-sm">{request.defense_venue || '—'}</div>
-                </div>
-                <div>
-                  <div className="text-xs text-muted-foreground mb-1">Mode</div>
-                  <div className="font-medium text-sm">{request.defense_mode ? (request.defense_mode === 'face-to-face' ? 'Face-to-Face' : 'Online') : '—'}</div>
-                </div>
-                <div className="md:col-span-2">
-                  <div className="text-xs text-muted-foreground mb-1">Notes</div>
-                  <div className="font-medium text-sm">{request.scheduling_notes || '—'}</div>
-                </div>
-              </div>
-            </div>
-
-            {/* Committee (read-only summary) */}
-            <div className={sectionClass}>
-              <h2 className="text-sm font-semibold flex items-center gap-2">
-                <Users className="h-4 w-4" /> Committee
-              </h2>
-              <Separator />
-              <div className="grid md:grid-cols-2 gap-4 text-sm">
-                <div>
-                  <div className="text-[11px] text-muted-foreground uppercase tracking-wide">
-                    Adviser
-                  </div>
-                  <div className="font-medium">
-                    {request.defense_adviser || '—'}
-                  </div>
-                </div>
-                {[
-                  {
-                    label: 'Chairperson',
-                    v: panels.defense_chairperson || request.defense_chairperson
-                  },
-                  {
-                    label: 'Panelist 1',
-                    v: panels.defense_panelist1 || request.defense_panelist1
-                  },
-                  {
-                    label: 'Panelist 2',
-                    v: panels.defense_panelist2 || request.defense_panelist2
-                  },
-                  {
-                    label: 'Panelist 3',
-                    v: panels.defense_panelist3 || request.defense_panelist3
-                  },
-                  {
-                    label: 'Panelist 4',
-                    v: panels.defense_panelist4 || request.defense_panelist4
-                  }
-                ].map(r => (
-                  <div key={r.label}>
-                    <div className="text-[11px] text-muted-foreground uppercase tracking-wide">
-                      {r.label}
-                    </div>
-                    <div className="font-medium">{r.v || '—'}</div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Attachments */}
-            <div className={sectionClass}>
-              <h2 className="text-sm font-semibold flex items-center gap-2">
-                <FileText className="h-4 w-4" /> Attachments
-              </h2>
-              <Separator />
-              <div className="space-y-2 text-sm">
-                {attachments.map(a =>
-                  a.url ? (
-                    <a
-                      key={a.label}
-                      href={a.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center gap-2 px-3 py-2 rounded-md border hover:bg-muted transition"
-                    >
-                      <FileText className="h-4 w-4" />
-                      <span className="font-medium">{a.label}</span>
-                      <span className="text-xs text-muted-foreground ml-auto truncate max-w-[180px]">
-                        {a.url.split('/').pop()}
+                    {request.status && (
+                      <span
+                        className={`text-xs font-semibold px-2 py-0.5 rounded-full mt-2 md:mt-0 ${statusBadgeColor(
+                          request.status
+                        )}`}
+                      >
+                        {request.status}
                       </span>
-                    </a>
-                  ) : null
-                )}
-                {!attachments.some(a => a.url) && (
-                  <p className="text-sm text-muted-foreground">
-                    No attachments.
-                  </p>
-                )}
-              </div>
-            </div>
+                    )}
+                  </div>
+                  {/* Info Grid */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-6 mt-6">
+                    <div>
+                      <div className="text-xs text-muted-foreground mb-1">Presenter</div>
+                      <div className="flex items-center gap-3">
+                        <Avatar className="h-8 w-8">
+                          <AvatarFallback className="text-base font-bold bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-200">
+                            {getInitials(request)}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div>
+                          <div className="font-medium text-sm leading-tight">
+                            {request.first_name} {request.middle_name ? `${request.middle_name} ` : ''}{request.last_name}
+                          </div>
+                          <div className="text-xs text-muted-foreground mt-0.5">
+                            {request.school_id}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-xs text-muted-foreground mb-1">Program</div>
+                      <div className="font-medium text-sm">{request.program}</div>
+                    </div>
+                    <div>
+                      <div className="text-xs text-muted-foreground mb-1">Defense Type</div>
+                      <Badge variant="secondary" className="text-xs font-medium">
+                        {request.defense_type ?? '—'}
+                      </Badge>
+                    </div>
+                    <div>
+                      <div className="text-xs text-muted-foreground mb-1">Scheduled Date</div>
+                      <div className="font-medium text-sm">{formatDate(request.scheduled_date)}</div>
+                    </div>
+                    <div>
+                      <div className="text-xs text-muted-foreground mb-1">Time</div>
+                      <div className="font-medium text-sm">
+                        {request.scheduled_time
+                          ? `${formatTime12h(request.scheduled_time)}${request.scheduled_end_time ? ' - ' + formatTime12h(request.scheduled_end_time) : ''}`
+                          : '—'}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-xs text-muted-foreground mb-1">Venue</div>
+                      <div className="font-medium text-sm">{request.defense_venue || '—'}</div>
+                    </div>
+                    <div>
+                      <div className="text-xs text-muted-foreground mb-1">Mode</div>
+                      <div className="font-medium text-sm">{request.defense_mode ? (request.defense_mode === 'face-to-face' ? 'Face-to-Face' : 'Online') : '—'}</div>
+                    </div>
+                    <div className="md:col-span-2">
+                      <div className="text-xs text-muted-foreground mb-1">Notes</div>
+                      <div className="font-medium text-sm">{request.scheduling_notes || '—'}</div>
+                    </div>
+                  </div>
+                </div>
 
-            {/* Panel Assignment */}
-            <div className={sectionClass}>
-              <h2 className="text-sm font-semibold flex items-center gap-2">
-                <Users className="h-4 w-4" /> Panel Assignment
-              </h2>
-              <Separator />
-              <div className="grid md:grid-cols-2 gap-4">
-                {[
-                  { label: 'Chairperson', key: 'defense_chairperson' },
-                  { label: 'Panelist 1', key: 'defense_panelist1' },
-                  { label: 'Panelist 2', key: 'defense_panelist2' },
-                  { label: 'Panelist 3', key: 'defense_panelist3' },
-                  { label: 'Panelist 4', key: 'defense_panelist4' }
-                ].map(({ label, key }) => (
-                  <PanelMemberCombobox
-                    key={key}
-                    label={label}
-                    value={panels[key as keyof typeof panels]}
-                    onChange={v => setPanels(p => ({ ...p, [key]: v }))}
-                    options={panelMembers}
-                    disabled={!canEdit || loadingMembers}
-                    taken={taken}
-                  />
-                ))}
-              </div>
-              <div className="flex justify-end mt-4">
-                <Button
-                  onClick={savePanels}
-                  disabled={!canEdit || savingPanels}
-                  className="gap-2 dark:bg-rose-500 text-white hover:cursor-pointer"
-                >
-                  {savingPanels && <Loader2 className="animate-spin h-4 w-4" />}
-                  <Save className="h-4 w-4" />
-                  Save Panel Assignment
-                </Button>
-              </div>
-              {panelLoadError && (
-                <div className="text-xs text-red-500 mt-2">{panelLoadError}</div>
-              )}
-            </div>
+                {/* Committee (read-only summary) */}
+                <div className={sectionClass}>
+                  <h2 className="text-sm font-semibold flex items-center gap-2">
+                    <Users className="h-4 w-4" /> Committee
+                  </h2>
+                  <Separator />
+                  <div className="grid md:grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <div className="text-[11px] text-muted-foreground uppercase tracking-wide">
+                        Adviser
+                      </div>
+                      <div className="font-medium">
+                        {request.defense_adviser || '—'}
+                      </div>
+                    </div>
+                    {[
+                      {
+                        label: 'Chairperson',
+                        v: panels.defense_chairperson || request.defense_chairperson
+                      },
+                      {
+                        label: 'Panelist 1',
+                        v: panels.defense_panelist1 || request.defense_panelist1
+                      },
+                      {
+                        label: 'Panelist 2',
+                        v: panels.defense_panelist2 || request.defense_panelist2
+                      },
+                      {
+                        label: 'Panelist 3',
+                        v: panels.defense_panelist3 || request.defense_panelist3
+                      },
+                      {
+                        label: 'Panelist 4',
+                        v: panels.defense_panelist4 || request.defense_panelist4
+                      }
+                    ].map(r => (
+                      <div key={r.label}>
+                        <div className="text-[11px] text-muted-foreground uppercase tracking-wide">
+                          {r.label}
+                        </div>
+                        <div className="font-medium">{r.v || '—'}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
 
-            {/* Scheduling */}
-            <div className={sectionClass}>
-              <h2 className="text-sm font-semibold flex items-center gap-2">
-                <Calendar className="h-4 w-4" /> Scheduling
-              </h2>
-              <Separator />
-              <div className="grid md:grid-cols-2 gap-4">
-                <div>
-                  <div className="text-xs text-muted-foreground mb-1">Date</div>
-                  <Input
-                    type="date"
-                    value={schedule.scheduled_date}
-                    onChange={e =>
-                      setSchedule(s => ({ ...s, scheduled_date: e.target.value }))
-                    }
-                    disabled={!canEdit}
-                  />
+                {/* Attachments */}
+                <div className={sectionClass}>
+                  <h2 className="text-sm font-semibold flex items-center gap-2">
+                    <FileText className="h-4 w-4" /> Attachments
+                  </h2>
+                  <Separator />
+                  <div className="space-y-2 text-sm">
+                    {attachments.filter(a => !!a.url).length === 0 && (
+                      <p className="text-sm text-muted-foreground">No attachments.</p>
+                    )}
+                    {attachments
+                      .filter(a => !!a.url)
+                      .map(a => (
+                        <a
+                          key={a.label}
+                          href={a.url!}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-2 px-3 py-2 rounded-md border bg-white dark:bg-zinc-900 hover:bg-muted transition"
+                        >
+                          <FileText className="h-4 w-4" />
+                          <span className="font-medium">{a.label}</span>
+                          <span className="text-xs text-muted-foreground ml-auto truncate max-w-[180px]">
+                            {a.url?.split('/').pop()}
+                          </span>
+                        </a>
+                      ))}
+                    {/* Reference No. as plain text if present */}
+                    {request.reference_no && (
+                      <div className="flex items-center gap-2 px-3 py-2 rounded-md border bg-white dark:bg-zinc-900">
+                        <FileText className="h-4 w-4" />
+                        <span className="font-medium">Reference No.</span>
+                        <span className="ml-auto text-xs">{request.reference_no}</span>
+                      </div>
+                    )}
+                  </div>
                 </div>
-                <div>
-                  <div className="text-xs text-muted-foreground mb-1">Start Time</div>
-                  <Input
-                    type="time"
-                    value={schedule.scheduled_time}
-                    onChange={e =>
-                      setSchedule(s => ({ ...s, scheduled_time: e.target.value }))
-                    }
-                    disabled={!canEdit}
-                  />
+              </TabsContent>
+
+              {/* ASSIGN & SCHEDULE TAB */}
+              <TabsContent value="assign-schedule" className="space-y-5">
+                {/* Panel Assignment */}
+                <div className={sectionClass}>
+                  <h2 className="text-sm font-semibold flex items-center gap-2">
+                    <Users className="h-4 w-4" /> Panel Assignment
+                  </h2>
+                  <Separator />
+                  <div className="grid md:grid-cols-2 gap-4">
+                    {[
+                      { label: 'Chairperson', key: 'defense_chairperson' },
+                      { label: 'Panelist 1', key: 'defense_panelist1' },
+                      { label: 'Panelist 2', key: 'defense_panelist2' },
+                      { label: 'Panelist 3', key: 'defense_panelist3' },
+                      { label: 'Panelist 4', key: 'defense_panelist4' }
+                    ].map(({ label, key }) => (
+                      <PanelMemberCombobox
+                        key={key}
+                        label={label}
+                        value={panels[key as keyof typeof panels]}
+                        onChange={v => setPanels(p => ({ ...p, [key]: v }))}
+                        options={panelMembers}
+                        disabled={!canEdit || loadingMembers}
+                        taken={taken}
+                      />
+                    ))}
+                  </div>
+                  <div className="flex justify-end mt-4">
+                    <Button
+                      onClick={savePanels}
+                      disabled={!canEdit || savingPanels}
+                      className="gap-2 dark:bg-rose-500 text-white hover:cursor-pointer"
+                    >
+                      {savingPanels && <Loader2 className="animate-spin h-4 w-4" />}
+                      <Save className="h-4 w-4" />
+                      Save Panel Assignment
+                    </Button>
+                  </div>
+                  {panelLoadError && (
+                    <div className="text-xs text-red-500 mt-2">{panelLoadError}</div>
+                  )}
                 </div>
-                <div>
-                  <div className="text-xs text-muted-foreground mb-1">End Time</div>
-                  <Input
-                    type="time"
-                    value={schedule.scheduled_end_time}
-                    onChange={e =>
-                      setSchedule(s => ({ ...s, scheduled_end_time: e.target.value }))
-                    }
-                    disabled={!canEdit}
-                  />
+                {/* Scheduling */}
+                <div className={sectionClass}>
+                  <h2 className="text-sm font-semibold flex items-center gap-2">
+                    <Calendar className="h-4 w-4" /> Scheduling
+                  </h2>
+                  <Separator />
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <div>
+                      <div className="text-xs text-muted-foreground mb-1">Date</div>
+                      <Input
+                        type="date"
+                        value={schedule.scheduled_date}
+                        onChange={e =>
+                          setSchedule(s => ({ ...s, scheduled_date: e.target.value }))
+                        }
+                        disabled={!canEdit}
+                      />
+                    </div>
+                    <div>
+                      <div className="text-xs text-muted-foreground mb-1">Start Time</div>
+                      <Input
+                        type="time"
+                        value={schedule.scheduled_time}
+                        onChange={e =>
+                          setSchedule(s => ({ ...s, scheduled_time: e.target.value }))
+                        }
+                        disabled={!canEdit}
+                      />
+                    </div>
+                    <div>
+                      <div className="text-xs text-muted-foreground mb-1">End Time</div>
+                      <Input
+                        type="time"
+                        value={schedule.scheduled_end_time}
+                        onChange={e =>
+                          setSchedule(s => ({ ...s, scheduled_end_time: e.target.value }))
+                        }
+                        disabled={!canEdit}
+                      />
+                    </div>
+                    <div>
+                      <div className="text-xs text-muted-foreground mb-1">Mode</div>
+                      <Select
+                        value={schedule.defense_mode}
+                        onValueChange={v =>
+                          setSchedule(s => ({ ...s, defense_mode: v }))
+                        }
+                        disabled={!canEdit}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select mode" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="face-to-face">Face-to-Face</SelectItem>
+                          <SelectItem value="online">Online</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="md:col-span-2">
+                      <div className="text-xs text-muted-foreground mb-1">Venue</div>
+                      <Input
+                        value={schedule.defense_venue}
+                        onChange={e =>
+                          setSchedule(s => ({ ...s, defense_venue: e.target.value }))
+                        }
+                        disabled={!canEdit}
+                      />
+                    </div>
+                    <div className="md:col-span-2">
+                      <div className="text-xs text-muted-foreground mb-1">Notes</div>
+                      <Input
+                        value={schedule.scheduling_notes}
+                        onChange={e =>
+                          setSchedule(s => ({ ...s, scheduling_notes: e.target.value }))
+                        }
+                        disabled={!canEdit}
+                      />
+                    </div>
+                  </div>
+                  <div className="flex justify-end mt-4">
+                    <Button
+                      onClick={saveSchedule}
+                      disabled={!canEdit || savingSchedule}
+                      className="gap-2 dark:bg-rose-500 dark:text-white hover:cursor-pointer"
+                    >
+                      {savingSchedule && <Loader2 className="animate-spin h-4 w-4" />}
+                      <Save className="h-4 w-4" />
+                      Save Schedule
+                    </Button>
+                  </div>
                 </div>
-                <div>
-                  <div className="text-xs text-muted-foreground mb-1">Mode</div>
-                  <Select
-                    value={schedule.defense_mode}
-                    onValueChange={v =>
-                      setSchedule(s => ({ ...s, defense_mode: v }))
-                    }
-                    disabled={!canEdit}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select mode" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="face-to-face">Face-to-Face</SelectItem>
-                      <SelectItem value="online">Online</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="md:col-span-2">
-                  <div className="text-xs text-muted-foreground mb-1">Venue</div>
-                  <Input
-                    value={schedule.defense_venue}
-                    onChange={e =>
-                      setSchedule(s => ({ ...s, defense_venue: e.target.value }))
-                    }
-                    disabled={!canEdit}
-                  />
-                </div>
-                <div className="md:col-span-2">
-                  <div className="text-xs text-muted-foreground mb-1">Notes</div>
-                  <Input
-                    value={schedule.scheduling_notes}
-                    onChange={e =>
-                      setSchedule(s => ({ ...s, scheduling_notes: e.target.value }))
-                    }
-                    disabled={!canEdit}
-                  />
-                </div>
-              </div>
-              <div className="flex justify-end mt-4">
-                <Button
-                  onClick={saveSchedule}
-                  disabled={!canEdit || savingSchedule}
-                  className="gap-2 dark:bg-rose-500 dark:text-white hover:cursor-pointer"
-                >
-                  {savingSchedule && <Loader2 className="animate-spin h-4 w-4" />}
-                  <Save className="h-4 w-4" />
-                  Save Schedule
-                </Button>
-              </div>
-            </div>
+              </TabsContent>
+            </Tabs>
           </div>
 
           {/* Workflow Progress Stepper sidebar */}
@@ -1000,15 +1052,13 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
                     const { event, created, userName } = resolveHistoryFields(item);
                     const stepKey = getStepForEvent(event);
                     const step = workflowSteps.find(s => s.key === stepKey) || {
-                      label: event.charAt(0).toUpperCase() + event.slice(1), // Capitalize fallback
-                      icon: <Clock className="h-5 w-5 text-gray-500" />, // Use consistent gray
+                      label: event.charAt(0).toUpperCase() + event.slice(1),
+                      icon: <Clock className="h-5 w-5 text-gray-500" />,
                     };
                     const isLast = Array.isArray(request.workflow_history) && idx === request.workflow_history.length - 1;
-                    // Icon color and box
-                    const iconBoxColor = 'bg-gray-100 text-gray-500'; // or use 'bg-secondary text-secondary-foreground'
+                    const iconBoxColor = 'bg-gray-100 text-gray-500';
                     return (
                       <div key={idx} className="flex items-start gap-3 relative">
-                        {/* Step Icon in a square box and Dotted Line */}
                         <div className="flex flex-col items-center">
                           <div className={`w-9 h-9 rounded-md flex items-center justify-center ${iconBoxColor}`}>
                             {step.icon}
@@ -1017,7 +1067,6 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
                             <div className="h-8 border-l-2 border-dotted border-gray-300 dark:border-zinc-700 mx-auto"></div>
                           )}
                         </div>
-                        {/* Step Content */}
                         <div className="pb-4">
                           <div className="font-semibold text-xs">{step.label}</div>
                           <div className="text-[11px] text-muted-foreground">

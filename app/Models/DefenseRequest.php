@@ -11,7 +11,7 @@ class DefenseRequest extends Model
 {
     protected $guarded = [];
     // If you use $fillable, add:
-    // protected $fillable = [..., 'avisee_adviser_attachment'];
+    // protected $fillable = [..., 'ai_detection_certificate', 'endorsement_form'];
 
     protected $casts = [
         'workflow_history'        => 'array',

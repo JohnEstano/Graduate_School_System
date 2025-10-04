@@ -100,7 +100,7 @@ function ShowAllRequestsInner({ defenseRequests: initial, onStatusChange }: Show
   }, [initial]);
 
   const [search, setSearch] = useState('');
-  const [priorityFilter, setPriorityFilter] = useState<string[]>([]);
+  const [statusFilter, setStatusFilter] = useState<string[]>([]);
   const [typeFilter, setTypeFilter] = useState<string[]>([]);
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
   const [sortDir, setSortDir] = useState<'asc' | 'desc' | null>(null);
@@ -186,7 +186,7 @@ function ShowAllRequestsInner({ defenseRequests: initial, onStatusChange }: Show
         (`${r.first_name} ${r.last_name} ${r.thesis_title}`).toLowerCase().includes(q)
       );
     }
-    if (priorityFilter.length) result = result.filter(r => r.priority && priorityFilter.includes(r.priority));
+    if (statusFilter.length) result = result.filter(r => statusFilter.includes(r.status));
     if (typeFilter.length) result = result.filter(r => typeFilter.includes(r.defense_type));
     if (dateRange?.from && dateRange?.to) {
       const start = startOfDay(dateRange.from);
@@ -198,7 +198,7 @@ function ShowAllRequestsInner({ defenseRequests: initial, onStatusChange }: Show
       });
     }
     return result;
-  }, [search, priorityFilter, typeFilter, defenseRequests, dateRange]);
+  }, [search, statusFilter, typeFilter, defenseRequests, dateRange]);
 
   const sorted = useMemo(() => {
     if (!sortDir) return filtered;
@@ -465,7 +465,7 @@ function ShowAllRequestsInner({ defenseRequests: initial, onStatusChange }: Show
                 className="max-w-xs text-sm h-8"
                 disabled={isLoading}
               />
-              {/* Priority filter */}
+              {/* Status filter */}
               <Popover>
                 <PopoverTrigger asChild>
                   <Button
@@ -473,28 +473,28 @@ function ShowAllRequestsInner({ defenseRequests: initial, onStatusChange }: Show
                     className="h-8 px-3 rounded-md border-dashed text-xs flex items-center gap-1"
                   >
                     <CirclePlus className="h-4 w-4 mr-1" />
-                    Priority
-                    {priorityFilter.length > 0 && (
+                    Status
+                    {statusFilter.length > 0 && (
                       <span className="ml-1 px-2 py-0.5 rounded-full text-xs bg-muted">
-                        {priorityFilter.length > 1 ? `${priorityFilter.length} selected` : priorityFilter[0]}
+                        {statusFilter.length > 1 ? `${statusFilter.length} selected` : statusFilter[0]}
                       </span>
                     )}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-44 p-1" side="bottom" align="start">
-                  {['Low', 'Medium', 'High'].map(p => (
+                  {['Pending', 'Approved', 'Rejected'].map(s => (
                     <div
-                      key={p}
+                      key={s}
                       onClick={() =>
-                        setPriorityFilter(fp => (fp.includes(p) ? fp.filter(x => x !== p) : [...fp, p]))
+                        setStatusFilter(fs => (fs.includes(s) ? fs.filter(x => x !== s) : [...fs, s]))
                       }
                       className="flex items-center gap-2 p-2 rounded hover:bg-muted cursor-pointer"
                     >
-                      <Checkbox checked={priorityFilter.includes(p)} />
-                      <span className="text-sm">{p}</span>
+                      <Checkbox checked={statusFilter.includes(s)} />
+                      <span className="text-sm">{s}</span>
                     </div>
                   ))}
-                  <Button size="sm" variant="ghost" className="w-full mt-2" onClick={() => setPriorityFilter([])}>
+                  <Button size="sm" variant="ghost" className="w-full mt-2" onClick={() => setStatusFilter([])}>
                     Clear
                   </Button>
                 </PopoverContent>
@@ -557,13 +557,13 @@ function ShowAllRequestsInner({ defenseRequests: initial, onStatusChange }: Show
                 </PopoverContent>
               </Popover>
               {/* Reset button */}
-              {(priorityFilter.length > 0 || typeFilter.length > 0 || dateRange?.from || search.trim()) && (
+              {(statusFilter.length > 0 || typeFilter.length > 0 || dateRange?.from || search.trim()) && (
                 <Button
                   variant="ghost"
                   size="sm"
                   className="h-8 px-3 flex items-center gap-1"
                   onClick={() => {
-                    setPriorityFilter([]);
+                    setStatusFilter([]);
                     setTypeFilter([]);
                     setDateRange(undefined);
                     setSearch('');

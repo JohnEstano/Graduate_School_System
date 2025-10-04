@@ -143,14 +143,14 @@ export default function PanelistsListTable({
                         <span
                           className={
                             panelist.assignments && panelist.assignments.length > 0
-                              ? "inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-green-100 text-green-700 text-xs font-medium cursor-pointer"
+                              ? "inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 text-xs font-medium cursor-pointer"
                               : "inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-gray-100 text-gray-500 text-xs font-medium cursor-pointer"
                           }
                         >
                           {panelist.assignments && panelist.assignments.length > 0
                             ? (
                               <>
-                                <span className="w-1.5 h-1.5 rounded-full bg-green-500 inline-block" />
+                                <span className="w-1.5 h-1.5 rounded-full bg-blue-500 inline-block" />
                                 Assigned
                               </>
                             )
@@ -181,8 +181,8 @@ export default function PanelistsListTable({
                                     key={a.id}
                                     className="flex items-center gap-2 text-xs italic truncate max-w-[180px]"
                                   >
-                                    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-green-100 text-green-700 font-medium">
-                                      <span className="w-1.5 h-1.5 rounded-full bg-green-500 inline-block" />
+                                    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-blue-100 text-blue-700 font-medium">
+                                      <span className="w-1.5 h-1.5 rounded-full bg-blue-500 inline-block" />
                                       Active
                                     </span>
                                     <span className="text-muted-foreground">{a.thesis_title}</span>

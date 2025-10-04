@@ -1014,4 +1014,24 @@ class DefenseRequestController extends Controller
             'updated_ids' => $updated,
         ]);
     }
+
+    public function uploadDocuments(Request $request, DefenseRequest $defenseRequest)
+    {
+        $data = [];
+        if ($request->hasFile('ai_detection_certificate')) {
+            $file = $request->file('ai_detection_certificate');
+            $path = $file->store('defense_documents', 'public');
+            $defenseRequest->ai_detection_certificate = '/storage/' . $path;
+            $data['ai_detection_certificate'] = $defenseRequest->ai_detection_certificate;
+        }
+        if ($request->hasFile('endorsement_form')) {
+            $file = $request->file('endorsement_form');
+            $path = $file->store('defense_documents', 'public');
+            $defenseRequest->endorsement_form = '/storage/' . $path;
+            $data['endorsement_form'] = $defenseRequest->endorsement_form;
+        }
+        $defenseRequest->save();
+
+        return response()->json($data);
+    }
 }
