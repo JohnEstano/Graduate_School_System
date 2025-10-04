@@ -362,10 +362,18 @@ export default function DetailsRequirementsPage(rawProps: any) {
 
   // Auto Generate handler
   async function handleAutoGenerate() {
+    setAutoGenerating(true);
+    toast.loading("Generating document...");
     const templateName = getTemplateNameForDefenseType(request.defense_type || "");
+    if (templatesLoading) {
+      toast.error("Templates are still loading. Please wait.");
+      setAutoGenerating(false);
+      return;
+    }
     const template = templates.find(t => t.name === templateName);
     if (!template) {
       toast.error("No template found for this defense type.");
+      setAutoGenerating(false);
       return;
     }
     try {
@@ -384,6 +392,7 @@ export default function DetailsRequirementsPage(rawProps: any) {
       });
       if (!res.ok) {
         toast.error("Failed to generate document.");
+        setAutoGenerating(false);
         return;
       }
       const blob = await res.blob();
@@ -398,6 +407,9 @@ export default function DetailsRequirementsPage(rawProps: any) {
       toast.success("Endorsement Form generated and downloaded!");
     } catch (e) {
       toast.error("Network error generating document.");
+    } finally {
+      setAutoGenerating(false);
+      toast.dismiss();
     }
   }
 
@@ -652,9 +664,19 @@ export default function DetailsRequirementsPage(rawProps: any) {
                           type="button"
                           variant="secondary"
                           onClick={handleAutoGenerate}
-                          disabled={endorsementFormUploading}
+                          disabled={endorsementFormUploading || autoGenerating || templatesLoading}
                         >
-                          Auto Generate
+                          {autoGenerating || templatesLoading ? (
+                            <span className="flex items-center gap-2">
+                              <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/>
+                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+                              </svg>
+                              Generating...
+                            </span>
+                          ) : (
+                            "Auto Generate"
+                          )}
                         </Button>
                         <input
                           ref={endorsementInputRef}
