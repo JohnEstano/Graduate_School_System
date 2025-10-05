@@ -27,6 +27,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 
 type DefenseRequestFull = {
   id: number;
@@ -37,7 +38,6 @@ type DefenseRequestFull = {
   program: string;
   thesis_title: string;
   defense_type: string;
-  status?: string;
   priority?: 'Low' | 'Medium' | 'High';
   workflow_state?: string;
   defense_adviser?: string;
@@ -53,7 +53,15 @@ type DefenseRequestFull = {
   last_status_updated_by?: string;
   last_status_updated_at?: string;
   ai_detection_certificate?: string;
-  endorsement_form?: string; 
+  endorsement_form?: string;
+  adviser_status?: string;      
+  coordinator_status?: string;  
+  defense_venue?: string;       
+  defense_mode?: string;       
+  scheduling_notes?: string;    
+  scheduled_time?: string;      
+  scheduled_date?: string;
+  scheduled_end_time?: string;  
 };
 
 interface PageProps {
@@ -126,24 +134,41 @@ export default function DetailsRequirementsPage(rawProps: any) {
     );
   }
 
+  // --- Add state for missing docs alert ---
+  const [missingDocsAlert, setMissingDocsAlert] = useState<string | null>(null);
+
   // --- Approve/Reject/Retrieve logic ---
   async function handleStatusChange(action: 'approve' | 'reject' | 'retrieve') {
     if (!request.id) return;
+
+    // Restrict Endorse if required documents are missing
+    if (action === 'approve') {
+      if (!request.ai_detection_certificate || !request.endorsement_form) {
+        setMissingDocsAlert(
+          'You must upload both the AI Detection Certificate and Endorsement Form before endorsing this request.'
+        );
+        return;
+      }
+    }
+
     setIsLoading(true);
-    let newStatus: DefenseRequestFull['status'] = 'Pending';
-    if (action === 'approve') newStatus = 'Approved';
-    else if (action === 'reject') newStatus = 'Rejected';
-    else if (action === 'retrieve') newStatus = 'Pending';
+    setMissingDocsAlert(null);
+
+    // Map action to new adviser_status value
+    let newAdviserStatus: string = 'Pending';
+    if (action === 'approve') newAdviserStatus = 'Approved';
+    else if (action === 'reject') newAdviserStatus = 'Rejected';
+    else if (action === 'retrieve') newAdviserStatus = 'Pending';
 
     try {
-      const res = await fetch(`/adviser/defense-requirements/${request.id}/status`, {
+      const res = await fetch(`/adviser/defense-requirements/${request.id}/adviser-status`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
           'X-CSRF-TOKEN': csrf(),
           Accept: 'application/json'
         },
-        body: JSON.stringify({ status: newStatus }),
+        body: JSON.stringify({ adviser_status: newAdviserStatus }),
       });
       const data = await res.json();
       if (res.ok) {
@@ -152,16 +177,16 @@ export default function DetailsRequirementsPage(rawProps: any) {
         } else {
           setRequest(r => ({
             ...r,
-            status: newStatus,
+            adviser_status: newAdviserStatus,
             workflow_history: data.workflow_history || r.workflow_history,
           }));
         }
-        toast.success(`Request set to ${newStatus}`);
+        toast.success(`Adviser status set to ${newAdviserStatus}`);
       } else {
-        toast.error(data?.error || 'Failed to update status');
+        toast.error(data?.error || 'Failed to update adviser status');
       }
     } catch {
-      toast.error('Network error updating status');
+      toast.error('Network error updating adviser status');
     } finally {
       setIsLoading(false);
       setConfirm({ open: false, action: null });
@@ -415,11 +440,35 @@ export default function DetailsRequirementsPage(rawProps: any) {
 
   const sectionClass = 'rounded-lg border p-5 space-y-3';
 
+  // Add this helper for display
+  function getAdviserStatusDisplay(status?: string) {
+    if (status === 'Approved') return 'Endorsed';
+    if (status === 'Rejected') return 'Rejected';
+    return status || '—';
+  }
+  function getCoordinatorStatusDisplay(status?: string) {
+    if (status === 'Approved') return 'Approved';
+    if (status === 'Rejected') return 'Rejected';
+    return status || '—';
+  }
+
+  // Always show missing docs alert if not linked
+  const missingDocs =
+    !request.ai_detection_certificate || !request.endorsement_form;
+  const missingDocsAlertMsg = !request.ai_detection_certificate && !request.endorsement_form
+    ? "*You haven't uploaded the AI Detection Certificate and Endorsement Form yet."
+    : !request.ai_detection_certificate
+    ? "*You haven't uploaded the AI Detection Certificate yet."
+    : !request.endorsement_form
+    ? "*You haven't uploaded the Endorsement Form yet."
+    : null;
+
   return (
     <AppLayout breadcrumbs={breadcrumbs}>
       <Toaster position="bottom-right" richColors closeButton />
       <div className="p-5 space-y-6">
         <Head title={request.thesis_title || `Defense Request #${request.id}`} />
+
         <div className="flex items-center justify-between gap-3 flex-wrap">
           <div className="flex items-center gap-2">
             <Button
@@ -445,7 +494,7 @@ export default function DetailsRequirementsPage(rawProps: any) {
               size="sm"
               variant="outline"
               onClick={() => setConfirm({ open: true, action: 'approve' })}
-              disabled={isLoading || request.status === 'Approved'}
+              disabled={isLoading || request.adviser_status === 'Approved'}
             >
               <CheckCircle className="h-4 w-4 mr-1 text-green-600" />
               Endorse
@@ -454,7 +503,7 @@ export default function DetailsRequirementsPage(rawProps: any) {
               size="sm"
               variant="outline"
               onClick={() => setConfirm({ open: true, action: 'reject' })}
-              disabled={isLoading || request.status === 'Rejected'}
+              disabled={isLoading || request.adviser_status === 'Rejected'}
             >
               <XCircle className="h-4 w-4 mr-1 text-red-600" />
               Reject
@@ -463,13 +512,23 @@ export default function DetailsRequirementsPage(rawProps: any) {
               size="sm"
               variant="outline"
               onClick={() => setConfirm({ open: true, action: 'retrieve' })}
-              disabled={isLoading || request.status === 'Pending'}
+              disabled={isLoading || request.adviser_status === 'Pending'}
             >
               <CircleArrowLeft className="h-4 w-4 mr-1 text-blue-600" />
               Retrieve
             </Button>
           </div>
         </div>
+
+        {/* Subtle rose alert below the tabs if missing docs */}
+        {/* Removed the alert at the top as requested */}
+        {/* {missingDocs && (
+          <div className="mb-4 mt-2 rounded-md bg-transparent border-0 px-2 py-1">
+            <span className="text-xs text-rose-600 font-medium">
+              {missingDocsAlertMsg}
+            </span>
+          </div>
+        )} */}
 
         {/* Main content and sidebar layout */}
         <div className="flex flex-col md:flex-row gap-5 mb-2">
@@ -480,21 +539,28 @@ export default function DetailsRequirementsPage(rawProps: any) {
               <TabsContent value="details" className="space-y-5">
                 {/* Submission summary card */}
                 <div className="rounded-xl border p-8 bg-white dark:bg-zinc-900">
-                  {/* Thesis Title Header with Status */}
+                  {/* Thesis Title Header with Adviser Status */}
                   <div className="mb-1 flex flex-col md:flex-row md:items-center md:justify-between gap-2">
                     <div>
                       <div className="text-2xl font-semibold">{request.thesis_title}</div>
                       <div className="text-xs text-muted-foreground font-medium mt-0.5">Thesis Title</div>
                     </div>
-                    {request.status && (
+                    <div className="flex flex-col md:items-end gap-1">
+                      {/* Adviser Status */}
                       <span
-                        className={`text-xs font-semibold px-2 py-0.5 rounded-full mt-2 md:mt-0 ${statusBadgeColor(
-                          request.status
-                        )}`}
+                        className={`text-xs font-semibold px-2 py-0.5 rounded-full mt-2 md:mt-0 ${
+                          request.adviser_status === 'Approved'
+                            ? 'bg-green-100 text-green-600'
+                            : request.adviser_status === 'Rejected'
+                            ? 'bg-red-100 text-red-600'
+                            : request.adviser_status === 'Pending'
+                            ? 'bg-yellow-100 text-yellow-700'
+                            : 'bg-gray-100 text-gray-600'
+                        }`}
                       >
-                        {request.status}
+                        Adviser Status: {getAdviserStatusDisplay(request.adviser_status)}
                       </span>
-                    )}
+                    </div>
                   </div>
                   {/* Info Grid */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-6 mt-6">
@@ -530,14 +596,64 @@ export default function DetailsRequirementsPage(rawProps: any) {
                       <div className="text-xs text-muted-foreground mb-1">Submitted At</div>
                       <div className="font-medium text-sm">{formatDate(request.submitted_at)}</div>
                     </div>
+                    <div>
+                      <div className="text-xs text-muted-foreground mb-1">Scheduled Date</div>
+                      <div className="font-medium text-sm">{formatDate(request.scheduled_date)}</div>
+                    </div>
+                    <div>
+                      <div className="text-xs text-muted-foreground mb-1">Time</div>
+                      <div className="font-medium text-sm">
+                        {request.scheduled_time
+                          ? `${request.scheduled_time}${request.scheduled_end_time ? ' - ' + request.scheduled_end_time : ''}`
+                          : '—'}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-xs text-muted-foreground mb-1">Venue</div>
+                      <div className="font-medium text-sm">{request.defense_venue || '—'}</div>
+                    </div>
+                    <div>
+                      <div className="text-xs text-muted-foreground mb-1">Mode</div>
+                      <div className="font-medium text-sm">{request.defense_mode ? (request.defense_mode === 'face-to-face' ? 'Face-to-Face' : 'Online') : '—'}</div>
+                    </div>
+                    {/* --- Coordinator Status Badge --- */}
+                    <div>
+                      <div className="text-xs text-muted-foreground mb-1">Coordinator Status</div>
+                      <span
+                        className={`text-xs font-semibold px-2 py-0.5 rounded-full mt-1 inline-block ${
+                          request.coordinator_status === 'Approved'
+                            ? 'bg-green-100 text-green-600'
+                            : request.coordinator_status === 'Rejected'
+                            ? 'bg-red-100 text-red-600'
+                            : request.coordinator_status === 'Pending'
+                            ? 'bg-yellow-100 text-yellow-700'
+                            : 'bg-gray-100 text-gray-600'
+                        }`}
+                      >
+                        {getCoordinatorStatusDisplay(request.coordinator_status)}
+                      </span>
+                    </div>
+                    {/* --- End Coordinator Status Badge --- */}
+                    <div className="md:col-span-2">
+                      <div className="text-xs text-muted-foreground mb-1">Notes</div>
+                      <div className="font-medium text-sm">{request.scheduling_notes || '—'}</div>
+                    </div>
                   </div>
                 </div>
 
                 {/* Attachments */}
                 <div className={sectionClass}>
-                  <h2 className="text-sm font-semibold flex items-center gap-2">
-                    <FileText className="h-4 w-4" /> Attachments
-                  </h2>
+                  <div className="flex items-center gap-2 mb-1">
+                    <h2 className="text-sm font-semibold flex items-center gap-2">
+                      <FileText className="h-4 w-4" /> Attachments
+                    </h2>
+                    {/* Subtle rose alert in the header if missing docs */}
+                    {missingDocs && (
+                      <span className="ml-3 text-xs text-rose-600 font-medium">
+                        {missingDocsAlertMsg}
+                      </span>
+                    )}
+                  </div>
                   <Separator />
                   <div className="space-y-2 text-sm">
                     {/* Standard attachments */}
@@ -575,7 +691,7 @@ export default function DetailsRequirementsPage(rawProps: any) {
                           {request.ai_detection_certificate.split('/').pop()}
                         </a>
                       ) : (
-                        <span className="ml-auto text-xs text-muted-foreground">Not uploaded</span>
+                        <span className="ml-auto text-xs text-rose-600 font-semibold">Missing</span>
                       )}
                     </div>
 
@@ -593,7 +709,7 @@ export default function DetailsRequirementsPage(rawProps: any) {
                           {request.endorsement_form.split('/').pop()}
                         </a>
                       ) : (
-                        <span className="ml-auto text-xs text-muted-foreground">Not uploaded</span>
+                        <span className="ml-auto text-xs text-rose-600 font-semibold">Missing</span>
                       )}
                     </div>
 
@@ -631,17 +747,26 @@ export default function DetailsRequirementsPage(rawProps: any) {
               <TabsContent value="link-documents" className="space-y-5">
                 <form onSubmit={handleDocumentsSubmit} className="space-y-5">
                   {/* AI Detection Certificate Section */}
-                  <div className={sectionClass}>
-                    <h2 className="text-base font-semibold flex items-center gap-2">
+                  <div className={sectionClass + " text-sm"}>
+                    <h2 className="text-sm font-semibold flex items-center gap-2">
                       <FileScan className="h-5 w-5" /> AI Detection Certificate
                     </h2>
                     <Separator />
                     <div className="flex flex-col gap-3 mt-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="w-fit"
+                        onClick={() => aiDetectionInputRef.current?.click()}
+                        disabled={aiDetectionCertUploading}
+                      >
+                        Choose File
+                      </Button>
                       <input
                         ref={aiDetectionInputRef}
                         type="file"
                         accept=".pdf,.jpg,.jpeg,.png"
-                        className="block w-full text-sm file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary"
+                        className="hidden"
                         onChange={e => setAiDetectionCertFile(e.target.files?.[0] || null)}
                         disabled={aiDetectionCertUploading}
                       />
@@ -653,8 +778,8 @@ export default function DetailsRequirementsPage(rawProps: any) {
                     </div>
                   </div>
                   {/* Endorsement Form Section */}
-                  <div className={sectionClass}>
-                    <h2 className="text-base font-semibold flex items-center gap-2">
+                  <div className={sectionClass + " text-sm"}>
+                    <h2 className="text-sm font-semibold flex items-center gap-2">
                       <FileSignature className="h-5 w-5" /> Endorsement Form
                     </h2>
                     <Separator />
@@ -662,7 +787,7 @@ export default function DetailsRequirementsPage(rawProps: any) {
                       <div className="flex gap-2">
                         <Button
                           type="button"
-                          variant="secondary"
+                          variant="outline"
                           onClick={handleAutoGenerate}
                           disabled={endorsementFormUploading || autoGenerating || templatesLoading}
                         >
@@ -678,11 +803,20 @@ export default function DetailsRequirementsPage(rawProps: any) {
                             "Auto Generate"
                           )}
                         </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          className="w-fit"
+                          onClick={() => endorsementInputRef.current?.click()}
+                          disabled={endorsementFormUploading}
+                        >
+                          Choose File
+                        </Button>
                         <input
                           ref={endorsementInputRef}
                           type="file"
                           accept=".pdf,.jpg,.jpeg,.png"
-                          className="block w-full text-sm file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary"
+                          className="hidden"
                           onChange={e => setEndorsementFormFile(e.target.files?.[0] || null)}
                           disabled={endorsementFormUploading}
                         />
@@ -697,8 +831,8 @@ export default function DetailsRequirementsPage(rawProps: any) {
                   <div className="flex justify-end">
                     <Button
                       type="submit"
+                      className="gap-2 bg-rose-500 hover:bg-rose-600 text-white"
                       disabled={aiDetectionCertUploading || endorsementFormUploading}
-                      className="gap-2"
                     >
                       {aiDetectionCertUploading || endorsementFormUploading ? (
                         <span>Uploading...</span>
@@ -802,6 +936,7 @@ export default function DetailsRequirementsPage(rawProps: any) {
                 </p>
               </div>
             )}
+            {/* Removed duplicate alert here */}
           </div>
           <div className="flex justify-end gap-2 mt-4">
             <Button variant="ghost" onClick={() => setConfirm({ open: false, action: null })}>Cancel</Button>

@@ -42,78 +42,19 @@ class DefenseRequirementController extends Controller
         $user = Auth::user();
         if (!$user) abort(401);
 
-        $coordinatorRoles = ['Coordinator','Administrative Assistant','Dean'];
-        if (in_array($user->role, $coordinatorRoles)) {
-            $requests = DefenseRequest::whereIn('workflow_state', [
-                'adviser-approved','coordinator-review','coordinator-approved',
-                'coordinator-rejected','panels-assigned','scheduled','completed'
-            ])->orderByDesc('created_at')->get();
-
-            return inertia('adviser/defense-requirements/Index', [
-                'defenseRequirements' => [],
-                'defenseRequests' => $requests,
-                'coordinator' => null, // Not needed for coordinators
-            ]);
-        }
-
-        if (!in_array($user->role, ['Faculty','Adviser'])) {
-            return inertia('adviser/defense-requirements/Index', [
-                'defenseRequirements' => [],
-                'defenseRequests' => [],
-                'coordinator' => null,
-            ]);
-        }
-
-        $norm = fn(string $v) => preg_replace('/\s+/',' ', trim(strtolower($v)));
-        $first = $norm($user->first_name);
-        $last  = $norm($user->last_name);
-
-        $baseQuery = DefenseRequest::where(function($q) use ($user,$first,$last) {
-                $q->where('adviser_user_id', $user->id)
-                  ->orWhere('assigned_to_user_id', $user->id)
-                  ->orWhere(function($sub) use ($first,$last) {
-                      $sub->whereNull('adviser_user_id')
-                          ->whereNull('assigned_to_user_id')
-                          ->whereNotNull('defense_adviser')
-                          ->whereRaw('LOWER(defense_adviser) LIKE ?', ["%$first%"])
-                          ->whereRaw('LOWER(defense_adviser) LIKE ?', ["%$last%"]);
-                  });
-            })
-            ->whereIn('workflow_state', [
-                'submitted','adviser-review','adviser-approved','adviser-rejected'
-            ]);
-
-        $requests = $baseQuery->clone()->orderByDesc('created_at')->get();
-
-        foreach ($requests as $r) {
-            if (!$r->adviser_user_id && !$r->assigned_to_user_id) {
-                $name = $norm($r->defense_adviser ?? '');
-                if ($name && str_contains($name,$first) && str_contains($name,$last)) {
-                    $r->forceFill([
-                        'adviser_user_id' => $user->id,
-                        'assigned_to_user_id' => $user->id,
-                        // Preserve existing state; if blank set adviser-review (so adviser can proceed)
-                        'workflow_state' => in_array($r->workflow_state, [null,'','submitted'])
-                            ? 'adviser-review'
-                            : $r->workflow_state,
-                    ])->save();
-                }
-            }
-        }
-
-        $requests = $baseQuery->orderByDesc('created_at')->get();
-
-        // --- Get the registered coordinator ---
-        $coordinator = $user->coordinators()->first();
-        $coordinatorData = $coordinator ? [
-            'name' => trim($coordinator->first_name . ' ' . ($coordinator->middle_name ? strtoupper($coordinator->middle_name[0]) . '. ' : '') . $coordinator->last_name),
-            'email' => $coordinator->email,
-        ] : null;
+        // Show all requests where this user is adviser or assigned
+        $requests = DefenseRequest::where(function($q) use ($user) {
+            $q->where('adviser_user_id', $user->id)
+              ->orWhere('assigned_to_user_id', $user->id)
+              ->orWhereRaw('LOWER(defense_adviser) = ?', [strtolower(trim($user->first_name . ' ' . $user->last_name))]);
+        })
+        ->orderByDesc('created_at')
+        ->get();
 
         return inertia('adviser/defense-requirements/Index', [
             'defenseRequirements' => [],
             'defenseRequests' => $requests,
-            'coordinator' => $coordinatorData,
+            'coordinator' => null,
         ]);
     }
 

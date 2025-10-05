@@ -100,10 +100,12 @@ export type DefenseRequestFull = {
   similarity_index?: string | null;
   avisee_adviser_attachment?: string | null;
   ai_detection_certificate?: string | null;
-  last_status_updated_by?: string;          // could be an id
-  last_status_updated_by_name?: string;     // added: friendly name if backend provides
+  last_status_updated_by?: string;
+  last_status_updated_by_name?: string;
   last_status_updated_at?: string;
   workflow_history?: any[];
+  adviser_status?: string;
+  coordinator_status?: string;
 };
 
 interface PageProps {
@@ -470,7 +472,9 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
   async function handleStatusChange(action: 'approve' | 'reject' | 'retrieve') {
     if (!request.id) return;
     setIsLoading(true);
-    let newStatus: DefenseRequestFull['status'] = 'Pending';
+
+    // Map action to new coordinator_status value
+    let newStatus: 'Pending' | 'Approved' | 'Rejected' = 'Pending';
     if (action === 'approve') newStatus = 'Approved';
     else if (action === 'reject') newStatus = 'Rejected';
     else if (action === 'retrieve') newStatus = 'Pending';
@@ -493,11 +497,13 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
         } else {
           setRequest(r => ({
             ...r,
-            status: newStatus,
+            coordinator_status: newStatus,
+            workflow_state: data.workflow_state || r.workflow_state,
             workflow_history: data.workflow_history || r.workflow_history,
+            status: data.status || r.status,
           }));
         }
-        toast.success(`Request set to ${newStatus}`);
+        toast.success(`Coordinator status set to ${newStatus}`);
       } else {
         toast.error(data?.error || 'Failed to update status');
       }
@@ -607,7 +613,7 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
     },
     {
       key: 'adviser-approved',
-      label: 'Approved by Adviser',
+      label: 'Endorsed by Adviser', // CHANGED from "Approved by Adviser"
       icon: <UserCheck className="h-5 w-5" />,
     },
     {
@@ -676,7 +682,6 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
             >
               <ArrowLeft className="h-4 w-4" />
             </Button>
-            {/* Tabs beside back arrow */}
             <Tabs value={tab} onValueChange={v => setTab(v as 'details' | 'assign-schedule')}>
               <TabsList className="h-8">
                 <TabsTrigger value="details" className="flex items-center gap-1 text-sm px-3">
@@ -691,39 +696,43 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
           </div>
           {canEdit && (
             <div className="flex gap-2">
+              {/* Approve button: only enabled if not already approved or completed */}
               <Button
                 size="sm"
                 variant="outline"
                 onClick={() => setConfirm({ open: true, action: 'approve' })}
                 disabled={
                   isLoading ||
-                  request.status === 'Approved' ||
+                  request.coordinator_status === 'Approved' ||
                   request.workflow_state === 'completed'
                 }
               >
                 <CheckCircle className="h-4 w-4 mr-1 text-green-600" />
                 Approve
               </Button>
+              {/* Reject button: only enabled if not already rejected, not approved, and not completed */}
               <Button
                 size="sm"
                 variant="outline"
                 onClick={() => setConfirm({ open: true, action: 'reject' })}
                 disabled={
                   isLoading ||
-                  request.status === 'Rejected' ||
+                  request.coordinator_status === 'Rejected' ||
+                  request.coordinator_status === 'Approved' ||
                   request.workflow_state === 'completed'
                 }
               >
                 <XCircle className="h-4 w-4 mr-1 text-red-600" />
                 Reject
               </Button>
+              {/* Retrieve button: enabled if currently rejected OR approved and not completed */}
               <Button
                 size="sm"
                 variant="outline"
                 onClick={() => setConfirm({ open: true, action: 'retrieve' })}
                 disabled={
                   isLoading ||
-                  request.status === 'Pending' ||
+                  !['Rejected', 'Approved'].includes(request.coordinator_status || '') ||
                   request.workflow_state === 'completed'
                 }
               >
@@ -749,15 +758,24 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
                       <div className="text-2xl font-semibold">{request.thesis_title}</div>
                       <div className="text-xs text-muted-foreground font-medium mt-0.5">Thesis Title</div>
                     </div>
-                    {request.status && (
-                      <span
-                        className={`text-xs font-semibold px-2 py-0.5 rounded-full mt-2 md:mt-0 ${statusBadgeColor(
-                          request.status
-                        )}`}
-                      >
-                        {request.status}
-                      </span>
-                    )}
+                    <div className="flex flex-col md:items-end gap-1">
+                      {/* Coordinator Status */}
+                      {request.coordinator_status && (
+                        <span
+                          className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
+                            request.coordinator_status === 'Approved'
+                              ? 'bg-green-100 text-green-600'
+                              : request.coordinator_status === 'Rejected'
+                              ? 'bg-red-100 text-red-600'
+                              : request.coordinator_status === 'Pending'
+                              ? 'bg-yellow-100 text-yellow-700'
+                              : 'bg-gray-100 text-gray-600'
+                          }`}
+                        >
+                          Coordinator Status: {request.coordinator_status}
+                        </span>
+                      )}
+                    </div>
                   </div>
                   {/* Info Grid */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-6 mt-6">
@@ -953,14 +971,43 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
                   <div className="grid md:grid-cols-2 gap-4">
                     <div>
                       <div className="text-xs text-muted-foreground mb-1">Date</div>
-                      <Input
-                        type="date"
-                        value={schedule.scheduled_date}
-                        onChange={e =>
-                          setSchedule(s => ({ ...s, scheduled_date: e.target.value }))
-                        }
-                        disabled={!canEdit}
-                      />
+                      {/* --- SHADCN Date Picker --- */}
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant="outline"
+                            className={cn(
+                              "w-full justify-start text-left font-normal",
+                              !schedule.scheduled_date && "text-muted-foreground"
+                            )}
+                            disabled={!canEdit}
+                          >
+                            <Calendar className="mr-2 h-4 w-4" />
+                            {schedule.scheduled_date
+                              ? formatDate(schedule.scheduled_date)
+                              : "Pick a date"}  
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <CalendarCmp
+                            mode="single"
+                            selected={
+                              schedule.scheduled_date
+                                ? new Date(schedule.scheduled_date)
+                                : undefined
+                            }
+                            onSelect={date => {
+                              setSchedule(s => ({
+                                ...s,
+                                scheduled_date: date
+                                  ? format(date, "yyyy-MM-dd")
+                                  : ""
+                              }));
+                            }}
+                            initialFocus
+                          />
+                        </PopoverContent>
+                      </Popover>
                     </div>
                     <div>
                       <div className="text-xs text-muted-foreground mb-1">Start Time</div>

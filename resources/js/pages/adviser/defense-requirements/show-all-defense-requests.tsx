@@ -23,7 +23,6 @@ type DefenseRequest = {
     last_name: string;
     thesis_title: string;
     defense_type: string;
-    status: string;
     workflow_state: string;
     created_at?: string;
     program: string;
@@ -36,6 +35,8 @@ type DefenseRequest = {
     advisers_endorsement?: string;
     reference_no?: string;
     priority?: string;
+    adviser_status?: string;
+    coordinator_status?: string;
 };
 
 function getDisplayName(req: DefenseRequest) {
@@ -122,8 +123,8 @@ export default function ShowAllDefenseRequests({
         return match;
     });
 
-    // Endorsed submissions (status === 'Approved')
-    const endorsedRequests = filteredRequests.filter(req => req.status === 'Approved');
+    // Endorsed submissions (adviser_status === 'Approved')
+    const endorsedRequests = filteredRequests.filter(req => req.adviser_status === 'Approved');
 
     // Bulk select helpers
     const headerChecked = selected.length === filteredRequests.length && filteredRequests.length > 0;
@@ -158,7 +159,7 @@ export default function ShowAllDefenseRequests({
                     <td>${r.thesis_title}</td>
                     <td>${r.first_name} ${r.last_name}</td>
                     <td>${r.defense_type}</td>
-                    <td>${r.status}</td>
+                    <td>${r.adviser_status === 'Approved' ? 'Endorsed' : (r.adviser_status || '—')}</td>
                   </tr>`).join('')}
                 </tbody>
               </table>
@@ -219,7 +220,8 @@ export default function ShowAllDefenseRequests({
         program: true,
         type: true,
         submitted_at: true,
-        status: true,
+        adviser_status: true,
+        coordinator_status: true,
     };
 
     return (
@@ -385,7 +387,8 @@ export default function ShowAllDefenseRequests({
                                         <TableHead className="text-center px-2 min-w-[90px] whitespace-nowrap">Type</TableHead>
                                         <TableHead className="px-2 min-w-[130px] text-center whitespace-nowrap">Submitted</TableHead>
                                         <TableHead className="px-2 min-w-[180px] whitespace-nowrap">Attachments</TableHead>
-                                        <TableHead className="px-2 min-w-[100px] text-center whitespace-nowrap">Status</TableHead>
+                                        <TableHead className="px-2 min-w-[120px] text-center whitespace-nowrap">Adviser Status</TableHead>
+                                        <TableHead className="px-2 min-w-[120px] text-center whitespace-nowrap">Coordinator Status</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
@@ -428,16 +431,31 @@ export default function ShowAllDefenseRequests({
                                                 <TableCell className="px-2 py-2 text-xs whitespace-nowrap text-center align-middle">
                                                     <Badge
                                                         className={
-                                                            req.status === 'Approved'
+                                                            req.adviser_status === 'Endorsed'
                                                                 ? 'bg-green-100 text-green-700 border-green-200'
-                                                                : req.status === 'Rejected'
+                                                                : req.adviser_status === 'Rejected'
                                                                 ? 'bg-red-100 text-red-700 border-red-200'
-                                                                : req.status === 'Pending'
+                                                                : req.adviser_status === 'Pending'
                                                                 ? 'bg-yellow-100 text-yellow-700 border-yellow-200'
                                                                 : 'bg-gray-100 text-gray-700 border-gray-200'
                                                         }
                                                     >
-                                                        {req.status}
+                                                        {req.adviser_status === 'Approved' ? 'Endorsed' : (req.adviser_status || '—')}
+                                                    </Badge>
+                                                </TableCell>
+                                                <TableCell className="px-2 py-2 text-xs whitespace-nowrap text-center align-middle">
+                                                    <Badge
+                                                        className={
+                                                            req.coordinator_status === 'Approved'
+                                                                ? 'bg-green-100 text-green-700 border-green-200'
+                                                                : req.coordinator_status === 'Rejected'
+                                                                ? 'bg-red-100 text-red-700 border-red-200'
+                                                                : req.coordinator_status === 'Pending'
+                                                                ? 'bg-yellow-100 text-yellow-700 border-yellow-200'
+                                                                : 'bg-gray-100 text-gray-700 border-gray-200'
+                                                        }
+                                                    >
+                                                        {req.coordinator_status || '—'}
                                                     </Badge>
                                                 </TableCell>
                                             </TableRow>
@@ -445,7 +463,7 @@ export default function ShowAllDefenseRequests({
                                     })}
                                     {filteredRequests.length === 0 && (
                                         <TableRow>
-                                            <TableCell colSpan={8} className="text-center py-10 text-muted-foreground">
+                                            <TableCell colSpan={9} className="text-center py-10 text-muted-foreground">
                                                 No defense requests found.
                                             </TableCell>
                                         </TableRow>
@@ -475,7 +493,8 @@ export default function ShowAllDefenseRequests({
                                         <TableHead className="text-center px-2 min-w-[90px] whitespace-nowrap">Type</TableHead>
                                         <TableHead className="px-2 min-w-[130px] text-center whitespace-nowrap">Submitted</TableHead>
                                         <TableHead className="px-2 min-w-[180px] whitespace-nowrap">Attachments</TableHead>
-                                        <TableHead className="px-2 min-w-[100px] text-center whitespace-nowrap">Status</TableHead>
+                                        <TableHead className="px-2 min-w-[120px] text-center whitespace-nowrap">Adviser Status</TableHead>
+                                        <TableHead className="px-2 min-w-[120px] text-center whitespace-nowrap">Coordinator Status</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
@@ -518,16 +537,31 @@ export default function ShowAllDefenseRequests({
                                                 <TableCell className="px-2 py-2 text-xs whitespace-nowrap text-center align-middle">
                                                     <Badge
                                                         className={
-                                                            req.status === 'Approved'
+                                                            req.adviser_status === 'Endorsed'
                                                                 ? 'bg-green-100 text-green-700 border-green-200'
-                                                                : req.status === 'Rejected'
+                                                                : req.adviser_status === 'Rejected'
                                                                 ? 'bg-red-100 text-red-700 border-red-200'
-                                                                : req.status === 'Pending'
+                                                                : req.adviser_status === 'Pending'
                                                                 ? 'bg-yellow-100 text-yellow-700 border-yellow-200'
                                                                 : 'bg-gray-100 text-gray-700 border-gray-200'
                                                         }
                                                     >
-                                                        {req.status}
+                                                        {req.adviser_status === 'Approved' ? 'Endorsed' : (req.adviser_status || '—')}
+                                                    </Badge>
+                                                </TableCell>
+                                                <TableCell className="px-2 py-2 text-xs whitespace-nowrap text-center align-middle">
+                                                    <Badge
+                                                        className={
+                                                            req.coordinator_status === 'Approved'
+                                                                ? 'bg-green-100 text-green-700 border-green-200'
+                                                                : req.coordinator_status === 'Rejected'
+                                                                ? 'bg-red-100 text-red-700 border-red-200'
+                                                                : req.coordinator_status === 'Pending'
+                                                                ? 'bg-yellow-100 text-yellow-700 border-yellow-200'
+                                                                : 'bg-gray-100 text-gray-700 border-gray-200'
+                                                        }
+                                                    >
+                                                        {req.coordinator_status || '—'}
                                                     </Badge>
                                                 </TableCell>
                                             </TableRow>
@@ -535,7 +569,7 @@ export default function ShowAllDefenseRequests({
                                     })}
                                     {endorsedRequests.length === 0 && (
                                         <TableRow>
-                                            <TableCell colSpan={8} className="text-center py-10 text-muted-foreground">
+                                            <TableCell colSpan={9} className="text-center py-10 text-muted-foreground">
                                                 No endorsed submissions found.
                                             </TableCell>
                                         </TableRow>

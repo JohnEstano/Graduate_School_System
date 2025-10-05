@@ -315,13 +315,22 @@ Route::middleware(['auth','verified'])->group(function () {
                 'defense_mode' => $defenseRequest->defense_mode,
                 'defense_venue' => $defenseRequest->defense_venue,
                 'scheduling_notes' => $defenseRequest->scheduling_notes,
+                // --- ALL DOCUMENT FIELDS ---
                 'advisers_endorsement' => $defenseRequest->advisers_endorsement,
                 'rec_endorsement' => $defenseRequest->rec_endorsement,
                 'proof_of_payment' => $defenseRequest->proof_of_payment,
                 'reference_no' => $defenseRequest->reference_no,
+                'manuscript_proposal' => $defenseRequest->manuscript_proposal,
+                'similarity_index' => $defenseRequest->similarity_index,
+                'avisee_adviser_attachment' => $defenseRequest->avisee_adviser_attachment,
+                'ai_detection_certificate' => $defenseRequest->ai_detection_certificate,
+                'endorsement_form' => $defenseRequest->endorsement_form,
+                // --- END DOCUMENT FIELDS ---
                 'last_status_updated_by' => $defenseRequest->last_status_updated_by,
                 'last_status_updated_at' => $defenseRequest->last_status_updated_at,
                 'workflow_history' => $defenseRequest->workflow_history ?? [],
+                'adviser_status' => $defenseRequest->adviser_status ?? null,
+                'coordinator_status' => $defenseRequest->coordinator_status ?? null,
             ];
             return Inertia::render('coordinator/submissions/defense-request/details', [
                 'defenseRequest' => $mapped,
@@ -488,3 +497,7 @@ Route::post('/adviser/defense-requirements/{id}/endorsement-form', function($id)
 
 /* Document Generation API */
 Route::post('/api/generate-document', [GeneratedDocumentController::class, 'generateDocument']);
+
+/* Update Adviser Status for Defense Requirements */
+Route::patch('/adviser/defense-requirements/{defenseRequest}/adviser-status', [\App\Http\Controllers\DefenseRequestController::class, 'updateAdviserStatus'])
+    ->name('adviser.defense-requirements.update-adviser-status');
