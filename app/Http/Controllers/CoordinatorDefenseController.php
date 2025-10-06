@@ -666,72 +666,17 @@ class CoordinatorDefenseController extends Controller
      */
     public function assignPanelsJson(Request $request, DefenseRequest $defenseRequest)
     {
-        $this->authorizeRole();
-
         $data = $request->validate([
-            'defense_chairperson' => 'required|string|max:255',
-            'defense_panelist1'   => 'required|string|max:255',
-            'defense_panelist2'   => 'nullable|string|max:255',
-            'defense_panelist3'   => 'nullable|string|max:255',
-            'defense_panelist4'   => 'nullable|string|max:255',
+            'defense_chairperson' => 'nullable|string|max:255',
+            'defense_panelist1' => 'nullable|string|max:255',
+            'defense_panelist2' => 'nullable|string|max:255',
+            'defense_panelist3' => 'nullable|string|max:255',
+            'defense_panelist4' => 'nullable|string|max:255',
         ]);
 
-        try {
-            DB::beginTransaction();
+        $defenseRequest->update($data);
 
-            $origState = $defenseRequest->workflow_state;
-            // Only allow if adviser-approved or already in panel stages
-            if (!in_array($origState, [
-                'coordinator-approved','panels-assigned','scheduled',
-                'adviser-approved'
-            ])) {
-                return response()->json([
-                    'error'=>"Cannot assign panels from state '{$origState}'"
-                ],422);
-            }
-
-            foreach ($data as $k=>$v) {
-                $defenseRequest->{$k} = $v;
-            }
-
-            if ($defenseRequest->workflow_state === 'coordinator-approved' ||
-                $defenseRequest->workflow_state === 'adviser-approved') {
-                $defenseRequest->workflow_state = 'panels-assigned';
-                $defenseRequest->addWorkflowEntry(
-                    'panels-assigned',
-                    null,
-                    Auth::id(),
-                    $origState,
-                    'panels-assigned'
-                );
-            }
-
-            $defenseRequest->panels_assigned_by = Auth::id();
-            if (property_exists($defenseRequest,'scheduling_status') || isset($defenseRequest->scheduling_status)) {
-                $defenseRequest->scheduling_status = 'panels-assigned';
-            }
-
-            $defenseRequest->last_status_updated_at = now();
-            $defenseRequest->last_status_updated_by = Auth::id();
-            $defenseRequest->save();
-
-            // ADD THIS LINE TO CREATE HONORARIUM PAYMENTS
-            $defenseRequest->createHonorariumPayments();
-
-            DB::commit();
-
-            return response()->json([
-                'ok'=>true,
-                'request'=>$this->mapForDetails($defenseRequest)
-            ]);
-        } catch (\Throwable $e) {
-            DB::rollBack();
-            Log::error('assignPanelsJson error',[
-                'id'=>$defenseRequest->id,
-                'error'=>$e->getMessage()
-            ]);
-            return response()->json(['error'=>'Assigning panels failed'],500);
-        }
+        return response()->json(['ok' => true, 'request' => $defenseRequest]);
     }
 
     public function scheduleDefenseJson(Request $request, DefenseRequest $defenseRequest)

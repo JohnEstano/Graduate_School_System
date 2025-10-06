@@ -349,6 +349,7 @@ export default function DetailsRequirementsPage(rawProps: any) {
         setRequest(r => ({
           ...r,
           ai_detection_certificate: data.ai_detection_certificate || r.ai_detection_certificate,
+          endorsement_form: data.endorsement_form || r.endorsement_form,
           advisers_endorsement: data.advisers_endorsement || r.advisers_endorsement,
         }));
         setAiDetectionCertFile(null);
@@ -488,6 +489,12 @@ export default function DetailsRequirementsPage(rawProps: any) {
                 </TabsTrigger>
               </TabsList>
             </Tabs>
+            {/* Move missing docs alert here, always visible if missing */}
+            {tab === 'link-documents' && missingDocs && (
+              <span className="ml-4 text-xs text-rose-600 font-medium">
+                {missingDocsAlertMsg}
+              </span>
+            )}
           </div>
           <div className="flex gap-2">
             <Button
@@ -519,16 +526,6 @@ export default function DetailsRequirementsPage(rawProps: any) {
             </Button>
           </div>
         </div>
-
-        {/* Subtle rose alert below the tabs if missing docs */}
-        {/* Removed the alert at the top as requested */}
-        {/* {missingDocs && (
-          <div className="mb-4 mt-2 rounded-md bg-transparent border-0 px-2 py-1">
-            <span className="text-xs text-rose-600 font-medium">
-              {missingDocsAlertMsg}
-            </span>
-          </div>
-        )} */}
 
         {/* Main content and sidebar layout */}
         <div className="flex flex-col md:flex-row gap-5 mb-2">
@@ -753,30 +750,61 @@ export default function DetailsRequirementsPage(rawProps: any) {
                     </h2>
                     <Separator />
                     <div className="flex flex-col gap-3 mt-2">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        className="w-fit"
-                        onClick={() => aiDetectionInputRef.current?.click()}
-                        disabled={aiDetectionCertUploading}
-                      >
-                        Choose File
-                      </Button>
-                      <input
-                        ref={aiDetectionInputRef}
-                        type="file"
-                        accept=".pdf,.jpg,.jpeg,.png"
-                        className="hidden"
-                        onChange={e => setAiDetectionCertFile(e.target.files?.[0] || null)}
-                        disabled={aiDetectionCertUploading}
-                      />
-                      {aiDetectionCertFile && (
-                        <div className="text-xs text-muted-foreground">
-                          Selected: {aiDetectionCertFile.name}
+                      <div className="grid w-full max-w-sm items-center gap-1.5">
+                        <label
+                          htmlFor="ai-detection-upload"
+                          className="block text-xs font-medium text-zinc-700 dark:text-zinc-200"
+                        >
+                          Upload Certificate
+                        </label>
+                        {request.ai_detection_certificate && !aiDetectionCertFile ? (
+                          <div className="flex items-center gap-2 w-full">
+                            <Input
+                              type="text"
+                              value={request.ai_detection_certificate.split('/').pop() || ''}
+                              disabled
+                              className="flex-1 bg-zinc-100 text-zinc-700 cursor-default"
+                            />
+                            <Button
+                              type="button"
+                              size="icon"
+                              variant="ghost"
+                              className="h-7 w-7"
+                              onClick={() => {
+                                setRequest(r => ({ ...r, ai_detection_certificate: undefined }));
+                                if (aiDetectionInputRef.current) aiDetectionInputRef.current.value = "";
+                              }}
+                              title="Remove linked file"
+                            >
+                              <XCircle className="h-4 w-4 text-black" />
+                            </Button>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-2">
+                            <input
+                              id="ai-detection-upload"
+                              ref={aiDetectionInputRef}
+                              type="file"
+                              accept=".pdf,.jpg,.jpeg,.png"
+                              className="flex-1 text-xs file:bg-rose-500 file:text-white file:rounded file:border-0 file:px-3 file:py-1.5 file:text-xs file:font-semibold file:cursor-pointer"
+                              style={{ maxWidth: 220 }}
+                              onChange={e => setAiDetectionCertFile(e.target.files?.[0] || null)}
+                              disabled={aiDetectionCertUploading}
+                            />
+                            {aiDetectionCertUploading && (
+                              <span className="text-xs text-muted-foreground">Uploading...</span>
+                            )}
+                          </div>
+                        )}
+                        <div className="text-xs text-muted-foreground mt-1">
+                          {aiDetectionCertFile
+                            ? `Selected: ${aiDetectionCertFile.name}`
+                            : null}
                         </div>
-                      )}
+                      </div>
                     </div>
                   </div>
+
                   {/* Endorsement Form Section */}
                   <div className={sectionClass + " text-sm"}>
                     <h2 className="text-sm font-semibold flex items-center gap-2">
@@ -784,48 +812,76 @@ export default function DetailsRequirementsPage(rawProps: any) {
                     </h2>
                     <Separator />
                     <div className="flex flex-col gap-3 mt-2">
-                      <div className="flex gap-2">
-                        <Button
-                          type="button"
-                          variant="outline"
-                          onClick={handleAutoGenerate}
-                          disabled={endorsementFormUploading || autoGenerating || templatesLoading}
+                      <div className="grid w-full max-w-sm items-center gap-1.5">
+                        <label
+                          htmlFor="endorsement-upload"
+                          className="block text-xs font-medium text-zinc-700 dark:text-zinc-200"
                         >
-                          {autoGenerating || templatesLoading ? (
-                            <span className="flex items-center gap-2">
-                              <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
-                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/>
-                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
-                              </svg>
-                              Generating...
-                            </span>
-                          ) : (
-                            "Auto Generate"
-                          )}
-                        </Button>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          className="w-fit"
-                          onClick={() => endorsementInputRef.current?.click()}
-                          disabled={endorsementFormUploading}
-                        >
-                          Choose File
-                        </Button>
-                        <input
-                          ref={endorsementInputRef}
-                          type="file"
-                          accept=".pdf,.jpg,.jpeg,.png"
-                          className="hidden"
-                          onChange={e => setEndorsementFormFile(e.target.files?.[0] || null)}
-                          disabled={endorsementFormUploading}
-                        />
-                      </div>
-                      {endorsementFormFile && (
-                        <div className="text-xs text-muted-foreground">
-                          Selected: {endorsementFormFile.name}
+                          Upload Endorsement Form
+                        </label>
+                        {request.endorsement_form && !endorsementFormFile ? (
+                          <div className="flex items-center gap-2 w-full">
+                            <Input
+                              type="text"
+                              value={request.endorsement_form.split('/').pop() || ''}
+                              disabled
+                              className="flex-1 bg-zinc-100 text-zinc-700 cursor-default"
+                            />
+                            <Button
+                              type="button"
+                              size="icon"
+                              variant="ghost"
+                              className="h-7 w-7"
+                              onClick={() => {
+                                setRequest(r => ({ ...r, endorsement_form: undefined }));
+                                if (endorsementInputRef.current) endorsementInputRef.current.value = "";
+                              }}
+                              title="Remove linked file"
+                            >
+                              <XCircle className="h-4 w-4 text-black" />
+                            </Button>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-2">
+                            <input
+                              id="endorsement-upload"
+                              ref={endorsementInputRef}
+                              type="file"
+                              accept=".pdf,.jpg,.jpeg,.png"
+                              className="flex-1 text-xs file:bg-rose-500 file:text-white file:rounded file:border-0 file:px-3 file:py-1.5 file:text-xs file:font-semibold file:cursor-pointer"
+                              style={{ maxWidth: 220 }}
+                              onChange={e => setEndorsementFormFile(e.target.files?.[0] || null)}
+                              disabled={endorsementFormUploading}
+                            />
+                          </div>
+                        )}
+                        <div className="text-xs text-muted-foreground mt-1">
+                          {endorsementFormFile
+                            ? `Selected: ${endorsementFormFile.name}`
+                            : null}
                         </div>
-                      )}
+                        {/* Auto Generate button on a separate row */}
+                        <div className="mt-2">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            onClick={handleAutoGenerate}
+                            disabled={endorsementFormUploading || autoGenerating || templatesLoading}
+                          >
+                            {autoGenerating || templatesLoading ? (
+                              <span className="flex items-center gap-2">
+                                <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/>
+                                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+                                </svg>
+                                Generating...
+                              </span>
+                            ) : (
+                              "Auto Generate"
+                            )}
+                          </Button>
+                        </div>
+                      </div>
                     </div>
                   </div>
                   <div className="flex justify-end">

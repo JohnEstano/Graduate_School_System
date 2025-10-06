@@ -209,11 +209,32 @@ export default function DefenseRequestIndex() {
                 const response = await fetch(`/api/defense-request/${defenseRequest.id}`);
                 if (response.ok) {
                     const updatedRequest = await response.json();
-                    if (updatedRequest.workflow_state !== defenseRequest.workflow_state) {
+
+                    // Check for any relevant changes, not just workflow_state
+                    const fieldsToCheck: (keyof DefenseRequest)[] = [
+                        'workflow_state',
+                        'defense_chairperson',
+                        'defense_panelist1',
+                        'defense_panelist2',
+                        'defense_panelist3',
+                        'defense_panelist4',
+                        'scheduled_date',
+                        'scheduled_time',
+                        'scheduled_end_time',
+                        'defense_venue',
+                        'defense_mode',
+                        'scheduling_notes'
+                    ];
+                    const hasChanged = fieldsToCheck.some(
+                        key => updatedRequest[key] !== defenseRequest[key]
+                    );
+
+                    if (hasChanged) {
                         setDefenseRequest(updatedRequest);
                         setLastUpdateTime(dayjs().format('h:mm A'));
-                        console.log('Defense request status updated:', updatedRequest.workflow_state);
+                        console.log('Defense request updated:', updatedRequest);
                     }
+
                     // --- ADDED: Check for rejection states ---
                     if (['adviser-rejected','coordinator-rejected'].includes(updatedRequest.workflow_state)) {
                         // reflect rejection in requirements list
@@ -231,7 +252,7 @@ export default function DefenseRequestIndex() {
             }
         }, 10000);
         return () => clearInterval(pollInterval);
-    }, [defenseRequest?.id, defenseRequest?.workflow_state]);
+    }, [defenseRequest?.id, defenseRequest]);
 
     function handleSuccess() {
         setShowSuccessPanel(true);
@@ -368,7 +389,7 @@ export default function DefenseRequestIndex() {
                 case 'adviser-review':
                     progress = 20;
                     title = "Under Adviser Review";
-                    description = "Your defense requirements are currently being <b>reviewed by your Adviser</b>. You will be notified once the review is complete.";
+                    description = "Your submission is being reviewed by your adviser. Please wait for feedback or approval.";
                     color = "text-blue-600";
                     icon = <Eye className="h-4 w-4 text-blue-600" />;
                     bg = "bg-blue-50";
@@ -378,8 +399,8 @@ export default function DefenseRequestIndex() {
                 case 'adviser-approved':
                 case 'coordinator-review':
                     progress = 50;
-                    title = "Approved by Adviser - Under Coordinator Review";
-                    description = "Great! Your adviser has <b>approved</b> your defense requirements. The request is now being <b>reviewed by the Coordinator</b> for final approval and scheduling.";
+                    title = "Awaiting Coordinator Review";
+                    description = "Your adviser has approved your submission. The coordinator will now review and assign panel members.";
                     color = "text-orange-600";
                     icon = <CheckCircle className="h-4 w-4 text-orange-600" />;
                     bg = "bg-orange-50";
@@ -387,59 +408,41 @@ export default function DefenseRequestIndex() {
                     break;
                     
                 case 'coordinator-approved':
-                    progress = 75;
-                    title = "Approved - Panel Assignment in Progress";
-                    description = "Excellent! Your defense request has been <b>approved by the Coordinator</b>. Defense panel members are currently being assigned.";
+                    progress = 60;
+                    title = "Panel Assignment in Progress";
+                    description = "The coordinator has approved your submission. Panel members will be assigned soon.";
                     color = "text-green-600";
                     icon = <Users className="h-4 w-4 text-green-600" />;
                     bg = "bg-green-50";
                     progressColor = "bg-green-500";
                     break;
                     
-                case 'scheduled':
-                    progress = 100;
-                    title = "Defense Scheduled";
+                case 'panels-assigned':
+                    progress = 75;
+                    title = "Panels Assigned";
+                    description = "Panel members have been assigned. Scheduling your defense is next.";
+                    color = "text-orange-600";
+                    icon = <Users className="h-4 w-4 text-orange-600" />;
+                    bg = "bg-orange-50";
+                    progressColor = "bg-orange-500";
+                    break;
                     
-                    // Get panel information
-                    const chairperson = defenseRequest.defense_chairperson || "Chairperson not assigned";
-                    const panelists = [
-                        defenseRequest.defense_panelist1,
-                        defenseRequest.defense_panelist2,
-                        defenseRequest.defense_panelist3,
-                        defenseRequest.defense_panelist4,
-                    ].filter(Boolean);
-
-                    const panelistText = panelists.length
-                        ? panelists.map((name, idx) => `<br/>• <b>${name}</b> (Panelist ${idx + 1})`).join("")
-                        : "<br/>• Panel members not yet assigned.";
-
-                    // Format schedule information
-                    let scheduleInfo = "";
-                    if (defenseRequest.scheduled_date && defenseRequest.formatted_time_range) {
-                        const scheduleDate = dayjs(defenseRequest.scheduled_date).format("MMMM D, YYYY");
-                        scheduleInfo = `<br/><br/><div class="mt-3 p-3 bg-blue-50 rounded-lg border-l-4 border-blue-400">
-                            <h4 class="font-semibold text-blue-800 mb-2">📅 Defense Schedule</h4>
-                            <p><b>Date:</b> ${scheduleDate}</p>
-                            <p><b>Time:</b> ${defenseRequest.formatted_time_range}</p>
-                            ${defenseRequest.defense_venue ? `<p><b>Venue:</b> ${defenseRequest.defense_venue}</p>` : ''}
-                            ${defenseRequest.defense_mode ? `<p><b>Mode:</b> ${defenseRequest.defense_mode}</p>` : ''}
-                        </div>`;
-                    } else if (defenseRequest.date_of_defense) {
-                        // Fallback to old date field
-                        const scheduleDate = dayjs(defenseRequest.date_of_defense).format("MMMM D, YYYY");
-                        scheduleInfo = `<br/><br/><div class="mt-3 p-3 bg-blue-50 rounded-lg border-l-4 border-blue-400">
-                            <h4 class="font-semibold text-blue-800 mb-2">📅 Defense Schedule</h4>
-                            <p><b>Date:</b> ${scheduleDate}</p>
-                            <p><em>Time and venue details will be announced soon.</em></p>
-                        </div>`;
-                    }
-
-                    description = `🎉 <b>Congratulations!</b> Your defense has been fully scheduled and approved. 
-                        <br/><br/><h4 class="font-semibold text-green-800 mb-2">👥 Defense Panel</h4>
-                        • <b>${chairperson}</b> (Chairperson)${panelistText}${scheduleInfo}
-                        <br/><br/><p class="text-sm text-gray-600 mt-3">💡 <b>Next Steps:</b> Prepare your defense presentation and materials. You will receive email notifications with additional details.</p>`;
+                case 'scheduled':
+                    progress = 90;
+                    title = "Defense Scheduled";
+                    description = "Your defense has been scheduled. Please prepare your presentation and required materials.";
                     color = "text-green-600";
                     icon = <Calendar className="h-4 w-4 text-green-600" />;
+                    bg = "bg-green-50";
+                    progressColor = "bg-green-500";
+                    break;
+                    
+                case 'completed':
+                    progress = 100;
+                    title = "Defense Completed";
+                    description = "Congratulations! Your defense is complete.";
+                    color = "text-green-600";
+                    icon = <GraduationCap className="h-4 w-4 text-green-600" />;
                     bg = "bg-green-50";
                     progressColor = "bg-green-500";
                     break;
@@ -447,9 +450,7 @@ export default function DefenseRequestIndex() {
                 case 'adviser-rejected':
                     progress = 100;
                     title = "Rejected by Adviser";
-                    description = `Your defense request has been <b>rejected by your Adviser</b>. 
-                        ${defenseRequest.adviser_comments ? `<br/><br/><b>Feedback:</b> "${defenseRequest.adviser_comments}"` : ''}
-                        <br/><br/>Please address the feedback and submit a new set of requirements if needed.`;
+                    description = "Your adviser has rejected your submission. Please review the feedback and resubmit.";
                     color = "text-red-600";
                     icon = <X className="h-4 w-4 text-red-600" />;
                     bg = "bg-red-50";
@@ -459,23 +460,11 @@ export default function DefenseRequestIndex() {
                 case 'coordinator-rejected':
                     progress = 100;
                     title = "Rejected by Coordinator";
-                    description = `Your defense request has been <b>rejected by the Coordinator</b>. 
-                        ${defenseRequest.coordinator_comments ? `<br/><br/><b>Feedback:</b> "${defenseRequest.coordinator_comments}"` : ''}
-                        <br/><br/>Please address the feedback and resubmit if allowed.`;
+                    description = "Your submission was rejected by the coordinator. Please review the feedback and resubmit.";
                     color = "text-red-600";
                     icon = <X className="h-4 w-4 text-red-600" />;
                     bg = "bg-red-50";
                     progressColor = "bg-red-500";
-                    break;
-                    
-                case 'completed':
-                    progress = 100;
-                    title = "Defense Completed";
-                    description = "🎓 Congratulations! Your defense has been completed successfully.";
-                    color = "text-green-600";
-                    icon = <GraduationCap className="h-4 w-4 text-green-600" />;
-                    bg = "bg-green-50";
-                    progressColor = "bg-green-500";
                     break;
                     
                 default:
@@ -892,17 +881,8 @@ export default function DefenseRequestIndex() {
                                                                     </div>
                                                                 </>
                                                             ) : (
-                                                                <div className="flex items-center justify-center">
-                                                                    {isCompletedRow ? (
-                                                                        <div className="rounded-full p-2 border bg-green-500 text-white border-green-500">
-                                                                            <Check className="w-4 h-4" />
-                                                                        </div>
-                                                                    ) : (
-                                                                        <div className="rounded-full p-2 border bg-red-500 text-white border-red-500">
-                                                                            <X className="w-4 h-4" />
-                                                                        </div>
-                                                                    )}
-                                                                </div>
+                                                                // Remove the big X and big Check for cancelled and approved/completed
+                                                                <div className="flex items-center justify-center" />
                                                             )}
                                                         </div>
                                                     </div>
@@ -1016,133 +996,70 @@ export default function DefenseRequestIndex() {
                                                             {defenseRequest &&
                                                              defenseRequest.thesis_title === req.thesis_title && (
                                                                 <div className="mt-2 w-full border border-zinc-200 dark:border-zinc-700 rounded-md p-3 bg-zinc-50 dark:bg-zinc-800/40">
-                                                                    <div className="flex items-center justify-between mb-2">
-                                                                        <span className="text-[11px] font-semibold uppercase tracking-wide text-zinc-600 dark:text-zinc-300 flex items-center gap-1">
-                                                                            <Info className="w-3 h-3 text-rose-500" /> Defense Information
-                                                                        </span>
-                                                                        <span className="text-[10px] text-muted-foreground dark:text-zinc-400">
-                                                                            State: {defenseRequest.workflow_state}
+                                                                    <div className="flex items-center mb-2">
+                                                                        <Info className="w-4 h-4 text-rose-500 mr-2" />
+                                                                        <span className="text-xs font-semibold text-zinc-700 dark:text-zinc-200">
+                                                                            Defense Information
                                                                         </span>
                                                                     </div>
-
-                                                                    {(() => {
-                                                                        const wf = defenseRequest.workflow_state;
-                                                                        const chair = defenseRequest.defense_chairperson;
-                                                                        const p1 = defenseRequest.defense_panelist1;
-                                                                        const p2 = defenseRequest.defense_panelist2;
-                                                                        const p3 = defenseRequest.defense_panelist3;
-                                                                        const p4 = defenseRequest.defense_panelist4;
-                                                                        const anyPanels = [chair,p1,p2,p3,p4].some(Boolean);
-
-                                                                        const scheduleDate = defenseRequest.scheduled_date
-                                                                            ? dayjs(defenseRequest.scheduled_date).format("MMMM D, YYYY")
-                                                                            : null;
-
-                                                                        const timeRange = defenseRequest.formatted_time_range
-                                                                            ? defenseRequest.formatted_time_range
-                                                                            : (defenseRequest.scheduled_time && defenseRequest.scheduled_end_time
-                                                                                ? `${defenseRequest.scheduled_time} - ${defenseRequest.scheduled_end_time}`
-                                                                                : null);
-
-                                                                        const mode = defenseRequest.defense_mode || defenseRequest.mode_defense;
-                                                                        const venue = defenseRequest.defense_venue;
-                                                                        const notes = defenseRequest.scheduling_notes;
-
-                                                                        // Message helpers
-                                                                        const awaitingAdviser = (
-                                                                            <div className="text-[11px] text-zinc-600 dark:text-zinc-400">
-                                                                                Awaiting adviser review. No coordinator actions yet.
+                                                                    <div className="text-xs text-zinc-700 dark:text-zinc-300 space-y-3">
+                                                                        {/* Cancelled/Rejected */}
+                                                                        {['adviser-rejected','coordinator-rejected','cancelled'].includes(defenseRequest.workflow_state) && (
+                                                                            <div className="text-xs text-rose-600">
+                                                                                No further defense information (request {defenseRequest.workflow_state.replace('-',' ')}).
                                                                             </div>
-                                                                        );
-                                                                        const awaitingCoordinator = (
-                                                                            <div className="text-[11px] text-zinc-600 dark:text-zinc-400">
-                                                                                Adviser approved. Awaiting coordinator review / panel assignment.
-                                                                            </div>
-                                                                        );
-                                                                        const awaitingPanels = (
-                                                                            <div className="text-[11px] text-zinc-600 dark:text-zinc-400">
-                                                                                Coordinator approved. Panel assignment pending.
-                                                                            </div>
-                                                                        );
-                                                                        const awaitingSchedule = (
-                                                                            <div className="text-[11px] text-zinc-600 dark:text-zinc-400">
-                                                                                Panel assigned. Scheduling in progress.
-                                                                            </div>
-                                                                        );
+                                                                        )}
 
-                                                                        if (['adviser-rejected','coordinator-rejected','cancelled'].includes(wf)) {
-                                                                            return (
-                                                                                <div className="text-[11px] text-red-600">
-                                                                                    No further defense information (request {wf.replace('-',' ')}).
+                                                                        {/* Panels (if assigned) */}
+                                                                        {['panels-assigned','scheduled','completed'].includes(defenseRequest.workflow_state) &&
+                                                                            [defenseRequest.defense_chairperson, defenseRequest.defense_panelist1, defenseRequest.defense_panelist2, defenseRequest.defense_panelist3, defenseRequest.defense_panelist4].some(Boolean) && (
+                                                                            <div>
+                                                                                <span className="font-semibold">Committee:</span>
+                                                                                <ul className="pl-4 list-disc">
+                                                                                    {defenseRequest.defense_chairperson && <li>{defenseRequest.defense_chairperson} <span className="text-xs text-zinc-500">(Chairperson)</span></li>}
+                                                                                    {defenseRequest.defense_panelist1 && <li>{defenseRequest.defense_panelist1} <span className="text-xs text-zinc-500">(Panelist 1)</span></li>}
+                                                                                    {defenseRequest.defense_panelist2 && <li>{defenseRequest.defense_panelist2} <span className="text-xs text-zinc-500">(Panelist 2)</span></li>}
+                                                                                    {defenseRequest.defense_panelist3 && <li>{defenseRequest.defense_panelist3} <span className="text-xs text-zinc-500">(Panelist 3)</span></li>}
+                                                                                    {defenseRequest.defense_panelist4 && <li>{defenseRequest.defense_panelist4} <span className="text-xs text-zinc-500">(Panelist 4)</span></li>}
+                                                                                </ul>
+                                                                            </div>
+                                                                        )}
+
+                                                                        {/* Completed: Show only the congratulations and certificate link */}
+                                                                        {defenseRequest.workflow_state === 'completed' && (
+                                                                            <div className="mt-2 p-3 rounded-md border border-green-200 bg-green-50 dark:bg-green-900/30 flex flex-col gap-2">
+                                                                                <div className="font-bold text-green-700 text-xs mb-1">
+                                                                                    Congratulations, your defense has been successfully completed!
                                                                                 </div>
-                                                                            );
-                                                                        }
-
-                                                                        return (
-                                                                            <div className="space-y-3">
-                                                                                {/* Panels */}
-                                                                                {['panels-assigned','scheduled','completed'].includes(wf) && anyPanels && (
-                                                                                    <div>
-                                                                                        <div className="text-[11px] font-semibold text-zinc-700 dark:text-zinc-300 mb-1">
-                                                                                            Committee
-                                                                                        </div>
-                                                                                        <ul className="pl-3 list-disc space-y-0.5">
-                                                                                            {chair && <li className="text-[11px] text-zinc-700 dark:text-zinc-300"><b>{chair}</b> (Chairperson)</li>}
-                                                                                            {p1 && <li className="text-[11px] text-zinc-700 dark:text-zinc-300">{p1} (Panelist 1)</li>}
-                                                                                            {p2 && <li className="text-[11px] text-zinc-700 dark:text-zinc-300">{p2} (Panelist 2)</li>}
-                                                                                            {p3 && <li className="text-[11px] text-zinc-700 dark:text-zinc-300">{p3} (Panelist 3)</li>}
-                                                                                            {p4 && <li className="text-[11px] text-zinc-700 dark:text-zinc-300">{p4} (Panelist 4)</li>}
-                                                                                        </ul>
-                                                                                    </div>
-                                                                                )}
-
-                                                                                {/* Schedule (only when scheduled or completed) */}
-                                                                                {['scheduled','completed'].includes(wf) && (
-                                                                                    <div className="rounded-md border border-blue-200 dark:border-blue-600/40 bg-blue-50 dark:bg-blue-900/20 p-2.5">
-                                                                                        <div className="text-[11px] font-semibold text-blue-700 dark:text-blue-300 mb-1">
-                                                                                            Schedule
-                                                                                        </div>
-                                                                                        <div className="space-y-0.5">
-                                                                                            <div className="text-[11px] text-blue-800 dark:text-blue-200">
-                                                                                                <b>Date:</b> {scheduleDate || 'TBD'}
-                                                                                            </div>
-                                                                                            <div className="text-[11px] text-blue-800 dark:text-blue-200">
-                                                                                                <b>Time:</b> {timeRange || 'TBD'}
-                                                                                            </div>
-                                                                                            {mode && (
-                                                                                                <div className="text-[11px] text-blue-800 dark:text-blue-200">
-                                                                                                    <b>Mode:</b> {mode}
-                                                                                                </div>
-                                                                                            )}
-                                                                                            {venue && (
-                                                                                                <div className="text-[11px] text-blue-800 dark:text-blue-200">
-                                                                                                    <b>Venue:</b> {venue}
-                                                                                                </div>
-                                                                                            )}
-                                                                                            {notes && (
-                                                                                                <div className="text-[11px] text-blue-800 dark:text-blue-200">
-                                                                                                    <b>Notes:</b> {notes}
-                                                                                                </div>
-                                                                                            )}
-                                                                                        </div>
-                                                                                    </div>
-                                                                                )}
-
-                                                                                {/* State guidance (only if earlier states) */}
-                                                                                {['submitted','adviser-review'].includes(wf) && awaitingAdviser}
-                                                                                {['adviser-approved','coordinator-review'].includes(wf) && awaitingCoordinator}
-                                                                                {wf === 'coordinator-approved' && !anyPanels && awaitingPanels}
-                                                                                {wf === 'panels-assigned' && !scheduleDate && awaitingSchedule}
-
-                                                                                {/* Quick summary line */}
-                                                                                <div className="pt-1 border-t border-dashed border-zinc-200 dark:border-zinc-700 mt-2 text-[10px] text-muted-foreground dark:text-zinc-500">
-                                                                                    Last workflow state: {wf}
-                                                                                    {scheduleDate && ` • Scheduled for ${scheduleDate}`}
-                                                                                    {mode && ` • Mode: ${mode}`}
+                                                                                <div className="text-xs text-zinc-700 dark:text-zinc-200 mb-1">
+                                                                                    <b>Request for Oral Defense Certificate</b><br />
+                                                                                    Please fill out the following form to request your Oral Defense Certificate:<br />
+                                                                                    <a
+                                                                                        href="https://docs.google.com/forms/d/e/1FAIpQLScIFYf8Z6L8q_N2qVEdS4koTJ7jv4HOFnhit-4LKXmOH--Ukg/viewform?usp=send_form"
+                                                                                        target="_blank"
+                                                                                        rel="noopener noreferrer"
+                                                                                        className="text-blue-700 underline break-all"
+                                                                                    >
+                                                                                        https://docs.google.com/forms/d/e/1FAIpQLScIFYf8Z6L8q_N2qVEdS4koTJ7jv4HOFnhit-4LKXmOH--Ukg/viewform?usp=send_form
+                                                                                    </a>
                                                                                 </div>
                                                                             </div>
-                                                                        );
-                                                                    })()}
+                                                                        )}
+
+                                                                        {/* Awaiting/Review states */}
+                                                                        {['submitted','adviser-review'].includes(defenseRequest.workflow_state) && (
+                                                                            <div>Awaiting adviser review. No coordinator actions yet.</div>
+                                                                        )}
+                                                                        {['adviser-approved','coordinator-review'].includes(defenseRequest.workflow_state) && (
+                                                                            <div>Adviser approved. Awaiting coordinator review / panel assignment.</div>
+                                                                        )}
+                                                                        {defenseRequest.workflow_state === 'coordinator-approved' && ![defenseRequest.defense_chairperson, defenseRequest.defense_panelist1, defenseRequest.defense_panelist2, defenseRequest.defense_panelist3, defenseRequest.defense_panelist4].some(Boolean) && (
+                                                                            <div>Coordinator approved. Panel assignment pending.</div>
+                                                                        )}
+                                                                        {defenseRequest.workflow_state === 'panels-assigned' && !defenseRequest.scheduled_date && (
+                                                                            <div>Panel assigned. Scheduling in progress.</div>
+                                                                        )}
+                                                                    </div>
                                                                 </div>
                                                             )}
                                                             {/* Submitted at info, top right */}
