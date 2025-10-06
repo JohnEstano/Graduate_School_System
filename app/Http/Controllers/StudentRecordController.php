@@ -9,6 +9,7 @@ use Illuminate\Http\Request;
 use PhpOffice\PhpWord\PhpWord;
 use PhpOffice\PhpWord\IOFactory;
 use Inertia\Inertia;
+use Barryvdh\DomPDF\Facade\Pdf; 
 
 class StudentRecordController extends Controller
 {
@@ -132,35 +133,23 @@ public function show($id)
         return response()->json($panelists);
     }
 
-    public function downloadDocs($id)
-    {
-        $payment = PaymentRecord::with(['studentRecord', 'studentRecord.program'])
-            ->findOrFail($id);
+public function downloadPdf($id)
+{
+    $payment = PaymentRecord::with('studentRecord')->findOrFail($id);
+    $student = $payment->studentRecord;
 
-        $phpWord = new PhpWord();
-        $section = $phpWord->addSection();
+    // Prepare data for PDF view
+    $data = [
+        'student' => $student,
+        'payment' => $payment,
+    ];
 
-        // Title
-        $section->addText("Payment Summary", ['bold' => true, 'size' => 16]);
-        $section->addTextBreak();
+    // Load a Blade view into PDF
+    $pdf = Pdf::loadView('pdfs.payment-summary', $data);
 
-        // Student details
-        $student = $payment->studentRecord;
-        $section->addText("Student: {$student->first_name} {$student->last_name}");
-        $section->addText("School Year: {$payment->school_year}");
-        $section->addText("Payment Date: {$payment->payment_date}");
-        $section->addText("Defense Status: {$payment->defense_status}");
-        $section->addText("Amount: ₱" . number_format($payment->amount, 2));
-
-        // Save temp file
-        $fileName = "payment-{$payment->id}.docx";
-        $tempFile = tempnam(sys_get_temp_dir(), $fileName);
-
-        $writer = IOFactory::createWriter($phpWord, 'Word2007');
-        $writer->save($tempFile);
-
-        return response()->download($tempFile, $fileName)->deleteFileAfterSend(true);
-    }
+    $fileName = "payment-{$payment->id}.pdf";
+    return $pdf->download($fileName);
+}
 
 }
     

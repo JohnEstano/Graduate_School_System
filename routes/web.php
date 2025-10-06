@@ -77,11 +77,13 @@ Route::get('/honorarium/individual-record/{programId}', [HonorariumSummaryContro
     
 
 // Download CSV for a program
-Route::get('/honorarium/{record}/download', [HonorariumSummaryController::class, 'downloadCSV'])
-    ->name('honorarium.download');
+// API route
+Route::get('/api/honorarium/{programId}/download-pdf', [HonorariumSummaryController::class, 'downloadPdfApi']);
 
-Route::get('/honorarium/{id}/download-pdf', [HonorariumSummaryController::class, 'downloadPDF'])
+// Web route
+Route::get('/honorarium/{programId}/download-pdf', [HonorariumSummaryController::class, 'downloadProgramPdf'])
     ->name('honorarium.downloadPDF');
+
 
 
 
@@ -128,6 +130,23 @@ Route::get('/honorarium/{id}/download-pdf', [HonorariumSummaryController::class,
     Route::get('/student-records', [StudentRecordController::class, 'index'])->name('student-records.index');
     Route::put('/student-records/{studentRecord}', [StudentRecordController::class, 'update'])->name('student-records.update');
     Route::delete('/student-records/{studentRecord}', [StudentRecordController::class, 'destroy'])->name('student-records.destroy');
+
+    
+    Route::get('/payments/{id}/download-pdf', [StudentRecordController::class, 'downloadPdf'])
+    ->name('payments.downloadPdf');
+
+
+
+
+
+
+
+
+
+
+
+
+
     
     
     //Schedules route

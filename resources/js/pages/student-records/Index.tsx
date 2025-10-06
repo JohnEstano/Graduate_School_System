@@ -138,49 +138,54 @@ export default function Index({ records, filters }: IndexProps) {
           />
         </div>
 
-        {/* Scrollable Table with Sticky Header */}
-        <div className="rounded-md border border-border bg-white dark:bg-[#121212] p-2 max-h-[75vh] overflow-y-auto">
-          <Table className="min-w-full text-sm">
-            <TableHeader className="sticky top-0 bg-white dark:bg-[#121212] z-10 shadow-sm">
-              <TableRow>
-                <TableHead className="w-[30%] px-1 py-2">Student Name</TableHead>
-                <TableHead className="w-[15%] px-1 py-2 text-center">Program/Section</TableHead>
-                <TableHead className="w-[15%] px-1 py-2 text-center">Academic Status</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {records.data.length > 0 ? (
-                records.data.map((record) => (
-                  <TableRow
-                    key={record.id}
-                    className="hover:bg-muted/50 cursor-pointer"
-                    onClick={() => openIndividualRecord(record)}
-                  >
-                    <TableCell className="flex items-center space-x-4 px-1 py-2">
-                      <Avatar className="h-10 w-10 flex-shrink-0 bg-blue-100 text-blue-600 dark:bg-blue-900 dark:text-blue-300">
-                        <AvatarFallback>{record.first_name.charAt(0)}</AvatarFallback>
-                      </Avatar>
-                      <div>
-                        <div className="font-medium">
-                          {record.first_name} {record.middle_name ? record.middle_name.charAt(0) + '.' : ''} {record.last_name}
-                        </div>
-                        <div className="text-sm text-muted-foreground">{record.student_id}</div>
-                      </div>
-                    </TableCell>
-                    <TableCell className="px-1 py-2 text-center">{record.program}</TableCell>
-                    <TableCell className="px-1 py-2 text-center">{record.or_number}</TableCell>
-                  </TableRow>
-                ))
-              ) : (
-                <TableRow>
-                  <TableCell colSpan={4} className="h-24 text-center">
-                    No results found.
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </div>
+{/* Scrollable Table with Sticky Header */}
+<div className="rounded-md border border-border bg-white dark:bg-[#121212] p-2 max-h-[75vh] overflow-y-auto">
+  <Table className="min-w-full text-sm">
+    <TableHeader className="sticky top-0 bg-white dark:bg-[#121212] z-10 shadow-sm">
+      <TableRow>
+        <TableHead className="w-[30%] px-1 py-2">Student Name</TableHead>
+        <TableHead className="w-[25%] px-1 py-2 text-center">Program / Section</TableHead>
+        <TableHead className="w-[15%] px-1 py-2 text-center">Academic Status</TableHead>
+      </TableRow>
+    </TableHeader>
+    <TableBody>
+      {records.data.length > 0 ? (
+        records.data.map((record) => (
+          <TableRow
+            key={record.id}
+            className="hover:bg-muted/50 cursor-pointer"
+            onClick={() => openIndividualRecord(record)}
+          >
+            <TableCell className="flex items-center space-x-4 px-1 py-2">
+              <Avatar className="h-10 w-10 flex-shrink-0 bg-blue-100 text-blue-600 dark:bg-blue-900 dark:text-blue-300">
+                <AvatarFallback>{record.first_name.charAt(0)}</AvatarFallback>
+              </Avatar>
+              <div>
+                <div className="font-medium">
+                  {record.first_name} {record.middle_name ? record.middle_name.charAt(0) + '.' : ''} {record.last_name}
+                </div>
+                <div className="text-sm text-muted-foreground">{record.student_id}</div>
+              </div>
+            </TableCell>
+            <TableCell className="px-1 py-2 text-center">
+              {record.program} / {record.course_section || "-"}
+            </TableCell>
+            <TableCell className="px-1 py-2 text-center">
+              {record.academic_status || "-"}
+            </TableCell>
+          </TableRow>
+        ))
+      ) : (
+        <TableRow>
+          <TableCell colSpan={3} className="h-24 text-center">
+            No results found.
+          </TableCell>
+        </TableRow>
+      )}
+    </TableBody>
+  </Table>
+</div>
+
 
         {/* Individual Record Modal (same style as Show.tsx) */}
         {showIndividualRecord && selectedRecord && (

@@ -13,8 +13,8 @@ return new class extends Migration
     {
         Schema::create('program_records', function (Blueprint $table) {
             $table->id();
-            $table->string('name', 255);
-            $table->string('program', 50);
+            $table->string('name');
+            $table->string('program');
             $table->string('recently_updated', 100);
             $table->string('time_last_opened', 20);
             $table->date('date_edited');

@@ -3,11 +3,12 @@
 namespace App\Http\Controllers;
 
 use App\Models\ProgramRecord;
-use App\Models\PanelistRecord;
+use App\Models\PaymentRecord;
 use Illuminate\Http\Request;
-use Barryvdh\DomPDF\Facade\Pdf;
 use Inertia\Inertia;
 use App\Services\HonorariumService;
+use Illuminate\Support\Facades\Log;
+use Barryvdh\DomPDF\Facade\Pdf;
 
 class HonorariumSummaryController extends Controller
 {
@@ -118,14 +119,88 @@ public function downloadCSV(ProgramRecord $record)
         return response()->json(['students' => $students]);
     }
 
-    public function downloadPDF($id)
-{
-    $program = ProgramRecord::with('panelists')->findOrFail($id);
+    // Add this method for the PDF download functionality from your React component
+    public function downloadProgramPdf($programId)
+    {
+        try {
+            $record = ProgramRecord::with([
+                'panelists.students.payments',
+                'studentRecords.payments',
+            ])->findOrFail($programId);
 
-    $pdf = Pdf::loadView('pdf.panelist-summary', compact('program'));
+            $pdf = Pdf::loadView('pdfs.honorarium-summary', [
+                'record' => $record,
+                'panelists' => $record->panelists,
+                'program_name' => $record->name,
+                'program_level' => $record->program,
+            ]);
 
-    $filename = $program->name . '_panelists.pdf';
+            $filename = "honorarium-{$record->name}.pdf";
 
-    return $pdf->download($filename);
-}
+            return $pdf->download($filename);
+
+        } catch (\Exception $e) {
+            Log::error('Program PDF Generation Error: ' . $e->getMessage());
+            return response()->json(['error' => 'Failed to generate program PDF'], 500);
+        }
+    }
+
+    public function downloadPdfApi(Request $request, $programId)
+    {
+        try {
+            // 1. Load program with relationships
+            $record = ProgramRecord::with([
+                'panelists.students.payments',
+                'studentRecords.payments',
+            ])->findOrFail($programId);
+
+            if (!$record) {
+                throw new \Exception("Program record not found");
+            }
+
+            // 2. Filter panelists if array provided
+            if ($request->has('panelists') && !empty($request->panelists)) {
+                $panelistIds = $request->panelists;
+                $filteredPanelists = $record->panelists->filter(function ($panelist) use ($panelistIds) {
+                    return in_array($panelist->id, $panelistIds);
+                });
+
+                // Replace relation safely
+                $record->setRelation('panelists', $filteredPanelists);
+            }
+
+            // 3. Ensure Blade template exists
+            if (!view()->exists('pdfs.honorarium-summary')) {
+                throw new \Exception("PDF template not found");
+            }
+
+            // 4. Prepare data for view
+            $viewData = [
+                'record' => $record,
+                'panelists' => $record->panelists,
+                'generated_at' => now()->format('Y-m-d H:i:s'),
+            ];
+
+            // 5. Generate PDF
+            $pdf = Pdf::loadView('pdfs.honorarium-summary', $viewData);
+            $pdf->setPaper('a4', 'portrait');
+            $pdf->setOption(['dpi' => 150, 'defaultFont' => 'sans-serif']);
+
+            // 6. Safe filename
+            $safeName = preg_replace('/[^A-Za-z0-9\-]/', '-', $record->name);
+            $filename = "honorarium-{$safeName}-" . date('Y-m-d') . ".pdf";
+
+            return $pdf->download($filename);
+
+        } catch (\Exception $e) {
+            Log::error('API PDF Generation Error: ' . $e->getMessage());
+            Log::error($e->getTraceAsString());
+
+            return response()->json([
+                'error' => 'Failed to generate PDF',
+                'message' => $e->getMessage(),
+                'trace' => app()->environment('local') ? $e->getTraceAsString() : null,
+            ], 500);
+        }
+    }
 }

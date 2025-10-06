@@ -24,8 +24,8 @@ interface Student {
   course_section?: string;
   school_year?: string;
   or_number?: string;
-  defense_date?: string | null;  // ✅ added from DB migration
-  defense_type?: string | null;  // ✅ added from DB migration
+  defense_date?: string | null; 
+  defense_type?: string | null;  
   payments: Payment[];
 }
 

@@ -24,19 +24,13 @@ class PanelistRecord extends Model
         return $this->belongsTo(ProgramRecord::class, 'program_record_id');
     }
 
-    public function students()
+    public function payments()
     {
-        return $this->belongsToMany(
-            StudentRecord::class,
-            'panelist_student_records',
-            'panelist_id',
-            'student_id'
-        )->with('payments');
+        return $this->hasMany(\App\Models\PaymentRecord::class, 'panelist_record_id');
     }
 
-public function payments()
-{
-    return $this->hasMany(\App\Models\PaymentRecord::class, 'panelist_record_id');
-}
-
+    public function students()
+    {
+        return $this->belongsToMany(StudentRecord::class, 'panelist_student_records', 'panelist_id', 'student_id');
+    }
 }

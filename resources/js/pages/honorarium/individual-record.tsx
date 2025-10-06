@@ -13,7 +13,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import DownloadDropdown from "./honorarium-modals/download-dropdown";
+import PDFDownloadButton from "./honorarium-modals/download-dropdown";
 import PanelistIndividualRecord from "./panelist-individual-record";
 
 // Types
@@ -113,35 +113,40 @@ export default function Show({ record, panelists: initialPanelists }: Props) {
                   <TableHead className="w-[20%] px-1 py-2 text-center">Action</TableHead>
                 </TableRow>
               </TableHeader>
-              <TableBody>
-                {panelists.length > 0 ? (
-                  panelists.map((panelist) => (
-                    <TableRow
-                      key={panelist.id}
-                      className="cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800"
-                      onClick={() => setSelectedPanelist(panelist)}
-                    >
-                      <TableCell className="px-1 py-2 font-medium">
-                        {panelist.pfirst_name} {panelist.pmiddle_name} {panelist.plast_name}
-                      </TableCell>
-                      <TableCell className="px-1 py-2 text-center">
-                        ₱ {panelist.amount.toLocaleString()}
-                      </TableCell>
-                      <TableCell className="px-1 py-2 text-center">
-                        <div className="flex justify-center gap-2">
-                          <DownloadDropdown record={record} panelists={panelists} />
-                        </div>
+                <TableBody>
+                  {panelists.length > 0 ? (
+                    panelists.map((panelist) => (
+                      <TableRow
+                        key={panelist.id}
+                        className="cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800"
+                        onClick={() => setSelectedPanelist(panelist)}
+                      >
+                        <TableCell className="px-1 py-2 font-medium">
+                          {panelist.pfirst_name} {panelist.pmiddle_name} {panelist.plast_name}
+                        </TableCell>
+                        <TableCell className="px-1 py-2 text-center">
+                          ₱ {panelist.amount.toLocaleString()}
+                        </TableCell>
+                        <TableCell className="px-1 py-2 text-center">
+                          <div className="flex justify-center">
+                            <PDFDownloadButton
+                              record={record}
+                              panelists={[panelist]}
+                              onClick={(e) => e.stopPropagation()}
+                              // The button internally stops propagation
+                            />
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={3} className="h-24 text-center">
+                        No panelists found.
                       </TableCell>
                     </TableRow>
-                  ))
-                ) : (
-                  <TableRow>
-                    <TableCell colSpan={3} className="h-24 text-center">
-                      No panelists found.
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
+                  )}
+                </TableBody>
             </Table>
           </div>
         </div>
