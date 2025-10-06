@@ -158,6 +158,8 @@ class CoordinatorDefenseController extends Controller
                     $validated['defense_panelist4'] ?? null,
                     Auth::id()
                 );
+                // CREATE HONORARIUM PAYMENTS HERE
+                $defenseRequest->createHonorariumPayments();
             });
 
             if ($request->expectsJson()) {
@@ -713,6 +715,9 @@ class CoordinatorDefenseController extends Controller
             $defenseRequest->last_status_updated_by = Auth::id();
             $defenseRequest->save();
 
+            // ADD THIS LINE TO CREATE HONORARIUM PAYMENTS
+            $defenseRequest->createHonorariumPayments();
+
             DB::commit();
 
             return response()->json([
@@ -722,7 +727,6 @@ class CoordinatorDefenseController extends Controller
         } catch (\Throwable $e) {
             DB::rollBack();
             Log::error('assignPanelsJson error',[
-
                 'id'=>$defenseRequest->id,
                 'error'=>$e->getMessage()
             ]);

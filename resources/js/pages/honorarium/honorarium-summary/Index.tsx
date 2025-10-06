@@ -27,7 +27,7 @@ const breadcrumbs: BreadcrumbItem[] = [
   { title: 'Honorarium Summary', href: '/honorarium-summary' },
 ];
 
-const programCategories = ['Doctorate', 'Masters'];
+const programCategories = ['Doctorate', 'Masters', 'Bachelors'];
 
 export type ProgramRecord = {
    id: number;
@@ -269,7 +269,18 @@ export default function Index({ records = [] }: { records?: ProgramRecord[] }) {
       <IndividualRecordModal
         show={showRecordModal}
         onClose={() => setShowRecordModal(false)}
-        record={selectedRecord}
+        record={
+          selectedRecord
+            ? {
+                ...selectedRecord,
+                payments: (selectedRecord.payments ?? []).map((p: any) => ({
+                  ...p,
+                  panelist_name: p.panelist_name ?? '',
+                  role: p.role ?? '',
+                })),
+              }
+            : null
+        }
       />
     </AppLayout>
   );

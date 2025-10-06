@@ -11,6 +11,7 @@ import { Toaster, toast } from 'sonner';
 import { CheckCircle, CircleX, X, Trash2, Search, Users, PlusCircle } from 'lucide-react';
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { Checkbox } from "@/components/ui/checkbox";
+import axios from "axios";
 
 const breadcrumbs = [
   { title: "Dashboard", href: "/dashboard" },
@@ -264,24 +265,19 @@ export default function PanelistsPage() {
     });
   }
 
-  function handleSpecsSave() {
+  async function handleSaveRates() {
     setSavingSpecs(true);
-    router.post(
-      "/panelists/honorarium-specs",
-      { specs: honorariumSpecs },
-      {
-        preserveScroll: true,
-        onSuccess: (page) => {
-          toast.success("Honorarium rates updated");
-          setHonorariumSpecs(Array.isArray(page.props.honorariumSpecs) ? page.props.honorariumSpecs : []);
-          setSavingSpecs(false);
-        },
-        onError: () => {
-          toast.error("Failed to update rates");
-          setSavingSpecs(false);
-        },
+    try {
+      const response = await axios.put("/panelists/honorarium-specs", { specs: honorariumSpecs });
+      toast.success("Honorarium rates updated");
+      if (response.data && Array.isArray(response.data.honorariumSpecs)) {
+        setHonorariumSpecs(response.data.honorariumSpecs);
       }
-    );
+    } catch (e) {
+      toast.error("Failed to update rates");
+    } finally {
+      setSavingSpecs(false);
+    }
   }
 
   return (
@@ -497,7 +493,7 @@ export default function PanelistsPage() {
           onOpenChange={setRatesDialogOpen}
           honorariumSpecs={honorariumSpecs}
           onChange={setHonorariumSpecs}
-          onSave={handleSpecsSave}
+          onSave={handleSaveRates}
           saving={savingSpecs}
         />
       </div>

@@ -10,4 +10,9 @@ class Panelist extends Model
     use HasFactory;
 
     protected $fillable = ['name', 'email', 'role', 'status'];
+
+    public function honorariumPayments()
+    {
+        return $this->hasMany(HonorariumPayment::class);
+    }
 }

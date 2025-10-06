@@ -15,10 +15,10 @@ return new class extends Migration
             $table->id();
             $table->string('name', 255);
             $table->string('program', 50);
-            $table->string('recently_updated', 100);
             $table->string('time_last_opened', 20);
             $table->date('date_edited');
             $table->timestamps(); 
+            $table->timestamp('recently_updated')->nullable()->default(now());
         });
     }
 

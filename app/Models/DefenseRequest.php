@@ -5,6 +5,9 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Auth;
 use App\Models\User;
+use App\Models\Panelist;
+use App\Models\HonorariumPayment;
+use App\Models\PanelistHonorariumSpec;
 use Carbon\Carbon;
 
 class DefenseRequest extends Model
@@ -33,7 +36,25 @@ class DefenseRequest extends Model
     public function lastStatusUpdater()   { return $this->belongsTo(User::class,'last_status_updated_by'); }
     public function adviserReviewer()     { return $this->belongsTo(User::class,'adviser_reviewed_by'); }
     public function coordinatorReviewer() { return $this->belongsTo(User::class,'coordinator_reviewed_by'); }
-    public function student()              { return $this->belongsTo(User::class, 'submitted_by'); }
+    public function student()             { return $this->belongsTo(User::class, 'submitted_by'); }
+
+    public function honorariumPayments()
+    {
+        return $this->hasMany(HonorariumPayment::class);
+    }
+
+    // Helper: get all panelists as models (Panelist or User)
+    public function getPanelists()
+    {
+        $ids = [
+            $this->defense_chairperson,
+            $this->defense_panelist1,
+            $this->defense_panelist2,
+            $this->defense_panelist3,
+            $this->defense_panelist4,
+        ];
+        return Panelist::whereIn('id', array_filter($ids))->get();
+    }
 
     public function scopeForAdviser($q, User $user)
     {
@@ -120,6 +141,9 @@ class DefenseRequest extends Model
         return $this;
     }
 
+    /**
+     * Assign panelists and create honorarium payments for each assigned panelist.
+     */
     public function assignPanels(
         string $chair,
         string $panel1,
@@ -158,7 +182,93 @@ class DefenseRequest extends Model
         $this->last_status_updated_by = $userId;
 
         $this->save();
+
+        // --- HONORARIUM PAYMENT CREATION LOGIC ---
+        $panelAssignments = [
+            ['id' => $chair,   'role' => 'Chairperson'],
+            ['id' => $panel1,  'role' => 'Panel Member'],
+            ['id' => $panel2,  'role' => 'Panel Member'],
+            ['id' => $panel3,  'role' => 'Panel Member'],
+            ['id' => $panel4,  'role' => 'Panel Member'],
+        ];
+
+        // You may need to store the defense type in the model, e.g. $this->defense_type
+        $defenseType = $this->defense_type ?? 'Final'; // fallback if not set
+
+        foreach ($panelAssignments as $panel) {
+            if (!$panel['id']) continue;
+
+            // Avoid duplicate payments for the same panelist/role/defense
+            $exists = $this->honorariumPayments()
+                ->where('panelist_id', $panel['id'])
+                ->where('role', $panel['role'])
+                ->where('panelist_type', 'Panelist')
+                ->exists();
+
+            if ($exists) continue;
+
+            // Get honorarium rate for this role and defense type
+            $spec = PanelistHonorariumSpec::where('role', $panel['role'])
+                ->where('defense_type', $defenseType)
+                ->first();
+
+            $amount = $spec ? $spec->amount : 0;
+
+            HonorariumPayment::create([
+                'defense_request_id' => $this->id,
+                'panelist_id'        => $panel['id'],
+                'panelist_type'      => 'Panelist',
+                'role'               => $panel['role'],
+                'amount'             => $amount,
+                'status'             => 'Unpaid',
+            ]);
+        }
+
         return $this;
+    }
+
+    public function createHonorariumPayments()
+    {
+        $panelAssignments = [
+            ['id' => $this->defense_chairperson, 'role' => 'Chairperson'],
+            ['id' => $this->defense_panelist1, 'role' => 'Panel Member'],
+            ['id' => $this->defense_panelist2, 'role' => 'Panel Member'],
+            ['id' => $this->defense_panelist3, 'role' => 'Panel Member'],
+            ['id' => $this->defense_panelist4, 'role' => 'Panel Member'],
+        ];
+
+        $defenseType = $this->defense_type ?? 'Final';
+
+        foreach ($panelAssignments as $panel) {
+            if (!$panel['id']) continue;
+
+            // If $panel['id'] is a name, convert to panelist ID
+            $panelist = \App\Models\Panelist::where('name', $panel['id'])->first();
+            if (!$panelist) continue; // skip if not found
+
+            // Avoid duplicate payments
+            $exists = $this->honorariumPayments()
+                ->where('panelist_id', $panelist->id)
+                ->where('role', $panel['role'])
+                ->exists();
+
+            if ($exists) continue;
+
+            $spec = \App\Models\PanelistHonorariumSpec::where('role', $panel['role'])
+                ->where('defense_type', $defenseType)
+                ->first();
+
+            $amount = $spec ? $spec->amount : 0;
+
+            \App\Models\HonorariumPayment::create([
+                'defense_request_id' => $this->id,
+                'panelist_id'        => $panelist->id,
+                'panelist_type'      => 'Panelist',
+                'role'               => $panel['role'],
+                'amount'             => $amount,
+                'status'             => 'Unpaid',
+            ]);
+        }
     }
 
     public function getWorkflowHistoryAttribute($value)

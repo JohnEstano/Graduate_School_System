@@ -215,13 +215,23 @@ export default function PanelistsListTable({
                     {panelist.assignments && panelist.assignments.length > 0 ? (
                       <ul>
                         {panelist.assignments.map((a) => {
-                          const spec = honorariumSpecs.find(
-                            (s) => s.defense_type === a.defense_type && s.role === a.role
-                          );
+                          // Use the receivable from backend if present
+                          let amount = a.receivable;
+                          if (
+                            (amount === undefined || amount === null || amount === "") &&
+                            honorariumSpecs.length > 0
+                          ) {
+                            const spec = honorariumSpecs.find(
+                              (s) =>
+                                s.defense_type === a.defense_type &&
+                                s.role === (a.role ?? panelist.role)
+                            );
+                            amount = spec?.amount;
+                          }
                           return (
                             <li key={a.id}>
-                              {spec && spec.amount !== undefined && spec.amount !== null && spec.amount !== ""
-                                ? `₱${spec.amount}`
+                              {amount !== undefined && amount !== null && amount !== ""
+                                ? `₱${amount}`
                                 : "-"}
                             </li>
                           );

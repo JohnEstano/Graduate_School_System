@@ -49,7 +49,21 @@ class ProgramRecordSeeder extends Seeder
             ['name'=>'Master in Pastoral Ministry (Non-Thesis), Specialized in: Family Ministry and Counseling','program'=>'MPM-FMC','category'=>'Masters','date_edited'=>'2025-08-08'],
             ['name'=>'Master in Pastoral Ministry (Non-Thesis), Specialized in: Pastoral Management','program'=>'MPM-PM','category'=>'Masters','date_edited'=>'2025-08-08'],
             ['name'=>'Master in Pastoral Ministry (Non-Thesis), Specialized in: Retreat Giving and Spirituality','program'=>'MPM-RGS','category'=>'Masters','date_edited'=>'2025-08-08'],
+
+            // Bachelors Programs
+            [
+                'name' => 'Bachelor of Science in Computer Science',
+                'program' => 'Bachelor of Science in Computer Science', // must match defense_requests.program
+                'category' => 'Bachelors',
+                'date_edited' => '2025-08-08',
+            ],
         ];
+
+        foreach ($records as &$record) {
+            $record['recently_updated'] = now();
+            $record['time_last_opened'] = now()->format('H:i:s');
+        }
+        unset($record);
 
         foreach ($records as $record) {
             ProgramRecord::create($record);
