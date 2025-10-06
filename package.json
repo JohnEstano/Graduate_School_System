@@ -4,7 +4,7 @@
     "scripts": {
         "build": "vite build",
         "build:ssr": "vite build && vite build --ssr",
-        "dev": "vite",
+        "dev": "concurrently \"php artisan serve\" \"vite\" \"php artisan queue:listen --tries=3 --timeout=90\" --names=\"server,vite,queue\" --prefix-colors=\"blue,green,magenta\"",
         "format": "prettier --write resources/",
         "format:check": "prettier --check resources/",
         "lint": "eslint . --fix",

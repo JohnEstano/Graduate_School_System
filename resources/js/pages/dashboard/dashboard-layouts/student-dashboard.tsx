@@ -129,11 +129,12 @@ export default function StudentDashboard() {
         },
     ];
 
-    const customGreeting = user?.school_id ? `${user?.role ?? 'Student'} / ${user.school_id}` : (user?.role ?? 'Student');
+    // Remove the custom greeting to use the default time-based greeting
+    // const customGreeting = user?.school_id ? `${user?.role ?? 'Student'} / ${user.school_id}` : (user?.role ?? 'Student');
 
     if (loading) {
         return (
-            <UnifiedDashboardLayout user={user} customGreeting={customGreeting}>
+            <UnifiedDashboardLayout user={user}>
                 <div className="w-full min-h-[70vh] bg-zinc-100 dark:bg-zinc-900 flex flex-col gap-4 p-0 m-0">
                     <div className="h-6 w-1/6 rounded bg-zinc-300 dark:bg-zinc-800 mt-8 mx-8" />
                     <div className="h-12 w-3/4 rounded bg-zinc-300 dark:bg-zinc-800 mx-8" />
@@ -145,7 +146,7 @@ export default function StudentDashboard() {
     }
 
     return (
-        <UnifiedDashboardLayout user={user} customGreeting={customGreeting}>
+        <UnifiedDashboardLayout user={user}>
             {/* Quick Actions - positioned at top right */}
             <div className="absolute top-6 right-8">
                 <QuickActionsWidget userRole={user?.role} />
