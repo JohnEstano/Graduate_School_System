@@ -229,9 +229,11 @@ export default function CoordinatorDashboard() {
                         </div>
                         <div className="flex items-center">
                             <div className="h-12 w-px mx-4 bg-gray-300 dark:bg-gray-700 opacity-60" />
+                            {/*  
                             <div className="mr-8"> 
                                 <QuickActionsWidget userRole={user?.role} />
                             </div>
+                            */ }
                         </div>
                     </div>
 
@@ -274,7 +276,7 @@ export default function CoordinatorDashboard() {
                         </div>
 
                         <div className="grid gap-4 md:grid-cols-2">
-                            
+
                         </div>
                     </div>
                 </>

@@ -246,6 +246,16 @@ export default function DefenseRequestIndex() {
                         // Only update if changed
                         // setDefenseRequirements state (create one if not present)
                     }
+
+                    setDefenseRequest(updatedRequest);
+                    // Update adviser in defenseRequirements if thesis_title matches
+                    if (updatedRequest.thesis_title) {
+                        defenseRequirements.forEach((r) => {
+                            if (r.thesis_title === updatedRequest.thesis_title) {
+                                r.adviser = updatedRequest.defense_adviser;
+                            }
+                        });
+                    }
                 }
             } catch (error) {
                 console.error('Failed to poll defense request updates:', error);
@@ -903,13 +913,9 @@ export default function DefenseRequestIndex() {
                                                                 <div>
                                                                     <span className="font-semibold text-xs text-zinc-500 dark:text-zinc-400">Adviser:</span>
                                                                     <div className="text-sm text-zinc-800 dark:text-white">
-                                                                        {
-                                                                            defenseRequest &&
+                                                                        {req.adviser || (defenseRequest &&
                                                                             defenseRequest.thesis_title === req.thesis_title &&
-                                                                            defenseRequest.defense_adviser
-                                                                                ? defenseRequest.defense_adviser
-                                                                                : req.adviser || '—'
-                                                                        }
+                                                                            defenseRequest.defense_adviser) || '—'}
                                                                     </div>
                                                                 </div>
                                                             </div>

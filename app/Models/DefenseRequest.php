@@ -37,6 +37,7 @@ class DefenseRequest extends Model
     public function adviserReviewer()     { return $this->belongsTo(User::class,'adviser_reviewed_by'); }
     public function coordinatorReviewer() { return $this->belongsTo(User::class,'coordinator_reviewed_by'); }
     public function student()             { return $this->belongsTo(User::class, 'submitted_by'); }
+    public function coordinator()         { return $this->belongsTo(User::class, 'coordinator_user_id'); }
 
     public function honorariumPayments()
     {

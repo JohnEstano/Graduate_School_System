@@ -535,3 +535,117 @@ Route::post('/api/generate-document', [GeneratedDocumentController::class, 'gene
 Route::patch('/adviser/defense-requirements/{defenseRequest}/adviser-status', [\App\Http\Controllers\DefenseRequestController::class, 'updateAdviserStatus'])
     ->name('adviser.defense-requirements.update-adviser-status');
 
+Route::post('/login', function (Request $request) {
+    $credentials = $request->validate([
+        'identifier' => 'required|string',
+        'password' => 'required|string',
+    ]);
+
+    $user = User::where('email', $credentials['identifier'])
+        ->orWhere('school_id', $credentials['identifier'])
+        ->first();
+
+    if ($user && $user->password && Hash::check($credentials['password'], $user->password)) {
+        Auth::login($user, $request->boolean('remember'));
+        return redirect()->intended('/dashboard');
+    }
+
+    return response()->json([
+        'message' => 'These credentials do not match our records.',
+        'errors' => ['identifier' => 'These credentials do not match our records.']
+    ], 422);
+});
+
+
+Route::get('/assistant/all-defense-list', function () {
+    // You can add authorization here if you want only AA/Dean to access
+    if (!in_array(Auth::user()->role, ['Administrative Assistant', 'Dean'])) {
+        abort(403);
+    }
+    return Inertia::render('assistant/all-defense-list/Index');
+})->name('assistant.all-defense-list');
+
+Route::get('/coordinator/defense-requests', function () {
+    $user = Auth::user();
+    if (!$user || $user->role !== 'Coordinator') {
+        abort(403);
+    }
+    return Inertia::render('coordinator/submissions/defense-request/Index');
+})->name('coordinator.defense-requests');
+
+Route::get('/assistant/all-defense-list/{id}/details', function ($id) {
+    $user = Auth::user();
+    if (!$user || !in_array($user->role, ['Administrative Assistant', 'Dean'])) {
+        abort(403);
+    }
+    $defenseRequest = DefenseRequest::findOrFail($id);
+
+    // Compose the full data structure, similar to coordinator view
+    $panelistFields = [
+        $defenseRequest->defense_chairperson,
+        $defenseRequest->defense_panelist1,
+        $defenseRequest->defense_panelist2,
+        $defenseRequest->defense_panelist3,
+        $defenseRequest->defense_panelist4,
+    ];
+    $panelists = collect($panelistFields)
+        ->filter()
+        ->map(function($panelistIdOrName) {
+            if (is_numeric($panelistIdOrName)) {
+                $p = \App\Models\Panelist::find($panelistIdOrName);
+                if ($p) return ['id' => $p->id, 'name' => $p->name];
+            }
+            return ['id' => null, 'name' => $panelistIdOrName];
+        })->values()->all();
+
+    return Inertia::render('assistant/all-defense-list/details', [
+        'defenseRequest' => [
+            'id' => $defenseRequest->id,
+            'first_name' => $defenseRequest->first_name,
+            'middle_name' => $defenseRequest->middle_name,
+            'last_name' => $defenseRequest->last_name,
+            'school_id' => $defenseRequest->school_id,
+            'program' => $defenseRequest->program,
+            'thesis_title' => $defenseRequest->thesis_title,
+            'defense_type' => $defenseRequest->defense_type,
+            'status' => $defenseRequest->status,
+            'priority' => $defenseRequest->priority,
+            'workflow_state' => $defenseRequest->workflow_state,
+            'scheduled_date' => $defenseRequest->scheduled_date?->format('Y-m-d'),
+            'scheduled_time' => $defenseRequest->scheduled_time,
+            'scheduled_end_time' => $defenseRequest->scheduled_end_time,
+            'defense_mode' => $defenseRequest->defense_mode,
+            'defense_venue' => $defenseRequest->defense_venue,
+            'scheduling_notes' => $defenseRequest->scheduling_notes,
+            'adviser' => $defenseRequest->defense_adviser,
+            'submitted_at' => $defenseRequest->adviser_reviewed_at
+                ? (is_object($defenseRequest->adviser_reviewed_at)
+                    ? $defenseRequest->adviser_reviewed_at->format('Y-m-d H:i:s')
+                    : date('Y-m-d H:i:s', strtotime($defenseRequest->adviser_reviewed_at)))
+                : null,
+            'panelists' => $panelists,
+            'defense_adviser' => $defenseRequest->defense_adviser,
+            'defense_chairperson' => $defenseRequest->defense_chairperson,
+            'defense_panelist1' => $defenseRequest->defense_panelist1,
+            'defense_panelist2' => $defenseRequest->defense_panelist2,
+            'defense_panelist3' => $defenseRequest->defense_panelist3,
+            'defense_panelist4' => $defenseRequest->defense_panelist4,
+            'last_status_updated_by' => $defenseRequest->last_status_updated_by,
+            'last_status_updated_by_name' => $defenseRequest->last_status_updated_by_name ?? null,
+            'last_status_updated_at' => $defenseRequest->last_status_updated_at,
+            'workflow_history' => $defenseRequest->workflow_history ?? [],
+            'reference_no' => $defenseRequest->reference_no,
+            'attachments' => [
+                'advisers_endorsement' => $defenseRequest->advisers_endorsement,
+                'rec_endorsement' => $defenseRequest->rec_endorsement,
+                'proof_of_payment' => $defenseRequest->proof_of_payment,
+                'manuscript_proposal' => $defenseRequest->manuscript_proposal,
+                'similarity_index' => $defenseRequest->similarity_index,
+                'avisee_adviser_attachment' => $defenseRequest->avisee_adviser_attachment,
+                'ai_detection_certificate' => $defenseRequest->ai_detection_certificate,
+                'endorsement_form' => $defenseRequest->endorsement_form,
+            ],
+        ],
+    ]);
+})->name('assistant.all-defense-list.details');
+

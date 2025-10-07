@@ -3,10 +3,6 @@
 namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Facades\Hash;
-use App\Models\Role;
-use App\Models\User;
-use App\Models\ProgramRecord; // <-- add this line
 
 class DatabaseSeeder extends Seeder
 {
@@ -15,10 +11,16 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-    
+        // You can truncate tables here if you want a clean slate
+        // \DB::statement('SET FOREIGN_KEY_CHECKS=0;');
+        // \App\Models\User::truncate();
+        // \App\Models\DefenseRequest::truncate();
+        // \App\Models\Panelist::truncate();
+        // \DB::statement('SET FOREIGN_KEY_CHECKS=1;');
 
-
-
-        $this->call(HonorariumFullDemoSeeder::class);
+        $this->call([
+            DefenseRequestSeeder::class,
+          
+        ]);
     }
 }
