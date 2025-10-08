@@ -196,4 +196,13 @@ class User extends Authenticatable
     {
         return $this->belongsToMany(User::class, 'adviser_coordinator', 'adviser_id', 'coordinator_id');
     }
+
+    protected static function booted()
+    {
+        static::creating(function ($user) {
+            if ($user->isCoordinator() && !$user->coordinator_code) {
+                $user->generateCoordinatorCode();
+            }
+        });
+    }
 }

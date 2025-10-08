@@ -18,6 +18,9 @@ class DashboardController extends Controller
         if (in_array($roleName, ['Faculty', 'Adviser']) && !$user->adviser_code) {
             $user->generateAdviserCode();
         }
+        if (in_array($roleName, ['Coordinator']) && !$user->coordinator_code) {
+            $user->generateCoordinatorCode();
+        }
 
         // --- Add this block ---
         $studentsCount = 0;

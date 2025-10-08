@@ -192,7 +192,7 @@ function ShowAllRequestsInner({ defenseRequests: initial, onStatusChange }: Show
       const start = startOfDay(dateRange.from);
       const end = endOfDay(dateRange.to);
       result = result.filter(r => {
-        if (!r.date_of_defense) return false;
+        if (!r.date_of_defense) return true;
         const d = startOfDay(new Date(r.date_of_defense));
         return isWithinInterval(d, { start, end });
       });
@@ -655,14 +655,13 @@ function ShowAllRequestsInner({ defenseRequests: initial, onStatusChange }: Show
           <TableDefenseRequests
             paged={paged}
             columns={{
-              title: columns.title,
-              presenter: columns.presenter,
-              adviser: columns.adviser,
-              submitted_at: columns.submitted_at,
-              program: columns.program,
+              title: true,
+              presenter: true,
+              adviser: true,
+              program: true,
+              type: true,
+              submitted_at: true,
               status: true,
-              type: columns.type,
-              priority: columns.priority
             }}
             selected={selected}
             toggleSelectOne={toggleSelectOne}
@@ -671,10 +670,14 @@ function ShowAllRequestsInner({ defenseRequests: initial, onStatusChange }: Show
             toggleSort={toggleSort}
             sortDir={sortDir}
             onPriorityChange={onPriorityChange}
-            onRowApprove={id => openConfirmSingle(id, 'approve')}
-            onRowReject={id => openConfirmSingle(id, 'reject')}
-            onRowRetrieve={id => openConfirmSingle(id, 'retrieve')}
-            onViewDetails={id => router.visit(`/coordinator/defense-requests/${id}/details`)}
+            tabType={undefined}
+            onViewDetails={() => {}}
+            onRowApprove={(id: number) => openConfirmSingle(id, 'approve')}
+            onRowReject={(id: number) => openConfirmSingle(id, 'reject')}
+            onRowRetrieve={(id: number) => openConfirmSingle(id, 'retrieve')}
+            highlightMissingDateMode={false}
+            hideActions={false}
+            hideSelect={false}
           />
         </div>
         <PaginationBar page={page} totalPages={totalPages} onPageChange={setPage} />

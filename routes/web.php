@@ -81,7 +81,9 @@ Route::get('/test-upload-limits', function () {
 |--------------------------------------------------------------------------
 */
 Route::middleware(['auth', 'verified'])->group(function () {
-    
+Route::get('/coordinator/defense-requests/all-defense-requests', [\App\Http\Controllers\DefenseRequestController::class, 'allForCoordinator'])->middleware('auth');
+    Route::get('/api/coordinator/code', [CoordinatorAdviserController::class, 'getCoordinatorCode']);
+    Route::post('/api/adviser/register-with-coordinator-code', [\App\Http\Controllers\CoordinatorAdviserController::class, 'registerWithCode']);
 
     Route::get('/panelists/honorarium-specs', [PanelistHonorariumSpecController::class, 'index']);
     Route::put('/panelists/honorarium-specs', [PanelistHonorariumSpecController::class, 'update'])
@@ -590,10 +592,11 @@ Route::get('/assistant/all-defense-list/{id}/details', function ($id) {
     ];
     $panelists = collect($panelistFields)
         ->filter()
-        ->map(function($panelistIdOrName) {
+        ->map(function ($panelistIdOrName) {
             if (is_numeric($panelistIdOrName)) {
                 $p = \App\Models\Panelist::find($panelistIdOrName);
-                if ($p) return ['id' => $p->id, 'name' => $p->name];
+                if ($p)
+                    return ['id' => $p->id, 'name' => $p->name];
             }
             return ['id' => null, 'name' => $panelistIdOrName];
         })->values()->all();
@@ -648,4 +651,5 @@ Route::get('/assistant/all-defense-list/{id}/details', function ($id) {
         ],
     ]);
 })->name('assistant.all-defense-list.details');
+
 

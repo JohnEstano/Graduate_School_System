@@ -8,9 +8,12 @@ import WeeklyDefenseSchedulesWidget from '../widgets/weekly-defense-schedule-wid
 import QuickActionsWidget from '../widgets/quick-actions-widget';
 import { Separator } from "@/components/ui/separator";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import type { DefenseRequest } from '@/types';
 import { Users, CalendarDays, ClipboardList, BadgeDollarSign } from 'lucide-react';
 import { Skeleton } from "@/components/ui/skeleton";
+import DefenseCountLineChart from '../widgets/visual-charts/defense-count';
+import PanelAssignedRadial from '../widgets/visual-charts/panel-assigned-count';
 
 type PageProps = {
     auth: {
@@ -238,27 +241,64 @@ export default function CoordinatorDashboard() {
                     </div>
 
                     {/* Metrics Cards */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 px-7">
-                        {metrics.map((metric, idx) => (
-                            <Card key={idx} className="border border-1 bg-white dark:bg-muted rounded-xl shadow-none flex flex-row items-center min-h-[70px] py-4 px-5">
-                                <div className="flex flex-col justify-center flex-1">
-                                    <CardHeader className="pb-1 px-0">
-                                        <CardTitle className="text-xs font-semibold text-gray-600 dark:text-gray-300">{metric.title}</CardTitle>
-                                    </CardHeader>
-                                    <CardContent className="px-0 py-0">
-                                        <div className="mb-0.5">
-                                            {idx === 0 ? metric.value : (
-                                                <span className="text-2xl font-bold text-gray-900 dark:text-white leading-tight">{metric.value}</span>
-                                            )}
-                                        </div>
-                                        <div className="text-[11px] text-gray-400 dark:text-gray-500 mt-0.5">{metric.description}</div>
-                                    </CardContent>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-3 px-7 mb-6">
+                        <DefenseCountLineChart />
+
+                        {/* Other Metric Cards */}
+                        {metrics.slice(0, 2).map((metric, idx) => (
+                            <Card key={idx} className="col-span-1 rounded-2xl shadow-none border flex flex-col justify-between p-0 min-h-[220px]">
+                                <div className="flex items-center justify-between px-6 pt-5">
+                                    <div className="text-sm font-medium text-muted-foreground">
+                                        {metric.title}
+                                    </div>
+                                    <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        className="text-sm font-semibold px-3 py-1"
+                                        type="button"
+                                    >
+                                        View More
+                                    </Button>
                                 </div>
-                                <div className="flex items-center justify-center ml-3 w-[40px] h-[40px]">
-                                    {React.cloneElement(metric.icon, { className: "text-rose-500 dark:text-rose-400 size-7" })}
+                                <div className="px-6">
+                                    <div className="text-3xl font-bold leading-tight">{metric.value}</div>
+                                    <div className="text-sm mt-1 mb-2 text-muted-foreground">{metric.description}</div>
                                 </div>
+                                <CardContent className="flex-1 flex items-end w-full p-0">
+                                    <div className="flex items-center justify-end w-full pr-6 pb-4">
+                                        {React.cloneElement(metric.icon, { className: "text-rose-500 dark:text-rose-400 size-7" })}
+                                    </div>
+                                </CardContent>
                             </Card>
                         ))}
+                        <Card className="col-span-1 rounded-2xl shadow-none border flex flex-col justify-between p-0 min-h-[220px]">
+                            <div className="flex items-center justify-between px-6 pt-5">
+                                <div className="text-sm font-medium text-muted-foreground">
+                                    Pending Defense Requests
+                                </div>
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="text-sm font-semibold px-3 py-1"
+                                    type="button"
+                                >
+                                    View More
+                                </Button>
+                            </div>
+                            <div className="px-6">
+                                <div className="text-3xl font-bold leading-tight text-gray-900 dark:text-white">
+                                    {pendingRequests.length}
+                                </div>
+                                <div className="text-sm mt-1 mb-2 text-muted-foreground">
+                                    Awaiting coordinator action
+                                </div>
+                            </div>
+                            <CardContent className="flex-1 flex items-end w-full p-0">
+                                <div className="flex items-center justify-end w-full pr-6 pb-4">
+                                    <ClipboardList className="text-rose-500 dark:text-rose-400 size-7" />
+                                </div>
+                            </CardContent>
+                        </Card>
                     </div>
 
                     {/* Widgets Body */}
@@ -273,10 +313,6 @@ export default function CoordinatorDashboard() {
                                 loading={loading}
                             />
                             <PendingDefenseRequestsWidget pendingRequests={pendingRequests} loading={loading} />
-                        </div>
-
-                        <div className="grid gap-4 md:grid-cols-2">
-
                         </div>
                     </div>
                 </>

@@ -32,16 +32,7 @@ class DefenseRequestController extends Controller
 
         if (in_array($user->role, $coordinatorRoles)) {
             // Coordinator view: show queue of adviser-approved onward
-            $query = DefenseRequest::query()
-                ->whereIn('workflow_state', [
-                    'adviser-approved',
-                    'coordinator-review',
-                    'coordinator-approved',
-                    'coordinator-rejected',
-                    'panels-assigned',
-                    'scheduled',
-                    'completed'
-                ]);
+            $query = DefenseRequest::query();
 
             if ($s = $request->input('search')) {
                 $query->where(function($q) use ($s){
@@ -982,5 +973,58 @@ class DefenseRequestController extends Controller
             'request' => $defenseRequest,
             'workflow_history' => $defenseRequest->workflow_history,
         ]);
+    }
+
+    public function allForCoordinator(Request $request)
+    {
+        $user = Auth::user();
+        if (!$user || !in_array($user->role, ['Coordinator','Administrative Assistant','Dean'])) {
+            abort(403);
+        }
+
+        $query = DefenseRequest::query();
+
+        if ($s = $request->input('search')) {
+            $query->where(function($q) use ($s){
+                $q->where('thesis_title','like',"%$s%")
+                  ->orWhere('first_name','like',"%$s%")
+                  ->orWhere('last_name','like',"%$s%")
+                  ->orWhere('school_id','like',"%$s%");
+            });
+        }
+
+        $rows = $query
+            ->orderByDesc('created_at')
+            ->limit(500)
+            ->get([
+                'id','first_name','middle_name','last_name','school_id','program',
+                'thesis_title','defense_type','status','priority','workflow_state',
+                'scheduled_date','defense_mode','defense_venue','panels_assigned_at',
+                'defense_adviser','submitted_at'
+            ])
+            ->map(function($r){
+                return [
+                    'id' => $r->id,
+                    'first_name' => $r->first_name,
+                    'middle_name' => $r->middle_name,
+                    'last_name' => $r->last_name,
+                    'program' => $r->program,
+                    'thesis_title' => $r->thesis_title,
+                    'defense_type' => $r->defense_type,
+                    'priority' => $r->priority,
+                    'workflow_state' => $r->workflow_state,
+                    'status' => $r->status,
+                    'scheduled_date' => $r->scheduled_date?->format('Y-m-d'),
+                    'date_of_defense' => $r->scheduled_date
+                        ? $r->scheduled_date->format('Y-m-d')
+                        : ($r->created_at ? $r->created_at->format('Y-m-d') : null),
+                    'defense_mode' => $r->defense_mode,
+                    'mode_defense' => $r->defense_mode,
+                    'adviser' => $r->defense_adviser ?? '—',
+                    'submitted_at' => $r->submitted_at ? \Carbon\Carbon::parse($r->submitted_at)->format('Y-m-d H:i:s') : null,
+                ];
+            });
+
+        return response()->json($rows);
     }
 }
