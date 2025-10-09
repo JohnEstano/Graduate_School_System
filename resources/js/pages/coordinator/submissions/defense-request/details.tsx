@@ -363,25 +363,30 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
     userRole
   );
 
-  // --- Robust fetchWithCsrfRetry (copied from adviser view) ---
+  // Helper to always get a fresh CSRF token
+  async function getFreshCsrfToken(): Promise<string> {
+    try {
+      await fetch('/sanctum/csrf-cookie', { credentials: 'same-origin' });
+      const token = (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content || '';
+      return token;
+    } catch {
+      return '';
+    }
+  }
+
+  // Robust fetch with CSRF retry and refresh
   async function fetchWithCsrfRetry(url: string, options: RequestInit, retry = true) {
-    options.headers = {
-      ...(typeof options.headers === 'object' && options.headers !== null ? options.headers : {}),
-      'X-CSRF-TOKEN': csrf(),
-    };
+    if (!options.headers) options.headers = {};
+    (options.headers as Record<string, string>)['X-CSRF-TOKEN'] = await getFreshCsrfToken();
     let res: Response;
     try {
       res = await fetch(url, options);
     } catch (err) {
-      // Network error (no response at all)
       throw new Error('network');
     }
     if (res.status === 419 && retry) {
-      // Try to get a fresh CSRF token and retry once
-      if (!options.headers || typeof options.headers !== 'object') {
-        options.headers = {};
-      }
-      (options.headers as Record<string, string>)['X-CSRF-TOKEN'] = csrf();
+      // CSRF error, try to refresh token and retry once
+      (options.headers as Record<string, string>)['X-CSRF-TOKEN'] = await getFreshCsrfToken();
       try {
         res = await fetch(url, options);
       } catch (err) {
@@ -389,12 +394,6 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
       }
     }
     return res;
-  }
-  function csrf(): string {
-    return (
-      (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)
-        ?.content || ''
-    );
   }
 
   async function savePanels() {
@@ -449,6 +448,7 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
   }
 
   async function saveSchedule() {
+    // Validate times
     if (
       !schedule.scheduled_date ||
       !schedule.scheduled_time ||
@@ -459,6 +459,17 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
       toast.error('Please fill in all required scheduling fields.');
       return;
     }
+    // Time logic: start < end
+    if (schedule.scheduled_time && schedule.scheduled_end_time) {
+      const [sh, sm] = schedule.scheduled_time.split(':').map(Number);
+      const [eh, em] = schedule.scheduled_end_time.split(':').map(Number);
+      const start = sh * 60 + sm;
+      const end = eh * 60 + em;
+      if (end <= start) {
+        toast.error('End time must be after start time.');
+        return;
+      }
+    }
     const toastId = toast.loading('Saving schedule...');
     setSavingSchedule(true);
     try {
@@ -468,12 +479,26 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
+            'Accept': 'application/json'
           },
           body: JSON.stringify(schedule)
         }
       );
-      const data = await res.json();
-      if (res.ok) {
+
+      const contentType = res.headers.get('content-type') || '';
+      let data: any = {};
+      try {
+        if (contentType.includes('application/json')) {
+          data = await res.json();
+        } else {
+          const txt = await res.text();
+          data = { error: txt };
+        }
+      } catch {
+        data = { error: 'Invalid response' };
+      }
+
+      if (res.ok && data.request) {
         setRequest(r => ({ ...r, ...data.request }));
         toast.success('Schedule saved', {
           id: toastId,
@@ -484,10 +509,14 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
           }`
         });
       } else {
-        toast.error(data.error || 'Failed to save schedule', { id: toastId });
+        toast.error(data.error || `Failed (${res.status})`, { id: toastId });
       }
-    } catch {
-      toast.error('Network error saving schedule', { id: toastId });
+    } catch (err: any) {
+      if (err instanceof Error && err.message === 'network') {
+        toast.error('Network error saving schedule', { id: toastId });
+      } else {
+        toast.error('Unknown error saving schedule', { id: toastId });
+      }
     } finally {
       setSavingSchedule(false);
     }
