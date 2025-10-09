@@ -502,10 +502,24 @@ Route::get('/adviser/defense-requirements/{id}/details', function ($id) {
 
     $defenseRequest = \App\Models\DefenseRequest::findOrFail($id);
 
-    // You may want to add more mapping/logic here as needed
+    // Fetch all coordinators linked to this adviser
+    $coordinators = $user->coordinators()
+        ->select('users.id', 'users.first_name', 'users.middle_name', 'users.last_name', 'users.email')
+        ->get()
+        ->map(function ($c) {
+            return [
+                'id' => $c->id,
+                'name' => trim($c->first_name . ' ' . ($c->middle_name ? strtoupper($c->middle_name[0]) . '. ' : '') . $c->last_name),
+                'email' => $c->email,
+            ];
+        })
+        ->values()
+        ->all();
+
     return Inertia::render('adviser/defense-requirements/details-requirements', [
         'defenseRequest' => $defenseRequest,
         'userRole' => $user->role,
+        'coordinators' => $coordinators, // <-- pass as prop
     ]);
 })->name('adviser.defense-requirements.details');
 
@@ -645,5 +659,22 @@ Route::get('/assistant/all-defense-list/{id}/details', function ($id) {
         ],
     ]);
 })->name('assistant.all-defense-list.details');
+
+
+Route::middleware(['auth'])->get('/api/adviser/coordinators', function (Request $request) {
+    $user = $request->user();
+    $coordinators = $user->coordinators()
+        ->select('first_name', 'middle_name', 'last_name', 'email')
+        ->get()
+        ->map(function ($c) {
+            return [
+                'name' => trim($c->first_name . ' ' . ($c->middle_name ? strtoupper($c->middle_name[0]) . '. ' : '') . $c->last_name),
+                'email' => $c->email,
+            ];
+        });
+    return response()->json(['coordinators' => $coordinators]);
+});
+
+Route::middleware(['auth'])->get('/api/adviser/registered-coordinator', [\App\Http\Controllers\CoordinatorAdviserController::class, 'getRegisteredCoordinator']);
 
 

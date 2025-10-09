@@ -444,32 +444,58 @@ class DefenseRequestController extends Controller
         }
 
         $data = $request->validate([
-            'status' => 'required|in:Pending,Approved,Rejected,Completed' // <-- add Completed
+            'status' => 'required|in:Pending,Approved,Rejected,Completed'
         ]);
 
         $target = $data['status'];
         $originalState = $defenseRequest->workflow_state;
 
         try {
-            if ($target === 'Completed') {
+            // --- Update coordinator_status and workflow_state ---
+            if ($target === 'Approved') {
+                $defenseRequest->coordinator_status = 'Approved';
+                $defenseRequest->workflow_state = 'coordinator-approved';
+                $defenseRequest->status = 'Approved';
+            } elseif ($target === 'Rejected') {
+                $defenseRequest->coordinator_status = 'Rejected';
+                $defenseRequest->workflow_state = 'coordinator-rejected';
+                $defenseRequest->status = 'Rejected';
+            } elseif ($target === 'Pending') {
+                $defenseRequest->coordinator_status = 'Pending';
+                $defenseRequest->workflow_state = 'coordinator-review';
+                $defenseRequest->status = 'Pending';
+            } elseif ($target === 'Completed') {
+                $defenseRequest->coordinator_status = 'Approved'; // or 'Completed' if you want a new value
                 $defenseRequest->workflow_state = 'completed';
                 $defenseRequest->status = 'Completed';
-                $defenseRequest->last_status_updated_at = now();
-                $defenseRequest->last_status_updated_by = $user->id;
-                $hist = $defenseRequest->workflow_history ?? [];
-                $hist[] = [
-                    'action'=>'completed',
-                    'timestamp'=>now()->toISOString(),
-                    'user_id'=>$user->id,
-                    'user_name'=>$user->first_name.' '.$user->last_name,
-                    'from_state'=>$originalState,
-                    'to_state'=>'completed'
-                ];
-                $defenseRequest->workflow_history = $hist;
-                $defenseRequest->save();
             }
-            // ...existing logic for other statuses...
-            // (leave the rest of the method unchanged)
+
+            $defenseRequest->last_status_updated_at = now();
+            $defenseRequest->last_status_updated_by = $user->id;
+
+            // --- Add workflow history entry ---
+            $hist = $defenseRequest->workflow_history ?? [];
+            $hist[] = [
+                'action' => 'coordinator-status-updated',
+                'coordinator_status' => $defenseRequest->coordinator_status,
+                'timestamp' => now()->toISOString(),
+                'user_id' => $user->id,
+                'user_name' => $user->first_name . ' ' . $user->last_name,
+                'from_state' => $originalState,
+                'to_state' => $defenseRequest->workflow_state
+            ];
+            $defenseRequest->workflow_history = $hist;
+
+            $defenseRequest->save();
+
+            return response()->json([
+                'ok' => true,
+                'request' => $defenseRequest,
+                'workflow_history' => $defenseRequest->workflow_history,
+                'workflow_state' => $defenseRequest->workflow_state,
+                'status' => $defenseRequest->status,
+                'coordinator_status' => $defenseRequest->coordinator_status,
+            ]);
         } catch (\Throwable $e) {
             \Log::error('updateStatus error',[
                 'id'=>$defenseRequest->id,
@@ -949,7 +975,8 @@ class DefenseRequestController extends Controller
         }
 
         $data = $request->validate([
-            'adviser_status' => 'required|in:Pending,Approved,Rejected'
+            'adviser_status' => 'required|in:Pending,Approved,Rejected',
+            'coordinator_user_id' => 'nullable|integer|exists:users,id', // <-- add this
         ]);
 
         $fromState = $defenseRequest->workflow_state;
@@ -984,6 +1011,24 @@ class DefenseRequestController extends Controller
             'to_state' => $defenseRequest->workflow_state
         ];
         $defenseRequest->workflow_history = $hist;
+
+        // --- FIX: Use coordinator_user_id from request if present ---
+        if ($data['adviser_status'] === 'Approved') {
+            if (!empty($data['coordinator_user_id'])) {
+                $defenseRequest->coordinator_user_id = $data['coordinator_user_id'];
+            } elseif (!$defenseRequest->coordinator_user_id) {
+                // Fallback: Find the coordinator for this program/department
+                $coordinator = User::where('role', 'Coordinator')
+                    ->where('program', $defenseRequest->program)
+                    ->first();
+
+                if ($coordinator) {
+                    $defenseRequest->coordinator_user_id = $coordinator->id;
+                }
+            }
+        } else {
+            $defenseRequest->coordinator_user_id = null;
+        }
 
         $defenseRequest->save();
 

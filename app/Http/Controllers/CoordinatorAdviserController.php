@@ -142,4 +142,18 @@ class CoordinatorAdviserController extends Controller
             ],
         ]);
     }
+
+    public function getRegisteredCoordinator(Request $request)
+    {
+        $user = $request->user();
+        $coordinator = $user->coordinators()->select('id', 'first_name', 'middle_name', 'last_name', 'email')->first();
+        if (!$coordinator) {
+            return response()->json(['error' => 'No coordinator registered.'], 404);
+        }
+        return response()->json([
+            'id' => $coordinator->id,
+            'name' => trim($coordinator->first_name . ' ' . ($coordinator->middle_name ? strtoupper($coordinator->middle_name[0]) . '. ' : '') . $coordinator->last_name),
+            'email' => $coordinator->email,
+        ]);
+    }
 }

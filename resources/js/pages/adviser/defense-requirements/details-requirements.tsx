@@ -65,7 +65,7 @@ type DefenseRequestFull = {
 interface PageProps {
   defenseRequest: DefenseRequestFull;
   userRole: string;
-  coordinator?: { name: string; email: string } | null;
+  coordinators?: { id?: number; name: string; email: string }[]; // <-- add id
 }
 
 type WorkflowStepKey =
@@ -179,13 +179,19 @@ export default function DetailsRequirementsPage(rawProps: any) {
     else if (action === 'retrieve') newAdviserStatus = 'Pending';
 
     try {
+      const payload: any = { adviser_status: newAdviserStatus };
+      // Only include coordinator_user_id when approving and a coordinator is available
+      if (action === 'approve' && coordinators.length > 0 && coordinators[0].id) {
+        payload.coordinator_user_id = coordinators[0].id;
+      }
+
       const res = await fetchWithCsrfRetry(`/adviser/defense-requirements/${request.id}/adviser-status`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
           Accept: 'application/json',
         },
-        body: JSON.stringify({ adviser_status: newAdviserStatus }),
+        body: JSON.stringify(payload),
       });
       const data = await res.json();
       if (res.ok) {
@@ -504,6 +510,10 @@ export default function DetailsRequirementsPage(rawProps: any) {
     ? "*You haven't uploaded the Endorsement Form yet."
     : null;
 
+  // New state and effect for coordinators
+  const coordinators = props.coordinators ?? [];
+  const loadingCoordinators = false; // No need to fetch, already loaded
+
   return (
     <AppLayout breadcrumbs={breadcrumbs}>
       <Toaster position="bottom-right" richColors closeButton />
@@ -564,6 +574,32 @@ export default function DetailsRequirementsPage(rawProps: any) {
               <CircleArrowLeft className="h-4 w-4 mr-1 text-blue-600" />
               Retrieve
             </Button>
+          </div>
+        </div>
+
+        {/* New coordinator info box */}
+        <div className="mb-4">
+          <div className="rounded-lg border bg-white dark:bg-zinc-900 p-4 flex items-center gap-4 shadow-sm">
+            <div>
+              <div className="font-semibold text-sm mb-1">Your Coordinator{coordinators.length > 1 ? 's' : ''}</div>
+              {coordinators.length === 0 ? (
+                <span className="text-xs text-red-500">No coordinator registered.</span>
+              ) : (
+                <ul className="text-xs">
+                  {coordinators.map((c, i) => (
+                    <li key={i}>
+                      <span className="font-medium">{c.name}</span>
+                      {c.email && (
+                        <span className="ml-2 text-muted-foreground">({c.email})</span>
+                      )}
+                      {c.id && (
+                        <span className="ml-2 text-blue-600">[ID: {c.id}]</span>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
           </div>
         </div>
 
@@ -1034,9 +1070,9 @@ export default function DetailsRequirementsPage(rawProps: any) {
                   : 'Pending'}
               </span>?
             </p>
-            {confirm.action === 'approve' && props.coordinator && (
+            {confirm.action === 'approve' && coordinators.length > 0 && (
               <div className="text-xs text-muted-foreground">
-                This will be sent to your coordinator: <span className="font-semibold">{props.coordinator.name}</span>
+                This will be sent to your coordinator: <span className="font-semibold">{coordinators[0].name}</span>
               </div>
             )}
             {confirm.action === 'approve' && (

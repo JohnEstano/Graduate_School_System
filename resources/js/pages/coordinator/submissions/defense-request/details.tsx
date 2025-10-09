@@ -363,7 +363,34 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
     userRole
   );
 
-  function csrf() {
+  // --- Robust fetchWithCsrfRetry (copied from adviser view) ---
+  async function fetchWithCsrfRetry(url: string, options: RequestInit, retry = true) {
+    options.headers = {
+      ...(typeof options.headers === 'object' && options.headers !== null ? options.headers : {}),
+      'X-CSRF-TOKEN': csrf(),
+    };
+    let res: Response;
+    try {
+      res = await fetch(url, options);
+    } catch (err) {
+      // Network error (no response at all)
+      throw new Error('network');
+    }
+    if (res.status === 419 && retry) {
+      // Try to get a fresh CSRF token and retry once
+      if (!options.headers || typeof options.headers !== 'object') {
+        options.headers = {};
+      }
+      (options.headers as Record<string, string>)['X-CSRF-TOKEN'] = csrf();
+      try {
+        res = await fetch(url, options);
+      } catch (err) {
+        throw new Error('network');
+      }
+    }
+    return res;
+  }
+  function csrf(): string {
     return (
       (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)
         ?.content || ''
@@ -374,13 +401,12 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
     const toastId = toast.loading('Saving panel assignments...');
     setSavingPanels(true);
     try {
-      const res = await fetch(
+      const res = await fetchWithCsrfRetry(
         `/coordinator/defense-requests/${request.id}/panels`,
         {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'X-CSRF-TOKEN': csrf(),
             'Accept': 'application/json'
           },
           body: JSON.stringify(panels)
@@ -436,13 +462,12 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
     const toastId = toast.loading('Saving schedule...');
     setSavingSchedule(true);
     try {
-      const res = await fetch(
+      const res = await fetchWithCsrfRetry(
         `/coordinator/defense-requests/${request.id}/schedule-json`,
         {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'X-CSRF-TOKEN': csrf()
           },
           body: JSON.stringify(schedule)
         }
@@ -468,30 +493,32 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
     }
   }
 
-  // --- Approve/Reject/Retrieve logic ---
+  // --- Approve/Reject/Retrieve logic (robust, uses fetchWithCsrfRetry) ---
   async function handleStatusChange(action: 'approve' | 'reject' | 'retrieve') {
     if (!request.id) return;
     setIsLoading(true);
 
-    // Map action to new coordinator_status value
     let newStatus: 'Pending' | 'Approved' | 'Rejected' = 'Pending';
     if (action === 'approve') newStatus = 'Approved';
     else if (action === 'reject') newStatus = 'Rejected';
     else if (action === 'retrieve') newStatus = 'Pending';
 
     try {
-      const res = await fetch(`/defense-requests/${request.id}/status`, {
+      const res = await fetchWithCsrfRetry(`/defense-requests/${request.id}/status`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
-          'X-CSRF-TOKEN': csrf(),
           Accept: 'application/json'
         },
         body: JSON.stringify({ status: newStatus }),
       });
-      const data = await res.json();
+      let data: any = {};
+      try {
+        data = await res.json();
+      } catch {
+        data = { error: 'Invalid response from server.' };
+      }
       if (res.ok) {
-        // Use the updated request from the backend if available
         if (data.request) {
           setRequest(data.request);
         } else {
@@ -505,10 +532,14 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
         }
         toast.success(`Coordinator status set to ${newStatus}`);
       } else {
-        toast.error(data?.error || 'Failed to update status');
+        toast.error(data?.error || `Failed to update status (${res.status})`);
       }
-    } catch {
-      toast.error('Network error updating status');
+    } catch (err: any) {
+      if (err instanceof Error && err.message === 'network') {
+        toast.error('Network error updating status. Please check your connection and try again.');
+      } else {
+        toast.error('Unknown error updating status.');
+      }
     } finally {
       setIsLoading(false);
       setConfirm({ open: false, action: null });
