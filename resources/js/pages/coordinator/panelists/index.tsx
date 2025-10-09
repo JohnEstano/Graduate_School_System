@@ -8,7 +8,7 @@ import PanelistsListTable from './panelists-list-table';
 import PanelistFormModal from './panelists-form-modal';
 import HonorariumRatesDialog from "./honorarium-rates-dialog";
 import { Toaster, toast } from 'sonner';
-import { CheckCircle, CircleX, X, Trash2, Search, Users, PlusCircle } from 'lucide-react';
+import { CheckCircle, CircleX, X, Trash2, Search, Users, PlusCircle, Settings2, UserPlus } from 'lucide-react';
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { Checkbox } from "@/components/ui/checkbox";
 import axios from "axios";
@@ -302,9 +302,20 @@ export default function PanelistsPage() {
                 </span>
               </div>
             </div>
-            <Button onClick={() => { setModalOpen(true); setEditing(null); }} disabled={formLoading || loading}>
-              {formLoading ? "Loading..." : "Add Panel"}
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="ghost"
+                onClick={() => setRatesDialogOpen(true)}
+                className="h-9 flex items-center gap-2"
+              >
+                <Settings2 className="h-4 w-4" />
+                Edit Honorarium Rates
+              </Button>
+              <Button onClick={() => { setModalOpen(true); setEditing(null); }} disabled={formLoading || loading}>
+                  <UserPlus className="h-4 w-4" />  {formLoading ? "Loading..." : "Add Panel"}
+                    
+              </Button>
+            </div>
           </div>
           {/* Search bar row with filters */}
           <div className="flex items-center justify-between gap-2 px-4 py-3 border-b bg-white">
@@ -404,10 +415,6 @@ export default function PanelistsPage() {
                 </Button>
               )}
             </div>
-            {/* Edit Honorarium Rates button on the right */}
-            <Button variant="outline" onClick={() => setRatesDialogOpen(true)} className="h-8">
-              Edit Honorarium Rates
-            </Button>
           </div>
         </div>
 

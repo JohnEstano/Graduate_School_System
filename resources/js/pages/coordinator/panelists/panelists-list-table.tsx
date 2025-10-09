@@ -22,6 +22,7 @@ import {
   HoverCardContent,
   HoverCardTrigger,
 } from "@/components/ui/hover-card";
+import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import type { PanelistWithAssignments, PanelistHonorariumSpec } from "@/types";
 
 type Props = {
@@ -315,5 +316,19 @@ function Avatar({ name }: { name: string }) {
     <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 font-semibold text-sm">
       {initials}
     </div>
+  );
+}
+
+function StatusBadge({ status }: { status: "Assigned" | "Not Assigned" }) {
+  return (
+    <span
+      className={
+        status === "Assigned"
+          ? "px-2 py-0.5 rounded-full text-xs font-medium bg-rose-100 text-rose-700"
+          : "px-2 py-0.5 rounded-full text-xs font-medium bg-rose-50 text-rose-400 border border-rose-100"
+      }
+    >
+      {status}
+    </span>
   );
 }

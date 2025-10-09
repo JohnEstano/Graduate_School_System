@@ -278,9 +278,13 @@ class DefenseRequestController extends Controller
 
         if ($decision === 'approve') {
             $defenseRequest->workflow_state = 'adviser-approved';
-            $defenseRequest->adviser_status = 'Approved'; // <-- NEW
-            // Optionally keep legacy status for compatibility:
+            $defenseRequest->adviser_status = 'Approved';
             $defenseRequest->status = 'Pending';
+            // ADD THIS:
+            $coordinator = $user->coordinators()->first();
+            if ($coordinator) {
+                $defenseRequest->coordinator_user_id = $coordinator->id;
+            }
         } else {
             $defenseRequest->workflow_state = 'adviser-rejected';
             $defenseRequest->adviser_status = 'Rejected'; // <-- NEW
@@ -983,6 +987,22 @@ class DefenseRequestController extends Controller
         }
 
         $query = DefenseRequest::query();
+
+        // Only show requests assigned to this coordinator
+        if ($user->role === 'Coordinator') {
+            $query->where('coordinator_user_id', $user->id);
+        }
+
+        // Only show requests in states relevant to the coordinator
+        $query->whereIn('workflow_state', [
+            'adviser-approved',
+            'coordinator-review',
+            'coordinator-approved',
+            'panels-assigned',
+            'scheduled',
+            'completed',
+            'coordinator-rejected'
+        ]);
 
         if ($s = $request->input('search')) {
             $query->where(function($q) use ($s){

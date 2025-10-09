@@ -19,7 +19,27 @@ class DefenseRequirementController extends Controller
         $acceptDefense = $acceptDefense === null ? true : $acceptDefense === '1';
 
         return inertia('student/submissions/defense-requirements/Index', [
-            'defenseRequirements' => $requirements,
+            'defenseRequirements' => $requirements->map(function($r) {
+                return [
+                    'id' => $r->id,
+                    'first_name' => $r->first_name,
+                    'middle_name' => $r->middle_name,
+                    'last_name' => $r->last_name,
+                    'school_id' => $r->school_id,
+                    'program' => $r->program,
+                    'thesis_title' => $r->thesis_title,
+                    'adviser' => $r->defense_adviser ?: '—',
+                    'status' => $r->status ?? 'Pending',
+                    'workflow_state' => $r->workflow_state,
+                    'created_at' => $r->created_at?->toIso8601String(),
+                  
+                    'manuscript_proposal' => $r->manuscript_proposal,
+                    'similarity_index' => $r->similarity_index,
+                    'rec_endorsement' => $r->rec_endorsement,
+                    'proof_of_payment' => $r->proof_of_payment,
+                    'defense_type' => $r->defense_type, 
+                ];
+            }),
             'defenseRequest' => $defenseRequest,
             'acceptDefense' => $acceptDefense,
             'auth' => [

@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
+import { cn } from "@/lib/utils";
 import type { Panelist } from "@/types";
 
 type Props = {
@@ -60,43 +61,76 @@ export default function PanelistFormModal({ open, editing, onClose, onSubmit, lo
     <Dialog open={open} onOpenChange={(val) => { if (!val) onClose(); }}>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>{editing ? "Edit Panelist" : "Add Panelist"}</DialogTitle>
+          <DialogTitle>
+            {editing ? "Edit Panelist" : "Add Panelist"}
+          </DialogTitle>
+          <p className="text-muted-foreground text-sm mt-1">
+            {editing
+              ? "Update the details of this panelist."
+              : "Fill out the form below to add a new panelist."}
+          </p>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="grid gap-4 py-2">
           <div>
-            <Label>Name</Label>
-            <Input value={name} onChange={(e) => setName(e.target.value)} disabled={loading} />
+            <Label htmlFor="panelist-name">Name</Label>
+            <Input
+              id="panelist-name"
+              placeholder="e.g. Dr. Jane Doe"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              disabled={loading}
+              autoComplete="off"
+            />
+            <small className="text-muted-foreground">
+              Enter the full name of the panelist.
+            </small>
           </div>
 
           <div>
-            <Label>Email</Label>
-            <Input value={email} onChange={(e) => setEmail(e.target.value)} disabled={loading} />
+            <Label htmlFor="panelist-email">Email</Label>
+            <Input
+              id="panelist-email"
+              type="email"
+              placeholder="e.g. janedoe@email.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              disabled={loading}
+              autoComplete="off"
+            />
+            <small className="text-muted-foreground">
+              Enter a valid email address.
+            </small>
           </div>
 
+          {/* Example for role and status if you want to add them back:
           <div>
-            <Label>Role</Label>
-            <Select value={role} onValueChange={(value: Panelist["role"]) => setRole(value)} disabled={loading}>
+            <Label htmlFor="panelist-role">Role</Label>
+            <Select
+              id="panelist-role"
+              value={role}
+              onValueChange={setRole}
+              disabled={loading}
+            >
               {ROLES.map((r) => (
-                <option key={r} value={r}>{r}</option>
+                <Select.Item key={r} value={r}>{r}</Select.Item>
               ))}
             </Select>
+            <small className="text-muted-foreground">
+              Select the role of the panelist.
+            </small>
           </div>
-
-          <div>
-            <Label>Status</Label>
-            <Select value={status} onValueChange={(value: Panelist["status"]) => setStatus(value)} disabled={loading}>
-              {STATUSES.map((s) => (
-                <option key={s} value={s}>{s}</option>
-              ))}
-            </Select>
-          </div>
+          */}
 
           <DialogFooter>
             <div className="flex w-full justify-end gap-2">
-              <Button variant="ghost" onClick={onClose} type="button" disabled={loading}>Cancel</Button>
+              <Button variant="ghost" onClick={onClose} type="button" disabled={loading}>
+                Cancel
+              </Button>
               <Button type="submit" disabled={loading}>
-                {loading ? (editing ? "Saving..." : "Adding...") : (editing ? "Save changes" : "Add Panelist")}
+                {loading
+                  ? (editing ? "Saving..." : "Adding...")
+                  : (editing ? "Save changes" : "Add Panelist")}
               </Button>
             </div>
           </DialogFooter>

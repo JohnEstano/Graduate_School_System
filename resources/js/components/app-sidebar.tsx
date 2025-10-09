@@ -103,6 +103,14 @@ const facultyNavItems: MainNavItem[] = [
     { title: 'Schedules', href: '/schedules', icon: CalendarFold },
 ];
 
+const deanNavItems: MainNavItem[] = [
+    { title: 'Dashboard', href: '/dashboard', icon: LayoutGrid },
+    { title: 'Programs', href: '/dean/programs', icon: LibraryBig },
+    { title: 'Users', href: '/dean/users', icon: Users },
+    { title: 'Defense Requests', href: '/dean/defense-requests', icon: FileText },
+    { title: 'Schedules', href: '/dean/schedules', icon: CalendarFold },
+];
+
 const footerNavItems: NavItem[] = [];
 
 export function AppSidebar() {
@@ -114,7 +122,9 @@ export function AppSidebar() {
 
     if (user.role === 'Coordinator') {
         navItems = coordinatorNavItems;
-    } else if (user.role === 'Administrative Assistant' || user.role === 'Dean') {
+    } else if (user.role === 'Dean') {
+        navItems = deanNavItems;
+    } else if (user.role === 'Administrative Assistant') {
         navItems = assistantNavItems;
     } else if (user.role === 'Faculty' || user.role === 'Adviser') {
         navItems = facultyNavItems;

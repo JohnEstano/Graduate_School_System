@@ -28,23 +28,31 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { Info as InfoIcon } from "lucide-react";
 import { DocumentGeneratorDialog } from "@/components/DocumentGeneratorDialog"; // <-- ADD THIS IMPORT
+import { Badge } from "@/components/ui/badge";
+
+
+function resolveFileUrl(url?: string | null) {
+    if (!url) return null;
+    if (/^https?:\/\//i.test(url) || url.startsWith('/storage/')) return url;
+    return `/storage/${url.replace(/^\/?storage\//, '')}`;
+}
 
 // Add this helper function to map the request data for document generation
 function mapToTemplateData(req: any) {
-  return {
-    ...req,
-    student: {
-      full_name: `${req.first_name || ''} ${req.last_name || ''}`.trim(),
-      program: req.program || '',
-      school_id: req.school_id || '',
-    },
-    request: {
-      thesis_title: req.thesis_title || '',
-      defense_type: req.defense_type || req.status || '',
-    },
-    adviser: req.adviser || req.defense_adviser || '',
-    // Add more mappings as needed
-  };
+    return {
+        ...req,
+        student: {
+            full_name: `${req.first_name || ''} ${req.last_name || ''}`.trim(),
+            program: req.program || '',
+            school_id: req.school_id || '',
+        },
+        request: {
+            thesis_title: req.thesis_title || '',
+            defense_type: req.defense_type || req.status || '',
+        },
+        adviser: req.adviser || req.defense_adviser || '',
+        // Add more mappings as needed
+    };
 }
 
 dayjs.extend(relativeTime);
@@ -63,9 +71,10 @@ type DefenseRequirement = {
     status: string;
     reference_no: string;
     program: string;
+    defense_type?: string;
     created_at?: string;
-    workflow_state?: string;           // <-- added
-    defense_chairperson?: string;      // optional (for row-only display)
+    workflow_state?: string;
+    defense_chairperson?: string;
     defense_panelist1?: string;
     defense_panelist2?: string;
     defense_panelist3?: string;
@@ -76,6 +85,10 @@ type DefenseRequirement = {
     formatted_time_range?: string;
     defense_venue?: string;
     defense_mode?: string;
+    manuscript_proposal?: string;      // <-- added for attachments
+    similarity_index?: string;         // <-- added for attachments
+    rec_endorsement?: string;          // <-- added for attachments
+    proof_of_payment?: string;         // <-- added for attachments
 };
 
 type DefenseRequest = {
@@ -83,7 +96,7 @@ type DefenseRequest = {
     thesis_title: string;
     school_id: string;
     status: string;
-    defense_adviser:string;
+    defense_adviser: string;
     workflow_state: string;
     workflow_state_display?: string;
     date_of_defense?: string;
@@ -194,7 +207,7 @@ export default function DefenseRequestIndex() {
     function currentStepperIndex(dr: DefenseRequest | null): number {
         if (!dr) return 0;
         // If panels already assigned but state not yet updated
-        if (dr.panels_assigned_at && !['panels-assigned','scheduled','completed'].includes(dr.workflow_state || '')) {
+        if (dr.panels_assigned_at && !['panels-assigned', 'scheduled', 'completed'].includes(dr.workflow_state || '')) {
             return STATE_ORDER.indexOf('panels-assigned');
         }
         const norm = normalizeWorkflowState(dr.workflow_state);
@@ -236,7 +249,7 @@ export default function DefenseRequestIndex() {
                     }
 
                     // --- ADDED: Check for rejection states ---
-                    if (['adviser-rejected','coordinator-rejected'].includes(updatedRequest.workflow_state)) {
+                    if (['adviser-rejected', 'coordinator-rejected'].includes(updatedRequest.workflow_state)) {
                         // reflect rejection in requirements list
                         const newList = defenseRequirements.map(r =>
                             r.thesis_title === updatedRequest.thesis_title
@@ -248,14 +261,15 @@ export default function DefenseRequestIndex() {
                     }
 
                     setDefenseRequest(updatedRequest);
-                    // Update adviser in defenseRequirements if thesis_title matches
-                    if (updatedRequest.thesis_title) {
-                        defenseRequirements.forEach((r) => {
-                            if (r.thesis_title === updatedRequest.thesis_title) {
-                                r.adviser = updatedRequest.defense_adviser;
-                            }
-                        });
-                    }
+
+                    // REMOVE THIS BLOCK (no more adviser sync from polling):
+                    // if (updatedRequest.thesis_title) {
+                    //     defenseRequirements.forEach((r) => {
+                    //         if (r.thesis_title === updatedRequest.thesis_title) {
+                    //             r.adviser = updatedRequest.defense_adviser;
+                    //         }
+                    //     });
+                    // }
                 }
             } catch (error) {
                 console.error('Failed to poll defense request updates:', error);
@@ -366,7 +380,7 @@ export default function DefenseRequestIndex() {
         }
 
         // Row-level adviser/coordinator rejection fallback
-        if ((!defenseRequest || defenseRequest.thesis_title !== req.thesis_title) && ['adviser-rejected','coordinator-rejected'].includes(rowState)) {
+        if ((!defenseRequest || defenseRequest.thesis_title !== req.thesis_title) && ['adviser-rejected', 'coordinator-rejected'].includes(rowState)) {
             return {
                 progress: 100,
                 title: rowState === 'adviser-rejected' ? 'Rejected by Adviser' : 'Rejected by Coordinator',
@@ -393,7 +407,7 @@ export default function DefenseRequestIndex() {
             defenseRequest.school_id === props.auth.user.school_id
         ) {
             const workflowState = defenseRequest.workflow_state;
-            
+
             switch (workflowState) {
                 case 'submitted':
                 case 'adviser-review':
@@ -405,7 +419,7 @@ export default function DefenseRequestIndex() {
                     bg = "bg-blue-50";
                     progressColor = "bg-blue-500";
                     break;
-                    
+
                 case 'adviser-approved':
                 case 'coordinator-review':
                     progress = 50;
@@ -416,7 +430,7 @@ export default function DefenseRequestIndex() {
                     bg = "bg-orange-50";
                     progressColor = "bg-orange-500";
                     break;
-                    
+
                 case 'coordinator-approved':
                     progress = 60;
                     title = "Panel Assignment in Progress";
@@ -426,7 +440,7 @@ export default function DefenseRequestIndex() {
                     bg = "bg-green-50";
                     progressColor = "bg-green-500";
                     break;
-                    
+
                 case 'panels-assigned':
                     progress = 75;
                     title = "Panels Assigned";
@@ -436,7 +450,7 @@ export default function DefenseRequestIndex() {
                     bg = "bg-orange-50";
                     progressColor = "bg-orange-500";
                     break;
-                    
+
                 case 'scheduled':
                     progress = 90;
                     title = "Defense Scheduled";
@@ -446,7 +460,7 @@ export default function DefenseRequestIndex() {
                     bg = "bg-green-50";
                     progressColor = "bg-green-500";
                     break;
-                    
+
                 case 'completed':
                     progress = 100;
                     title = "Defense Completed";
@@ -456,7 +470,7 @@ export default function DefenseRequestIndex() {
                     bg = "bg-green-50";
                     progressColor = "bg-green-500";
                     break;
-                    
+
                 case 'adviser-rejected':
                     progress = 100;
                     title = "Rejected by Adviser";
@@ -466,7 +480,7 @@ export default function DefenseRequestIndex() {
                     bg = "bg-red-50";
                     progressColor = "bg-red-500";
                     break;
-                    
+
                 case 'coordinator-rejected':
                     progress = 100;
                     title = "Rejected by Coordinator";
@@ -476,7 +490,7 @@ export default function DefenseRequestIndex() {
                     bg = "bg-red-50";
                     progressColor = "bg-red-500";
                     break;
-                    
+
                 default:
                     // Handle any other states
                     progress = 10;
@@ -497,7 +511,7 @@ export default function DefenseRequestIndex() {
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Defense Requirements" />
-           
+
             {/* Skeleton Loader */}
             {loading ? (
                 <div className="w-full min-h-[70vh] bg-zinc-100 dark:bg-zinc-900 flex flex-col gap-4 p-0 m-0">
@@ -511,28 +525,28 @@ export default function DefenseRequestIndex() {
                 </div>
             ) : (
                 <div className="flex flex-col px-7 pt-5 pb-5 w-full">
-                     {/* Alert if submissions are closed */}
-            {!acceptDefense && showClosedAlert && (
-                <Alert
-                    className="bg-yellow-50 dark:bg-yellow-950 border-yellow-200 dark:border-yellow-900 text-yellow-900 dark:text-yellow-100 flex items-start gap-3 px-6 py-5 rounded-xl mb-4 relative"
-                >
-                    <InfoIcon className="h-5 w-5 text-yellow-500 dark:text-yellow-400 mt-1 flex-shrink-0" />
-                    <div>
-                        <AlertTitle className="font-semibold mb-1">Defense Requirement Submissions Closed</AlertTitle>
-                        <AlertDescription>
-                            The defense requirement submission period is currently closed. Please contact your coordinator for more information.
-                        </AlertDescription>
-                    </div>
-                    <button
-                        type="button"
-                        className="absolute top-2 right-2 text-yellow-900 dark:text-yellow-100 hover:text-yellow-700 dark:hover:text-yellow-300 rounded p-1"
-                        aria-label="Close"
-                        onClick={() => setShowClosedAlert(false)}
-                    >
-                        <X className="h-4 w-4" />
-                    </button>
-                </Alert>
-            )}
+                    {/* Alert if submissions are closed */}
+                    {!acceptDefense && showClosedAlert && (
+                        <Alert
+                            className="bg-yellow-50 dark:bg-yellow-950 border-yellow-200 dark:border-yellow-900 text-yellow-900 dark:text-yellow-100 flex items-start gap-3 px-6 py-5 rounded-xl mb-4 relative"
+                        >
+                            <InfoIcon className="h-5 w-5 text-yellow-500 dark:text-yellow-400 mt-1 flex-shrink-0" />
+                            <div>
+                                <AlertTitle className="font-semibold mb-1">Defense Requirement Submissions Closed</AlertTitle>
+                                <AlertDescription>
+                                    The defense requirement submission period is currently closed. Please contact your coordinator for more information.
+                                </AlertDescription>
+                            </div>
+                            <button
+                                type="button"
+                                className="absolute top-2 right-2 text-yellow-900 dark:text-yellow-100 hover:text-yellow-700 dark:hover:text-yellow-300 rounded p-1"
+                                aria-label="Close"
+                                onClick={() => setShowClosedAlert(false)}
+                            >
+                                <X className="h-4 w-4" />
+                            </button>
+                        </Alert>
+                    )}
                     <div className="w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg overflow-hidden">
                         <div className="flex flex-row items-center justify-between w-full p-3 border-b border-zinc-200 dark:border-zinc-800">
                             <div className="flex items-center gap-2">
@@ -590,15 +604,15 @@ export default function DefenseRequestIndex() {
 
                                     // Stepper workflow states
                                     const workflowSteps = [
-                                        { key: 'submitted',            label: 'Submitted',          icon: <Hourglass className="w-4 h-4" /> },
-                                        { key: 'adviser-approved',     label: 'Adviser Approved',   icon: <CheckCircle className="w-4 h-4" /> },
+                                        { key: 'submitted', label: 'Submitted', icon: <Hourglass className="w-4 h-4" /> },
+                                        { key: 'adviser-approved', label: 'Adviser Approved', icon: <CheckCircle className="w-4 h-4" /> },
                                         { key: 'coordinator-approved', label: 'Coordinator Approved', icon: <CheckCircle className="w-4 h-4" /> },
-                                        { key: 'panels-assigned',      label: 'Panels Assigned',    icon: <Users className="w-4 h-4" /> },
-                                        { key: 'scheduled',            label: 'Scheduled',          icon: <Calendar className="w-4 h-4" /> },
-                                        { key: 'completed',            label: 'Completed',          icon: <GraduationCap className="w-4 h-4" /> },
+                                        { key: 'panels-assigned', label: 'Panels Assigned', icon: <Users className="w-4 h-4" /> },
+                                        { key: 'scheduled', label: 'Scheduled', icon: <Calendar className="w-4 h-4" /> },
+                                        { key: 'completed', label: 'Completed', icon: <GraduationCap className="w-4 h-4" /> },
                                     ] as
-                                    
-                                    const;
+
+                                        const;
 
                                     const activeObjForRow =
                                         defenseRequest && defenseRequest.thesis_title === req.thesis_title
@@ -614,10 +628,10 @@ export default function DefenseRequestIndex() {
                                     const isRejectedActive =
                                         !!defenseRequest &&
                                         defenseRequest.thesis_title === req.thesis_title &&
-                                        ['adviser-rejected','coordinator-rejected'].includes(defenseRequest.workflow_state || '');
+                                        ['adviser-rejected', 'coordinator-rejected'].includes(defenseRequest.workflow_state || '');
 
                                     const rejectionByCoordinator = isRejectedActive && defenseRequest?.workflow_state === 'coordinator-rejected';
-                                    const rejectionByAdviser     = isRejectedActive && defenseRequest?.workflow_state === 'adviser-rejected';
+                                    const rejectionByAdviser = isRejectedActive && defenseRequest?.workflow_state === 'adviser-rejected';
 
                                     const rejectionComment = rejectionByCoordinator
                                         ? defenseRequest?.coordinator_comments
@@ -642,8 +656,8 @@ export default function DefenseRequestIndex() {
                                     const rowStateRaw = (req.workflow_state || '').toLowerCase();
                                     const isCompletedRow =
                                         (defenseRequest &&
-                                          defenseRequest.thesis_title === req.thesis_title &&
-                                          defenseRequest.workflow_state === 'completed') ||
+                                            defenseRequest.thesis_title === req.thesis_title &&
+                                            defenseRequest.workflow_state === 'completed') ||
                                         rowStateRaw === 'completed';
 
                                     let currentIdx = 0;
@@ -743,18 +757,17 @@ export default function DefenseRequestIndex() {
                                         detailsDescription = `
                                             <div class="space-y-2">
                                                 <div>Your defense request has been <b>${rejectionHeaderTitle.toLowerCase()}</b>.</div>
-                                                ${
-                                                    rejectionComment
-                                                        ? `<div class="text-sm"><b>Feedback:</b> "${rejectionComment}"</div>`
-                                                        : ''
-                                                }
+                                                ${rejectionComment
+                                                ? `<div class="text-sm"><b>Feedback:</b> "${rejectionComment}"</div>`
+                                                : ''
+                                            }
                                                 <div class="text-xs text-muted-foreground">
                                                     Please address the feedback and, if allowed, submit a new set of requirements or updated documents.
                                                 </div>
                                             </div>`;
                                     } else if (defenseRequest &&
-                                               defenseRequest.thesis_title === req.thesis_title &&
-                                               defenseRequest.school_id === props.auth.user.school_id) {
+                                        defenseRequest.thesis_title === req.thesis_title &&
+                                        defenseRequest.school_id === props.auth.user.school_id) {
                                         // Normal progression
                                         switch (normState) {
                                             case 'submitted':
@@ -848,22 +861,37 @@ export default function DefenseRequestIndex() {
                                                         <ChevronDown
                                                             className={`transition-transform duration-200 h-4 w-4 text-muted-foreground dark:text-zinc-400 mr-3 ${isOpen ? 'rotate-180' : ''}`}
                                                         />
-                                                        <div className="flex items-center gap-2 flex-1">
-                                                            { (isCancelled || isRejectedActive)
-                                                                ? <X className="h-4 w-4 text-red-600" />
-                                                                : isCompletedRow
-                                                                    ? <CheckCircle className="h-4 w-4 text-green-600" />
-                                                                    : React.cloneElement(headerIcon, { className: "h-4 w-4 text-muted-foreground dark:text-zinc-300" })
-                                                            }
-                                                             <span className={`font-semibold text-xs ${
-                                                                (isCancelled || isRejectedActive)
-                                                                    ? "text-red-600"
+                                                        <div className="flex flex-col flex-1 gap-0.5">
+                                                            <div className="flex items-center gap-2">
+                                                                {req.defense_type && (
+                                                                    <Badge variant="outline" className="text-xs font-semibold px-2 py-0.5 capitalize">
+                                                                        {req.defense_type}
+                                                                    </Badge>
+                                                                )}
+                                                                <span className="font-semibold text-xs text-black dark:text-white leading-tight">
+                                                                    {req.thesis_title}
+                                                                </span>
+                                                            </div>
+                                                            <div className="flex items-center gap-2">
+                                                                {(isCancelled || isRejectedActive)
+                                                                    ? <X className="h-4 w-4 text-red-600" />
                                                                     : isCompletedRow
-                                                                        ? "text-green-600"
-                                                                        : "text-muted-foreground dark:text-zinc-300"
-                                                             }`}>
-                                                                 {headerTitle}
-                                                             </span>
+                                                                        ? <CheckCircle className="h-4 w-4 text-green-600" />
+                                                                        : React.cloneElement(headerIcon, { className: "h-4 w-4 text-muted-foreground text-xs dark:text-zinc-300" })
+                                                                }
+                                                                <span className={`font-medium text-xs ${(isCancelled || isRejectedActive)
+                                                                        ? "text-red-600"
+                                                                        : isCompletedRow
+                                                                            ? "text-green-600"
+                                                                            : "text-muted-foreground dark:text-zinc-300"
+                                                                    }`}>
+                                                                    {headerTitle}
+                                                                </span>
+
+                                                                <span className="text-xs text-muted-foreground dark:text-zinc-400 ">
+                                                                    {timeSubmitted}
+                                                                </span>
+                                                            </div>
                                                         </div>
                                                         <div className="flex items-center w-64 justify-end">
                                                             {showStepper ? (
@@ -913,17 +941,15 @@ export default function DefenseRequestIndex() {
                                                                 <div>
                                                                     <span className="font-semibold text-xs text-zinc-500 dark:text-zinc-400">Adviser:</span>
                                                                     <div className="text-sm text-zinc-800 dark:text-white">
-                                                                        {req.adviser || (defenseRequest &&
-                                                                            defenseRequest.thesis_title === req.thesis_title &&
-                                                                            defenseRequest.defense_adviser) || '—'}
+                                                                        {req.adviser || '—'}
                                                                     </div>
                                                                 </div>
                                                             </div>
                                                             {/* Attachments */}
                                                             <div className="flex flex-row gap-2 mt-2 flex-wrap">
-                                                                {defenseRequest?.manuscript_proposal && (
+                                                                {req.manuscript_proposal && (
                                                                     <a
-                                                                        href={defenseRequest.manuscript_proposal}
+                                                                        href={resolveFileUrl(req.manuscript_proposal) || undefined}
                                                                         target="_blank"
                                                                         rel="noopener noreferrer"
                                                                         className="flex items-center gap-2 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-lg px-2 py-1 min-w-[120px] max-w-[180px] hover:bg-zinc-50 dark:hover:bg-zinc-800 transition truncate"
@@ -935,14 +961,14 @@ export default function DefenseRequestIndex() {
                                                                         <div className="flex flex-col min-w-0">
                                                                             <span className="font-medium text-xs leading-tight truncate max-w-[100px] dark:text-white">Manuscript</span>
                                                                             <span className="text-[10px] text-muted-foreground dark:text-zinc-400 truncate max-w-[100px]">
-                                                                                {defenseRequest.manuscript_proposal.split('/').pop()}
+                                                                                {req.manuscript_proposal.split('/').pop()}
                                                                             </span>
                                                                         </div>
                                                                     </a>
                                                                 )}
-                                                                {defenseRequest?.similarity_index && (
+                                                                {req.similarity_index && (
                                                                     <a
-                                                                        href={defenseRequest.similarity_index}
+                                                                        href={resolveFileUrl(req.similarity_index) || undefined}
                                                                         target="_blank"
                                                                         rel="noopener noreferrer"
                                                                         className="flex items-center gap-2 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-lg px-2 py-1 min-w-[120px] max-w-[180px] hover:bg-zinc-50 dark:hover:bg-zinc-800 transition truncate"
@@ -954,14 +980,14 @@ export default function DefenseRequestIndex() {
                                                                         <div className="flex flex-col min-w-0">
                                                                             <span className="font-medium text-xs leading-tight truncate max-w-[100px] dark:text-white">Similarity</span>
                                                                             <span className="text-[10px] text-muted-foreground dark:text-zinc-400 truncate max-w-[100px]">
-                                                                                {defenseRequest.similarity_index.split('/').pop()}
+                                                                                {req.similarity_index.split('/').pop()}
                                                                             </span>
                                                                         </div>
                                                                     </a>
                                                                 )}
-                                                                {defenseRequest?.rec_endorsement && (
+                                                                {req.rec_endorsement && (
                                                                     <a
-                                                                        href={defenseRequest.rec_endorsement}
+                                                                        href={resolveFileUrl(req.rec_endorsement) || undefined}
                                                                         target="_blank"
                                                                         rel="noopener noreferrer"
                                                                         className="flex items-center gap-2 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-lg px-2 py-1 min-w-[120px] max-w-[180px] hover:bg-zinc-50 dark:hover:bg-zinc-800 transition truncate"
@@ -973,14 +999,14 @@ export default function DefenseRequestIndex() {
                                                                         <div className="flex flex-col min-w-0">
                                                                             <span className="font-medium text-xs leading-tight truncate max-w-[100px] dark:text-white">Endorsement</span>
                                                                             <span className="text-[10px] text-muted-foreground dark:text-zinc-400 truncate max-w-[100px]">
-                                                                                {defenseRequest.rec_endorsement.split('/').pop()}
+                                                                                {req.rec_endorsement.split('/').pop()}
                                                                             </span>
                                                                         </div>
                                                                     </a>
                                                                 )}
-                                                                {defenseRequest?.proof_of_payment && (
+                                                                {req.proof_of_payment && (
                                                                     <a
-                                                                        href={defenseRequest.proof_of_payment}
+                                                                        href={resolveFileUrl(req.proof_of_payment) || undefined}
                                                                         target="_blank"
                                                                         rel="noopener noreferrer"
                                                                         className="flex items-center gap-2 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-lg px-2 py-1 min-w-[120px] max-w-[180px] hover:bg-zinc-50 dark:hover:bg-zinc-800 transition truncate"
@@ -992,7 +1018,7 @@ export default function DefenseRequestIndex() {
                                                                         <div className="flex flex-col min-w-0">
                                                                             <span className="font-medium text-xs leading-tight truncate max-w-[100px] dark:text-white">Payment</span>
                                                                             <span className="text-[10px] text-muted-foreground dark:text-zinc-400 truncate max-w-[100px]">
-                                                                                {defenseRequest.proof_of_payment.split('/').pop()}
+                                                                                {req.proof_of_payment.split('/').pop()}
                                                                             </span>
                                                                         </div>
                                                                     </a>
@@ -1000,74 +1026,74 @@ export default function DefenseRequestIndex() {
                                                             </div>
                                                             {/* Defense Information (dynamic) */}
                                                             {defenseRequest &&
-                                                             defenseRequest.thesis_title === req.thesis_title && (
-                                                                <div className="mt-2 w-full border border-zinc-200 dark:border-zinc-700 rounded-md p-3 bg-zinc-50 dark:bg-zinc-800/40">
-                                                                    <div className="flex items-center mb-2">
-                                                                        <Info className="w-4 h-4 text-rose-500 mr-2" />
-                                                                        <span className="text-xs font-semibold text-zinc-700 dark:text-zinc-200">
-                                                                            Defense Information
-                                                                        </span>
-                                                                    </div>
-                                                                    <div className="text-xs text-zinc-700 dark:text-zinc-300 space-y-3">
-                                                                        {/* Cancelled/Rejected */}
-                                                                        {['adviser-rejected','coordinator-rejected','cancelled'].includes(defenseRequest.workflow_state) && (
-                                                                            <div className="text-xs text-rose-600">
-                                                                                No further defense information (request {defenseRequest.workflow_state.replace('-',' ')}).
-                                                                            </div>
-                                                                        )}
-
-                                                                        {/* Panels (if assigned) */}
-                                                                        {['panels-assigned','scheduled','completed'].includes(defenseRequest.workflow_state) &&
-                                                                            [defenseRequest.defense_chairperson, defenseRequest.defense_panelist1, defenseRequest.defense_panelist2, defenseRequest.defense_panelist3, defenseRequest.defense_panelist4].some(Boolean) && (
-                                                                            <div>
-                                                                                <span className="font-semibold">Committee:</span>
-                                                                                <ul className="pl-4 list-disc">
-                                                                                    {defenseRequest.defense_chairperson && <li>{defenseRequest.defense_chairperson} <span className="text-xs text-zinc-500">(Chairperson)</span></li>}
-                                                                                    {defenseRequest.defense_panelist1 && <li>{defenseRequest.defense_panelist1} <span className="text-xs text-zinc-500">(Panelist 1)</span></li>}
-                                                                                    {defenseRequest.defense_panelist2 && <li>{defenseRequest.defense_panelist2} <span className="text-xs text-zinc-500">(Panelist 2)</span></li>}
-                                                                                    {defenseRequest.defense_panelist3 && <li>{defenseRequest.defense_panelist3} <span className="text-xs text-zinc-500">(Panelist 3)</span></li>}
-                                                                                    {defenseRequest.defense_panelist4 && <li>{defenseRequest.defense_panelist4} <span className="text-xs text-zinc-500">(Panelist 4)</span></li>}
-                                                                                </ul>
-                                                                            </div>
-                                                                        )}
-
-                                                                        {/* Completed: Show only the congratulations and certificate link */}
-                                                                        {defenseRequest.workflow_state === 'completed' && (
-                                                                            <div className="mt-2 p-3 rounded-md border border-green-200 bg-green-50 dark:bg-green-900/30 flex flex-col gap-2">
-                                                                                <div className="font-bold text-green-700 text-xs mb-1">
-                                                                                    Congratulations, your defense has been successfully completed!
+                                                                defenseRequest.thesis_title === req.thesis_title && (
+                                                                    <div className="mt-2 w-full border border-zinc-200 dark:border-zinc-700 rounded-md p-3 bg-zinc-50 dark:bg-zinc-800/40">
+                                                                        <div className="flex items-center mb-2">
+                                                                            <Info className="w-4 h-4 text-rose-500 mr-2" />
+                                                                            <span className="text-xs font-semibold text-zinc-700 dark:text-zinc-200">
+                                                                                Defense Information
+                                                                            </span>
+                                                                        </div>
+                                                                        <div className="text-xs text-zinc-700 dark:text-zinc-300 space-y-3">
+                                                                            {/* Cancelled/Rejected */}
+                                                                            {['adviser-rejected', 'coordinator-rejected', 'cancelled'].includes(defenseRequest.workflow_state) && (
+                                                                                <div className="text-xs text-rose-600">
+                                                                                    No further defense information (request {defenseRequest.workflow_state.replace('-', ' ')}).
                                                                                 </div>
-                                                                                <div className="text-xs text-zinc-700 dark:text-zinc-200 mb-1">
-                                                                                    <b>Request for Oral Defense Certificate</b><br />
-                                                                                    Please fill out the following form to request your Oral Defense Certificate:<br />
-                                                                                    <a
-                                                                                        href="https://docs.google.com/forms/d/e/1FAIpQLScIFYf8Z6L8q_N2qVEdS4koTJ7jv4HOFnhit-4LKXmOH--Ukg/viewform?usp=send_form"
-                                                                                        target="_blank"
-                                                                                        rel="noopener noreferrer"
-                                                                                        className="text-blue-700 underline break-all"
-                                                                                    >
-                                                                                        https://docs.google.com/forms/d/e/1FAIpQLScIFYf8Z6L8q_N2qVEdS4koTJ7jv4HOFnhit-4LKXmOH--Ukg/viewform?usp=send_form
-                                                                                    </a>
-                                                                                </div>
-                                                                            </div>
-                                                                        )}
+                                                                            )}
 
-                                                                        {/* Awaiting/Review states */}
-                                                                        {['submitted','adviser-review'].includes(defenseRequest.workflow_state) && (
-                                                                            <div>Awaiting adviser review. No coordinator actions yet.</div>
-                                                                        )}
-                                                                        {['adviser-approved','coordinator-review'].includes(defenseRequest.workflow_state) && (
-                                                                            <div>Adviser approved. Awaiting coordinator review / panel assignment.</div>
-                                                                        )}
-                                                                        {defenseRequest.workflow_state === 'coordinator-approved' && ![defenseRequest.defense_chairperson, defenseRequest.defense_panelist1, defenseRequest.defense_panelist2, defenseRequest.defense_panelist3, defenseRequest.defense_panelist4].some(Boolean) && (
-                                                                            <div>Coordinator approved. Panel assignment pending.</div>
-                                                                        )}
-                                                                        {defenseRequest.workflow_state === 'panels-assigned' && !defenseRequest.scheduled_date && (
-                                                                            <div>Panel assigned. Scheduling in progress.</div>
-                                                                        )}
+                                                                            {/* Panels (if assigned) */}
+                                                                            {['panels-assigned', 'scheduled', 'completed'].includes(defenseRequest.workflow_state) &&
+                                                                                [defenseRequest.defense_chairperson, defenseRequest.defense_panelist1, defenseRequest.defense_panelist2, defenseRequest.defense_panelist3, defenseRequest.defense_panelist4].some(Boolean) && (
+                                                                                    <div>
+                                                                                        <span className="font-semibold">Committee:</span>
+                                                                                        <ul className="pl-4 list-disc">
+                                                                                            {defenseRequest.defense_chairperson && <li>{defenseRequest.defense_chairperson} <span className="text-xs text-zinc-500">(Chairperson)</span></li>}
+                                                                                            {defenseRequest.defense_panelist1 && <li>{defenseRequest.defense_panelist1} <span className="text-xs text-zinc-500">(Panelist 1)</span></li>}
+                                                                                            {defenseRequest.defense_panelist2 && <li>{defenseRequest.defense_panelist2} <span className="text-xs text-zinc-500">(Panelist 2)</span></li>}
+                                                                                            {defenseRequest.defense_panelist3 && <li>{defenseRequest.defense_panelist3} <span className="text-xs text-zinc-500">(Panelist 3)</span></li>}
+                                                                                            {defenseRequest.defense_panelist4 && <li>{defenseRequest.defense_panelist4} <span className="text-xs text-zinc-500">(Panelist 4)</span></li>}
+                                                                                        </ul>
+                                                                                    </div>
+                                                                                )}
+
+                                                                            {/* Completed: Show only the congratulations and certificate link */}
+                                                                            {defenseRequest.workflow_state === 'completed' && (
+                                                                                <div className="mt-2 p-3 rounded-md border border-green-200 bg-green-50 dark:bg-green-900/30 flex flex-col gap-2">
+                                                                                    <div className="font-bold text-green-700 text-xs mb-1">
+                                                                                        Congratulations, your defense has been successfully completed!
+                                                                                    </div>
+                                                                                    <div className="text-xs text-zinc-700 dark:text-zinc-200 mb-1">
+                                                                                        <b>Request for Oral Defense Certificate</b><br />
+                                                                                        Please fill out the following form to request your Oral Defense Certificate:<br />
+                                                                                        <a
+                                                                                            href="https://docs.google.com/forms/d/e/1FAIpQLScIFYf8Z6L8q_N2qVEdS4koTJ7jv4HOFnhit-4LKXmOH--Ukg/viewform?usp=send_form"
+                                                                                            target="_blank"
+                                                                                            rel="noopener noreferrer"
+                                                                                            className="text-blue-700 underline break-all"
+                                                                                        >
+                                                                                            https://docs.google.com/forms/d/e/1FAIpQLScIFYf8Z6L8q_N2qVEdS4koTJ7jv4HOFnhit-4LKXmOH--Ukg/viewform?usp=send_form
+                                                                                        </a>
+                                                                                    </div>
+                                                                                </div>
+                                                                            )}
+
+                                                                            {/* Awaiting/Review states */}
+                                                                            {['submitted', 'adviser-review'].includes(defenseRequest.workflow_state) && (
+                                                                                <div>Awaiting adviser review. No coordinator actions yet.</div>
+                                                                            )}
+                                                                            {['adviser-approved', 'coordinator-review'].includes(defenseRequest.workflow_state) && (
+                                                                                <div>Adviser approved. Awaiting coordinator review / panel assignment.</div>
+                                                                            )}
+                                                                            {defenseRequest.workflow_state === 'coordinator-approved' && ![defenseRequest.defense_chairperson, defenseRequest.defense_panelist1, defenseRequest.defense_panelist2, defenseRequest.defense_panelist3, defenseRequest.defense_panelist4].some(Boolean) && (
+                                                                                <div>Coordinator approved. Panel assignment pending.</div>
+                                                                            )}
+                                                                            {defenseRequest.workflow_state === 'panels-assigned' && !defenseRequest.scheduled_date && (
+                                                                                <div>Panel assigned. Scheduling in progress.</div>
+                                                                            )}
+                                                                        </div>
                                                                     </div>
-                                                                </div>
-                                                            )}
+                                                                )}
                                                             {/* Submitted at info, top right */}
                                                             <div className="absolute right-3 top-2 flex items-center gap-2">
                                                                 <span className="text-[10px] text-muted-foreground dark:text-zinc-400 whitespace-nowrap">
@@ -1103,13 +1129,13 @@ export default function DefenseRequestIndex() {
                                                                             onSelect={e => {
                                                                                 e.preventDefault();
                                                                                 setDocGenRequest(mapToTemplateData({
-                                                                                  ...req,
-                                                                                  ...(defenseRequest && defenseRequest.thesis_title === req.thesis_title ? defenseRequest : {})
+                                                                                    ...req,
+                                                                                    ...(defenseRequest && defenseRequest.thesis_title === req.thesis_title ? defenseRequest : {})
                                                                                 }));
                                                                                 setDocGenOpen(true);
                                                                             }}
                                                                         >
-                                                                          Generate Document
+                                                                            Generate Document
                                                                         </DropdownMenuItem>
                                                                         {/* --- END ADD --- */}
                                                                         <DropdownMenuItem>
@@ -1225,7 +1251,7 @@ export default function DefenseRequestIndex() {
                                                     let data = {};
                                                     try {
                                                         data = await res.json();
-                                                    } catch (e) {}
+                                                    } catch (e) { }
                                                     alert(
                                                         typeof data === 'object' && data !== null && 'message' in data
                                                             ? (data as { message?: string }).message
@@ -1246,13 +1272,13 @@ export default function DefenseRequestIndex() {
                         </DialogContent>
                     </Dialog>
                     {/* --- ADD THIS AT THE BOTTOM, OUTSIDE THE MAP, INSIDE AppLayout --- */}
-            {docGenRequest && (
-                <DocumentGeneratorDialog
-                    open={docGenOpen}
-                    onOpenChange={setDocGenOpen}
-                    defenseRequest={docGenRequest}
-                />
-            )}
+                    {docGenRequest && (
+                        <DocumentGeneratorDialog
+                            open={docGenOpen}
+                            onOpenChange={setDocGenOpen}
+                            defenseRequest={docGenRequest}
+                        />
+                    )}
                 </div>
             )}
         </AppLayout>

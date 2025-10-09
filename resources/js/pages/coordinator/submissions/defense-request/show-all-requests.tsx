@@ -22,7 +22,13 @@ import {
   Clock4,
   CircleArrowLeft,
   Signature,
-  Filter
+  Filter,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
+  GraduationCap,
+  Link as LinkIcon,
 } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import TableDefenseRequests from './table-defense-requests';
@@ -62,13 +68,21 @@ interface ShowAllRequestsProps {
 
 function PaginationBar({ page, totalPages, onPageChange }: { page: number; totalPages: number; onPageChange: (p: number) => void }) {
   return (
-    <div className="flex justify-between items-center gap-2 px-4 py-2">
-      <span className="text-xs">Page {page} of {totalPages}</span>
-      <div className="flex gap-1">
-        <Button size="sm" variant="outline" disabled={page === 1} onClick={() => onPageChange(1)}>&laquo;</Button>
-        <Button size="sm" variant="outline" disabled={page === 1} onClick={() => onPageChange(page - 1)}>&lsaquo;</Button>
-        <Button size="sm" variant="outline" disabled={page === totalPages} onClick={() => onPageChange(page + 1)}>&rsaquo;</Button>
-        <Button size="sm" variant="outline" disabled={page === totalPages} onClick={() => onPageChange(totalPages)}>&raquo;</Button>
+    <div className="flex justify-between items-center gap-2 px-4 py-4 bg-background sticky bottom-0 z-10">
+      <span className="text-sm font-medium">Page {page} of {totalPages}</span>
+      <div className="flex gap-2">
+        <Button size="lg" variant="outline" disabled={page === 1} onClick={() => onPageChange(1)}>
+          <ChevronsLeft className="w-5 h-5" />
+        </Button>
+        <Button size="lg" variant="outline" disabled={page === 1} onClick={() => onPageChange(page - 1)}>
+          <ChevronLeft className="w-5 h-5" />
+        </Button>
+        <Button size="lg" variant="outline" disabled={page === totalPages} onClick={() => onPageChange(page + 1)}>
+          <ChevronRight className="w-5 h-5" />
+        </Button>
+        <Button size="lg" variant="outline" disabled={page === totalPages} onClick={() => onPageChange(totalPages)}>
+          <ChevronsRight className="w-5 h-5" />
+        </Button>
       </div>
     </div>
   );
@@ -174,8 +188,8 @@ function ShowAllRequestsInner({ defenseRequests: initial, onStatusChange }: Show
   }, []);
 
   useEffect(() => {
-    if (!initial) fetchDefenseRequests();
-  }, [fetchDefenseRequests, initial]);
+    fetchDefenseRequests();
+  }, [fetchDefenseRequests]);
 
   // Filtered and sorted requests (all in one)
   const filtered = useMemo(() => {
@@ -426,6 +440,8 @@ function ShowAllRequestsInner({ defenseRequests: initial, onStatusChange }: Show
     }
   }
 
+  console.log("Initial defenseRequests prop:", initial);
+
   return (
     <>
       <Head title="Defense Requests" />
@@ -436,8 +452,8 @@ function ShowAllRequestsInner({ defenseRequests: initial, onStatusChange }: Show
         <div className="w-full bg-white dark:bg-zinc-900 border border-border rounded-lg overflow-hidden mb-2">
           <div className="flex flex-row dark:bg-zinc-900 items-center justify-between w-full p-3 border-b bg-white">
             <div className="flex dark:bg-zinc-900 items-center gap-2">
-              <div className="h-10 w-10 flex items-center justify-center rounded-full bg-blue-500/10 border border-blue-500">
-                <Signature className="h-5 w-5 text-blue-400" />
+              <div className="h-10 w-10 flex items-center justify-center rounded-full bg-rose-100 dark:bg-rose-900 border border-rose-500">
+                <GraduationCap className="h-5 w-5 text-rose-400" />
               </div>
               <div>
                 <span className="text-base font-semibold">
@@ -615,16 +631,17 @@ function ShowAllRequestsInner({ defenseRequests: initial, onStatusChange }: Show
                 <CircleArrowLeft size={13} className="text-blue-500" />
                 <span className="hidden sm:inline">{isLoading ? "Updating..." : "Retrieve"}</span>
               </Button>
+              {/* Link button replaces Delete */}
               <Button
                 variant="ghost"
                 size="icon"
                 className="px-2 py-1 h-7 w-auto text-xs flex items-center gap-1"
-                onClick={() => setConfirmBulkDelete(true)}
-                aria-label="Delete"
+                onClick={() => {/* your link logic here */}}
+                aria-label="Link"
                 disabled={isLoading}
               >
-                <Trash2 size={13} />
-                <span className="hidden sm:inline">{isLoading ? "Deleting..." : "Delete"}</span>
+                <Settings2 size={13} className="text-blue-500" />
+                <span className="hidden sm:inline">Link</span>
               </Button>
               <Button
                 variant="ghost"
@@ -659,8 +676,8 @@ function ShowAllRequestsInner({ defenseRequests: initial, onStatusChange }: Show
               presenter: true,
               adviser: true,
               program: true,
-              type: true,
-              submitted_at: true,
+              panelists: true,   
+              scheduled: true,  
               status: true,
             }}
             selected={selected}
@@ -671,7 +688,7 @@ function ShowAllRequestsInner({ defenseRequests: initial, onStatusChange }: Show
             sortDir={sortDir}
             onPriorityChange={onPriorityChange}
             tabType={undefined}
-            onViewDetails={() => {}}
+            onViewDetails={(id: number) => router.visit(`/coordinator/defense-requests/${id}/details`)}
             onRowApprove={(id: number) => openConfirmSingle(id, 'approve')}
             onRowReject={(id: number) => openConfirmSingle(id, 'reject')}
             onRowRetrieve={(id: number) => openConfirmSingle(id, 'retrieve')}
