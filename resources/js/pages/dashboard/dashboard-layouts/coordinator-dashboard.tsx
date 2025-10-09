@@ -1,16 +1,17 @@
 import React, { useEffect, useState } from 'react';
 import { usePage } from '@inertiajs/react';
+import { Sun, Moon } from 'lucide-react';
 import RemindersWidget from '../widgets/reminders-widget';
 import UpcomingSchedulesWidget from '../widgets/upcomming-schedules-widget';
 import PendingDefenseRequestsWidget from '../widgets/pending-defense-request-widget';
 import WeeklyDefenseSchedulesWidget from '../widgets/weekly-defense-schedule-widget';
 import QuickActionsWidget from '../widgets/quick-actions-widget';
+import { Separator } from "@/components/ui/separator";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import type { DefenseRequest } from '@/types';
 import { Users, CalendarDays, ClipboardList, BadgeDollarSign } from 'lucide-react';
 import { Skeleton } from "@/components/ui/skeleton";
-import UnifiedDashboardLayout from '../components/unified-dashboard-layout';
 import DefenseCountLineChart from '../widgets/visual-charts/defense-count';
 import PanelAssignedRadial from '../widgets/visual-charts/panel-assigned-count';
 
@@ -24,7 +25,19 @@ type PageProps = {
     };
 };
 
+function getFormattedDate() {
+    const now = new Date();
+    return now.toLocaleDateString('en-US', {
+        weekday: 'long',
+        month: 'long',
+        day: 'numeric',
+    });
+}
 
+function isDaytime() {
+    const hour = new Date().getHours();
+    return hour >= 6 && hour < 18;
+}
 
 // Helper: Get unique panelists from defense requests
 function getPanelistStats(defenseRequests: DefenseRequest[]) {
@@ -184,13 +197,17 @@ export default function CoordinatorDashboard() {
         },
     ];
 
-    if (loading) {
-        return (
-            <UnifiedDashboardLayout user={user}>
+    return (
+        <div className="flex h-full flex-1 flex-col gap-4 overflow-auto  bg-white dark:bg-background">
+            {/* Skeleton Loader */}
+            {loading ? (
                 <div className="w-full min-h-[70vh] bg-zinc-100 dark:bg-zinc-900 flex flex-col gap-4 p-0 m-0">
+                    {/* Top short row */}
                     <Skeleton className="h-6 w-1/6 rounded bg-zinc-300 dark:bg-zinc-800 mt-8 mx-8" />
+                    {/* Main rows */}
                     <Skeleton className="h-12 w-3/4 rounded bg-zinc-300 dark:bg-zinc-800 mx-8" />
                     <Skeleton className="h-12 w-2/3 rounded bg-zinc-300 dark:bg-zinc-800 mx-8" />
+                    {/* Big rectangle for dashboard body */}
                     <Skeleton className="h-[500px] w-full rounded bg-zinc-300 dark:bg-zinc-800 mt-4" />
                 </div>
             ) : (
