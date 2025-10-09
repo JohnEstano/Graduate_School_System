@@ -32,12 +32,12 @@ class DefenseRequirementController extends Controller
                     'status' => $r->status ?? 'Pending',
                     'workflow_state' => $r->workflow_state,
                     'created_at' => $r->created_at?->toIso8601String(),
-                  
                     'manuscript_proposal' => $r->manuscript_proposal,
                     'similarity_index' => $r->similarity_index,
                     'rec_endorsement' => $r->rec_endorsement,
                     'proof_of_payment' => $r->proof_of_payment,
-                    'defense_type' => $r->defense_type, 
+                    'defense_type' => $r->defense_type,
+                    'avisee_adviser_attachment' => $r->avisee_adviser_attachment, // <-- ADD THIS LINE
                 ];
             }),
             'defenseRequest' => $defenseRequest,

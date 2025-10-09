@@ -408,8 +408,8 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/api/signatures', [UserSignatureController::class, 'store']);
     Route::patch('/api/signatures/{signature}/activate', [UserSignatureController::class, 'activate']);
 
-    Route::get('/generated-documents/{doc}', [GeneratedDocumentController::class, 'show'])
-        ->name('generated-documents.show');
+Route::get('/generated-documents/{doc}', [GeneratedDocumentController::class, 'show'])
+    ->name('generated-documents.show');
 });
 
 /*
@@ -631,13 +631,7 @@ Route::get('/assistant/all-defense-list/{id}/details', function ($id) {
             'defense_chairperson' => $defenseRequest->defense_chairperson,
             'defense_panelist1' => $defenseRequest->defense_panelist1,
             'defense_panelist2' => $defenseRequest->defense_panelist2,
-            'defense_panelist3' => $defenseRequest->defense_panelist3,
-            'defense_panelist4' => $defenseRequest->defense_panelist4,
-            'last_status_updated_by' => $defenseRequest->last_status_updated_by,
-            'last_status_updated_by_name' => $defenseRequest->last_status_updated_by_name ?? null,
-            'last_status_updated_at' => $defenseRequest->last_status_updated_at,
-            'workflow_history' => $defenseRequest->workflow_history ?? [],
-            'reference_no' => $defenseRequest->reference_no,
+            'defense_panelist3' => $defenseRequest->defense,
             'attachments' => [
                 'advisers_endorsement' => $defenseRequest->advisers_endorsement,
                 'rec_endorsement' => $defenseRequest->rec_endorsement,

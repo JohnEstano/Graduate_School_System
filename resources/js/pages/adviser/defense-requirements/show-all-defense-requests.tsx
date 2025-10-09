@@ -661,6 +661,11 @@ export default function ShowAllDefenseRequests({
                                 ? "Approve selected requests?"
                                 : "Reject selected requests?"}
                         </DialogTitle>
+                        {confirmAction === 'approve' && coordinator && (
+                            <div className="mt-2 text-xs text-muted-foreground">
+                                These requests will be forwarded to your coordinator: <span className="font-semibold">{coordinator.name}</span>
+                            </div>
+                        )}
                     </DialogHeader>
                     <div className="text-sm mb-2">
                         {confirmAction === 'approve'

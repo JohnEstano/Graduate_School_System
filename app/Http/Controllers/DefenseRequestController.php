@@ -280,15 +280,30 @@ class DefenseRequestController extends Controller
             $defenseRequest->workflow_state = 'adviser-approved';
             $defenseRequest->adviser_status = 'Approved';
             $defenseRequest->status = 'Pending';
-            // ADD THIS:
+
+            // --- FINAL: Always assign a coordinator ---
+            // 1. Try linked coordinator
             $coordinator = $user->coordinators()->first();
-            if ($coordinator) {
-                $defenseRequest->coordinator_user_id = $coordinator->id;
+            // 2. Fallback: coordinator for student's program
+            if (!$coordinator) {
+                $coordinator = \App\Models\User::where('role', 'Coordinator')
+                    ->where('program', $defenseRequest->program)
+                    ->first();
             }
+            // 3. Fallback: any coordinator
+            if (!$coordinator) {
+                $coordinator = \App\Models\User::where('role', 'Coordinator')->first();
+            }
+            // 4. If still not found, abort with error
+            if (!$coordinator) {
+                return back()->with('error', 'No coordinator found. Please contact admin.');
+            }
+            $defenseRequest->coordinator_user_id = $coordinator->id;
         } else {
             $defenseRequest->workflow_state = 'adviser-rejected';
-            $defenseRequest->adviser_status = 'Rejected'; // <-- NEW
+            $defenseRequest->adviser_status = 'Rejected';
             $defenseRequest->status = 'Rejected';
+            $defenseRequest->coordinator_user_id = null;
         }
 
         $defenseRequest->last_status_updated_at = now();
@@ -988,10 +1003,8 @@ class DefenseRequestController extends Controller
 
         $query = DefenseRequest::query();
 
-        // Only show requests assigned to this coordinator
-        if ($user->role === 'Coordinator') {
-            $query->where('coordinator_user_id', $user->id);
-        }
+        // Only show requests assigned to this coordinator (for all coordinator roles)
+        $query->where('coordinator_user_id', $user->id);
 
         // Only show requests in states relevant to the coordinator
         $query->whereIn('workflow_state', [

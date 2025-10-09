@@ -3,7 +3,7 @@ import { type BreadcrumbItem } from '@/types';
 import { Head, usePage } from '@inertiajs/react';
 import { Button } from '@/components/ui/button';
 import React, { useState, useEffect } from 'react';
-import { ChevronDown, GraduationCap, Hourglass, Check, X, Eye, CheckCircle, Users, Calendar, Paperclip, MoreVertical, Info } from 'lucide-react';
+import { ChevronDown, GraduationCap, Hourglass, Check, X, Eye, CheckCircle, Users, Calendar, Paperclip, MoreVertical, Info, Plus } from 'lucide-react';
 import {
     Dialog,
     DialogContent,
@@ -85,10 +85,11 @@ type DefenseRequirement = {
     formatted_time_range?: string;
     defense_venue?: string;
     defense_mode?: string;
-    manuscript_proposal?: string;      // <-- added for attachments
-    similarity_index?: string;         // <-- added for attachments
-    rec_endorsement?: string;          // <-- added for attachments
-    proof_of_payment?: string;         // <-- added for attachments
+    manuscript_proposal?: string;      
+    similarity_index?: string;         
+    rec_endorsement?: string;         
+    proof_of_payment?: string;        
+    avisee_adviser_attachment?: string; 
 };
 
 type DefenseRequest = {
@@ -565,7 +566,7 @@ export default function DefenseRequestIndex() {
                             <Button
                                 className="bg-rose-500 text-sm px-5 rounded-md dark:bg-rose-600 disabled:opacity-60"
                                 onClick={() => setOpen(true)}
-                                disabled={hasActiveWorkflow || !acceptDefense} // <-- disable if closed
+                                disabled={hasActiveWorkflow || !acceptDefense} 
                                 title={
                                     !acceptDefense
                                         ? 'Defense requirement submissions are currently closed.'
@@ -574,13 +575,13 @@ export default function DefenseRequestIndex() {
                                             : 'Submit new defense requirements'
                                 }
                             >
-                                Submit requirements
+                                <Plus /> Submit requirements
                             </Button>
                             <SubmitDefenseRequirements
                                 open={open}
                                 onOpenChange={setOpen}
                                 onFinish={handleSuccess}
-                                acceptDefense={acceptDefense} // <-- pass to child
+                                acceptDefense={acceptDefense} 
                             />
                         </div>
                         {defenseRequirements.length === 0 ? (
@@ -1019,6 +1020,25 @@ export default function DefenseRequestIndex() {
                                                                             <span className="font-medium text-xs leading-tight truncate max-w-[100px] dark:text-white">Payment</span>
                                                                             <span className="text-[10px] text-muted-foreground dark:text-zinc-400 truncate max-w-[100px]">
                                                                                 {req.proof_of_payment.split('/').pop()}
+                                                                            </span>
+                                                                        </div>
+                                                                    </a>
+                                                                )}
+                                                                {req.avisee_adviser_attachment && (
+                                                                    <a
+                                                                        href={resolveFileUrl(req.avisee_adviser_attachment) || undefined}
+                                                                        target="_blank"
+                                                                        rel="noopener noreferrer"
+                                                                        className="flex items-center gap-2 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-lg px-2 py-1 min-w-[120px] max-w-[180px] hover:bg-zinc-50 dark:hover:bg-zinc-800 transition truncate"
+                                                                        style={{ textDecoration: 'none' }}
+                                                                    >
+                                                                        <div className="h-7 w-7 flex items-center justify-center rounded-lg border border-rose-500 dark:border-rose-700 bg-rose-500 dark:bg-rose-600">
+                                                                            <Paperclip className="w-4 h-4 text-white" />
+                                                                        </div>
+                                                                        <div className="flex flex-col min-w-0">
+                                                                            <span className="font-medium text-xs leading-tight truncate max-w-[100px] dark:text-white">Avisee-Adviser</span>
+                                                                            <span className="text-[10px] text-muted-foreground dark:text-zinc-400 truncate max-w-[100px]">
+                                                                                {req.avisee_adviser_attachment.split('/').pop()}
                                                                             </span>
                                                                         </div>
                                                                     </a>
