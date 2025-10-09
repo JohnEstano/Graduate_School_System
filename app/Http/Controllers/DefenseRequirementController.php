@@ -20,7 +20,27 @@ class DefenseRequirementController extends Controller
         $acceptDefense = $acceptDefense === null ? true : $acceptDefense === '1';
 
         return inertia('student/submissions/defense-requirements/Index', [
-            'defenseRequirements' => $requirements,
+            'defenseRequirements' => $requirements->map(function($r) {
+                return [
+                    'id' => $r->id,
+                    'first_name' => $r->first_name,
+                    'middle_name' => $r->middle_name,
+                    'last_name' => $r->last_name,
+                    'school_id' => $r->school_id,
+                    'program' => $r->program,
+                    'thesis_title' => $r->thesis_title,
+                    'adviser' => $r->defense_adviser ?: '—',
+                    'status' => $r->status ?? 'Pending',
+                    'workflow_state' => $r->workflow_state,
+                    'created_at' => $r->created_at?->toIso8601String(),
+                    'manuscript_proposal' => $r->manuscript_proposal,
+                    'similarity_index' => $r->similarity_index,
+                    'rec_endorsement' => $r->rec_endorsement,
+                    'proof_of_payment' => $r->proof_of_payment,
+                    'defense_type' => $r->defense_type,
+                    'avisee_adviser_attachment' => $r->avisee_adviser_attachment, // <-- ADD THIS LINE
+                ];
+            }),
             'defenseRequest' => $defenseRequest,
             'acceptDefense' => $acceptDefense,
             'auth' => [
@@ -43,68 +63,19 @@ class DefenseRequirementController extends Controller
         $user = Auth::user();
         if (!$user) abort(401);
 
-        $coordinatorRoles = ['Coordinator','Administrative Assistant','Dean'];
-        if (in_array($user->role, $coordinatorRoles)) {
-            $requests = DefenseRequest::whereIn('workflow_state', [
-                'adviser-approved','coordinator-review','coordinator-approved',
-                'coordinator-rejected','panels-assigned','scheduled','completed'
-            ])->orderByDesc('created_at')->get();
-
-            return inertia('adviser/defense-requirements/Index', [
-                'defenseRequirements' => [],
-                'defenseRequests' => $requests,
-            ]);
-        }
-
-        if (!in_array($user->role, ['Faculty','Adviser'])) {
-            return inertia('adviser/defense-requirements/Index', [
-                'defenseRequirements' => [],
-                'defenseRequests' => [],
-            ]);
-        }
-
-        $norm = fn(string $v) => preg_replace('/\s+/',' ', trim(strtolower($v)));
-        $first = $norm($user->first_name);
-        $last  = $norm($user->last_name);
-
-        $baseQuery = DefenseRequest::where(function($q) use ($user,$first,$last) {
-                $q->where('adviser_user_id', $user->id)
-                  ->orWhere('assigned_to_user_id', $user->id)
-                  ->orWhere(function($sub) use ($first,$last) {
-                      $sub->whereNull('adviser_user_id')
-                          ->whereNull('assigned_to_user_id')
-                          ->whereNotNull('defense_adviser')
-                          ->whereRaw('LOWER(defense_adviser) LIKE ?', ["%$first%"])
-                          ->whereRaw('LOWER(defense_adviser) LIKE ?', ["%$last%"]);
-                  });
-            })
-            ->whereIn('workflow_state', [
-                'submitted','adviser-review','adviser-approved','adviser-rejected'
-            ]);
-
-        $requests = $baseQuery->clone()->orderByDesc('created_at')->get();
-
-        foreach ($requests as $r) {
-            if (!$r->adviser_user_id && !$r->assigned_to_user_id) {
-                $name = $norm($r->defense_adviser ?? '');
-                if ($name && str_contains($name,$first) && str_contains($name,$last)) {
-                    $r->forceFill([
-                        'adviser_user_id' => $user->id,
-                        'assigned_to_user_id' => $user->id,
-                        // Preserve existing state; if blank set adviser-review (so adviser can proceed)
-                        'workflow_state' => in_array($r->workflow_state, [null,'','submitted'])
-                            ? 'adviser-review'
-                            : $r->workflow_state,
-                    ])->save();
-                }
-            }
-        }
-
-        $requests = $baseQuery->orderByDesc('created_at')->get();
+        // Show all requests where this user is adviser or assigned
+        $requests = DefenseRequest::where(function($q) use ($user) {
+            $q->where('adviser_user_id', $user->id)
+              ->orWhere('assigned_to_user_id', $user->id)
+              ->orWhereRaw('LOWER(defense_adviser) = ?', [strtolower(trim($user->first_name . ' ' . $user->last_name))]);
+        })
+        ->orderByDesc('created_at')
+        ->get();
 
         return inertia('adviser/defense-requirements/Index', [
             'defenseRequirements' => [],
             'defenseRequests' => $requests,
+            'coordinator' => null,
         ]);
     }
 
@@ -146,9 +117,10 @@ class DefenseRequirementController extends Controller
             'reference_no' => 'nullable|string|max:150',
             'manuscript_proposal' => "nullable|file|mimes:pdf,doc,docx|max:{$maxFileSize}",
             'similarity_index' => "nullable|file|mimes:{$allowedMimes}|max:{$maxFileSize}",
+            'avisee_adviser_attachment' => "nullable|file|mimes:pdf,doc,docx,jpg,jpeg,png|max:{$maxFileSize}",
         ]);
 
-        foreach (['rec_endorsement','proof_of_payment','manuscript_proposal','similarity_index'] as $f) {
+        foreach (['rec_endorsement','proof_of_payment','manuscript_proposal','similarity_index','avisee_adviser_attachment'] as $f) {
             if ($request->hasFile($f)) {
                 try {
                     $uploaded = $request->file($f);
@@ -183,6 +155,7 @@ class DefenseRequirementController extends Controller
                 'reference_no' => $data['reference_no'] ?? null,
                 'manuscript_proposal' => $data['manuscript_proposal'] ?? null,
                 'similarity_index' => $data['similarity_index'] ?? null,
+                'avisee_adviser_attachment' => $data['avisee_adviser_attachment'] ?? null,
                 'submitted_by' => Auth::id(),
                 'submitted_at' => now(),
                 'status' => 'Pending',

@@ -53,45 +53,47 @@ const studentNavItems: MainNavItem[] = [
 
 ];
 
-const assistantNavItems: MainNavItem[] = [
+const coordinatorNavItems: MainNavItem[] = [
     { title: 'Dashboard', href: '/dashboard', icon: LayoutGrid },
-
-
-     {
+    {
+        title: 'Thesis & Dissertations',
+        href: '/coordinator/defense-requests',
+        icon: GraduationCap,
+        subItems: [
+            { title: 'Defense Requests', href: '/coordinator/defense-requests' },
+            { title: 'Panel Assignment', href: '/panelists' },
+        ],
+    },
+    {
         title: 'Applications',
         href: '/defense',
         icon: FileText,
         subItems: [
-        { title: 'Comprehensive Exams', href: '/coordinator/compre-exam' },
-         { title: 'Payment Receipt', href: '/coordinator/compre-payment'},
-
+            { title: 'Comprehensive Exams', href: '/coordinator/compre-exam' },
+            { title: 'Payment Receipt', href: '/coordinator/compre-payment' },
         ],
     },
-   
-
-    {
-        title: 'Thesis & Dissertations',
-        href: '/defense',
-        icon: GraduationCap,
-        subItems: [
-            { title: 'Defense Request', href: '/defense-request' },
-
-          //  { title: 'Defense Management', href: '/coordinator/defense-management', icon: Calendar },
-            { title: 'Panelists', href: '/panelists', icon: SquareUserRound },
-        ],
-    },
-    {
-        title: 'Honorarium',
-        href: '/honorarium',
-        icon: DollarSign,
-        subItems: [
-            { title: 'Honorarium Summary', href: '/honorarium-summary' },
-            { title: 'Generate Report', href: '/generate-report' },
-        ],
-    },
+    { title: 'Honorarium', href: '/honorarium-summary', icon: DollarSign },
     { title: 'Student Records', href: '/student-records', icon: Users },
     { title: 'Schedules', href: '/schedules', icon: CalendarFold },
-    //{ title: 'Messages', href: '/messages', icon: MessageSquareText },
+    { title: 'Adviser List', href: '/coordinator/adviser-list', icon: Users },
+];
+
+const assistantNavItems: MainNavItem[] = [
+    { title: 'Dashboard', href: '/dashboard', icon: LayoutGrid },
+    { title: 'Defense Requests', href: '/assistant/all-defense-list', icon: FileText }, // Only this for AA
+    {
+        title: 'Applications',
+        href: '/defense',
+        icon: FileText,
+        subItems: [
+            { title: 'Comprehensive Exams', href: '/coordinator/compre-exam' },
+            { title: 'Payment Receipt', href: '/coordinator/compre-payment' },
+        ],
+    },
+    { title: 'Honorarium', href: '/honorarium-summary', icon: DollarSign },
+    { title: 'Student Records', href: '/student-records', icon: Users },
+    { title: 'Schedules', href: '/schedules', icon: CalendarFold },
 ];
 
 const facultyNavItems: MainNavItem[] = [
@@ -101,6 +103,14 @@ const facultyNavItems: MainNavItem[] = [
     { title: 'Schedules', href: '/schedules', icon: CalendarFold },
 ];
 
+const deanNavItems: MainNavItem[] = [
+    { title: 'Dashboard', href: '/dashboard', icon: LayoutGrid },
+    { title: 'Programs', href: '/dean/programs', icon: LibraryBig },
+    { title: 'Users', href: '/dean/users', icon: Users },
+    { title: 'Defense Requests', href: '/dean/defense-requests', icon: FileText },
+    { title: 'Schedules', href: '/dean/schedules', icon: CalendarFold },
+];
+
 const footerNavItems: NavItem[] = [];
 
 export function AppSidebar() {
@@ -108,11 +118,21 @@ export function AppSidebar() {
         auth: { user },
     } = usePage<PageProps>().props;
 
-    const staffRoles = ['Administrative Assistant', 'Coordinator', 'Dean'];
-    const isStaff = staffRoles.includes(user.role);
-    const isFaculty = user.role === 'Faculty' || user.role === 'Adviser';
-    const items = isStaff ? assistantNavItems : (isFaculty ? facultyNavItems : studentNavItems);
+    let navItems: MainNavItem[];
 
+    if (user.role === 'Coordinator') {
+        navItems = coordinatorNavItems;
+    } else if (user.role === 'Dean') {
+        navItems = deanNavItems;
+    } else if (user.role === 'Administrative Assistant') {
+        navItems = assistantNavItems;
+    } else if (user.role === 'Faculty' || user.role === 'Adviser') {
+        navItems = facultyNavItems;
+    } else {
+        navItems = studentNavItems;
+    }
+
+    // Only show badge for coordinator's "Defense Requests" submenu
     const [defenseRequestCount, setDefenseRequestCount] = useState<number>(0);
 
     useEffect(() => {
@@ -126,12 +146,11 @@ export function AppSidebar() {
                     if (isMounted) setDefenseRequestCount(data.count);
                 }
             } catch {
-                // error handling (ignore for now)
+                // ignore
             }
         }
 
         fetchCount();
-        // Poll every 60 seconds
         const pollInterval = setInterval(fetchCount, 60000);
         return () => {
             isMounted = false;
@@ -139,17 +158,15 @@ export function AppSidebar() {
         };
     }, []);
 
-    let navItems = items;
-
-    if (isStaff) {
-        // FIX: badge mapping should target "Thesis & Dissertations" (where Defense Request lives)
-        navItems = assistantNavItems.map(item => {
+    // Only add badge for coordinator
+    if (user.role === 'Coordinator') {
+        navItems = navItems.map(item => {
             if (item.title === 'Thesis & Dissertations') {
                 return {
                     ...item,
                     indicator: defenseRequestCount > 0,
                     subItems: item.subItems?.map(sub =>
-                        sub.title === 'Defense Request'
+                        sub.title === 'Defense Requests'
                             ? { ...sub, count: defenseRequestCount }
                             : sub
                     ),
@@ -159,9 +176,8 @@ export function AppSidebar() {
         });
     }
 
-    // Add state for expanded menus
+    // Expanded menus state
     const [expandedMenus, setExpandedMenus] = useState<string[]>(() => {
-        // Restore from localStorage
         try {
             const saved = localStorage.getItem("sidebar.expandedMenus");
             return saved ? JSON.parse(saved) : [];
@@ -170,7 +186,6 @@ export function AppSidebar() {
         }
     });
 
-    // Save to localStorage whenever expandedMenus changes
     useEffect(() => {
         localStorage.setItem("sidebar.expandedMenus", JSON.stringify(expandedMenus));
     }, [expandedMenus]);
@@ -198,7 +213,7 @@ export function AppSidebar() {
             </SidebarContent>
 
             <SidebarFooter>
-                <NavFooter items={footerNavItems} className="mt-auto" />
+                <NavFooter items={[]} className="mt-auto" />
                 <NavUser />
             </SidebarFooter>
         </Sidebar>

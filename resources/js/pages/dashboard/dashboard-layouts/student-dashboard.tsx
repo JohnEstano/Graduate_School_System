@@ -14,7 +14,7 @@ import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, Dialog
 import { AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "@inertiajs/react";
-import UnifiedDashboardLayout from '../components/unified-dashboard-layout';
+import StatusDefenseWidget from '../widgets/status-defense-widget';
 
 type DefenseRequirement = {
     id: number;
@@ -153,25 +153,36 @@ export default function StudentDashboard() {
             </div>
 
                     {/* Metrics Cards */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 px-7">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-3 px-7 mb-6">
+                        {/* Example metric cards */}
                         {metrics.map((metric, idx) => (
-                            <Card key={idx} className="border border-1 bg-white dark:bg-muted rounded-xl shadow-none flex flex-row items-center min-h-[70px] py-4 px-5">
-                                <div className="flex flex-col justify-center flex-1">
-                                    <CardHeader className="pb-1 px-0">
-                                        <CardTitle className="text-xs font-semibold text-gray-600 dark:text-gray-300">{metric.title}</CardTitle>
-                                    </CardHeader>
-                                    <CardContent className="px-0 py-0">
-                                        <div className="mb-0.5">
-                                            <span className="text-2xl font-bold text-gray-900 dark:text-white leading-tight">{metric.value}</span>
-                                        </div>
-                                        <div className="text-[11px] text-gray-400 dark:text-gray-500 mt-0.5">{metric.description}</div>
-                                    </CardContent>
+                            <Card key={idx} className="col-span-1 rounded-2xl shadow-none border flex flex-col justify-between p-0 min-h-[220px]">
+                                <div className="flex items-center justify-between px-6 pt-5">
+                                    <div className="text-sm font-medium text-muted-foreground">
+                                        {metric.title}
+                                    </div>
+                                    <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        className="text-sm font-semibold px-3 py-1"
+                                        type="button"
+                                    >
+                                        View More
+                                    </Button>
                                 </div>
-                                <div className="flex items-center justify-center ml-3 w-[40px] h-[40px]">
-                                    {React.cloneElement(metric.icon, { className: "text-rose-500 dark:text-rose-400 size-7" })}
+                                <div className="px-6">
+                                    <div className="text-3xl font-bold leading-tight text-gray-900 dark:text-white">{metric.value}</div>
+                                    <div className="text-sm mt-1 mb-2 text-muted-foreground">{metric.description}</div>
                                 </div>
+                                <CardContent className="flex-1 flex items-end w-full p-0">
+                                    <div className="flex items-center justify-end w-full pr-6 pb-4">
+                                        {React.cloneElement(metric.icon, { className: "text-rose-500 dark:text-rose-400 size-7" })}
+                                    </div>
+                                </CardContent>
                             </Card>
                         ))}
+                        {/* StatusDefenseWidget as a card */}
+                        <StatusDefenseWidget recentRequests={allRequests} loading={loading} />
                     </div>
 
                     {/* ALERT: Student has not registered an adviser */}

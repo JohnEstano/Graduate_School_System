@@ -8,7 +8,7 @@ import SignatureCanvas from 'react-signature-canvas';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Label } from '@/components/ui/label';
-import { Signature, UploadCloud, Trash2 } from "lucide-react"; // <-- update import
+import { Signature, UploadCloud, Trash2 } from "lucide-react";
 import { toast } from 'sonner';
 
 type BreadcrumbItem = { title: string; href: string };
@@ -23,7 +23,7 @@ export default function SignaturesIndex() {
   const [uploading, setUploading] = useState(false);
   const [drawingOpen, setDrawingOpen] = useState(false);
   const [tab, setTab] = useState<'draw' | 'upload'>('draw');
-  const [loading, setLoading] = useState(false); // <-- add loading state
+  const [loading, setLoading] = useState(false);
   const sigPad = useRef<SignatureCanvas>(null);
 
   async function load() {
@@ -96,16 +96,15 @@ export default function SignaturesIndex() {
     }
   }
 
-
   function drawGuideLine() {
     if (sigPad.current) {
       const canvas = sigPad.current.getCanvas();
       const ctx = canvas.getContext('2d');
       if (ctx) {
-        const margin = 40; // px from left/right
-        const y = canvas.height - 80; // px from bottom
+        const margin = 40;
+        const y = canvas.height - 80;
         ctx.save();
-        ctx.strokeStyle = "#d1d5db"; // zinc-300
+        ctx.strokeStyle = "#d1d5db";
         ctx.lineWidth = 1;
         ctx.beginPath();
         ctx.moveTo(margin, y);
@@ -116,7 +115,6 @@ export default function SignaturesIndex() {
     }
   }
 
-  // Redraw guide line when dialog opens or after clear
   useEffect(() => {
     if (drawingOpen && sigPad.current) {
       sigPad.current.clear();
@@ -132,15 +130,15 @@ export default function SignaturesIndex() {
           <div className="space-y-4">
             <HeadingSmall title="E‑Signatures" description="Upload or draw your signature image." />
             <div>
-              <input type="file" accept="image/png" onChange={upload} />
-              <Button className="ml-2" size="sm" onClick={() => setDrawingOpen(true)}>
+              <Button size="sm" onClick={() => setDrawingOpen(true)}>
                 Draw Signature
               </Button>
               {uploading && <span className="ml-2 text-sm">Uploading...</span>}
-              <p className="text-xs text-neutral-500 mt-1">Upload transparent PNG (max 1MB) or draw below.</p>
             </div>
           </div>
-
+          <p className="font-medium">
+            Active Signature
+          </p>
           <div className="grid gap-4 sm:grid-cols-3">
             {list.map(s => (
               <div key={s.id}
@@ -160,100 +158,117 @@ export default function SignaturesIndex() {
 
           {/* Signature Drawing Dialog */}
           <Dialog open={drawingOpen} onOpenChange={setDrawingOpen}>
-            <DialogContent className="max-w-[900px] w-full min-h-[520px] p-8 flex flex-col gap-6">
-              <DialogHeader>
-                <DialogTitle className="text-xl font-semibold mb-2">Create Your Signature</DialogTitle>
-              </DialogHeader>
-              <Tabs value={tab} onValueChange={v => setTab(v as 'draw' | 'upload')} className="w-full">
-                <div className=" flex items-center justify-between w-full">
-                  <TabsList className="flex gap-2">
-                    <TabsTrigger value="draw" className="px-4 py-1 text-sm flex items-center gap-2">
-                      <Signature className="w-4 h-4" /> Draw
-                    </TabsTrigger>
-                    <TabsTrigger value="upload" className="px-4 py-1 text-sm flex items-center gap-2">
-                      <UploadCloud className="w-4 h-4" /> Upload
-                    </TabsTrigger>
-                  </TabsList>
-                  {tab === 'draw' && (
-                    <Button
-                      size="sm"
-                      variant="secondary"
-                      className="ml-4"
-                      onClick={() => {
-                        sigPad.current?.clear();
-                        drawGuideLine();
-                      }}
-                    >
-                      <Trash2 className="w-4 h-4 inline" />
-                      Clear
-                    </Button>
-                  )}
-                </div>
-                <div className="w-full flex-1 flex items-center">
-                  <TabsContent value="draw" className="w-full h-[320px] flex flex-col justify-center items-center px-6">
-                    <div className="w-full flex flex-col gap-2 items-center">
-                      <div className="flex justify-center w-full">
-                        <SignatureCanvas
-                          ref={sigPad}
-                          penColor="black"
-                          backgroundColor="rgba(0,0,0,0)" // transparent
-                          canvasProps={{
-                            width: 690,
-                            height: 300,
-                            className: 'border border-zinc-300 rounded bg-zinc-100 shadow-lg mx-auto',
-                            style: { cursor: 'crosshair' }
-                          }}
-                        />
-                      </div>
-                    </div>
-                  </TabsContent>
-                  <TabsContent value="upload" className="w-full h-[240px] flex flex-col justify-center items-center">
-                    <div
-                      className="w-full h-[180px] border-2 border-dashed border-neutral-300 rounded flex flex-col items-center justify-center bg-neutral-50 cursor-pointer transition hover:border-primary"
-                      onDrop={e => {
-                        e.preventDefault();
-                        if (e.dataTransfer.files?.[0]) upload({ target: { files: e.dataTransfer.files } } as any);
-                      }}
-                      onDragOver={e => e.preventDefault()}
-                    >
-                      <UploadCloud className="w-8 h-8 mb-2 text-neutral-400" />
-                      <span className="text-sm text-neutral-500 mb-2">Drag & drop PNG here, or click to select</span>
-                      <input
-                        id="signature-upload"
-                        type="file"
-                        accept="image/png"
-                        onChange={upload}
-                        className="hidden"
-                        style={{ display: "none" }}
-                      />
+            <DialogContent className="max-w-4xl w-full p-0">
+              <div className="p-8 flex flex-col gap-6">
+                <DialogHeader>
+                  <DialogTitle className="text-xl font-semibold mb-2">Create Your Signature</DialogTitle>
+                </DialogHeader>
+                
+                <Tabs value={tab} onValueChange={v => setTab(v as 'draw' | 'upload')} className="w-full">
+                  <div className="flex items-center justify-between w-full">
+                    <TabsList className="flex gap-2">
+                      <TabsTrigger value="draw" className="px-4 py-1 text-sm flex items-center gap-2">
+                        <Signature className="w-4 h-4" /> Draw
+                      </TabsTrigger>
+                      <TabsTrigger value="upload" className="px-4 py-1 text-sm flex items-center gap-2">
+                        <UploadCloud className="w-4 h-4" /> Upload
+                      </TabsTrigger>
+                    </TabsList>
+                    {tab === 'draw' && (
                       <Button
                         size="sm"
-                        variant="outline"
-                        onClick={() => document.getElementById("signature-upload")?.click()}
+                        variant="secondary"
+                        className="ml-4"
+                        onClick={() => {
+                          sigPad.current?.clear();
+                          drawGuideLine();
+                        }}
                       >
-                        Browse
+                        <Trash2 className="w-4 h-4 inline" />
+                        Clear
                       </Button>
-                    </div>
-                    <p className="text-xs text-neutral-500 mt-2">Upload transparent PNG (max 1MB).</p>
-                  </TabsContent>
-                </div>
-              </Tabs>
-              {/* Footer row: text + buttons */}
-              <div className="flex items-center justify-between w-full mt-4 ">
-                <span className="text-xs text-neutral-600">
-                  I understand this is a legal representation of my signature. 
-                </span>
-                <div className="flex gap-2">
-                  {tab === 'draw' && (
-                    <Button size="sm" onClick={saveDrawnSignature} disabled={uploading}>
-                      {uploading ? 'Saving...' : 'Save Signature'}
+                    )}
+                  </div>
+                  
+                  <div className="w-full mt-4">
+                    <TabsContent value="draw" className="w-full flex flex-col justify-center items-center">
+                      <div className="w-full flex flex-col gap-2 items-center">
+                        <div className="flex justify-center w-full">
+                          <SignatureCanvas
+                            ref={sigPad}
+                            penColor="black"
+                            backgroundColor="rgba(0,0,0,0)"
+                            canvasProps={{
+                              width: 690,
+                              height: 300,
+                              className: 'border border-zinc-300 rounded bg-zinc-100 shadow-lg mx-auto',
+                              style: { cursor: 'crosshair' }
+                            }}
+                          />
+                        </div>
+                      </div>
+                    </TabsContent>
+                    
+                    <TabsContent value="upload" className="w-full flex flex-col justify-center items-center">
+                      <div
+                        className="w-full h-[180px] border-2 border-dashed border-neutral-300 rounded flex flex-col items-center justify-center bg-neutral-50 cursor-pointer transition hover:border-primary"
+                        onDrop={e => {
+                          e.preventDefault();
+                          if (e.dataTransfer.files?.[0]) upload({ target: { files: e.dataTransfer.files } } as any);
+                        }}
+                        onDragOver={e => e.preventDefault()}
+                      >
+                        <UploadCloud className="w-8 h-8 mb-2 text-neutral-400" />
+                        <span className="text-sm text-neutral-500 mb-2">Drag & drop PNG here, or click to select</span>
+                        <input
+                          id="signature-upload"
+                          type="file"
+                          accept="image/png"
+                          onChange={upload}
+                          className="hidden"
+                        />
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => document.getElementById("signature-upload")?.click()}
+                        >
+                          Browse
+                        </Button>
+                      </div>
+                      <p className="text-xs text-neutral-500 mt-2">Upload transparent PNG (max 1MB).</p>
+                    </TabsContent>
+                  </div>
+                </Tabs>
+                
+                {/* Footer row: text + buttons */}
+                <div className="flex items-center justify-between w-full mt-4">
+                  <span className="text-xs text-neutral-600">
+                    I understand this is a legal representation of my signature. 
+                  </span>
+                  <div className="flex gap-2">
+                    {tab === 'draw' && (
+                      <Button size="sm" onClick={saveDrawnSignature} disabled={uploading}>
+                        {uploading ? 'Saving...' : 'Save Signature'}
+                      </Button>
+                    )}
+                    <Button size="sm" variant="secondary" onClick={() => setDrawingOpen(false)}>
+                      Cancel
                     </Button>
-                  )}
-                  <Button size="sm" variant="secondary" onClick={() => setDrawingOpen(false)}>
-                    Cancel
-                  </Button>
+                  </div>
                 </div>
               </div>
+              
+              {uploading && (
+                <div className="absolute inset-0 bg-white bg-opacity-70 flex items-center justify-center z-50 rounded-lg">
+                  <div className="flex flex-col items-center">
+                    <svg className="animate-spin h-8 w-8 text-primary mb-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
+                    </svg>
+                    <span className="text-sm text-primary">Saving signature...</span>
+                  </div>
+                </div>
+              )}
             </DialogContent>
           </Dialog>
         </div>

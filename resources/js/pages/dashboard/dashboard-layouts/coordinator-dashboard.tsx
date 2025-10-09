@@ -6,10 +6,13 @@ import PendingDefenseRequestsWidget from '../widgets/pending-defense-request-wid
 import WeeklyDefenseSchedulesWidget from '../widgets/weekly-defense-schedule-widget';
 import QuickActionsWidget from '../widgets/quick-actions-widget';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import type { DefenseRequest } from '@/types';
 import { Users, CalendarDays, ClipboardList, BadgeDollarSign } from 'lucide-react';
 import { Skeleton } from "@/components/ui/skeleton";
 import UnifiedDashboardLayout from '../components/unified-dashboard-layout';
+import DefenseCountLineChart from '../widgets/visual-charts/defense-count';
+import PanelAssignedRadial from '../widgets/visual-charts/panel-assigned-count';
 
 type PageProps = {
     auth: {
@@ -23,6 +26,42 @@ type PageProps = {
 
 
 
+// Helper: Get unique panelists from defense requests
+function getPanelistStats(defenseRequests: DefenseRequest[]) {
+    const panelistSet = new Set<string>();
+    let assignedCount = 0;
+
+    defenseRequests.forEach((req: any) => {
+        if (Array.isArray(req.panelists)) {
+            req.panelists.forEach((p: any) => {
+                if (p?.id) {
+                    panelistSet.add(p.id);
+                    assignedCount++;
+                }
+            });
+        }
+    });
+
+    return {
+        totalPanelists: panelistSet.size,
+        assignedPanelists: assignedCount,
+    };
+}
+
+// Helper: Count today's scheduled defenses
+function getTodaysSchedules(defenseRequests: DefenseRequest[]) {
+    const today = new Date();
+    return defenseRequests.filter((dr: any) => {
+        if (!dr.scheduled_date) return false;
+        const eventDate = new Date(dr.scheduled_date);
+        return (
+            eventDate.getFullYear() === today.getFullYear() &&
+            eventDate.getMonth() === today.getMonth() &&
+            eventDate.getDate() === today.getDate()
+        );
+    }).length;
+}
+
 export default function CoordinatorDashboard() {
     const {
         auth: { user },
@@ -32,6 +71,11 @@ export default function CoordinatorDashboard() {
     const [pendingRequests, setPendingRequests] = useState<DefenseRequest[]>([]);
     const [todayEvents, setTodayEvents] = useState<DefenseRequest[]>([]);
     const [loading, setLoading] = useState(true);
+
+    // Add this state for real panelists count
+    const [realPanelistsCount, setRealPanelistsCount] = useState<number>(0);
+
+    const [assignedPanelists, setAssignedPanelists] = useState<number>(0);
 
     const [selectedDay, setSelectedDay] = useState<number>(new Date().getDay());
 
@@ -82,13 +126,47 @@ export default function CoordinatorDashboard() {
                 setTodayEvents([]);
             })
             .finally(() => setLoading(false));
+
+        // Fetch real panelists count from API
+        fetch('/api/panelists/count', {
+            headers: { 'Accept': 'application/json' }
+        })
+            .then(res => res.ok ? res.json() : { count: 0 })
+            .then((data) => {
+                setRealPanelistsCount(data.count ?? 0);
+            })
+            .catch(() => setRealPanelistsCount(0));
+
+        // Fetch assigned panelists count
+        fetch('/api/assigned-panelists/count', {
+            headers: { 'Accept': 'application/json' }
+        })
+            .then(res => res.ok ? res.json() : { assignedPanelists: 0 })
+            .then((data) => {
+                setAssignedPanelists(data.assignedPanelists ?? 0);
+            })
+            .catch(() => setAssignedPanelists(0));
     }, []);
 
-    const metrics = [
+    // Dynamic metrics
+    const { assignedPanelists: assignedPanelistsCount } = getPanelistStats(allRequests);
+    const todaysSchedules = getTodaysSchedules(allRequests);
 
+    const metrics = [
+        {
+            title: "Panelists Assignment",
+            value: (
+                <span>
+                    <span className="text-3xl font-bold text-gray-900 dark:text-white">{assignedPanelistsCount}</span>
+                    <span className="text-base font-semibold text-gray-400 dark:text-gray-500 ml-1">/ {realPanelistsCount}</span>
+                </span>
+            ),
+            description: "Panelists assigned",
+            icon: <Users className="size-7" />,
+        },
         {
             title: "Today's Schedules",
-            value: todayEvents.length,
+            value: todaysSchedules,
             description: "Defenses scheduled for today",
             icon: <CalendarDays className="size-7" />,
         },
@@ -100,7 +178,7 @@ export default function CoordinatorDashboard() {
         },
         {
             title: "Pending Honorariums",
-            value: 0, // TODO: Connect to real honorarium data when available
+            value: 7, // leave static for now
             description: "Honorariums not yet processed",
             icon: <BadgeDollarSign className="size-7" />,
         },
@@ -115,59 +193,113 @@ export default function CoordinatorDashboard() {
                     <Skeleton className="h-12 w-2/3 rounded bg-zinc-300 dark:bg-zinc-800 mx-8" />
                     <Skeleton className="h-[500px] w-full rounded bg-zinc-300 dark:bg-zinc-800 mt-4" />
                 </div>
-            </UnifiedDashboardLayout>
-        );
-    }
+            ) : (
+                <>
+                    {/* Header */}
+                    <div className="mb-7 mt-3 pt-3 flex flex-row justify-between items-center relative overflow-hidden" style={{ minHeight: '120px' }}>
+                        <div className="flex flex-col pr-8 pl-7">
+                            <span className="flex items-center text-xs font-semibold text-gray-700 dark:text-gray-200 mb-1 relative z-10">
+                                {isDaytime() ? (
+                                    <Sun className="mr-1 size-4 text-yellow-500" />
+                                ) : (
+                                    <Moon className="mr-1 size-4 text-blue-500" />
+                                )}
+                                {getFormattedDate()}
+                            </span>
+                            <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white relative z-10">
+                                Hi, {user?.name}!
+                            </h1>
+                            <span className="text-xs text-gray-400 dark:text-gray-500 mt-1 relative z-10">
+                                {user?.role ?? 'Student'}
+                            </span>
+                        </div>
+                        <div className="flex items-center">
+                            <div className="h-12 w-px mx-4 bg-gray-300 dark:bg-gray-700 opacity-60" />
+                            {/*  
+                            <div className="mr-8"> 
+                                <QuickActionsWidget userRole={user?.role} />
+                            </div>
+                            */ }
+                        </div>
+                    </div>
 
-    return (
-        <UnifiedDashboardLayout user={user}>
-            {/* Quick Actions - positioned at top right */}
-            <div className="absolute top-6 right-8">
-                <QuickActionsWidget userRole={user?.role} />
-            </div>
+                    {/* Metrics Cards */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-3 px-7 mb-6">
+                        <DefenseCountLineChart />
 
-            {/* Metrics Cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 px-7">
-                {metrics.map((metric, idx) => (
-                    <Card key={idx} className="border border-1 bg-white dark:bg-muted rounded-xl shadow-none flex flex-row items-center min-h-[70px] py-4 px-5">
-                        <div className="flex flex-col justify-center flex-1">
-                            <CardHeader className="pb-1 px-0">
-                                <CardTitle className="text-xs font-semibold text-gray-600 dark:text-gray-300">{metric.title}</CardTitle>
-                            </CardHeader>
-                            <CardContent className="px-0 py-0">
-                                <div className="mb-0.5">
-                                    {idx === 0 ? metric.value : (
-                                        <span className="text-2xl font-bold text-gray-900 dark:text-white leading-tight">{metric.value}</span>
-                                    )}
+                        {/* Other Metric Cards */}
+                        {metrics.slice(0, 2).map((metric, idx) => (
+                            <Card key={idx} className="col-span-1 rounded-2xl shadow-none border flex flex-col justify-between p-0 min-h-[220px]">
+                                <div className="flex items-center justify-between px-6 pt-5">
+                                    <div className="text-sm font-medium text-muted-foreground">
+                                        {metric.title}
+                                    </div>
+                                    <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        className="text-sm font-semibold px-3 py-1"
+                                        type="button"
+                                    >
+                                        View More
+                                    </Button>
                                 </div>
-                                <div className="text-[11px] text-gray-400 dark:text-gray-500 mt-0.5">{metric.description}</div>
+                                <div className="px-6">
+                                    <div className="text-3xl font-bold leading-tight">{metric.value}</div>
+                                    <div className="text-sm mt-1 mb-2 text-muted-foreground">{metric.description}</div>
+                                </div>
+                                <CardContent className="flex-1 flex items-end w-full p-0">
+                                    <div className="flex items-center justify-end w-full pr-6 pb-4">
+                                        {React.cloneElement(metric.icon, { className: "text-rose-500 dark:text-rose-400 size-7" })}
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        ))}
+                        <Card className="col-span-1 rounded-2xl shadow-none border flex flex-col justify-between p-0 min-h-[220px]">
+                            <div className="flex items-center justify-between px-6 pt-5">
+                                <div className="text-sm font-medium text-muted-foreground">
+                                    Pending Defense Requests
+                                </div>
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="text-sm font-semibold px-3 py-1"
+                                    type="button"
+                                >
+                                    View More
+                                </Button>
+                            </div>
+                            <div className="px-6">
+                                <div className="text-3xl font-bold leading-tight text-gray-900 dark:text-white">
+                                    {pendingRequests.length}
+                                </div>
+                                <div className="text-sm mt-1 mb-2 text-muted-foreground">
+                                    Awaiting coordinator action
+                                </div>
+                            </div>
+                            <CardContent className="flex-1 flex items-end w-full p-0">
+                                <div className="flex items-center justify-end w-full pr-6 pb-4">
+                                    <ClipboardList className="text-rose-500 dark:text-rose-400 size-7" />
+                                </div>
                             </CardContent>
-                        </div>
-                        <div className="flex items-center justify-center ml-3 w-[40px] h-[40px]">
-                            {React.cloneElement(metric.icon, { className: "text-rose-500 dark:text-rose-400 size-7" })}
-                        </div>
-                    </Card>
-                ))}
-            </div>
+                        </Card>
+                    </div>
 
-            {/* Widgets Body */}
-            <div className="flex flex-col gap-6 bg-gray-100 dark:bg-muted ms-4 me-4 rounded-xl mt-2 mb-2 px-5 py-8">
-                <div className="w-full mb-2 flex flex-col md:flex-row gap-4">
-                    <WeeklyDefenseSchedulesWidget
-                        weekDays={weekDays}
-                        selectedDay={selectedDay}
-                        setSelectedDay={setSelectedDay}
-                        approvedDefenses={allRequests}
-                        referenceDate={new Date()}
-                        loading={loading}
-                    />
-                    <PendingDefenseRequestsWidget pendingRequests={pendingRequests} loading={loading} />
-                </div>
-
-                <div className="grid gap-4 md:grid-cols-2">
-                    
-                </div>
-            </div>
-        </UnifiedDashboardLayout>
+                    {/* Widgets Body */}
+                    <div className="flex flex-col gap-6 bg-gray-100 dark:bg-muted ms-4 me-4 rounded-xl mt-2 mb-2 px-5 py-8">
+                        <div className="w-full mb-2 flex flex-col md:flex-row gap-4">
+                            <WeeklyDefenseSchedulesWidget
+                                weekDays={weekDays}
+                                selectedDay={selectedDay}
+                                setSelectedDay={setSelectedDay}
+                                approvedDefenses={allRequests}
+                                referenceDate={new Date()}
+                                loading={loading}
+                            />
+                            <PendingDefenseRequestsWidget pendingRequests={pendingRequests} loading={loading} />
+                        </div>
+                    </div>
+                </>
+            )}
+        </div>
     );
 }

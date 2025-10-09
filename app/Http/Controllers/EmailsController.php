@@ -10,7 +10,7 @@ class EmailsController extends Controller
 {
     public function welcomeEmail()
     {
-       Mail::to('jestano_230000001603@uic.edu.ph')->send(new WelcomeMail());
+       Mail::to('japzdiapana@gmail.com')->send(new WelcomeMail());
        return "Email Sent";
     }
 }

@@ -42,7 +42,8 @@ class CoordinatorDefenseController extends Controller
         }
 
         $defenseRequests = DefenseRequest::with(['user','adviserUser','panelsAssignedBy','scheduleSetBy'])
-            ->whereIn('workflow_state', ['adviser-approved','coordinator-review','coordinator-approved','panels-assigned','scheduled'])
+            ->whereIn('workflow_state', ['adviser-approved','coordinator-review','coordinator-approved','coordinator-rejected','panels-assigned','scheduled','completed'])
+            ->where('coordinator_user_id', $user->id) // <-- Only show requests for this coordinator
             ->orderBy('adviser_reviewed_at','desc')
             ->orderBy('created_at','desc')
             ->get()
@@ -160,6 +161,8 @@ class CoordinatorDefenseController extends Controller
                     $validated['defense_panelist4'] ?? null,
                     Auth::id()
                 );
+                // CREATE HONORARIUM PAYMENTS HERE
+                $defenseRequest->createHonorariumPayments();
             });
 
             if ($request->expectsJson()) {
@@ -673,70 +676,17 @@ class CoordinatorDefenseController extends Controller
      */
     public function assignPanelsJson(Request $request, DefenseRequest $defenseRequest)
     {
-        $this->authorizeRole();
-
         $data = $request->validate([
-            'defense_chairperson' => 'required|string|max:255',
-            'defense_panelist1'   => 'required|string|max:255',
-            'defense_panelist2'   => 'nullable|string|max:255',
-            'defense_panelist3'   => 'nullable|string|max:255',
-            'defense_panelist4'   => 'nullable|string|max:255',
+            'defense_chairperson' => 'nullable|string|max:255',
+            'defense_panelist1' => 'nullable|string|max:255',
+            'defense_panelist2' => 'nullable|string|max:255',
+            'defense_panelist3' => 'nullable|string|max:255',
+            'defense_panelist4' => 'nullable|string|max:255',
         ]);
 
-        try {
-            DB::beginTransaction();
+        $defenseRequest->update($data);
 
-            $origState = $defenseRequest->workflow_state;
-            // Only allow if adviser-approved or already in panel stages
-            if (!in_array($origState, [
-                'coordinator-approved','panels-assigned','scheduled',
-                'adviser-approved'
-            ])) {
-                return response()->json([
-                    'error'=>"Cannot assign panels from state '{$origState}'"
-                ],422);
-            }
-
-            foreach ($data as $k=>$v) {
-                $defenseRequest->{$k} = $v;
-            }
-
-            if ($defenseRequest->workflow_state === 'coordinator-approved' ||
-                $defenseRequest->workflow_state === 'adviser-approved') {
-                $defenseRequest->workflow_state = 'panels-assigned';
-                $defenseRequest->addWorkflowEntry(
-                    'panels-assigned',
-                    null,
-                    Auth::id(),
-                    $origState,
-                    'panels-assigned'
-                );
-            }
-
-            $defenseRequest->panels_assigned_by = Auth::id();
-            if (property_exists($defenseRequest,'scheduling_status') || isset($defenseRequest->scheduling_status)) {
-                $defenseRequest->scheduling_status = 'panels-assigned';
-            }
-
-            $defenseRequest->last_status_updated_at = now();
-            $defenseRequest->last_status_updated_by = Auth::id();
-            $defenseRequest->save();
-
-            DB::commit();
-
-            return response()->json([
-                'ok'=>true,
-                'request'=>$this->mapForDetails($defenseRequest)
-            ]);
-        } catch (\Throwable $e) {
-            DB::rollBack();
-            Log::error('assignPanelsJson error',[
-
-                'id'=>$defenseRequest->id,
-                'error'=>$e->getMessage()
-            ]);
-            return response()->json(['error'=>'Assigning panels failed'],500);
-        }
+        return response()->json(['ok' => true, 'request' => $defenseRequest]);
     }
 
     public function scheduleDefenseJson(Request $request, DefenseRequest $defenseRequest)
@@ -841,5 +791,75 @@ class CoordinatorDefenseController extends Controller
             'last_status_updated_at'=>$r->last_status_updated_at?->toIso8601String(),
             'last_status_updated_by'=>$r->last_status_updated_by
         ];
+    }
+
+    public function updateStatus(Request $request, DefenseRequest $defenseRequest)
+    {
+        $this->authorizeRole();
+
+        $validated = $request->validate([
+            'status' => 'required|in:Pending,Approved,Rejected'
+        ]);
+        $user = Auth::user();
+
+        $origState = $defenseRequest->workflow_state;
+        $newStatus = $validated['status'];
+
+        DB::beginTransaction();
+        try {
+            if ($newStatus === 'Approved') {
+                // Only allow approval from certain states
+                if (!in_array($origState, ['adviser-approved','coordinator-review','submitted', null])) {
+                    return response()->json(['error'=>'Cannot approve in current state.'], 422);
+                }
+                $defenseRequest->approveByCoordinator(null, $user->id);
+                // approveByCoordinator should already add a workflow entry
+            } elseif ($newStatus === 'Rejected') {
+                // Allow rejection from any state except already rejected
+                if ($origState === 'rejected') {
+                    return response()->json(['error'=>'Already rejected.'], 422);
+                }
+                $defenseRequest->status = 'Rejected';
+                $defenseRequest->workflow_state = 'rejected';
+                $defenseRequest->last_status_updated_at = now();
+                $defenseRequest->last_status_updated_by = $user->id;
+                $defenseRequest->addWorkflowEntry(
+                    'rejected',
+                    'Request rejected by coordinator',
+                    $user->id,
+                    $origState,
+                    'rejected'
+                );
+                $defenseRequest->save();
+            } elseif ($newStatus === 'Pending') {
+                // "Retrieve" action: set back to pending
+                $defenseRequest->status = 'Pending';
+                $defenseRequest->workflow_state = 'coordinator-review';
+                $defenseRequest->last_status_updated_at = now();
+                $defenseRequest->last_status_updated_by = $user->id;
+                $defenseRequest->addWorkflowEntry(
+                    'retrieved',
+                    'Request retrieved (set to pending) by coordinator',
+                    $user->id,
+                    $origState,
+                    'coordinator-review'
+                );
+                $defenseRequest->save();
+            }
+
+            DB::commit();
+
+            return response()->json([
+                'ok' => true,
+                'request' => $this->mapForDetails($defenseRequest)
+            ]);
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            \Log::error('updateStatus error', [
+                'id' => $defenseRequest->id,
+                'error' => $e->getMessage()
+            ]);
+            return response()->json(['error' => 'Failed to update status.'], 500);
+        }
     }
 }

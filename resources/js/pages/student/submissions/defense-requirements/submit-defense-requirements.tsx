@@ -2,6 +2,7 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Separator } from '@/components/ui/separator';
 
 import React, { useRef, useState } from 'react';
 import { useForm } from '@inertiajs/react';
@@ -143,6 +144,7 @@ export default function SubmitDefenseRequirements({ onFinish, open, onOpenChange
     const similarityRef = useRef<HTMLInputElement>(null);
     const recEndorsementRef = useRef<HTMLInputElement>(null);
     const proofOfPaymentRef = useRef<HTMLInputElement>(null);
+    const aviseeAdviserAttachmentRef = useRef<HTMLInputElement>(null);
 
     // Add defense_type to form data
     const { data, setData, post, processing, reset } = useForm<{
@@ -161,6 +163,7 @@ export default function SubmitDefenseRequirements({ onFinish, open, onOpenChange
         reference_no: string;
         manuscript_proposal: File | null;
         similarity_index: File | null;
+        avisee_adviser_attachment: File | null;
     }>({
         first_name: user.first_name || '',
         middle_name: user.middle_name || '',
@@ -177,6 +180,7 @@ export default function SubmitDefenseRequirements({ onFinish, open, onOpenChange
         reference_no: '',
         manuscript_proposal: null,
         similarity_index: null,
+        avisee_adviser_attachment: null,
     });
 
     const [openDialog, setOpenDialog] = useState(false);
@@ -222,8 +226,7 @@ export default function SubmitDefenseRequirements({ onFinish, open, onOpenChange
         post(route('defense-requirements.store'), {
             forceFormData: true,
             onSuccess: () => {
-                setShowSuccessPanel(true);
-                if (onFinish) onFinish();
+                window.location.reload(); // Refresh the page after successful submission
             },
             onError: (errors) => {
                 console.error('Submission failed:', errors);
@@ -243,10 +246,41 @@ export default function SubmitDefenseRequirements({ onFinish, open, onOpenChange
         });
     }
 
+    // Validation function based on defense type
+    function isStepTwoValid() {
+        if (!data.defense_type) return false;
+        if (!data.thesis_title.trim()) return false;
+        if (!data.manuscript_proposal) return false;
+        if (!data.similarity_index) return false;
+        if (!data.proof_of_payment) return false;
+        if (!data.reference_no.trim()) return false;
+
+        if (data.defense_type === 'Proposal') {
+            if (!data.avisee_adviser_attachment) return false;
+        }
+        if (data.defense_type === 'Prefinal' || data.defense_type === 'Final') {
+            if (!data.rec_endorsement) return false;
+        }
+        return true;
+    }
+
     function handleNext() {
-        if (currentStep < steps.length - 1) {
+        // If on Step 1, always allow next (since it's read-only)
+        if (currentStep === 0) {
             setCurrentStep(currentStep + 1);
-        } else {
+            return;
+        }
+        // If on Step 2, validate required fields
+        if (currentStep === 1) {
+            if (!isStepTwoValid()) {
+                alert('Please fill in all required fields and upload all required documents before proceeding.');
+                return;
+            }
+            setCurrentStep(currentStep + 1);
+            return;
+        }
+        // If on Step 3, submit
+        if (currentStep === 2) {
             handleSubmit();
         }
     }
@@ -270,68 +304,76 @@ export default function SubmitDefenseRequirements({ onFinish, open, onOpenChange
         {
             title: 'Personal Information',
             content: (
-                <div className="flex flex-col gap-3">
+                <div className="flex flex-col gap-6">
                     <div>
-                        <Label className="text-xs">First Name</Label>
-                        <Input
-                            value={data.first_name}
-                            readOnly
-                            disabled
-                            placeholder="First Name"
-                            className="h-8 text-sm"
-                        />
+                        <h3 className="text-base font-semibold mb-2">Student Details</h3>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div>
+                                <Label className="text-xs">First Name</Label>
+                                <Input
+                                    value={data.first_name}
+                                    readOnly
+                                    disabled
+                                    placeholder="First Name"
+                                    className="h-8 text-sm"
+                                />
+                            </div>
+                            <div>
+                                <Label className="text-xs">Middle Name</Label>
+                                <Input
+                                    value={data.middle_name}
+                                    readOnly
+                                    disabled
+                                    placeholder="Middle Name"
+                                    className="h-8 text-sm"
+                                />
+                            </div>
+                            <div>
+                                <Label className="text-xs">Last Name</Label>
+                                <Input
+                                    value={data.last_name}
+                                    readOnly
+                                    disabled
+                                    placeholder="Last Name"
+                                    className="h-8 text-sm"
+                                />
+                            </div>
+                        </div>
                     </div>
-                    <div>
-                        <Label className="text-xs">Middle Name</Label>
-                        <Input
-                            value={data.middle_name}
-                            readOnly
-                            disabled
-                            placeholder="Middle Name"
-                            className="h-8 text-sm"
-                        />
-                    </div>
-                    <div>
-                        <Label className="text-xs">Last Name</Label>
-                        <Input
-                            value={data.last_name}
-                            readOnly
-                            disabled
-                            placeholder="Last Name"
-                            className="h-8 text-sm"
-                        />
-                    </div>
-                    <div>
-                        <Label className="text-xs">School ID</Label>
-                        <Input
-                            value={data.school_id}
-                            readOnly
-                            disabled
-                            placeholder="School ID"
-                            className="h-8 text-sm"
-                        />
-                    </div>
-                    <div>
-                        <Label className="text-xs">Program</Label>
-                        <Input
-                            value={data.program}
-                            readOnly
-                            disabled
-                            placeholder="Program"
-                            className="h-8 text-sm"
-                        />
-                    </div>
-                    <div>
-                        <Label className="text-xs">Adviser</Label>
-                        <Input
-                            value={adviser
-                                ? `${adviser.first_name} ${adviser.middle_name ? adviser.middle_name + " " : ""}${adviser.last_name}`
-                                : 'No adviser registered'}
-                            readOnly
-                            disabled
-                            placeholder="Adviser"
-                            className="h-8 text-sm"
-                        />
+                    <Separator />
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                            <Label className="text-xs">School ID</Label>
+                            <Input
+                                value={data.school_id}
+                                readOnly
+                                disabled
+                                placeholder="School ID"
+                                className="h-8 text-sm"
+                            />
+                        </div>
+                        <div>
+                            <Label className="text-xs">Program</Label>
+                            <Input
+                                value={data.program}
+                                readOnly
+                                disabled
+                                placeholder="Program"
+                                className="h-8 text-sm"
+                            />
+                        </div>
+                        <div>
+                            <Label className="text-xs">Adviser</Label>
+                            <Input
+                                value={adviser
+                                    ? `${adviser.first_name} ${adviser.middle_name ? adviser.middle_name + " " : ""}${adviser.last_name}`
+                                    : 'No adviser registered'}
+                                readOnly
+                                disabled
+                                placeholder="Adviser"
+                                className="h-8 text-sm"
+                            />
+                        </div>
                     </div>
                 </div>
             ),
@@ -339,10 +381,10 @@ export default function SubmitDefenseRequirements({ onFinish, open, onOpenChange
         {
             title: 'Defense Type & Thesis Information',
             content: (
-                <div className="space-y-4">
+                <div className="space-y-6 pb-10">
                     <div>
-                        <Label className="text-xs mb-2 block">Type of Defense</Label>
-                        <div className="flex gap-2 mb-4">
+                        <h3 className="text-base font-semibold mb-2">Defense Details</h3>
+                        <div className="flex gap-2 mb-2">
                             {[
                                 { value: "Proposal", label: "Proposal" },
                                 { value: "Prefinal", label: "Prefinal" },
@@ -363,105 +405,166 @@ export default function SubmitDefenseRequirements({ onFinish, open, onOpenChange
                                 </button>
                             ))}
                         </div>
+                        <p className="text-xs text-muted-foreground">Select the type of defense you are applying for.</p>
                     </div>
+                    <Separator />
                     <div>
-                        <Label className="text-xs">Thesis Title</Label>
-                        <Input
-                            value={data.thesis_title}
-                            onChange={e => setData('thesis_title', e.target.value)}
-                            placeholder="Thesis Title"
-                            className="h-8 text-sm"
-                        />
+                        <h3 className="text-base font-semibold mb-2">Thesis Information</h3>
+                        <div className="grid grid-cols-1 gap-4">
+                            <div>
+                                <Label className="text-xs">
+                                    Thesis Title <span className="text-rose-500">*</span>
+                                </Label>
+                                <Input
+                                    value={data.thesis_title}
+                                    onChange={e => setData('thesis_title', e.target.value)}
+                                    placeholder="Thesis Title"
+                                    className="h-8 text-sm"
+                                />
+                            </div>
+                        </div>
                     </div>
-                </div>
-            ),
-        },
-        {
-            title: 'Attachments',
-            content: (
-                <div className="space-y-4 mb-4">
-                    <Label className="text-xs">Reference No.</Label>
-                    <Input
-                        value={data.reference_no}
-                        onChange={e => setData('reference_no', e.target.value)}
-                        placeholder="Reference No."
-                        className="h-8 text-sm"
-                    />
-                    <Label className="text-xs">REC Endorsement</Label>
-                    <div className="flex items-center gap-2">
-                        <Input
-                            readOnly
-                            value={data.rec_endorsement ? data.rec_endorsement.name : ''}
-                            placeholder="No file chosen"
-                            className="flex-1 h-8 text-sm"
-                        />
-                        <Button variant="outline" type="button" onClick={() => recEndorsementRef.current?.click()} className="h-8 px-2 text-xs">
-                            <Paperclip className="mr-1 h-4 w-4" />
-                            Choose File
-                        </Button>
-                        <input
-                            type="file"
-                            ref={recEndorsementRef}
-                            className="hidden"
-                            onChange={handleFile('rec_endorsement')}
-                        />
+                    <Separator />
+                    <div>
+                        <h3 className="text-base font-semibold mb-2">Document Uploads</h3>
+                        <div className="space-y-4">
+                            {(data.defense_type === 'Prefinal' || data.defense_type === 'Final') && (
+                                <div>
+                                    <Label className="text-xs">
+                                        REC Endorsement <span className="text-rose-500">*</span>
+                                    </Label>
+                                    <div className="flex items-center gap-2">
+                                        <Input
+                                            readOnly
+                                            value={data.rec_endorsement ? data.rec_endorsement.name : ''}
+                                            placeholder="No file chosen"
+                                            className="flex-1 h-8 text-sm"
+                                        />
+                                        <Button variant="outline" type="button" onClick={() => recEndorsementRef.current?.click()} className="h-8 px-2 text-xs">
+                                            <Paperclip className="mr-1 h-4 w-4" />
+                                            Choose File
+                                        </Button>
+                                        <input
+                                            type="file"
+                                            ref={recEndorsementRef}
+                                            className="hidden"
+                                            onChange={handleFile('rec_endorsement')}
+                                        />
+                                    </div>
+                                </div>
+                            )}
+                            <div>
+                                <Label className="text-xs">
+                                    Manuscript <span className="text-rose-500">*</span>
+                                </Label>
+                                <div className="flex items-center gap-2">
+                                    <Input
+                                        readOnly
+                                        value={data.manuscript_proposal ? data.manuscript_proposal.name : ''}
+                                        placeholder="No file chosen"
+                                        className="flex-1 h-8 text-sm"
+                                    />
+                                    <Button variant="outline" type="button" onClick={() => manuscriptRef.current?.click()} className="h-8 px-2 text-xs">
+                                        <Paperclip className="mr-1 h-4 w-4" />
+                                        Choose File
+                                    </Button>
+                                    <input
+                                        type="file"
+                                        ref={manuscriptRef}
+                                        className="hidden"
+                                        onChange={handleFile('manuscript_proposal')}
+                                    />
+                                </div>
+                            </div>
+                            <div>
+                                <Label className="text-xs">
+                                    Similarity Index <span className="text-rose-500">*</span>
+                                </Label>
+                                <div className="flex items-center gap-2">
+                                    <Input
+                                        readOnly
+                                        value={data.similarity_index ? data.similarity_index.name : ''}
+                                        placeholder="No file chosen"
+                                        className="flex-1 h-8 text-sm"
+                                    />
+                                    <Button variant="outline" type="button" onClick={() => similarityRef.current?.click()} className="h-8 px-2 text-xs">
+                                        <Paperclip className="mr-1 h-4 w-4" />
+                                        Choose File
+                                    </Button>
+                                    <input
+                                        type="file"
+                                        ref={similarityRef}
+                                        className="hidden"
+                                        onChange={handleFile('similarity_index')}
+                                    />
+                                </div>
+                            </div>
+                            {data.defense_type === 'Proposal' && (
+                                <div>
+                                    <Label className="text-xs">
+                                        Avisee-Adviser Attachment <span className="text-rose-500">*</span>
+                                    </Label>
+                                    <div className="flex items-center gap-2">
+                                        <Input
+                                            readOnly
+                                            value={data.avisee_adviser_attachment ? data.avisee_adviser_attachment.name : ''}
+                                            placeholder="No file chosen"
+                                            className="flex-1 h-8 text-sm"
+                                        />
+                                        <Button variant="outline" type="button" onClick={() => aviseeAdviserAttachmentRef.current?.click()} className="h-8 px-2 text-xs">
+                                            <Paperclip className="mr-1 h-4 w-4" />
+                                            Choose File
+                                        </Button>
+                                        <input
+                                            type="file"
+                                            ref={aviseeAdviserAttachmentRef}
+                                            className="hidden"
+                                            onChange={handleFile('avisee_adviser_attachment')}
+                                        />
+                                    </div>
+                                </div>
+                            )}
+                        </div>
                     </div>
-                    <Label className="text-xs">Proof of Payment</Label>
-                    <div className="flex items-center gap-2">
-                        <Input
-                            readOnly
-                            value={data.proof_of_payment ? data.proof_of_payment.name : ''}
-                            placeholder="No file chosen"
-                            className="flex-1 h-8 text-sm"
-                        />
-                        <Button variant="outline" type="button" onClick={() => proofOfPaymentRef.current?.click()} className="h-8 px-2 text-xs">
-                            <Paperclip className="mr-1 h-4 w-4" />
-                            Choose File
-                        </Button>
-                        <input
-                            type="file"
-                            ref={proofOfPaymentRef}
-                            className="hidden"
-                            onChange={handleFile('proof_of_payment')}
-                        />
-                    </div>
-                    <Label className="text-xs">Manuscript for Proposal</Label>
-                    <div className="flex items-center gap-2">
-                        <Input
-                            readOnly
-                            value={data.manuscript_proposal ? data.manuscript_proposal.name : ''}
-                            placeholder="No file chosen"
-                            className="flex-1 h-8 text-sm"
-                        />
-                        <Button variant="outline" type="button" onClick={() => manuscriptRef.current?.click()} className="h-8 px-2 text-xs">
-                            <Paperclip className="mr-1 h-4 w-4" />
-                            Choose File
-                        </Button>
-                        <input
-                            type="file"
-                            ref={manuscriptRef}
-                            className="hidden"
-                            onChange={handleFile('manuscript_proposal')}
-                        />
-                    </div>
-                    <Label className="text-xs">Similarity Index</Label>
-                    <div className="flex items-center gap-2">
-                        <Input
-                            readOnly
-                            value={data.similarity_index ? data.similarity_index.name : ''}
-                            placeholder="No file chosen"
-                            className="flex-1 h-8 text-sm"
-                        />
-                        <Button variant="outline" type="button" onClick={() => similarityRef.current?.click()} className="h-8 px-2 text-xs">
-                            <Paperclip className="mr-1 h-4 w-4" />
-                            Choose File
-                        </Button>
-                        <input
-                            type="file"
-                            ref={similarityRef}
-                            className="hidden"
-                            onChange={handleFile('similarity_index')}
-                        />
+                    <Separator className="my-4" />
+                    <div>
+                        <h3 className="text-base font-semibold mb-2">Payment</h3>
+                        <div className="flex flex-col gap-4">
+                            <div>
+                                <Label className="text-xs mb-1">
+                                    Proof of Payment <span className="text-rose-500">*</span>
+                                </Label>
+                                <div className="flex items-center gap-2">
+                                    <Input
+                                        readOnly
+                                        value={data.proof_of_payment ? data.proof_of_payment.name : ''}
+                                        placeholder="No file chosen"
+                                        className="flex-1 h-8 text-sm"
+                                    />
+                                    <Button variant="outline" type="button" onClick={() => proofOfPaymentRef.current?.click()} className="h-8 px-2 text-xs">
+                                        <Paperclip className="mr-1 h-4 w-4" />
+                                        Choose File
+                                    </Button>
+                                    <input
+                                        type="file"
+                                        ref={proofOfPaymentRef}
+                                        className="hidden"
+                                        onChange={handleFile('proof_of_payment')}
+                                    />
+                                </div>
+                            </div>
+                            <div>
+                                <Label className="text-xs mb-1">
+                                    Reference No. <span className="text-rose-500">*</span>
+                                </Label>
+                                <Input
+                                    value={data.reference_no}
+                                    onChange={e => setData('reference_no', e.target.value)}
+                                    placeholder="Reference No."
+                                    className="h-8 text-sm"
+                                />
+                            </div>
+                        </div>
                     </div>
                 </div>
             ),
@@ -469,20 +572,71 @@ export default function SubmitDefenseRequirements({ onFinish, open, onOpenChange
         {
             title: 'Review Submission',
             content: (
-                <div className="space-y-4">
-                    <div className="rounded-lg border border-rose-200 bg-rose-50 p-4 text-sm">
-                        <div className="mb-2 font-semibold">Personal Info</div>
-                        <div>Name: {`${data.first_name} ${data.middle_name} ${data.last_name}`}</div>
-                        <div>School ID: {data.school_id}</div>
-                        <div>Program: {data.program}</div>
-                        <div>Type of Defense: {data.defense_type}</div>
-                        <div>Thesis Title: {data.thesis_title}</div>
-                        <div>Adviser: {data.adviser}</div>
-                        <div>Reference No.: {data.reference_no}</div>
-                        <div>Recommendation Endorsement: {data.rec_endorsement?.name || '—'}</div>
-                        <div>Proof of Payment: {data.proof_of_payment?.name || '—'}</div>
-                        <div>Manuscript Proposal: {data.manuscript_proposal?.name || '—'}</div>
-                        <div>Similarity Index: {data.similarity_index?.name || '—'}</div>
+                <div className="space-y-6">
+                    <div className="rounded-lg border border-rose-200 bg-rose-50 p-4 text-sm space-y-4">
+                        <div>
+                            <div className="mb-1 font-semibold text-rose-700">Personal Information</div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-1">
+                                <div>
+                                    <span className="font-medium">Name:</span> {`${data.first_name} ${data.middle_name} ${data.last_name}`}
+                                </div>
+                                <div>
+                                    <span className="font-medium">School ID:</span> {data.school_id}
+                                </div>
+                                <div>
+                                    <span className="font-medium">Program:</span> {data.program}
+                                </div>
+                                <div>
+                                    <span className="font-medium">Adviser:</span> {data.adviser}
+                                </div>
+                            </div>
+                        </div>
+                        <Separator />
+                        <div>
+                            <div className="mb-1 font-semibold text-rose-700">Defense Details</div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-1">
+                                <div>
+                                    <span className="font-medium">Type of Defense:</span> {data.defense_type}
+                                </div>
+                                <div>
+                                    <span className="font-medium">Thesis Title:</span> {data.thesis_title}
+                                </div>
+                            </div>
+                        </div>
+                        <Separator />
+                        <div>
+                            <div className="mb-1 font-semibold text-rose-700">Document Uploads</div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-1">
+                                {(data.defense_type === 'Prefinal' || data.defense_type === 'Final') && (
+                                    <div>
+                                        <span className="font-medium">REC Endorsement:</span> {data.rec_endorsement?.name || <span className="text-muted-foreground">—</span>}
+                                    </div>
+                                )}
+                                <div>
+                                    <span className="font-medium">Manuscript:</span> {data.manuscript_proposal?.name || <span className="text-muted-foreground">—</span>}
+                                </div>
+                                <div>
+                                    <span className="font-medium">Similarity Index:</span> {data.similarity_index?.name || <span className="text-muted-foreground">—</span>}
+                                </div>
+                                {data.defense_type === 'Proposal' && (
+                                    <div>
+                                        <span className="font-medium">Avisee-Adviser Attachment:</span> {data.avisee_adviser_attachment?.name || <span className="text-muted-foreground">—</span>}
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                        <Separator />
+                        <div>
+                            <div className="mb-1 font-semibold text-rose-700">Payment</div>
+                            <div className="grid grid-cols-1 gap-y-1">
+                                <div>
+                                    <span className="font-medium">Proof of Payment:</span> {data.proof_of_payment?.name || <span className="text-muted-foreground">—</span>}
+                                </div>
+                                <div>
+                                    <span className="font-medium">Reference No.:</span> {data.reference_no}
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             ),

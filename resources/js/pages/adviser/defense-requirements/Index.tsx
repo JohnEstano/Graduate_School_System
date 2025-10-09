@@ -1,74 +1,46 @@
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
 import { Head } from '@inertiajs/react';
-import ShowAllDefenseRequirements from './show-all-defense-requirements';
 import ShowAllDefenseRequests from './show-all-defense-requests'; 
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 
 const breadcrumbs: BreadcrumbItem[] = [
-    {
-        title: 'Dashboard',
-        href: '/dashboard',
-    },
-    {
-        title: 'All Defense Requirements',
-        href: '/all-defense-requirements',
-    },
+    { title: 'Dashboard', href: '/dashboard' },
+    { title: 'All Defense Requirements', href: '/all-defense-requirements' },
 ];
+
+// Helper to map workflow_state to status label
+function getStatus(workflow_state: string) {
+    if (['adviser-approved'].includes(workflow_state)) return 'Approved';
+    if (['adviser-rejected', 'coordinator-rejected'].includes(workflow_state)) return 'Rejected';
+    // All others are considered Pending
+    return 'Pending';
+}
 
 export default function Index({
     defenseRequirements,
     defenseRequests,
+    coordinator, // <-- accept coordinator prop
 }: {
     defenseRequirements: any[];
     defenseRequests: any[];
+    coordinator?: { name: string; email: string } | null;
 }) {
-    // Filter requests by workflow state
-    const pendingRequests = (defenseRequests || []).filter(
-        (r:any) => ['submitted','adviser-review'].includes(r.workflow_state)
-    );
-    const approvedRequests = (defenseRequests || []).filter(
-        (r:any) => r.workflow_state === 'adviser-approved'
-    );
-    const rejectedRequests = (defenseRequests || []).filter(
-        (r:any) => ['adviser-rejected','coordinator-rejected'].includes(r.workflow_state)
-    );
+    // Attach status for display
+    const allRequests = (defenseRequests || []).map((r: any) => ({
+        ...r,
+        status: getStatus(r.workflow_state),
+    }));
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="All Defense Requirements" />
             <div className="flex h-full flex-1 flex-col gap-4 overflow-auto rounded-xl pt-5 pr-7 pl-7">
-                <Tabs defaultValue="pending" className="w-full">
-                    <TabsList className="mb-4 dark:bg-muted dark:text-muted-foreground">
-                        <TabsTrigger value="pending">Pending</TabsTrigger>
-                        <TabsTrigger value="approved">Approved</TabsTrigger>
-                        <TabsTrigger value="rejected">Rejected</TabsTrigger>
-                    </TabsList>
-                    <TabsContent value="pending" className="flex-1">
-                        <ShowAllDefenseRequests 
-                            defenseRequests={pendingRequests} 
-                            showActions={true}
-                            title="Defense Requirements sent by your students"
-                            description="Review and approve/reject defense requests from your advisees"
-                        />
-                    </TabsContent>
-                    <TabsContent value="approved" className="flex-1">
-                        <ShowAllDefenseRequests 
-                            defenseRequests={approvedRequests} 
-                            showActions={false}
-                            title="Approved Defense Requirements"
-                            description="Defense requests you have approved and forwarded to coordinator"
-                        />
-                    </TabsContent>
-                    <TabsContent value="rejected" className="flex-1">
-                        <ShowAllDefenseRequests 
-                            defenseRequests={rejectedRequests}
-                            showActions={false}
-                            title="Rejected Defense Requirements"
-                            description="Requests rejected by you or the coordinator"
-                        />
-                    </TabsContent>
-                </Tabs>
+                <ShowAllDefenseRequests 
+                    defenseRequests={allRequests}
+                    coordinator={coordinator} // <-- pass coordinator prop
+                    title="Defense Requirements"
+                    description="Defense requirements submitted by your students. Review and manage their submissions here."
+                />
             </div>
         </AppLayout>
     );

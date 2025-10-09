@@ -37,18 +37,8 @@ class DefenseRequestController extends Controller
         $coordinatorRoles = ['Coordinator','Administrative Assistant','Dean'];
 
         if (in_array($user->role, $coordinatorRoles)) {
-            // Coordinator view: show only requests assigned to this coordinator
-            $query = DefenseRequest::query()
-                ->where('coordinator_user_id', $user->id)  // Filter by assigned coordinator
-                ->whereIn('workflow_state', [
-                    'adviser-approved',
-                    'coordinator-review',
-                    'coordinator-approved',
-                    'coordinator-rejected',
-                    'panels-assigned',
-                    'scheduled',
-                    'completed'
-                ]);
+            // Coordinator view: show queue of adviser-approved onward
+            $query = DefenseRequest::query();
 
             Log::info('Coordinator dashboard filter applied', [
                 'coordinator_id' => $user->id,
@@ -74,8 +64,29 @@ class DefenseRequestController extends Controller
                     'thesis_title','defense_type','status','priority','workflow_state',
                     'scheduled_date','scheduled_time','scheduled_end_time',
                     'defense_mode','defense_venue','panels_assigned_at',
-                    'defense_adviser','adviser_reviewed_at' // <-- ADD THESE
+                    'defense_adviser','adviser_reviewed_at',
+                    'defense_chairperson','defense_panelist1','defense_panelist2','defense_panelist3','defense_panelist4'
                 ])->map(function($r){
+                    // Helper to resolve panelist info
+                    $panelistFields = [
+                        $r->defense_chairperson,
+                        $r->defense_panelist1,
+                        $r->defense_panelist2,
+                        $r->defense_panelist3,
+                        $r->defense_panelist4,
+                    ];
+                    $panelists = collect($panelistFields)
+                        ->filter()
+                        ->map(function($panelistIdOrName) {
+                            // Try to resolve by ID first
+                            if (is_numeric($panelistIdOrName)) {
+                                $p = \App\Models\Panelist::find($panelistIdOrName);
+                                if ($p) return ['id' => $p->id, 'name' => $p->name];
+                            }
+                            // Fallback: treat as name string
+                            return ['id' => null, 'name' => $panelistIdOrName];
+                        })->values()->all();
+
                     return [
                         'id' => $r->id,
                         'first_name' => $r->first_name,
@@ -103,13 +114,7 @@ class DefenseRequestController extends Controller
                                 : date('Y-m-d H:i:s', strtotime($r->adviser_reviewed_at)))
                             : '—',
                         // ADD THIS LINE:
-                        'panelists' => collect([
-                            $r->defense_chairperson ?? null,
-                            $r->defense_panelist1 ?? null,
-                            $r->defense_panelist2 ?? null,
-                            $r->defense_panelist3 ?? null,
-                            $r->defense_panelist4 ?? null,
-                        ])->filter()->values()->all(),
+                        'panelists' => $panelists,
                     ];
                 });
 
@@ -134,10 +139,6 @@ class DefenseRequestController extends Controller
         $requirements = DefenseRequest::where('submitted_by', $user->id)
             ->orderByDesc('created_at')
             ->get();
-
-        foreach ($requirements as $r) {
-            try { $r->attemptAutoComplete(); } catch (\Throwable $e) {}
-        }
 
         $terminal = ['cancelled','adviser-rejected','coordinator-rejected','completed'];
         $active = $requirements->first(fn($r) => !in_array($r->workflow_state, $terminal));
@@ -193,6 +194,7 @@ class DefenseRequestController extends Controller
             'recEndorsement' => 'required|file|mimes:pdf,doc,docx,jpg,jpeg,png|max:204800',
             'proofOfPayment' => 'required|file|mimes:pdf,doc,docx,jpg,jpeg,png|max:204800',
             'referenceNo' => 'required|string|max:100',
+            'avisee_adviser_attachment' => "nullable|file|mimes:pdf,doc,docx,jpg,jpeg,png|max:204800",
         ]);
 
         foreach (['advisersEndorsement','recEndorsement','proofOfPayment'] as $f) {
@@ -318,139 +320,64 @@ class DefenseRequestController extends Controller
     {
         $user = Auth::user();
         if (!$user) abort(401);
-        if (!in_array($user->role,['Faculty','Adviser'])) {
-            return response()->json(['error'=>'Unauthorized'],403);
+        if (!in_array($user->role, ['Faculty', 'Adviser'])) {
+            abort(403, 'Unauthorized');
         }
 
         $data = $request->validate([
             'decision' => 'required|in:approve,reject',
             'comment'  => 'nullable|string|max:2000'
         ]);
+        $decision = $data['decision'];
         $comment = $data['comment'] ?? null;
 
         $current = $defenseRequest->workflow_state ?: 'submitted';
-        if (!in_array($current,['submitted','adviser-review','adviser-rejected'])) {
-            return response()->json([
-                'error'=>"Cannot act in state '{$defenseRequest->workflow_state}'"
-            ],422);
+        if (!in_array($current, ['submitted', 'adviser-review', 'adviser-rejected'])) {
+            return back()->with('error', 'This request cannot be acted on at this stage.');
         }
 
-        try {
-            $defenseRequest->ensureSubmittedHistory();
-            $fromState = $current;
+        if ($decision === 'approve') {
+            $defenseRequest->workflow_state = 'adviser-approved';
+            $defenseRequest->adviser_status = 'Approved';
+            $defenseRequest->status = 'Pending';
 
-            if ($data['decision']==='approve') {
-                $defenseRequest->workflow_state = 'adviser-approved';
-                $defenseRequest->status = 'Pending';
-                $defenseRequest->adviser_comments = null;
-            } else {
-                $defenseRequest->workflow_state = 'adviser-rejected';
-                $defenseRequest->adviser_comments = $comment;
+            // --- FINAL: Always assign a coordinator ---
+            // 1. Try linked coordinator
+            $coordinator = $user->coordinators()->first();
+            // 2. Fallback: coordinator for student's program
+            if (!$coordinator) {
+                $coordinator = \App\Models\User::where('role', 'Coordinator')
+                    ->where('program', $defenseRequest->program)
+                    ->first();
             }
-
-            $defenseRequest->adviser_reviewed_at = now();
-            $defenseRequest->adviser_reviewed_by = $user->id;
-            $defenseRequest->last_status_updated_at = now();
-            $defenseRequest->last_status_updated_by = $user->id;
-
-            $defenseRequest->addWorkflowEntry(
-                $defenseRequest->workflow_state,
-                $comment,
-                $user->id,
-                $fromState,
-                $defenseRequest->workflow_state
-            );
-
-            $hist = is_array($defenseRequest->workflow_history) ? $defenseRequest->workflow_history : [];
-            foreach ($hist as &$h) {
-                $h['comment']   = $h['comment']   ?? null;
-                $h['user_name'] = $h['user_name'] ?? '';
+            // 3. Fallback: any coordinator
+            if (!$coordinator) {
+                $coordinator = \App\Models\User::where('role', 'Coordinator')->first();
             }
-            $defenseRequest->workflow_history = $hist;
-
-            $defenseRequest->save();
-
-            // AUTO-ASSIGN COORDINATOR when adviser approves
-            if ($data['decision'] === 'approve') {
-                Log::info('Adviser approved - attempting coordinator auto-assignment', [
-                    'defense_request_id' => $defenseRequest->id,
-                    'program' => $defenseRequest->program,
-                    'student_id' => $defenseRequest->submitted_by,
-                ]);
-
-                $defenseRequest->assignCoordinator(
-                    $defenseRequest->program,
-                    $user->id,  // adviser is the one triggering the assignment
-                    false,      // not manual, it's auto-assignment
-                    'Auto-assigned when adviser approved the request'
-                );
-
-                // Send email notification to assigned coordinator
-                if ($defenseRequest->coordinatorUser && $defenseRequest->coordinatorUser->email) {
-                    Log::info('Sending email to assigned coordinator', [
-                        'defense_request_id' => $defenseRequest->id,
-                        'coordinator_id' => $defenseRequest->coordinator_user_id,
-                        'coordinator_email' => $defenseRequest->coordinatorUser->email,
-                    ]);
-
-                    Mail::to($defenseRequest->coordinatorUser->email)
-                        ->queue(new DefenseRequestAssignedToCoordinator($defenseRequest));
-                } else {
-                    Log::warning('Coordinator assigned but no email to send notification', [
-                        'defense_request_id' => $defenseRequest->id,
-                        'coordinator_user_id' => $defenseRequest->coordinator_user_id,
-                    ]);
-                }
+            // 4. If still not found, abort with error
+            if (!$coordinator) {
+                return back()->with('error', 'No coordinator found. Please contact admin.');
             }
-
-            // Only dispatch when it just became Approved
-            if ($defenseRequest->status === 'Approved') {
-                // Queue job AFTER transaction commits
-                GenerateDefenseDocumentsJob::dispatch($defenseRequest->id)->afterCommit();
-            }
-            
-            // Send email notification to student
-            $student = User::find($defenseRequest->submitted_by);
-            if ($student && $student->email) {
-                if ($data['decision'] === 'approve') {
-                    Mail::to($student->email)
-                        ->queue(new DefenseRequestApproved(
-                            $defenseRequest,
-                            $student,
-                            'adviser',
-                            $comment
-                        ));
-                } else {
-                    Mail::to($student->email)
-                        ->queue(new DefenseRequestRejected(
-                            $defenseRequest,
-                            $student,
-                            'adviser',
-                            $comment
-                        ));
-                }
-            }
-
-            return response()->json([
-                'ok'=>true,
-                'request'=>[
-                    'id'=>$defenseRequest->id,
-                    'workflow_state'=>$defenseRequest->workflow_state,
-                    'status'=>$defenseRequest->status,
-                    'adviser_comments'=>$defenseRequest->adviser_comments,
-                    'coordinator_comments'=>$defenseRequest->coordinator_comments,
-                ],
-                'workflow_history'=>$defenseRequest->workflow_history
-            ]);
-        } catch (\Throwable $e) {
-            Log::error('adviserDecision error',[
-                'id'=>$defenseRequest->id,
-                'error'=>$e->getMessage()
-            ]);
-            return response()->json([
-                'error'=>app()->environment('local') ? $e->getMessage() : 'Internal error'
-            ],500);
+            $defenseRequest->coordinator_user_id = $coordinator->id;
+        } else {
+            $defenseRequest->workflow_state = 'adviser-rejected';
+            $defenseRequest->adviser_status = 'Rejected';
+            $defenseRequest->status = 'Rejected';
+            $defenseRequest->coordinator_user_id = null;
         }
+
+        $defenseRequest->last_status_updated_at = now();
+        $defenseRequest->last_status_updated_by = $user->id;
+        $defenseRequest->addWorkflowEntry(
+            $decision === 'approve' ? 'adviser-approved' : 'adviser-rejected',
+            $comment,
+            $user->id,
+            $current,
+            $defenseRequest->workflow_state
+        );
+        $defenseRequest->save();
+
+        return back()->with('success', 'Decision recorded.');
     }
 
     /** Coordinator approve / reject */
@@ -578,8 +505,6 @@ class DefenseRequestController extends Controller
         $user = Auth::user();
         if (!$user) abort(401);
 
-        $defenseRequest->attemptAutoComplete();
-
         return response()->json([
             'id' => $defenseRequest->id,
             'thesis_title' => $defenseRequest->thesis_title,
@@ -615,82 +540,57 @@ class DefenseRequestController extends Controller
         }
 
         $data = $request->validate([
-            'status' => 'required|in:Pending,Approved,Rejected'
+            'status' => 'required|in:Pending,Approved,Rejected,Completed'
         ]);
 
         $target = $data['status'];
         $originalState = $defenseRequest->workflow_state;
 
         try {
+            // --- Update coordinator_status and workflow_state ---
             if ($target === 'Approved') {
-                if (!in_array($defenseRequest->workflow_state, [
-                    'coordinator-approved','panels-assigned','scheduled','completed'
-                ])) {
-                    if (!in_array($defenseRequest->workflow_state, ['adviser-approved','coordinator-review'])) {
-                        return response()->json([
-                            'error'=>"Cannot approve from state '{$defenseRequest->workflow_state}'"
-                        ],422);
-                    }
-                    $defenseRequest->approveByCoordinator(null, $user->id);
-                } else {
-                    $defenseRequest->status = 'Approved';
-                    $defenseRequest->last_status_updated_at = now();
-                    $defenseRequest->last_status_updated_by = $user->id;
-                    $defenseRequest->save();
-                }
+                $defenseRequest->coordinator_status = 'Approved';
+                $defenseRequest->workflow_state = 'coordinator-approved';
+                $defenseRequest->status = 'Approved';
             } elseif ($target === 'Rejected') {
-                if (in_array($defenseRequest->workflow_state,['scheduled','completed'])) {
-                    return response()->json(['error'=>'Cannot reject a scheduled/completed defense'],422);
-                }
-
-                $defenseRequest->ensureSubmittedHistory();
-                $hist = $defenseRequest->workflow_history ?? [];
-
-                $defenseRequest->status = 'Rejected';
+                $defenseRequest->coordinator_status = 'Rejected';
                 $defenseRequest->workflow_state = 'coordinator-rejected';
-                $defenseRequest->coordinator_reviewed_at = now();
-                $defenseRequest->coordinator_reviewed_by = $user->id;
-                $defenseRequest->last_status_updated_at = now();
-                $defenseRequest->last_status_updated_by = $user->id;
-
-                $hist[] = [
-                    'action'=>'coordinator-rejected',
-                    'timestamp'=>now()->toISOString(),
-                    'user_id'=>$user->id,
-                    'user_name'=>$user->first_name.' '.$user->last_name,
-                    'comment'=>null,
-                    'from_state'=>$originalState,
-                    'to_state'=>'coordinator-rejected'
-                ];
-                $defenseRequest->workflow_history = $hist;
-                $defenseRequest->save();
-            } else { // Pending
-                if ($defenseRequest->workflow_state === 'coordinator-rejected') {
-                    $defenseRequest->workflow_state = 'adviser-approved';
-                    $defenseRequest->status = 'Pending';
-                    $hist = $defenseRequest->workflow_history ?? [];
-                    $hist[] = [
-                        'action'=>'retrieved',
-                        'timestamp'=>now()->toISOString(),
-                        'user_id'=>$user->id,
-                        'user_name'=>$user->first_name.' '.$user->last_name,
-                        'from_state'=>'coordinator-rejected',
-                        'to_state'=>'adviser-approved'
-                    ];
-                    $defenseRequest->workflow_history = $hist;
-                } else {
-                    $defenseRequest->status = 'Pending';
-                }
-                $defenseRequest->last_status_updated_at = now();
-                $defenseRequest->last_status_updated_by = $user->id;
-                $defenseRequest->save();
+                $defenseRequest->status = 'Rejected';
+            } elseif ($target === 'Pending') {
+                $defenseRequest->coordinator_status = 'Pending';
+                $defenseRequest->workflow_state = 'coordinator-review';
+                $defenseRequest->status = 'Pending';
+            } elseif ($target === 'Completed') {
+                $defenseRequest->coordinator_status = 'Approved'; // or 'Completed' if you want a new value
+                $defenseRequest->workflow_state = 'completed';
+                $defenseRequest->status = 'Completed';
             }
 
+            $defenseRequest->last_status_updated_at = now();
+            $defenseRequest->last_status_updated_by = $user->id;
+
+            // --- Add workflow history entry ---
+            $hist = $defenseRequest->workflow_history ?? [];
+            $hist[] = [
+                'action' => 'coordinator-status-updated',
+                'coordinator_status' => $defenseRequest->coordinator_status,
+                'timestamp' => now()->toISOString(),
+                'user_id' => $user->id,
+                'user_name' => $user->first_name . ' ' . $user->last_name,
+                'from_state' => $originalState,
+                'to_state' => $defenseRequest->workflow_state
+            ];
+            $defenseRequest->workflow_history = $hist;
+
+            $defenseRequest->save();
+
             return response()->json([
-                'ok'=>true,
-                'id'=>$defenseRequest->id,
-                'status'=>$defenseRequest->status,
-                'workflow_state'=>$defenseRequest->workflow_state
+                'ok' => true,
+                'request' => $defenseRequest,
+                'workflow_history' => $defenseRequest->workflow_history,
+                'workflow_state' => $defenseRequest->workflow_state,
+                'status' => $defenseRequest->status,
+                'coordinator_status' => $defenseRequest->coordinator_status,
             ]);
         } catch (\Throwable $e) {
             Log::error('updateStatus error',[
@@ -738,7 +638,7 @@ class DefenseRequestController extends Controller
         $data = $request->validate([
             'ids' => 'required|array|min:1',
             'ids.*' => 'integer|exists:defense_requests,id',
-            'status' => 'required|in:Pending,Approved,Rejected'
+            'status' => 'required|in:Pending,Approved,Rejected,Completed' // <-- add Completed
         ]);
 
         $updated = [];
@@ -1026,5 +926,315 @@ class DefenseRequestController extends Controller
             'coordinator-approved','scheduled','completed' => 'Approved',
             default => 'Pending',
         };
+    }
+
+    public function assignedPanelistsCount()
+    {
+        $fields = [
+            'defense_chairperson',
+            'defense_panelist1',
+            'defense_panelist2',
+            'defense_panelist3',
+            'defense_panelist4',
+        ];
+
+        $count = 0;
+        foreach (\App\Models\DefenseRequest::all() as $dr) {
+            foreach ($fields as $field) {
+                if (!empty($dr->$field)) {
+                    $count++;
+                }
+            }
+        }
+
+        return response()->json(['assignedPanelists' => $count]);
+    }
+
+    public function bulkApprove(Request $request)
+    {
+        $user = Auth::user();
+        if (!$user || !in_array($user->role, ['Faculty', 'Adviser'])) {
+            return response()->json(['error' => 'Unauthorized'], 403);
+        }
+
+        $data = $request->validate([
+            'ids' => 'required|array|min:1',
+            'ids.*' => 'integer|exists:defense_requests,id',
+        ]);
+
+        $coordinator = $user->coordinators()->first();
+        if (!$coordinator) {
+            return response()->json(['error' => 'No coordinator registered.'], 422);
+        }
+
+        $updated = [];
+        foreach ($data['ids'] as $id) {
+            $defenseRequest = DefenseRequest::find($id);
+            if (!$defenseRequest) continue;
+
+            // Only allow if in correct state
+            if (!in_array($defenseRequest->workflow_state, ['submitted', 'adviser-review', 'adviser-rejected'])) continue;
+
+            $fromState = $defenseRequest->workflow_state;
+            $defenseRequest->workflow_state = 'adviser-approved';
+            $defenseRequest->adviser_status = 'Approved'; // <-- NEW
+            $defenseRequest->status = 'Pending';
+            $defenseRequest->adviser_reviewed_at = now();
+            $defenseRequest->adviser_reviewed_by = $user->id;
+            $defenseRequest->last_status_updated_at = now();
+            $defenseRequest->last_status_updated_by = $user->id;
+            $defenseRequest->coordinator_user_id = $coordinator->id;
+
+            // Add workflow entry
+            $hist = $defenseRequest->workflow_history ?? [];
+            $hist[] = [
+                'action'=>'adviser-approved',
+                'timestamp'=>now()->toISOString(),
+                'user_id'=>$user->id,
+                'user_name'=>$user->first_name.' '.$user->last_name,
+                'from_state'=>$fromState,
+                'to_state'=>'adviser-approved'
+            ];
+            $defenseRequest->workflow_history = $hist;
+
+            $defenseRequest->save();
+            $updated[] = $id;
+        }
+
+        return response()->json([
+            'ok' => true,
+            'updated_ids' => $updated,
+        ]);
+    }
+
+    public function bulkReject(Request $request)
+    {
+        $user = Auth::user();
+        if (!$user || !in_array($user->role, ['Faculty', 'Adviser'])) {
+            return response()->json(['error' => 'Unauthorized'], 403);
+        }
+
+        $data = $request->validate([
+            'ids' => 'required|array|min:1',
+            'ids.*' => 'integer|exists:defense_requests,id',
+        ]);
+
+        $updated = [];
+        foreach ($data['ids'] as $id) {
+            $defenseRequest = DefenseRequest::find($id);
+            if (!$defenseRequest) continue;
+
+            // Only allow if in correct state
+            if (!in_array($defenseRequest->workflow_state, ['submitted', 'adviser-review', 'adviser-approved'])) continue;
+
+            $defenseRequest->workflow_state = 'adviser-rejected';
+            $defenseRequest->adviser_status = 'Rejected'; // <-- NEW
+            $defenseRequest->status = 'Rejected';
+            $defenseRequest->adviser_reviewed_at = now();
+            $defenseRequest->adviser_reviewed_by = $user->id;
+            $defenseRequest->last_status_updated_at = now();
+            $defenseRequest->last_status_updated_by = $user->id;
+            $defenseRequest->coordinator_user_id = null;
+
+            $defenseRequest->save();
+            $updated[] = $id;
+        }
+
+        return response()->json([
+            'ok' => true,
+            'updated_ids' => $updated,
+        ]);
+    }
+
+    public function bulkRetrieve(Request $request)
+    {
+        $user = Auth::user();
+        if (!$user || !in_array($user->role, ['Faculty', 'Adviser'])) {
+            return response()->json(['error' => 'Unauthorized'], 403);
+        }
+
+        $data = $request->validate([
+            'ids' => 'required|array|min:1',
+            'ids.*' => 'integer|exists:defense_requests,id',
+        ]);
+
+        $updated = [];
+        foreach ($data['ids'] as $id) {
+            $defenseRequest = DefenseRequest::find($id);
+            if (!$defenseRequest) continue;
+
+            // Only allow if in correct state
+            if (!in_array($defenseRequest->workflow_state, ['adviser-approved', 'adviser-rejected'])) continue;
+
+            $defenseRequest->workflow_state = 'adviser-review';
+            $defenseRequest->status = 'Pending';
+            $defenseRequest->coordinator_user_id = null;
+            $defenseRequest->save();
+            $updated[] = $id;
+        }
+
+        return response()->json([
+            'ok' => true,
+            'updated_ids' => $updated,
+        ]);
+    }
+
+    public function uploadDocuments(Request $request, DefenseRequest $defenseRequest)
+    {
+        $data = [];
+        if ($request->hasFile('ai_detection_certificate')) {
+            $file = $request->file('ai_detection_certificate');
+            $path = $file->store('defense_documents', 'public');
+            $defenseRequest->ai_detection_certificate = '/storage/' . $path;
+            $data['ai_detection_certificate'] = $defenseRequest->ai_detection_certificate;
+        }
+        if ($request->hasFile('endorsement_form')) {
+            $file = $request->file('endorsement_form');
+            $path = $file->store('defense_documents', 'public');
+            $defenseRequest->endorsement_form = '/storage/' . $path;
+            $data['endorsement_form'] = $defenseRequest->endorsement_form;
+        }
+        $defenseRequest->save();
+
+        return response()->json($data);
+    }
+
+    public function updateAdviserStatus(Request $request, DefenseRequest $defenseRequest)
+    {
+        $user = Auth::user();
+        if (!$user || !in_array($user->role, ['Faculty', 'Adviser'])) {
+            return response()->json(['error' => 'Unauthorized'], 403);
+        }
+
+        $data = $request->validate([
+            'adviser_status' => 'required|in:Pending,Approved,Rejected',
+            'coordinator_user_id' => 'nullable|integer|exists:users,id', // <-- add this
+        ]);
+
+        $fromState = $defenseRequest->workflow_state;
+        $defenseRequest->adviser_status = $data['adviser_status'];
+
+        // Update workflow_state based on status
+        if ($data['adviser_status'] === 'Approved') {
+            $defenseRequest->workflow_state = 'adviser-approved';
+            $defenseRequest->status = 'Pending';
+        } elseif ($data['adviser_status'] === 'Rejected') {
+            $defenseRequest->workflow_state = 'adviser-rejected';
+            $defenseRequest->status = 'Rejected';
+        } else {
+            $defenseRequest->workflow_state = 'adviser-review';
+            $defenseRequest->status = 'Pending';
+        }
+
+        $defenseRequest->adviser_reviewed_at = now();
+        $defenseRequest->adviser_reviewed_by = $user->id;
+        $defenseRequest->last_status_updated_at = now();
+        $defenseRequest->last_status_updated_by = $user->id;
+
+        // Add workflow entry
+        $hist = $defenseRequest->workflow_history ?? [];
+        $hist[] = [
+            'action' => 'adviser-status-updated',
+            'adviser_status' => $data['adviser_status'],
+            'timestamp' => now()->toISOString(),
+            'user_id' => $user->id,
+            'user_name' => $user->first_name . ' ' . $user->last_name,
+            'from_state' => $fromState,
+            'to_state' => $defenseRequest->workflow_state
+        ];
+        $defenseRequest->workflow_history = $hist;
+
+        // --- FIX: Use coordinator_user_id from request if present ---
+        if ($data['adviser_status'] === 'Approved') {
+            if (!empty($data['coordinator_user_id'])) {
+                $defenseRequest->coordinator_user_id = $data['coordinator_user_id'];
+            } elseif (!$defenseRequest->coordinator_user_id) {
+                // Fallback: Find the coordinator for this program/department
+                $coordinator = User::where('role', 'Coordinator')
+                    ->where('program', $defenseRequest->program)
+                    ->first();
+
+                if ($coordinator) {
+                    $defenseRequest->coordinator_user_id = $coordinator->id;
+                }
+            }
+        } else {
+            $defenseRequest->coordinator_user_id = null;
+        }
+
+        $defenseRequest->save();
+
+        return response()->json([
+            'ok' => true,
+            'request' => $defenseRequest,
+            'workflow_history' => $defenseRequest->workflow_history,
+        ]);
+    }
+
+    public function allForCoordinator(Request $request)
+    {
+        $user = Auth::user();
+        if (!$user || !in_array($user->role, ['Coordinator','Administrative Assistant','Dean'])) {
+            abort(403);
+        }
+
+        $query = DefenseRequest::query();
+
+        // Only show requests assigned to this coordinator (for all coordinator roles)
+        $query->where('coordinator_user_id', $user->id);
+
+        // Only show requests in states relevant to the coordinator
+        $query->whereIn('workflow_state', [
+            'adviser-approved',
+            'coordinator-review',
+            'coordinator-approved',
+            'panels-assigned',
+            'scheduled',
+            'completed',
+            'coordinator-rejected'
+        ]);
+
+        if ($s = $request->input('search')) {
+            $query->where(function($q) use ($s){
+                $q->where('thesis_title','like',"%$s%")
+                  ->orWhere('first_name','like',"%$s%")
+                  ->orWhere('last_name','like',"%$s%")
+                  ->orWhere('school_id','like',"%$s%");
+            });
+        }
+
+        $rows = $query
+            ->orderByDesc('created_at')
+            ->limit(500)
+            ->get([
+                'id','first_name','middle_name','last_name','school_id','program',
+                'thesis_title','defense_type','status','priority','workflow_state',
+                'scheduled_date','defense_mode','defense_venue','panels_assigned_at',
+                'defense_adviser','submitted_at'
+            ])
+            ->map(function($r){
+                return [
+                    'id' => $r->id,
+                    'first_name' => $r->first_name,
+                    'middle_name' => $r->middle_name,
+                    'last_name' => $r->last_name,
+                    'program' => $r->program,
+                    'thesis_title' => $r->thesis_title,
+                    'defense_type' => $r->defense_type,
+                    'priority' => $r->priority,
+                    'workflow_state' => $r->workflow_state,
+                    'status' => $r->status,
+                    'scheduled_date' => $r->scheduled_date?->format('Y-m-d'),
+                    'date_of_defense' => $r->scheduled_date
+                        ? $r->scheduled_date->format('Y-m-d')
+                        : ($r->created_at ? $r->created_at->format('Y-m-d') : null),
+                    'defense_mode' => $r->defense_mode,
+                    'mode_defense' => $r->defense_mode,
+                    'adviser' => $r->defense_adviser ?? '—',
+                    'submitted_at' => $r->submitted_at ? \Carbon\Carbon::parse($r->submitted_at)->format('Y-m-d H:i:s') : null,
+                ];
+            });
+
+        return response()->json($rows);
     }
 }

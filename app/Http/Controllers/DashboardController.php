@@ -102,6 +102,9 @@ class DashboardController extends Controller
         if (in_array($roleName, ['Faculty', 'Adviser']) && method_exists($user, 'generateAdviserCode') && !$user->adviser_code) {
             $user->generateAdviserCode();
         }
+        if (in_array($roleName, ['Coordinator']) && !$user->coordinator_code) {
+            $user->generateCoordinatorCode();
+        }
 
         // --- Add this block ---
         $studentsCount = 0;
@@ -160,6 +163,11 @@ class DashboardController extends Controller
                     ->latest()
                     ->first();
             }
+
+            if (in_array($roleName, ['Coordinator','Administrative Assistant','Dean'])) {
+                // Send ALL defense requests for coordinator
+                $defenseRequests = \App\Models\DefenseRequest::orderByDesc('created_at')->get();
+            }
         } catch (\Throwable $e) {
             // don't crash the dashboard for missing models/columns — log if you want
             Log::debug('Dashboard student-defense lookup failed: '.$e->getMessage());
@@ -183,7 +191,6 @@ class DashboardController extends Controller
                     'advisers' => method_exists($user, 'advisers') ? $user->advisers()->get(['id','name','first_name','last_name','email','adviser_code']) : collect(),
                 ],
             ],
-            // student-specific objects (may be null / empty if not applicable)
             'defenseRequirement' => $latestRequirement,
             'defenseRequest' => $defenseRequest,
             'defenseRequests' => $defenseRequests,

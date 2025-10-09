@@ -6,7 +6,7 @@ import {
   startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays,
   format, isSameMonth, isSameDay, isToday, parseISO
 } from "date-fns";
-// UI components
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -22,10 +22,10 @@ import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, X, GraduationCap, 
 import { createPortal } from 'react-dom';
 import { useDroppable, useDraggable, DndContext, closestCenter, type DragStartEvent, type DragEndEvent, type DragOverEvent, DragOverlay } from "@dnd-kit/core";
 
-const pad2 = (n:number)=> n.toString().padStart(2,'0');
+const pad2 = (n: number) => n.toString().padStart(2, '0');
 
-function truncate(s: string, n=28) {
-  return s.length > n ? s.slice(0,n)+'…' : s;
+function truncate(s: string, n = 28) {
+  return s.length > n ? s.slice(0, n) + '…' : s;
 }
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -59,7 +59,7 @@ type CalendarEntry = {
   __layout?: { top: number; height: number; leftPct: number; widthPct: number };
 };
 
-const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 const CURRENT_YEAR = new Date().getFullYear();
 const YEARS = Array.from({ length: 9 }, (_, i) => CURRENT_YEAR - 4 + i);
 
@@ -79,7 +79,7 @@ function buildTimeSlots() {
   for (let h = DAY_START_HOUR; h < DAY_END_HOUR; h++) {
     for (let m = 0; m < 60; m += MINUTE_STEP) {
       const minutes = (h - DAY_START_HOUR) * 60 + m;
-      const label = format(new Date(2020,1,1,h,m,0),'h:mm a');
+      const label = format(new Date(2020, 1, 1, h, m, 0), 'h:mm a');
       slots.push({ label, minutes, isHour: m === 0 });
     }
   }
@@ -89,20 +89,20 @@ const TIME_SLOTS = buildTimeSlots();
 
 function timeToOffsetMinutes(t?: string) {
   if (!t) return 0;
-  const [hh, mm] = t.split(':').map(v => parseInt(v,10));
+  const [hh, mm] = t.split(':').map(v => parseInt(v, 10));
   return (hh - DAY_START_HOUR) * 60 + mm;
 }
 
 function formatTime(t?: string) {
   if (!t) return '';
   const [hh, mm] = t.split(':');
-  const d = new Date(2020,0,1, Number(hh||0), Number(mm||0), 0);
-  return format(d,'h:mm a');
+  const d = new Date(2020, 0, 1, Number(hh || 0), Number(mm || 0), 0);
+  return format(d, 'h:mm a');
 }
 
 function computeOverlaps(dayEvents: CalendarEntry[]): CalendarEntry[] {
   if (!dayEvents.length) return dayEvents;
-  const sorted = [...dayEvents].sort((a,b) =>
+  const sorted = [...dayEvents].sort((a, b) =>
     (a.start || '').localeCompare(b.start || '') ||
     (a.end || '').localeCompare(b.end || '')
   );
@@ -141,40 +141,40 @@ function computeOverlaps(dayEvents: CalendarEntry[]): CalendarEntry[] {
 
 function getTextColor(bg?: string) {
   if (!bg) return '#064e3b';
-  const c = bg.replace('#','');
+  const c = bg.replace('#', '');
   if (c.length !== 6) return '#064e3b';
-  const r = parseInt(c.slice(0,2),16)/255;
-  const g = parseInt(c.slice(2,4),16)/255;
-  const b = parseInt(c.slice(4,6),16)/255;
-  const lum = 0.2126*Math.pow(r,2.2)+0.7152*Math.pow(g,2.2)+0.0722*Math.pow(b,2.2);
+  const r = parseInt(c.slice(0, 2), 16) / 255;
+  const g = parseInt(c.slice(2, 4), 16) / 255;
+  const b = parseInt(c.slice(4, 6), 16) / 255;
+  const lum = 0.2126 * Math.pow(r, 2.2) + 0.7152 * Math.pow(g, 2.2) + 0.0722 * Math.pow(b, 2.2);
   return lum > 0.55 ? '#1f2937' : '#ffffff';
 }
 function hexToRgb(hex: string) {
-  const m = hex.replace('#','').match(/^([0-9a-fA-F]{6})$/);
+  const m = hex.replace('#', '').match(/^([0-9a-fA-F]{6})$/);
   if (!m) return { r: 37, g: 99, b: 235 };
   const h = m[1];
   return {
-    r: parseInt(h.slice(0,2),16),
-    g: parseInt(h.slice(2,4),16),
-    b: parseInt(h.slice(4,6),16)
+    r: parseInt(h.slice(0, 2), 16),
+    g: parseInt(h.slice(2, 4), 16),
+    b: parseInt(h.slice(4, 6), 16)
   };
 }
 function getTheme(ev: CalendarEntry) {
   const base = (ev.defense ? '#059669' : (ev.color || '#2563eb')).toLowerCase();
-  function shade(hex:string, amt:number) {
-    const c = hex.replace('#','');
-    const num = parseInt(c,16);
+  function shade(hex: string, amt: number) {
+    const c = hex.replace('#', '');
+    const num = parseInt(c, 16);
     let r = (num >> 16) + amt;
     let g = (num >> 8 & 0x00FF) + amt;
     let b = (num & 0x0000FF) + amt;
-    r = Math.max(0, Math.min(255,r));
-    g = Math.max(0, Math.min(255,g));
-    b = Math.max(0, Math.min(255,b));
-    return '#'+((1<<24)+(r<<16)+(g<<8)+b).toString(16).slice(1);
+    r = Math.max(0, Math.min(255, r));
+    g = Math.max(0, Math.min(255, g));
+    b = Math.max(0, Math.min(255, b));
+    return '#' + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
   }
   const border = shade(base, -30);
   const { r, g, b } = hexToRgb(base);
-  const luminance = (0.299*r + 0.587*g + 0.114*b)/255;
+  const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
   const text = luminance > 0.55 ? '#1f2937' : '#ffffff';
   const subText = luminance > 0.55 ? '#111827' : 'rgba(255,255,255,0.85)';
   return { base, border, text, subText };
@@ -251,7 +251,7 @@ const DroppableCell = ({
     id: dateKey,
     disabled: !editMode,
   });
-  
+
   return (
     <div
       ref={setNodeRef}
@@ -294,7 +294,7 @@ const DroppableDayColumn = ({
     id: dateKey,
     disabled: !editMode,
   });
-  
+
   return (
     <div
       ref={setNodeRef}
@@ -454,7 +454,7 @@ const DraggableDayEvent = ({
       <div className="text-[11px] font-medium mt-0.5">
         {event.start && formatTime(event.start)}
         {event.end && ' – ' + formatTime(event.end)}
-        {event.raw.student_name && event.defense && ' • '+event.raw.student_name}
+        {event.raw.student_name && event.defense && ' • ' + event.raw.student_name}
       </div>
       {event.defense && event.raw.student_name && (
         <div className="text-[10px] truncate">
@@ -482,41 +482,41 @@ export default function SchedulePage({ canManage, userRole }: { canManage: boole
   const [showAdd, setShowAdd] = useState(false);
   const [adding, setAdding] = useState(false);
   const [addTitle, setAddTitle] = useState("");
-  const [addDate, setAddDate] = useState(format(new Date(),'yyyy-MM-dd'));
+  const [addDate, setAddDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [addStart, setAddStart] = useState("08:00");
   const [addEnd, setAddEnd] = useState("09:00");
   const [addAllDay, setAddAllDay] = useState(false);
   const [addDesc, setAddDesc] = useState("");
   const [addError, setAddError] = useState<string | null>(null);
   const [addColor, setAddColor] = useState<string>("#10b981");
-  const colorChoices = ["#10b981","#0ea5e9","#6366f1","#f59e0b","#ef4444","#d946ef","#14b8a6","#6d28d9"];
+  const colorChoices = ["#10b981", "#0ea5e9", "#6366f1", "#f59e0b", "#ef4444", "#d946ef", "#14b8a6", "#6d28d9"];
   const [search] = useState(""); // reserved for future filtering UI
 
   const [now, setNow] = useState(new Date());
   useEffect(() => {
-    const id = setInterval(()=> setNow(new Date()), 60000);
+    const id = setInterval(() => setNow(new Date()), 60000);
     return () => clearInterval(id);
   }, []);
 
   const weekGridRef = useRef<HTMLDivElement | null>(null);
   const dayGridRef = useRef<HTMLDivElement | null>(null);
-  const [weekCursor, setWeekCursor] = useState<{v:boolean; y:number}>({v:false, y:0});
-  const [dayCursor, setDayCursor] = useState<{v:boolean; y:number}>({v:false, y:0});
+  const [weekCursor, setWeekCursor] = useState<{ v: boolean; y: number }>({ v: false, y: 0 });
+  const [dayCursor, setDayCursor] = useState<{ v: boolean; y: number }>({ v: false, y: 0 });
 
   const handleWeekMove = (e: React.MouseEvent) => {
     if (!weekGridRef.current) return;
     const rect = weekGridRef.current.getBoundingClientRect();
     const y = Math.min(Math.max(0, e.clientY - rect.top), rect.height);
-    setWeekCursor({v:true,y});
+    setWeekCursor({ v: true, y });
   };
-  const handleWeekLeave = () => setWeekCursor({v:false,y:0});
+  const handleWeekLeave = () => setWeekCursor({ v: false, y: 0 });
   const handleDayMove = (e: React.MouseEvent) => {
     if (!dayGridRef.current) return;
     const rect = dayGridRef.current.getBoundingClientRect();
     const y = Math.min(Math.max(0, e.clientY - rect.top), rect.height);
-    setDayCursor({v:true,y});
+    setDayCursor({ v: true, y });
   };
-  const handleDayLeave = () => setDayCursor({v:false,y:0});
+  const handleDayLeave = () => setDayCursor({ v: false, y: 0 });
 
   // Defense requests
   useEffect(() => {
@@ -524,7 +524,7 @@ export default function SchedulePage({ canManage, userRole }: { canManage: boole
     fetch('/defense-requests/calendar')
       .then(r => r.json())
       .then((data: DefenseEvent[]) => setRawEvents(data || []))
-      .finally(()=> setLoading(false));
+      .finally(() => setLoading(false));
   }, []);
 
   // Non-defense events for month range
@@ -532,10 +532,10 @@ export default function SchedulePage({ canManage, userRole }: { canManage: boole
     const rangeStart = startOfMonth(monthCursor);
     const rangeEnd = endOfMonth(monthCursor);
     const qs = `?from=${encodeURIComponent(rangeStart.toISOString())}&to=${encodeURIComponent(rangeEnd.toISOString())}`;
-    fetch('/api/calendar/events'+qs)
+    fetch('/api/calendar/events' + qs)
       .then(r => r.json())
-      .then((items:any[]) => {
-        const toDate = (s:string) => new Date(s.replace(' ','T'));
+      .then((items: any[]) => {
+        const toDate = (s: string) => new Date(s.replace(' ', 'T'));
         const mapped: CalendarEntry[] = items
           .filter(it => it.origin === 'event')
           .map(it => {
@@ -544,15 +544,15 @@ export default function SchedulePage({ canManage, userRole }: { canManage: boole
             return {
               id: it.id,
               title: it.title || 'Event',
-              date: format(sDate,'yyyy-MM-dd'),
-              start: format(sDate,'HH:mm'),
-              end: eDate ? format(eDate,'HH:mm') : undefined,
+              date: format(sDate, 'yyyy-MM-dd'),
+              start: format(sDate, 'HH:mm'),
+              end: eDate ? format(eDate, 'HH:mm') : undefined,
               raw: {
-                id: Number((it.id||'').replace('ev-','')) || 0,
+                id: Number((it.id || '').replace('ev-', '')) || 0,
                 thesis_title: it.title,
-                date_of_defense: format(sDate,'yyyy-MM-dd'),
-                start_time: format(sDate,'HH:mm'),
-                end_time: eDate ? format(eDate,'HH:mm') : undefined,
+                date_of_defense: format(sDate, 'yyyy-MM-dd'),
+                start_time: format(sDate, 'HH:mm'),
+                end_time: eDate ? format(eDate, 'HH:mm') : undefined,
                 defense_type: undefined,
                 defense_mode: undefined,
                 defense_venue: undefined,
@@ -566,17 +566,17 @@ export default function SchedulePage({ canManage, userRole }: { canManage: boole
           });
         setExtraEvents(mapped);
       })
-      .catch(()=>{/* ignore */});
+      .catch(() => {/* ignore */ });
   }, [monthCursor]);
 
   // Merge events
   useEffect(() => {
     const defenseEntries = rawEvents.map(d => ({
-      id: 'def-'+d.id,
+      id: 'def-' + d.id,
       title: d.thesis_title || 'Thesis Defense',
       date: d.date_of_defense,
-      start: d.start_time ? d.start_time.slice(0,5) : undefined,
-      end: d.end_time ? d.end_time.slice(0,5) : undefined,
+      start: d.start_time ? d.start_time.slice(0, 5) : undefined,
+      end: d.end_time ? d.end_time.slice(0, 5) : undefined,
       raw: d,
       defense: true
     })) as CalendarEntry[];
@@ -595,13 +595,13 @@ export default function SchedulePage({ canManage, userRole }: { canManage: boole
   }, [events, search]);
 
   const monthWeeks = useMemo(() => {
-    const s = startOfWeek(startOfMonth(monthCursor), { weekStartsOn:0 });
-    const e = endOfWeek(endOfMonth(monthCursor), { weekStartsOn:0 });
+    const s = startOfWeek(startOfMonth(monthCursor), { weekStartsOn: 0 });
+    const e = endOfWeek(endOfMonth(monthCursor), { weekStartsOn: 0 });
     const rows: Date[][] = [];
     let d = s;
     while (d <= e) {
       const row: Date[] = [];
-      for (let i=0;i<7;i++) { row.push(d); d = addDays(d,1); }
+      for (let i = 0; i < 7; i++) { row.push(d); d = addDays(d, 1); }
       rows.push(row);
     }
     return rows;
@@ -613,12 +613,12 @@ export default function SchedulePage({ canManage, userRole }: { canManage: boole
       (map[ev.date] ||= []).push(ev);
     });
     Object.values(map).forEach(list =>
-      list.sort((a,b)=> (a.start||'23:59:59').localeCompare(b.start||'23:59:59'))
+      list.sort((a, b) => (a.start || '23:59:59').localeCompare(b.start || '23:59:59'))
     );
     return map;
   }, [filtered]);
 
-  const selectedDateStr = selectedDate ? format(selectedDate,'yyyy-MM-dd') : '';
+  const selectedDateStr = selectedDate ? format(selectedDate, 'yyyy-MM-dd') : '';
   const dayEvents = useMemo(
     () => (selectedDateStr ? (eventsByDate[selectedDateStr] || []) : []),
     [eventsByDate, selectedDateStr]
@@ -626,15 +626,15 @@ export default function SchedulePage({ canManage, userRole }: { canManage: boole
 
   const weekDays = useMemo(() => {
     const base = selectedDate || new Date();
-    const s = startOfWeek(base, { weekStartsOn:0 });
-    return Array.from({ length:7 }, (_,i)=> addDays(s,i));
+    const s = startOfWeek(base, { weekStartsOn: 0 });
+    return Array.from({ length: 7 }, (_, i) => addDays(s, i));
   }, [selectedDate]);
 
   const weekMap = useMemo(() => {
     const map: Record<string, CalendarEntry[]> = {};
     weekDays.forEach(d => {
-      const k = format(d,'yyyy-MM-dd');
-      map[k] = (eventsByDate[k] || []).map(e => ({...e}));
+      const k = format(d, 'yyyy-MM-dd');
+      map[k] = (eventsByDate[k] || []).map(e => ({ ...e }));
       computeOverlaps(map[k]);
     });
     return map;
@@ -662,8 +662,8 @@ export default function SchedulePage({ canManage, userRole }: { canManage: boole
     }
   }, [view, monthCursor, selectedDate]);
 
-  function truncate(s: string, n=28) {
-    return s.length > n ? s.slice(0,n)+'…' : s;
+  function truncate(s: string, n = 28) {
+    return s.length > n ? s.slice(0, n) + '…' : s;
   }
 
   const [editMode, setEditMode] = useState(false);
@@ -693,15 +693,15 @@ export default function SchedulePage({ canManage, userRole }: { canManage: boole
 
   function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event;
-    
+
     // Always reset drag states first
     resetDragState();
-    
+
     if (!active || !over) return;
-    
+
     const dragData = active.data.current as DragData;
     if (!dragData || dragData.event.defense) return;
-    
+
     if (dragData.fromDate !== over.id) {
       setEditEvent({
         ...dragData.event,
@@ -741,7 +741,7 @@ export default function SchedulePage({ canManage, userRole }: { canManage: boole
             )}
             style={{ gridTemplateColumns: "repeat(7, 1fr)", top: VIEW_HEADER_OFFSET }}
           >
-            {['SUN','MON','TUE','WED','THU','FRI','SAT'].map(d => (
+            {['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'].map(d => (
               <div key={d} className={cn(
                 "h-12 border-r last:border-r-0 flex items-center justify-center text-[10px] font-semibold uppercase tracking-wide",
                 GRID_LINE
@@ -753,7 +753,7 @@ export default function SchedulePage({ canManage, userRole }: { canManage: boole
           <div className="grid grid-cols-7">
             {weeks.map(week =>
               week.map(day => {
-                const key = format(day,'yyyy-MM-dd');
+                const key = format(day, 'yyyy-MM-dd');
                 const list = eventsByDate[key] || [];
                 const outMonth = !isSameMonth(day, monthCursor);
                 const today = isToday(day);
@@ -775,16 +775,16 @@ export default function SchedulePage({ canManage, userRole }: { canManage: boole
                           !today && !selected && "text-muted-foreground"
                         )}
                       >
-                        {format(day,'d')}
+                        {format(day, 'd')}
                       </span>
                       {list.length > 3 && (
                         <span className="text-[10px] text-muted-foreground mt-0.5">
-                          +{list.length-3}
+                          +{list.length - 3}
                         </span>
                       )}
                     </div>
                     <div className="space-y-0.5">
-                      {list.slice(0,3).map(ev => (
+                      {list.slice(0, 3).map(ev => (
                         <DraggableEventCard
                           key={ev.id}
                           event={ev}
@@ -864,7 +864,7 @@ export default function SchedulePage({ canManage, userRole }: { canManage: boole
                     GRID_LINE
                   )}
                 >
-                  <span className="uppercase tracking-wide text-[10px]">{format(d,'EEE')}</span>
+                  <span className="uppercase tracking-wide text-[10px]">{format(d, 'EEE')}</span>
                   <span
                     className={cn(
                       "w-7 h-7 rounded-full flex items-center justify-center text-[12px] font-semibold",
@@ -872,7 +872,7 @@ export default function SchedulePage({ canManage, userRole }: { canManage: boole
                       !today && isSelected && "bg-rose-500/80 text-white dark:bg-rose-500/80"
                     )}
                   >
-                    {format(d,'d')}
+                    {format(d, 'd')}
                   </span>
                 </div>
               );
@@ -889,18 +889,18 @@ export default function SchedulePage({ canManage, userRole }: { canManage: boole
               {TIME_SLOTS.map(slot => (
                 <div key={slot.minutes} className="relative flex items-center justify-end pr-3" style={{ height: SLOT_HEIGHT }}>
                   <span className={cn("select-none text-[10px]", slot.isHour ? "font-semibold text-muted-foreground" : "text-muted-foreground/50")}>
-                    {slot.label.replace(':00','')}
+                    {slot.label.replace(':00', '')}
                   </span>
                 </div>
               ))}
             </div>
             <div className="absolute top-0 bottom-0 right-0 grid" style={{ left: TIME_COL_WIDTH, gridTemplateColumns: "repeat(7, 1fr)" }}>
               {weekDays.map(d => {
-                const dateKey = format(d,'yyyy-MM-dd');
+                const dateKey = format(d, 'yyyy-MM-dd');
                 const list = weekMap[dateKey] || [];
                 return (
                   <DroppableDayColumn
-                    key={'week-col-'+dateKey}
+                    key={'week-col-' + dateKey}
                     dateKey={dateKey}
                     editMode={editMode}
                     isDragOver={draggedOverDate === dateKey}
@@ -916,10 +916,10 @@ export default function SchedulePage({ canManage, userRole }: { canManage: boole
                     >
                       {Array.from({ length: DAY_END_HOUR - DAY_START_HOUR }, (_, i) =>
                         i % 2 === 1 ? (
-                          <div key={'stripe-'+i} className="absolute inset-x-0 bg-muted/15 dark:bg-zinc-800/30" style={{ top: i * 2 * SLOT_HEIGHT, height: SLOT_HEIGHT * 2 }} />
+                          <div key={'stripe-' + i} className="absolute inset-x-0 bg-muted/15 dark:bg-zinc-800/30" style={{ top: i * 2 * SLOT_HEIGHT, height: SLOT_HEIGHT * 2 }} />
                         ) : null
                       )}
-                      {TIME_SLOTS.map((slot,i) => (
+                      {TIME_SLOTS.map((slot, i) => (
                         <div
                           key={slot.minutes}
                           className={cn("absolute left-0 right-0", slot.isHour ? `${GRID_LINE} border-b-2` : `${GRID_LINE} border-b`)}
@@ -996,8 +996,8 @@ export default function SchedulePage({ canManage, userRole }: { canManage: boole
 
   const renderDay = () => {
     const d = selectedDate || new Date();
-    const key = format(d,'yyyy-MM-dd');
-    const list = computeOverlaps((eventsByDate[key] || []).map(e => ({...e})));
+    const key = format(d, 'yyyy-MM-dd');
+    const list = computeOverlaps((eventsByDate[key] || []).map(e => ({ ...e })));
     const totalHeight = TIME_SLOTS.length * SLOT_HEIGHT;
     let dayCursorTime: string | null = null;
     if (dayCursor.v) {
@@ -1024,12 +1024,12 @@ export default function SchedulePage({ canManage, userRole }: { canManage: boole
             <div className="flex items-end gap-4">
               <div className="flex flex-col leading-none">
                 <span className="text-4xl font-bold tracking-tight">
-                  {format(d,'d')}
+                  {format(d, 'd')}
                 </span>
               </div>
               <div className="flex flex-col">
-                <span className="text-lg font-semibold">{format(d,'MMMM')}</span>
-                <span className="text-sm text-muted-foreground">{format(d,'EEEE, yyyy')}</span>
+                <span className="text-lg font-semibold">{format(d, 'MMMM')}</span>
+                <span className="text-sm text-muted-foreground">{format(d, 'EEEE, yyyy')}</span>
               </div>
             </div>
             <Badge variant="secondary" className="text-[11px] px-3 py-1">
@@ -1053,18 +1053,18 @@ export default function SchedulePage({ canManage, userRole }: { canManage: boole
                   {TIME_SLOTS.map(slot => (
                     <div key={slot.minutes} className="relative flex items-center justify-end pr-3" style={{ height: SLOT_HEIGHT }}>
                       <span className={cn("text-[11px] select-none", slot.isHour ? "font-semibold text-muted-foreground" : "text-muted-foreground/50")}>
-                        {slot.label.replace(':00','')}
+                        {slot.label.replace(':00', '')}
                       </span>
                     </div>
                   ))}
                 </div>
                 <div className="absolute left-[90px] right-0 top-0 bottom-0 bg-white dark:bg-zinc-900">
-                  {Array.from({length: DAY_END_HOUR - DAY_START_HOUR}, (_,i)=> (
+                  {Array.from({ length: DAY_END_HOUR - DAY_START_HOUR }, (_, i) => (
                     i % 2 === 1 ? (
-                      <div key={'stripe-'+i} className="absolute inset-x-0 bg-muted/15 dark:bg-zinc-800/30" style={{ top: i * 2 * SLOT_HEIGHT, height: SLOT_HEIGHT * 2 }} />
+                      <div key={'stripe-' + i} className="absolute inset-x-0 bg-muted/15 dark:bg-zinc-800/30" style={{ top: i * 2 * SLOT_HEIGHT, height: SLOT_HEIGHT * 2 }} />
                     ) : null
                   ))}
-                  {TIME_SLOTS.map((slot,i) => (
+                  {TIME_SLOTS.map((slot, i) => (
                     <div
                       key={slot.minutes}
                       className={cn("absolute left-0 right-0", slot.isHour ? `${GRID_LINE} border-b-2` : `${GRID_LINE} border-b`)}
@@ -1076,7 +1076,7 @@ export default function SchedulePage({ canManage, userRole }: { canManage: boole
                       key={ev.id}
                       event={ev}
                       editMode={editMode}
-                      onClick={(e)=> {
+                      onClick={(e) => {
                         e.stopPropagation();
                         if (!editMode) {
                           if (canManage && !ev.defense) {
@@ -1180,92 +1180,92 @@ export default function SchedulePage({ canManage, userRole }: { canManage: boole
 
   const DetailPanel = detailEvent && view === 'day'
     ? createPortal(
-        <div
-          ref={sidePanelRef}
-            className={cn(
-              "fixed right-4 w-[400px] max-h-[82vh] flex flex-col rounded-lg overflow-hidden shadow-lg border z-[2500]",
-              "transition-all duration-200 ease-out will-change-transform will-change-opacity origin-top",
-              (detailAnimating || detailClosing)
-                ? "opacity-0 translate-y-2 scale-[0.97]"
-                : "opacity-100 translate-y-0 scale-100"
-            )}
-            style={{ top: TOOLBAR_STICKY_TOP + TOOLBAR_HEIGHT + 14 }}
-        >
-          {(() => {
-            const ev = detailEvent;
-            const t = getTheme(ev);
-            const dateStr = format(parseISO(ev.date), 'PPP');
-            const timeStr =
-              (ev.start ? format(parseISO('2020-01-01T'+ev.start),'h:mm a') : '') +
-              (ev.end ? ' – '+format(parseISO('2020-01-01T'+ev.end),'h:mm a') : (ev.start ? '' : ''));
-            const desc = (ev.description && ev.description.trim()) || '—';
-            return (
-              <>
-                <div
-                  className="px-4 py-3 flex items-start gap-3"
-                  style={{ background: t.base, borderBottom: `1px solid ${t.border}`, color: t.text }}
-                >
-                  <div className="mt-0.5 shrink-0">
-                    {ev.defense
-                      ? <GraduationCap className="h-5 w-5" style={{ color: t.text }} />
-                      : <CalendarIcon className="h-5 w-5" style={{ color: t.text }} />}
-                  </div>
-                  <div className="flex-1">
-                    <h2 className="font-semibold text-sm leading-snug pr-6" style={{ color: t.text }} title={ev.title}>
-                      {ev.title}
-                    </h2>
-                    <div className="text-[11px] font-medium mt-0.5" style={{ color: t.subText }}>
-                      {dateStr}{timeStr && ' • '+timeStr}
-                    </div>
-                  </div>
-                  <Button variant="ghost" size="icon" className="h-7 w-7 -m-1" onClick={closeDetail}>
-                    <X className="h-4 w-4" />
-                  </Button>
+      <div
+        ref={sidePanelRef}
+        className={cn(
+          "fixed right-4 w-[400px] max-h-[82vh] flex flex-col rounded-lg overflow-hidden shadow-lg border z-[2500]",
+          "transition-all duration-200 ease-out will-change-transform will-change-opacity origin-top",
+          (detailAnimating || detailClosing)
+            ? "opacity-0 translate-y-2 scale-[0.97]"
+            : "opacity-100 translate-y-0 scale-100"
+        )}
+        style={{ top: TOOLBAR_STICKY_TOP + TOOLBAR_HEIGHT + 14 }}
+      >
+        {(() => {
+          const ev = detailEvent;
+          const t = getTheme(ev);
+          const dateStr = format(parseISO(ev.date), 'PPP');
+          const timeStr =
+            (ev.start ? format(parseISO('2020-01-01T' + ev.start), 'h:mm a') : '') +
+            (ev.end ? ' – ' + format(parseISO('2020-01-01T' + ev.end), 'h:mm a') : (ev.start ? '' : ''));
+          const desc = (ev.description && ev.description.trim()) || '—';
+          return (
+            <>
+              <div
+                className="px-4 py-3 flex items-start gap-3"
+                style={{ background: t.base, borderBottom: `1px solid ${t.border}`, color: t.text }}
+              >
+                <div className="mt-0.5 shrink-0">
+                  {ev.defense
+                    ? <GraduationCap className="h-5 w-5" style={{ color: t.text }} />
+                    : <CalendarIcon className="h-5 w-5" style={{ color: t.text }} />}
                 </div>
-                <div className="flex-1 overflow-y-auto p-4 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100">
-                  <div className="space-y-4">
-                    <div className="space-y-3">
-                      <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                        {ev.defense ? 'Defense Details' : 'Event Details'}
-                      </div>
-                      <dl className="grid grid-cols-3 gap-x-2 gap-y-1 text-[11px]">
-                        <dt className="font-medium text-muted-foreground">Date</dt>
-                        <dd className="col-span-2">{dateStr}</dd>
-
-                        <dt className="font-medium text-muted-foreground">Time</dt>
-                        <dd className="col-span-2">{timeStr || '—'}</dd>
-
-                        {ev.defense && (
-                          <>
-                            <dt className="font-medium text-muted-foreground">Student</dt>
-                            <dd className="col-span-2">{ev.raw.student_name || '—'}</dd>
-
-                            <dt className="font-medium text-muted-foreground">Program</dt>
-                            <dd className="col-span-2">{ev.raw.program || '—'}</dd>
-
-                            <dt className="font-medium text-muted-foreground">Type</dt>
-                            <dd className="col-span-2 uppercase">{ev.raw.defense_type || '—'}</dd>
-
-                            <dt className="font-medium text-muted-foreground">Mode</dt>
-                            <dd className="col-span-2">{ev.raw.defense_mode || '—'}</dd>
-
-                            <dt className="font-medium text-muted-foreground">Venue</dt>
-                            <dd className="col-span-2">{ev.raw.defense_venue || '—'}</dd>
-                          </>
-                        )}
-
-                        <dt className="font-medium text-muted-foreground">Description</dt>
-                        <dd className="col-span-2 whitespace-pre-wrap">{desc}</dd>
-                      </dl>
-                    </div>
+                <div className="flex-1">
+                  <h2 className="font-semibold text-sm leading-snug pr-6" style={{ color: t.text }} title={ev.title}>
+                    {ev.title}
+                  </h2>
+                  <div className="text-[11px] font-medium mt-0.5" style={{ color: t.subText }}>
+                    {dateStr}{timeStr && ' • ' + timeStr}
                   </div>
                 </div>
-              </>
-            );
-          })()}
-        </div>,
-        document.body
-      )
+                <Button variant="ghost" size="icon" className="h-7 w-7 -m-1" onClick={closeDetail}>
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+              <div className="flex-1 overflow-y-auto p-4 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100">
+                <div className="space-y-4">
+                  <div className="space-y-3">
+                    <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                      {ev.defense ? 'Defense Details' : 'Event Details'}
+                    </div>
+                    <dl className="grid grid-cols-3 gap-x-2 gap-y-1 text-[11px]">
+                      <dt className="font-medium text-muted-foreground">Date</dt>
+                      <dd className="col-span-2">{dateStr}</dd>
+
+                      <dt className="font-medium text-muted-foreground">Time</dt>
+                      <dd className="col-span-2">{timeStr || '—'}</dd>
+
+                      {ev.defense && (
+                        <>
+                          <dt className="font-medium text-muted-foreground">Student</dt>
+                          <dd className="col-span-2">{ev.raw.student_name || '—'}</dd>
+
+                          <dt className="font-medium text-muted-foreground">Program</dt>
+                          <dd className="col-span-2">{ev.raw.program || '—'}</dd>
+
+                          <dt className="font-medium text-muted-foreground">Type</dt>
+                          <dd className="col-span-2 uppercase">{ev.raw.defense_type || '—'}</dd>
+
+                          <dt className="font-medium text-muted-foreground">Mode</dt>
+                          <dd className="col-span-2">{ev.raw.defense_mode || '—'}</dd>
+
+                          <dt className="font-medium text-muted-foreground">Venue</dt>
+                          <dd className="col-span-2">{ev.raw.defense_venue || '—'}</dd>
+                        </>
+                      )}
+
+                      <dt className="font-medium text-muted-foreground">Description</dt>
+                      <dd className="col-span-2 whitespace-pre-wrap">{desc}</dd>
+                    </dl>
+                  </div>
+                </div>
+              </div>
+            </>
+          );
+        })()}
+      </div>,
+      document.body
+    )
     : null;
 
   useEffect(() => {
@@ -1274,8 +1274,8 @@ export default function SchedulePage({ canManage, userRole }: { canManage: boole
       setAddTitle(editEvent.title);
       setAddDate(editEvent.date);
       setAddAllDay(false);
-      setAddStart(editEvent.start ? editEvent.start.slice(0,5) : "08:00");
-      setAddEnd(editEvent.end ? editEvent.end.slice(0,5) : (editEvent.start ? editEvent.start.slice(0,5) : "09:00"));
+      setAddStart(editEvent.start ? editEvent.start.slice(0, 5) : "08:00");
+      setAddEnd(editEvent.end ? editEvent.end.slice(0, 5) : (editEvent.start ? editEvent.start.slice(0, 5) : "09:00"));
       setAddDesc(editEvent.description || "");
       setAddColor(editEvent.color || "#10b981");
     }
@@ -1287,24 +1287,24 @@ export default function SchedulePage({ canManage, userRole }: { canManage: boole
 
   const handlePrint = () => {
     try {
-      const sorted = [...filtered].slice().sort((a,b)=>
+      const sorted = [...filtered].slice().sort((a, b) =>
         a.date === b.date
-          ? (a.start||'23:59').localeCompare(b.start||'23:59')
+          ? (a.start || '23:59').localeCompare(b.start || '23:59')
           : a.date.localeCompare(b.date)
       );
-      const esc = (s:string)=> (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+      const esc = (s: string) => (s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
       const rows = sorted.map(ev => {
-        const dateStr = format(parseISO(ev.date),'MMM d, yyyy');
+        const dateStr = format(parseISO(ev.date), 'MMM d, yyyy');
         const timeStr =
-          (ev.start ? format(parseISO('2020-01-01T'+ev.start),'h:mm a') : '') +
-          (ev.end ? ' – '+format(parseISO('2020-01-01T'+ev.end),'h:mm a') : '');
+          (ev.start ? format(parseISO('2020-01-01T' + ev.start), 'h:mm a') : '') +
+          (ev.end ? ' – ' + format(parseISO('2020-01-01T' + ev.end), 'h:mm a') : '');
         return `<tr>
           <td>${esc(dateStr)}</td>
           <td>${esc(timeStr)}</td>
           <td>${esc(ev.title)}</td>
-          <td>${esc(ev.raw.student_name||'—')}</td>
-          <td>${esc(ev.raw.program||'—')}</td>
-          <td>${esc(ev.raw.defense_type||'—')}</td>
+          <td>${esc(ev.raw.student_name || '—')}</td>
+          <td>${esc(ev.raw.program || '—')}</td>
+          <td>${esc(ev.raw.defense_type || '—')}</td>
           <td>${esc(ev.raw.defense_venue || ev.raw.defense_mode || '—')}</td>
         </tr>`;
       }).join('') || `<tr><td colspan="7" style="text-align:center;padding:16px;color:#666;">No scheduled defenses.</td></tr>`;
@@ -1346,7 +1346,7 @@ export default function SchedulePage({ canManage, userRole }: { canManage: boole
         URL.revokeObjectURL(url);
         return;
       }
-      setTimeout(()=> URL.revokeObjectURL(url), 5000);
+      setTimeout(() => URL.revokeObjectURL(url), 5000);
     } catch (e) {
       console.error('Print failed', e);
       alert('Print failed.');
@@ -1388,29 +1388,22 @@ export default function SchedulePage({ canManage, userRole }: { canManage: boole
                 <Button className="hover:cursor-pointer" variant="outline" onClick={goToday}>Today</Button>
               </div>
               {/* View switcher tabs */}
-              <div className="inline-flex rounded-md border border-zinc-200 dark:border-zinc-800 overflow-hidden h-8">
-                {([
-                  { key: 'day', label: 'Day', icon: <CalendarDays className="mr-1 h-4 w-4" /> },
-                  { key: 'week', label: 'Week', icon: <CalendarRange className="mr-1 h-4 w-4" /> },
-                  { key: 'month', label: 'Month', icon: <Calendar className="mr-1 h-4 w-4" /> },
-                ] as const).map(v => (
-                  <button
-                    key={v.key}
-                    type="button"
-                    onClick={()=> setView(v.key)}
-                    className={cn(
-                      "px-3 text-xs font-medium uppercase tracking-wide  focus:outline-none flex items-center cursor-pointer",
-                      view === v.key
-                      ? "bg-primary text-white dark:bg-rose-500 dark:text-white"
-                      : "bg-white dark:bg-zinc-900 hover:bg-muted/60 dark:hover:bg-zinc-800 text-muted-foreground"
-                    )}
-                  >
-                    {v.icon}
-                    {v.label}
-                  </button>
-                ))}
-
-              </div>
+              <Tabs value={view} onValueChange={v => setView(v as typeof view)}>
+                <TabsList>
+                  <TabsTrigger className="hover:cursor-pointer" value="day">
+                    <CalendarDays className="mr-1 h-4 w-4" />
+                    Day
+                  </TabsTrigger>
+                  <TabsTrigger className="hover:cursor-pointer" value="week">
+                    <CalendarRange className="mr-1 h-4 w-4" />
+                    Week
+                  </TabsTrigger>
+                  <TabsTrigger className="hover:cursor-pointer" value="month">
+                    <Calendar className="mr-1 h-4 w-4" />
+                    Month
+                  </TabsTrigger>
+                </TabsList>
+              </Tabs>
               {/* Month/Year dropdowns (only in month view) */}
               {view === 'month' && (
                 <div className="flex items-center gap-2 ml-2">
@@ -1555,7 +1548,7 @@ export default function SchedulePage({ canManage, userRole }: { canManage: boole
                               <button
                                 key={c}
                                 type="button"
-                                onClick={()=> setAddColor(c)}
+                                onClick={() => setAddColor(c)}
                                 className={cn(
                                   "w-6 h-6 rounded-full ring-2 transition",
                                   addColor === c ? "ring-black scale-110" : "ring-transparent hover:ring-gray-400"
@@ -1573,22 +1566,22 @@ export default function SchedulePage({ canManage, userRole }: { canManage: boole
                             type="button"
                             variant="destructive"
                             size="sm"
-                            onClick={async ()=>{
-                              if(!editEvent) return;
-                              if(!confirm('Delete this event?')) return;
+                            onClick={async () => {
+                              if (!editEvent) return;
+                              if (!confirm('Delete this event?')) return;
                               setAdding(true);
                               try {
                                 const csrf = getCsrf();
                                 const resp = await fetch(`/api/calendar/events/${editEvent.raw.id}`, {
-                                  method:'DELETE',
-                                  headers:{'Accept':'application/json','X-CSRF-TOKEN': csrf}
+                                  method: 'DELETE',
+                                  headers: { 'Accept': 'application/json', 'X-CSRF-TOKEN': csrf }
                                 });
-                                if(!resp.ok) throw new Error('Delete failed');
+                                if (!resp.ok) throw new Error('Delete failed');
                                 setExtraEvents(prev => prev.filter(p => p.raw.id !== editEvent.raw.id));
                                 setShowAdd(false);
                                 setEditEvent(null);
-                              } catch(e:any){
-                                setAddError(e.message||'Delete failed');
+                              } catch (e: any) {
+                                setAddError(e.message || 'Delete failed');
                               } finally {
                                 setAdding(false);
                               }
@@ -1597,7 +1590,7 @@ export default function SchedulePage({ canManage, userRole }: { canManage: boole
                             <Trash2 className="h-4 w-4 mr-1" /> Delete
                           </Button>
                         )}
-                        <Button variant="outline" size="sm" onClick={()=> {
+                        <Button variant="outline" size="sm" onClick={() => {
                           setShowAdd(false);
                           resetDragState(); // Reset drag state on cancel
                         }} disabled={adding}>Cancel</Button>
@@ -1614,7 +1607,7 @@ export default function SchedulePage({ canManage, userRole }: { canManage: boole
                             setAdding(true);
                             try {
                               const csrf = getCsrf();
-                              const payload:any = {
+                              const payload: any = {
                                 title: addTitle.trim(),
                                 description: addDesc.trim() || null,
                                 start: addAllDay ? `${addDate} 00:00:00` : `${addDate} ${addStart}:00`,
@@ -1626,28 +1619,28 @@ export default function SchedulePage({ canManage, userRole }: { canManage: boole
                               if (isEditing && editEvent) {
                                 resp = await fetch(`/api/calendar/events/${editEvent.raw.id}`, {
                                   method: 'PUT',
-                                  headers: { 'Content-Type':'application/json','Accept':'application/json','X-CSRF-TOKEN': csrf },
+                                  headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-TOKEN': csrf },
                                   body: JSON.stringify(payload)
                                 });
                               } else {
                                 resp = await fetch('/api/calendar/events', {
                                   method: 'POST',
-                                  headers: { 'Content-Type':'application/json','Accept':'application/json','X-CSRF-TOKEN': csrf },
+                                  headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-TOKEN': csrf },
                                   body: JSON.stringify(payload)
                                 });
                               }
                               if (!resp.ok) {
-                                const j = await resp.json().catch(()=> ({}));
+                                const j = await resp.json().catch(() => ({}));
                                 throw new Error(j.message || j.error || 'Save failed');
                               }
-                              const j = await resp.json().catch(()=> ({}));
+                              const j = await resp.json().catch(() => ({}));
                               const eventId = j.event_id || (editEvent && editEvent.raw.id);
                               const s = addAllDay ? "00:00" : addStart;
                               const e = addAllDay ? "23:59" : addEnd;
                               setExtraEvents(prev => {
                                 const others = prev.filter(p => p.raw.id !== eventId);
                                 const newEntry: CalendarEntry = {
-                                  id: 'ev-'+eventId,
+                                  id: 'ev-' + eventId,
                                   title: addTitle.trim(),
                                   date: addDate,
                                   start: s,
@@ -1673,7 +1666,7 @@ export default function SchedulePage({ canManage, userRole }: { canManage: boole
                               setShowAdd(false);
                               setEditEvent(null);
                               resetDragState(); // Reset drag state on successful save
-                            } catch(err:any) {
+                            } catch (err: any) {
                               setAddError(err.message || 'Error');
                             } finally {
                               setAdding(false);
@@ -1718,38 +1711,38 @@ export default function SchedulePage({ canManage, userRole }: { canManage: boole
                     )}
                     {filtered
                       .slice()
-                      .sort((a,b)=> a.date === b.date
-                        ? (a.start||'23:59').localeCompare(b.start||'23:59')
+                      .sort((a, b) => a.date === b.date
+                        ? (a.start || '23:59').localeCompare(b.start || '23:59')
                         : a.date.localeCompare(b.date))
                       .map(ev => (
-                      <TableRow
-                        key={ev.id}
-                        className="cursor-pointer hover:bg-muted/40"
-                        onClick={() => {
-                          setSelectedDate(parseISO(ev.date));
-                          setView('day');
-                        }}
-                      >
-                        <TableCell className="text-[11px]">
-                          {format(parseISO(ev.date),'MMM d, yyyy')}
-                        </TableCell>
-                        <TableCell className="text-[11px] whitespace-nowrap">
-                          {ev.start && format(parseISO('2020-01-01T'+ev.start),'h:mm a')}
-                          {ev.end && ' – '+format(parseISO('2020-01-01T'+ev.end),'h:mm a')}
-                        </TableCell>
-                        <TableCell className="text-[11px] truncate max-w-[240px]" title={ev.title}>
-                          {ev.title}
-                        </TableCell>
-                        <TableCell className="text-[11px] truncate max-w-[160px]" title={ev.raw.student_name}>
-                          {ev.raw.student_name || '—'}
-                        </TableCell>
-                        <TableCell className="text-[11px]">{ev.raw.program || '—'}</TableCell>
-                        <TableCell className="text-[11px]">{ev.raw.defense_type || '—'}</TableCell>
-                        <TableCell className="text-[11px]">
-                          {ev.raw.defense_venue || ev.raw.defense_mode || '—'}
-                        </TableCell>
-                      </TableRow>
-                    ))}
+                        <TableRow
+                          key={ev.id}
+                          className="cursor-pointer hover:bg-muted/40"
+                          onClick={() => {
+                            setSelectedDate(parseISO(ev.date));
+                            setView('day');
+                          }}
+                        >
+                          <TableCell className="text-[11px]">
+                            {format(parseISO(ev.date), 'MMM d, yyyy')}
+                          </TableCell>
+                          <TableCell className="text-[11px] whitespace-nowrap">
+                            {ev.start && format(parseISO('2020-01-01T' + ev.start), 'h:mm a')}
+                            {ev.end && ' – ' + format(parseISO('2020-01-01T' + ev.end), 'h:mm a')}
+                          </TableCell>
+                          <TableCell className="text-[11px] truncate max-w-[240px]" title={ev.title}>
+                            {ev.title}
+                          </TableCell>
+                          <TableCell className="text-[11px] truncate max-w-[160px]" title={ev.raw.student_name}>
+                            {ev.raw.student_name || '—'}
+                          </TableCell>
+                          <TableCell className="text-[11px]">{ev.raw.program || '—'}</TableCell>
+                          <TableCell className="text-[11px]">{ev.raw.defense_type || '—'}</TableCell>
+                          <TableCell className="text-[11px]">
+                            {ev.raw.defense_venue || ev.raw.defense_mode || '—'}
+                          </TableCell>
+                        </TableRow>
+                      ))}
                   </TableBody>
                 </Table>
               </div>
