@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 use App\Models\User;
 use Carbon\Carbon;
 
@@ -12,15 +13,17 @@ class DefenseRequest extends Model
     protected $guarded = [];
 
     protected $casts = [
-        'workflow_history'        => 'array',
-        'last_status_updated_at'  => 'datetime',
-        'created_at'              => 'datetime',
-        'updated_at'              => 'datetime',
-        'adviser_reviewed_at'     => 'datetime',
-        'coordinator_reviewed_at' => 'datetime',
-        'submitted_at'            => 'datetime',
-        'scheduled_date'          => 'datetime',
-        'scheduled_end_time'      => 'string', // added
+        'workflow_history'           => 'array',
+        'last_status_updated_at'     => 'datetime',
+        'created_at'                 => 'datetime',
+        'updated_at'                 => 'datetime',
+        'adviser_reviewed_at'        => 'datetime',
+        'coordinator_reviewed_at'    => 'datetime',
+        'submitted_at'               => 'datetime',
+        'scheduled_date'             => 'datetime',
+        'scheduled_end_time'         => 'string',
+        'coordinator_assigned_at'    => 'datetime',
+        'coordinator_manually_assigned' => 'boolean',
     ];
 
     public function user()                { return $this->belongsTo(User::class,'submitted_by'); }
@@ -31,6 +34,8 @@ class DefenseRequest extends Model
     public function lastStatusUpdater()   { return $this->belongsTo(User::class,'last_status_updated_by'); }
     public function adviserReviewer()     { return $this->belongsTo(User::class,'adviser_reviewed_by'); }
     public function coordinatorReviewer() { return $this->belongsTo(User::class,'coordinator_reviewed_by'); }
+    public function coordinatorUser()     { return $this->belongsTo(User::class,'coordinator_user_id'); }
+    public function coordinatorAssignedBy() { return $this->belongsTo(User::class,'coordinator_assigned_by'); }
 
     public function scopeForAdviser($q, User $user)
     {
@@ -233,5 +238,92 @@ class DefenseRequest extends Model
 
     public function generatedDocuments(){
       return $this->hasMany(GeneratedDocument::class);
+    }
+
+    /**
+     * Assign a coordinator to this defense request based on the student's program.
+     * 
+     * @param string $program The student's program to match coordinator
+     * @param int|null $assignedBy The user ID who triggered the assignment (system or user)
+     * @param bool $isManual Whether this is a manual assignment (true) or auto-assignment (false)
+     * @param string|null $notes Optional notes for the assignment audit trail
+     * @return self
+     */
+    public function assignCoordinator(
+        string $program,
+        ?int $assignedBy = null,
+        bool $isManual = false,
+        ?string $notes = null
+    ): self {
+        // PRIORITY 1: Check database for coordinator assignment
+        $coordinator = \App\Models\CoordinatorProgramAssignment::getCoordinatorForProgram($program);
+        
+        // FALLBACK: Use CoordinatorProgramService if no database assignment found
+        if (!$coordinator) {
+            $coordinatorEmail = \App\Services\CoordinatorProgramService::getCoordinatorByProgram($program);
+            
+            if (!$coordinatorEmail) {
+                Log::warning('No coordinator found for program in database or service', [
+                    'defense_request_id' => $this->id,
+                    'program' => $program,
+                    'student_id' => $this->submitted_by,
+                ]);
+                return $this;
+            }
+
+            // Find the coordinator user by email
+            $coordinator = User::where('email', $coordinatorEmail)->first();
+        }
+        
+        if (!$coordinator) {
+            Log::warning('Coordinator not found or does not exist', [
+                'defense_request_id' => $this->id,
+                'program' => $program,
+            ]);
+            return $this;
+        }
+
+        // Set coordinator assignment fields
+        $this->coordinator_user_id = $coordinator->id;
+        $this->coordinator_assigned_at = now();
+        $this->coordinator_assigned_by = $assignedBy ?? Auth::id();
+        $this->coordinator_manually_assigned = $isManual;
+        $this->coordinator_assignment_notes = $notes;
+
+        // Add to workflow history for audit trail
+        $this->addWorkflowEntry(
+            'coordinator-assigned',
+            $notes ?? ($isManual ? 'Manually assigned by administrator' : 'Auto-assigned based on program'),
+            $this->coordinator_assigned_by,
+            null,
+            null
+        );
+
+        Log::info('Coordinator assigned to defense request', [
+            'defense_request_id' => $this->id,
+            'program' => $program,
+            'coordinator_id' => $coordinator->id,
+            'coordinator_name' => trim($coordinator->first_name . ' ' . $coordinator->last_name),
+            'coordinator_email' => $coordinator->email,
+            'assigned_by' => $this->coordinator_assigned_by,
+            'is_manual' => $isManual,
+        ]);
+
+        $this->save();
+        return $this;
+    }
+
+    /**
+     * Get the assigned coordinator's display name for UI.
+     * 
+     * @return string|null
+     */
+    public function getAssignedCoordinatorNameAttribute(): ?string
+    {
+        if (!$this->coordinatorUser) {
+            return null;
+        }
+        
+        return trim($this->coordinatorUser->first_name . ' ' . $this->coordinatorUser->last_name);
     }
 }

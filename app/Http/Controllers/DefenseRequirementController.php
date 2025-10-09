@@ -6,6 +6,7 @@ use App\Models\DefenseRequest;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\DB;
 
 class DefenseRequirementController extends Controller
 {
@@ -15,7 +16,7 @@ class DefenseRequirementController extends Controller
         $requirements = DefenseRequest::where('submitted_by', Auth::id())->orderByDesc('created_at')->get();
         $defenseRequest = DefenseRequest::where('school_id', $user->school_id)->latest()->first();
 
-        $acceptDefense = \DB::table('settings')->where('key', 'accept_defense')->value('value');
+        $acceptDefense = DB::table('settings')->where('key', 'accept_defense')->value('value');
         $acceptDefense = $acceptDefense === null ? true : $acceptDefense === '1';
 
         return inertia('student/submissions/defense-requirements/Index', [
@@ -109,7 +110,7 @@ class DefenseRequirementController extends Controller
 
     public function store(Request $request)
     {
-        $acceptDefense = \DB::table('settings')->where('key', 'accept_defense')->value('value');
+        $acceptDefense = DB::table('settings')->where('key', 'accept_defense')->value('value');
         $acceptDefense = $acceptDefense === null ? true : $acceptDefense === '1'; // <-- FIXED
         if (!$acceptDefense) {
             return back()->withErrors(['message' => 'Defense requirement submissions are currently closed.']);

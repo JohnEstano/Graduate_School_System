@@ -5,7 +5,12 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\PanelistController;
 use App\Http\Controllers\DefenseRequestController;
 use App\Http\Controllers\NotificationController;
+<<<<<<< HEAD
 use App\Http\Controllers\DocumentTemplateController;
+=======
+use App\Http\Controllers\Api\StudentSearchController;
+use App\Http\Controllers\Api\ComprehensiveExamEligibilityController;
+>>>>>>> 3136fe4f80343e8706d41b387829b62667235988
 
 // Authenticated API routes
 Route::middleware('auth:sanctum')->group(function () {
@@ -33,10 +38,15 @@ Route::middleware('auth:sanctum')->group(function () {
     // Route::post('notifications/read/{notification}', [NotificationController::class, 'markAsRead']);
     // Route::post('notifications/read-all', [NotificationController::class, 'markAllAsRead']);
 
+<<<<<<< HEAD
     // Document Templates API
     Route::get('/document-templates', [DocumentTemplateController::class,'index']);
     Route::get('/document-templates/{template}', [DocumentTemplateController::class,'show']);
     Route::post('/document-templates', [DocumentTemplateController::class,'store']);
     Route::put('/document-templates/{template}/fields', [DocumentTemplateController::class,'updateFields']);
     Route::delete('/document-templates/{template}', [DocumentTemplateController::class,'destroy']);
+=======
+    // Student search API
+    Route::get('students/search', [StudentSearchController::class, 'search']);
+>>>>>>> 3136fe4f80343e8706d41b387829b62667235988
 });

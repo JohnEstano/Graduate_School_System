@@ -4,6 +4,7 @@ namespace App\Services;
 
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Cache;
 use Carbon\Carbon;
 use App\Models\{LegacyCredential, LegacyRecordCache, DataAccessAudit};
 use Throwable;
@@ -960,5 +961,557 @@ class LegacyPortalClient
             $meta['employee_photo_url'] = html_entity_decode($m2[1]);
         }
         return $meta;
+    }
+
+    /**
+     * Fetch clearance data from legacy system
+     */
+    public function fetchClearanceData(array $legacySession, int $semesterId): array
+    {
+        $config = config('legacy');
+        $base = $config['base_url'];
+        $cookieHeader = $legacySession['cookie_header'] ?? '';
+
+        try {
+            $response = Http::withHeaders([
+                'User-Agent' => $config['user_agent'],
+                'Accept' => 'application/json, text/plain, */*',
+                'Accept-Language' => 'en-US,en;q=0.9',
+                'Cookie' => $cookieHeader,
+                'Sec-Fetch-Site' => 'same-origin',
+                'Sec-Fetch-Mode' => 'cors',
+                'Sec-Fetch-Dest' => 'empty',
+                'Referer' => $base . '/index.cfm?fa=clearance.clearance',
+            ])->withOptions([
+                'timeout' => $config['timeout'],
+            ])->get($base . '/index.cfm', [
+                'fa' => 'clearance.json_get_clearance_list',
+                'semester_id' => $semesterId
+            ]);
+
+            if (!$response->ok()) {
+                Log::error('Failed to fetch clearance data', [
+                    'status' => $response->status(),
+                    'semester_id' => $semesterId
+                ]);
+                return [];
+            }
+
+            $data = $response->json();
+            
+            if (!is_array($data)) {
+                Log::warning('Clearance data is not array', [
+                    'type' => gettype($data),
+                    'semester_id' => $semesterId
+                ]);
+                return [];
+            }
+
+            Log::info('Clearance data fetched successfully', [
+                'semester_id' => $semesterId,
+                'areas_count' => count($data)
+            ]);
+
+            return $data;
+
+        } catch (\Exception $e) {
+            Log::error('Exception while fetching clearance data', [
+                'error' => $e->getMessage(),
+                'semester_id' => $semesterId
+            ]);
+            return [];
+        }
+    }
+
+    /**
+     * Fetch student information by school ID (keyword search)
+     */
+    public function fetchStudentBySchoolId(array $legacySession, string $schoolId): array
+    {
+        $config = config('legacy');
+        $base = $config['base_url'];
+        $cookieHeader = $legacySession['cookie_header'] ?? '';
+
+        try {
+            Log::info('=== FETCHING STUDENT BY SCHOOL ID ===', [
+                'school_id' => $schoolId
+            ]);
+
+            $response = Http::withHeaders([
+                'User-Agent' => $config['user_agent'],
+                'Accept' => 'application/json, text/plain, */*',
+                'Accept-Language' => 'en-US,en;q=0.9',
+                'Cookie' => $cookieHeader,
+                'Sec-Fetch-Site' => 'same-origin',
+                'Sec-Fetch-Mode' => 'cors',
+                'Sec-Fetch-Dest' => 'empty',
+                'Referer' => $base . '/index.cfm?fa=student.student_academic_record_index',
+            ])->withOptions([
+                'timeout' => $config['timeout'],
+            ])->get($base . '/index.cfm', [
+                'fa' => 'student.json_get_student_by_lastname',
+                'keyword' => $schoolId
+            ]);
+
+            if (!$response->ok()) {
+                Log::error('Failed to fetch student by school ID', [
+                    'status' => $response->status(),
+                    'school_id' => $schoolId
+                ]);
+                return [];
+            }
+
+            $data = $response->json();
+            
+            if (!is_array($data)) {
+                Log::warning('Student data is not array', [
+                    'type' => gettype($data),
+                    'school_id' => $schoolId
+                ]);
+                return [];
+            }
+
+            Log::info('Student data fetched successfully', [
+                'school_id' => $schoolId,
+                'students_found' => count($data),
+                'student_id' => $data[0]['student_id'] ?? null,
+                'degree_program_id' => $data[0]['degree_program_id'] ?? null
+            ]);
+
+            return $data;
+
+        } catch (\Exception $e) {
+            Log::error('Exception while fetching student by school ID', [
+                'error' => $e->getMessage(),
+                'school_id' => $schoolId
+            ]);
+            return [];
+        }
+    }
+
+    /**
+     * Comprehensive data scraping on login - fetches all necessary data for eligibility checking
+     */
+    public function performLoginDataScraping(array $legacySession, ?string $schoolId = null): array
+    {
+        Log::info('=== STARTING COMPREHENSIVE LOGIN DATA SCRAPING ===', [
+            'school_id' => $schoolId,
+            'timestamp' => now()
+        ]);
+
+        $scrapedData = [
+            'timestamp' => now(),
+            'success' => false,
+            'academic_records' => [],
+            'semesters' => [],
+            'current_semester_id' => null,
+            'clearance_data' => [],
+            'student_info' => [],
+            'all_semester_grades' => [],
+            'errors' => []
+        ];
+
+        try {
+            // 1. Fetch and parse academic records to get semester information
+            Log::info('Step 1: Fetching academic records and semester data');
+            try {
+                $academicHtml = $this->fetchAcademicRecordsHtml($legacySession);
+                $parsed = $this->parseAcademicRecords($academicHtml);
+                $init = $this->extractAcademicInitParams($academicHtml);
+                
+                $scrapedData['academic_records'] = $parsed;
+                $scrapedData['semesters'] = $parsed['semesters'] ?? [];
+                $scrapedData['current_semester_id'] = $parsed['current_semester_id'] ?? null;
+                $scrapedData['init_params'] = $init;
+                
+                Log::info('Academic records scraped successfully', [
+                    'semesters_found' => count($scrapedData['semesters']),
+                    'current_semester' => $scrapedData['current_semester_id']
+                ]);
+            } catch (\Exception $e) {
+                $error = 'Failed to fetch academic records: ' . $e->getMessage();
+                $scrapedData['errors'][] = $error;
+                Log::error($error);
+            }
+
+            // 2. Fetch student information by school ID if provided
+            if ($schoolId) {
+                Log::info('Step 2: Fetching student information by school ID');
+                try {
+                    $studentInfo = $this->fetchStudentBySchoolId($legacySession, $schoolId);
+                    $scrapedData['student_info'] = $studentInfo;
+                    
+                    Log::info('Student information scraped successfully', [
+                        'student_records_found' => count($studentInfo)
+                    ]);
+                } catch (\Exception $e) {
+                    $error = 'Failed to fetch student info: ' . $e->getMessage();
+                    $scrapedData['errors'][] = $error;
+                    Log::error($error);
+                }
+            }
+
+            // 3. Fetch clearance data for all available semesters
+            Log::info('Step 3: Fetching clearance data for all semesters');
+            $scrapedData['clearance_data'] = [];
+            
+            foreach ($scrapedData['semesters'] as $semester) {
+                $semesterId = (int)$semester['id'];
+                try {
+                    $clearanceData = $this->fetchClearanceData($legacySession, $semesterId);
+                    $scrapedData['clearance_data'][$semesterId] = [
+                        'semester_id' => $semesterId,
+                        'semester_label' => $semester['label'],
+                        'data' => $clearanceData,
+                        'areas_count' => count($clearanceData),
+                        'timestamp' => now()
+                    ];
+                    
+                    Log::info('Clearance data scraped for semester', [
+                        'semester_id' => $semesterId,
+                        'areas_found' => count($clearanceData)
+                    ]);
+                } catch (\Exception $e) {
+                    $error = "Failed to fetch clearance for semester {$semesterId}: " . $e->getMessage();
+                    $scrapedData['errors'][] = $error;
+                    Log::error($error);
+                }
+            }
+
+            // 4. Fetch grades data for all semesters
+            if ($init) {
+                Log::info('Step 4: Fetching grades for all semesters');
+                $scrapedData['all_semester_grades'] = [];
+                
+                foreach ($scrapedData['semesters'] as $semester) {
+                    $semesterId = $semester['id'];
+                    try {
+                        $rawJson = $this->fetchAcademicRecordJson(
+                            $legacySession,
+                            $init['student_id'],
+                            $init['educational_level_id'],
+                            $semesterId
+                        );
+                        
+                        $normalized = array_map(fn($r) => $this->normalizeAcademicRecordRow($r), $rawJson);
+                        
+                        $scrapedData['all_semester_grades'][$semesterId] = [
+                            'semester_id' => $semesterId,
+                            'semester_label' => $semester['label'],
+                            'grades' => $normalized,
+                            'records_count' => count($normalized),
+                            'timestamp' => now()
+                        ];
+                        
+                        Log::info('Grades scraped for semester', [
+                            'semester_id' => $semesterId,
+                            'records_found' => count($normalized)
+                        ]);
+                    } catch (\Exception $e) {
+                        $error = "Failed to fetch grades for semester {$semesterId}: " . $e->getMessage();
+                        $scrapedData['errors'][] = $error;
+                        Log::error($error);
+                    }
+                }
+            }
+
+            $scrapedData['success'] = true;
+            Log::info('=== COMPREHENSIVE DATA SCRAPING COMPLETED SUCCESSFULLY ===', [
+                'semesters_processed' => count($scrapedData['semesters']),
+                'clearance_semesters' => count($scrapedData['clearance_data']),
+                'grade_semesters' => count($scrapedData['all_semester_grades']),
+                'errors_count' => count($scrapedData['errors'])
+            ]);
+
+        } catch (\Exception $e) {
+            $error = 'Critical error during data scraping: ' . $e->getMessage();
+            $scrapedData['errors'][] = $error;
+            $scrapedData['success'] = false;
+            Log::error($error, ['trace' => $e->getTraceAsString()]);
+        }
+
+        return $scrapedData;
+    }
+
+    /**
+     * Cache scraped data for faster access
+     */
+    public function cacheScrapedData(int $userId, array $scrapedData): bool
+    {
+        try {
+            $cacheKey = "scraped_data_user_{$userId}";
+            $cacheTime = 3600; // Cache for 1 hour
+            
+            Cache::put($cacheKey, $scrapedData, $cacheTime);
+            
+            Log::info('Scraped data cached successfully', [
+                'user_id' => $userId,
+                'cache_key' => $cacheKey,
+                'cache_duration' => $cacheTime
+            ]);
+            
+            return true;
+        } catch (\Exception $e) {
+            Log::error('Failed to cache scraped data', [
+                'user_id' => $userId,
+                'error' => $e->getMessage()
+            ]);
+            return false;
+        }
+    }
+
+    /**
+     * Get cached scraped data
+     */
+    public function getCachedScrapedData(int $userId): ?array
+    {
+        try {
+            $cacheKey = "scraped_data_user_{$userId}";
+            $data = Cache::get($cacheKey);
+            
+            if ($data) {
+                Log::info('Retrieved cached scraped data', [
+                    'user_id' => $userId,
+                    'cache_key' => $cacheKey
+                ]);
+            }
+            
+            return $data;
+        } catch (\Exception $e) {
+            Log::error('Failed to get cached scraped data', [
+                'user_id' => $userId,
+                'error' => $e->getMessage()
+            ]);
+            return null;
+        }
+    }
+
+    /**
+     * Persist legacy student info (student_id, degree_program_id) for authenticated user.
+     */
+    public function saveStudentInfoToDb($user, $studentInfo)
+    {
+        try {
+            if (isset($studentInfo['student_id']) && isset($studentInfo['degree_program_id'])) {
+                \App\Models\LegacyStudentInfo::updateOrCreate([
+                    'user_id' => $user->id,
+                ], [
+                    'student_id' => $studentInfo['student_id'],
+                    'degree_program_id' => $studentInfo['degree_program_id'],
+                ]);
+                
+                Log::info('Saved student info to database', [
+                    'user_id' => $user->id,
+                    'student_id' => $studentInfo['student_id'],
+                    'degree_program_id' => $studentInfo['degree_program_id']
+                ]);
+            }
+        } catch (\Exception $e) {
+            Log::error('Failed to save student info to database', [
+                'user_id' => $user->id,
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
+
+    /**
+     * Persist academic records for the authenticated user and semester.
+     * Accepts array of normalized course records.
+     */
+    public function saveAcademicRecordsToDb($user, $semesterId, $records)
+    {
+        try {
+            foreach ($records as $rec) {
+                \App\Models\LegacyAcademicRecord::updateOrCreate([
+                    'user_id' => $user->id,
+                    'semester_id' => $semesterId,
+                    'course_code' => $rec['code'] ?? $rec['course'] ?? null,
+                ], [
+                    'course_title' => $rec['title'] ?? $rec['course_title'] ?? null,
+                    'units' => $rec['units'] ?? null,
+                    'type' => $rec['course_type'] ?? $rec['type'] ?? null,
+                    'prelim' => $rec['prelim'] ?? null,
+                    'midterm' => $rec['midterm'] ?? null,
+                    'finals' => $rec['finals'] ?? null,
+                    'average' => $rec['average'] ?? null,
+                    'units_earned' => $rec['units_earned'] ?? null,
+                    'section' => $rec['section'] ?? null,
+                    'is_complete' => $this->isCourseComplete($rec),
+                ]);
+            }
+            
+            Log::info('Saved academic records to database', [
+                'user_id' => $user->id,
+                'semester_id' => $semesterId,
+                'records_count' => count($records)
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Failed to save academic records to database', [
+                'user_id' => $user->id,
+                'semester_id' => $semesterId,
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
+
+    /**
+     * Helper to determine if a course is complete (no grade is 40).
+     */
+    protected function isCourseComplete($rec)
+    {
+        foreach (['prelim','midterm','finals'] as $g) {
+            if (isset($rec[$g]) && $rec[$g] == 40) return false;
+        }
+        return true;
+    }
+
+    /**
+     * Persist clearance status for the authenticated user and semester.
+     * Accepts array of clearance areas.
+     */
+    public function saveClearanceStatusToDb($user, $semesterId, $clearanceAreas)
+    {
+        try {
+            foreach ($clearanceAreas as $area) {
+                $status = 'complete';
+                if (isset($area['requirements'])) {
+                    foreach ($area['requirements'] as $req) {
+                        if (isset($req['default_cleared']) && $req['default_cleared'] == 0) {
+                            $status = 'missing';
+                            break;
+                        }
+                    }
+                }
+                
+                // Special handling for Cashier
+                if (($area['label'] ?? '') === 'Cashier') {
+                    foreach ($area['requirements'] ?? [] as $req) {
+                        if (isset($req['remarks']) && $req['remarks'] === 'Full Payment' && $req['default_cleared'] == 0) {
+                            $status = 'outstanding_balance';
+                            break;
+                        }
+                    }
+                }
+                
+                \App\Models\LegacyClearanceStatus::updateOrCreate([
+                    'user_id' => $user->id,
+                    'semester_id' => $semesterId,
+                    'area' => $area['label'] ?? null,
+                ], [
+                    'status' => $status,
+                    'details' => json_encode($area),
+                ]);
+            }
+            
+            Log::info('Saved clearance status to database', [
+                'user_id' => $user->id,
+                'semester_id' => $semesterId,
+                'areas_count' => count($clearanceAreas)
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Failed to save clearance status to database', [
+                'user_id' => $user->id,
+                'semester_id' => $semesterId,
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
+
+    /**
+     * Persist all scraped data to the database for the user.
+     */
+    public function persistAllScrapedData($user, $scrapedData)
+    {
+        Log::info('=== PERSISTING ALL SCRAPED DATA TO DATABASE ===', [
+            'user_id' => $user->id,
+            'timestamp' => now()
+        ]);
+        
+        // Save student info
+        if (!empty($scrapedData['student_info'][0])) {
+            $this->saveStudentInfoToDb($user, $scrapedData['student_info'][0]);
+        }
+        
+        // Save academic records and grades for all semesters
+        if (!empty($scrapedData['all_semester_grades'])) {
+            foreach ($scrapedData['all_semester_grades'] as $semesterId => $semData) {
+                $this->saveAcademicRecordsToDb($user, $semesterId, $semData['grades'] ?? []);
+            }
+        }
+        
+        // Save clearance data for all semesters
+        if (!empty($scrapedData['clearance_data'])) {
+            foreach ($scrapedData['clearance_data'] as $semesterId => $clearance) {
+                $this->saveClearanceStatusToDb($user, $semesterId, $clearance['data'] ?? []);
+            }
+        }
+        
+        Log::info('=== FINISHED PERSISTING ALL SCRAPED DATA ===', [
+            'user_id' => $user->id
+        ]);
+    }
+
+    /**
+     * Fetch student clearance data by last name keyword
+     * Returns array of clearance records with account_id, student_number, etc.
+     * 
+     * Endpoint: index.cfm?fa=clearance.json_get_student_clearance_by_keyword&keyword={LASTNAME}
+     * Response: [{"account_id": 119597, "student_number": "230000001047", "firstname": "GEOFFREY", ...}]
+     */
+    public function fetchClearanceByKeyword(array $session, string $keyword): ?array
+    {
+        $config = config('legacy');
+        $base = $config['base_url'];
+        $cookieHeader = $this->buildCookieHeader($session['cookies'] ?? []);
+        
+        $url = $base . '/index.cfm?fa=clearance.json_get_student_clearance_by_keyword&keyword=' . urlencode(strtoupper($keyword));
+        
+        Log::info('Fetching clearance by keyword', [
+            'keyword' => $keyword,
+            'url' => $url
+        ]);
+        
+        try {
+            $response = Http::withHeaders([
+                'User-Agent' => $config['user_agent'],
+                'Accept' => 'application/json, text/html, */*',
+                'Accept-Language' => 'en-GB,en;q=0.9',
+                'Cookie' => $cookieHeader,
+            ])->withOptions([
+                'timeout' => $config['timeout'],
+            ])->get($url);
+            
+            if (!$response->ok()) {
+                Log::warning('Clearance API request failed', [
+                    'status' => $response->status(),
+                    'keyword' => $keyword
+                ]);
+                return null;
+            }
+            
+            $data = json_decode($response->body(), true);
+            
+            if (!is_array($data)) {
+                Log::warning('Clearance API returned non-array', [
+                    'keyword' => $keyword,
+                    'body' => $response->body()
+                ]);
+                return null;
+            }
+            
+            Log::info('Clearance API response received', [
+                'keyword' => $keyword,
+                'records_count' => count($data)
+            ]);
+            
+            return $data;
+            
+        } catch (\Throwable $e) {
+            Log::error('Failed to fetch clearance by keyword', [
+                'keyword' => $keyword,
+                'error' => $e->getMessage()
+            ]);
+            return null;
+        }
     }
 }

@@ -20,8 +20,8 @@ export default function AppearanceToggleDropdown({ className }: { className?: st
 
     return (
         <DropdownMenu>
-            <DropdownMenuTrigger className={className}>
-                <Button variant="ghost" size="icon" className="h-9 w-9 hover:cursor-pointer rounded-md">
+            <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className={`h-9 w-9 hover:cursor-pointer rounded-md ${className || ''}`}>
                     {getCurrentIcon()}
                     <span className="sr-only">Toggle theme</span>
                 </Button>

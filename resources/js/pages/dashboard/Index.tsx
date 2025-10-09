@@ -8,6 +8,7 @@ import CoordinatorDashboard from './dashboard-layouts/coordinator-dashboard';
 import DeanDashboard from './dashboard-layouts/dean-dashboard';
 import StudentDashboard from './dashboard-layouts/student-dashboard';
 import FacultyDashboard from './dashboard-layouts/faculty-dashboard';
+import SuperAdminDashboard from './dashboard-layouts/super-admin-dashboard';
 
 const breadcrumbs: BreadcrumbItem[] = [{ title: 'Dashboard', href: '/dashboard' }];
 
@@ -44,6 +45,10 @@ export default function DashboardIndex() {
             break;
         case 'Faculty':
             ComponentToRender = FacultyDashboard;
+            break;
+        case 'Super Admin':
+        case 'SuperAdmin':
+            ComponentToRender = SuperAdminDashboard;
             break;
         default:
             ComponentToRender = () => (
