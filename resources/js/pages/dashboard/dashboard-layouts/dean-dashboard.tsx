@@ -26,6 +26,12 @@ type PageProps = {
             role: string;
         } | null;
     };
+    stats?: {
+        total_programs: number;
+        pending_approvals: number;
+        faculty_count: number;
+        graduate_students: number;
+    };
 };
 
 function getFormattedDate() {
@@ -81,6 +87,12 @@ function getTodaysSchedules(defenseRequests: DefenseRequest[]) {
 export default function DeanDashboard() {
     const {
         auth: { user },
+        stats = {
+            total_programs: 0,
+            pending_approvals: 0,
+            faculty_count: 0,
+            graduate_students: 0
+        }
     } = usePage<PageProps>().props;
 
     const [allRequests, setAllRequests] = useState<DefenseRequest[]>([]);

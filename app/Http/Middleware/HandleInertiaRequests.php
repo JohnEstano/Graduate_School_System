@@ -41,7 +41,7 @@ class HandleInertiaRequests extends Middleware
 
         $sharedUser = $u ? [
             'id'         => $u->id,
-            'name'       => $u->name,
+            'name'       => $u->display_name ?? ($u->first_name . ' ' . $u->last_name),
             'first_name' => $u->first_name ?? '',
             'last_name'  => $u->last_name ?? '',
             'email'      => $u->email,

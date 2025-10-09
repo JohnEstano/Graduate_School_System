@@ -16,8 +16,18 @@ class AdviserStudentController extends Controller
 
     public function store(Request $request)
     {
+        $request->validate([
+            'student_id' => 'required|integer|exists:users,id'
+        ]);
+
         $adviser = $request->user();
         $studentId = $request->input('student_id');
+        
+        // Check if student is already registered with this adviser
+        if ($adviser->advisedStudents()->where('student_id', $studentId)->exists()) {
+            return response()->json(['error' => 'Student is already registered with this adviser.'], 409);
+        }
+        
         $adviser->advisedStudents()->attach($studentId);
         return response()->json(['success' => true]);
     }

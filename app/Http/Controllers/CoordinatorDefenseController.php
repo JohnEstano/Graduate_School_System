@@ -6,6 +6,8 @@ use App\Models\DefenseRequest;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Mail;
+use Inertia\Inertia;
 use App\Models\User;
 use App\Models\Panelist;
 use App\Models\Notification;
@@ -14,6 +16,7 @@ use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 use App\Services\DefenseConflictService;
 use App\Services\DefenseNotificationService;
+use App\Mail\DefenseScheduled;
 
 class CoordinatorDefenseController extends Controller
 {
@@ -379,6 +382,13 @@ class CoordinatorDefenseController extends Controller
                 'message' => "Your {$defenseRequest->defense_type} defense: {$scheduleDate} {$timeRange}, Venue: {$validated['defense_venue']}",
                 'link' => '/defense-requirements',
             ]);
+            
+            // Send email notification to student
+            $student = User::find($defenseRequest->submitted_by);
+            if ($student && $student->email) {
+                Mail::to($student->email)
+                    ->queue(new DefenseScheduled($defenseRequest, $student));
+            }
         }
 
         $panelMembers = array_filter([

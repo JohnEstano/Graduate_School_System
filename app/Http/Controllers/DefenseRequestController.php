@@ -12,9 +12,15 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Mail;
 use Inertia\Inertia;
 use Carbon\Carbon;
 use App\Jobs\GenerateDefenseDocumentsJob;
+use App\Mail\DefenseRequestSubmitted;
+use App\Mail\DefenseRequestApproved;
+use App\Mail\DefenseRequestRejected;
+use App\Mail\DefenseScheduled;
+use App\Mail\DefenseRequestAssignedToCoordinator;
 
 class DefenseRequestController extends Controller
 {
@@ -33,6 +39,12 @@ class DefenseRequestController extends Controller
         if (in_array($user->role, $coordinatorRoles)) {
             // Coordinator view: show queue of adviser-approved onward
             $query = DefenseRequest::query();
+
+            Log::info('Coordinator dashboard filter applied', [
+                'coordinator_id' => $user->id,
+                'coordinator_email' => $user->email,
+                'search' => $request->input('search'),
+            ]);
 
             if ($s = $request->input('search')) {
                 $query->where(function($q) use ($s){
@@ -221,10 +233,22 @@ class DefenseRequestController extends Controller
                 ]]
             ]);
 
-            $adviserUser = User::where('role','Faculty')
-                ->whereRaw('LOWER(CONCAT(first_name," ",last_name)) = ?', [strtolower($defenseRequest->defense_adviser)])
-                ->first();
+            // Find adviser using flexible name matching
+            Log::info('Defense Request: Looking for adviser', [
+                'defense_request_id' => $defenseRequest->id,
+                'adviser_name' => $defenseRequest->defense_adviser,
+                'student' => $defenseRequest->first_name . ' ' . $defenseRequest->last_name
+            ]);
+            
+            $adviserUser = User::findByFullName($defenseRequest->defense_adviser, 'Faculty')->first();
+            
             if ($adviserUser) {
+                Log::info('Defense Request: Adviser found', [
+                    'adviser_id' => $adviserUser->id,
+                    'adviser_name' => $adviserUser->full_name,
+                    'adviser_email' => $adviserUser->email
+                ]);
+                
                 $defenseRequest->adviser_user_id = $adviserUser->id;
                 $defenseRequest->assigned_to_user_id = $adviserUser->id;
                 $defenseRequest->save();
@@ -234,6 +258,42 @@ class DefenseRequestController extends Controller
                     'title'=>'New Defense Request',
                     'message'=>"Review needed for {$defenseRequest->defense_type} request ({$defenseRequest->thesis_title}).",
                     'link'=>url("/defense-request/{$defenseRequest->id}")
+                ]);
+                
+                // Send email notification to adviser
+                if ($adviserUser->email) {
+                    try {
+                        Mail::to($adviserUser->email)
+                            ->queue(new DefenseRequestSubmitted($defenseRequest, $adviserUser));
+                        
+                        Log::info('Defense Request: Email queued successfully', [
+                            'defense_request_id' => $defenseRequest->id,
+                            'adviser_email' => $adviserUser->email,
+                            'email_type' => 'DefenseRequestSubmitted'
+                        ]);
+                    } catch (\Exception $e) {
+                        Log::error('Defense Request: Failed to queue email', [
+                            'defense_request_id' => $defenseRequest->id,
+                            'adviser_email' => $adviserUser->email,
+                            'error' => $e->getMessage(),
+                            'trace' => $e->getTraceAsString()
+                        ]);
+                    }
+                } else {
+                    Log::warning('Defense Request: Adviser has no email address', [
+                        'defense_request_id' => $defenseRequest->id,
+                        'adviser_id' => $adviserUser->id,
+                        'adviser_name' => $adviserUser->full_name
+                    ]);
+                }
+            } else {
+                Log::error('Defense Request: Adviser not found', [
+                    'defense_request_id' => $defenseRequest->id,
+                    'adviser_name_searched' => $defenseRequest->defense_adviser,
+                    'available_faculty' => User::where('role', 'Faculty')
+                        ->get(['id', 'first_name', 'middle_name', 'last_name', 'email'])
+                        ->map(fn($u) => $u->full_name)
+                        ->toArray()
                 ]);
             }
 
@@ -329,6 +389,20 @@ class DefenseRequestController extends Controller
             return response()->json(['error'=>'Unauthorized'],403);
         }
 
+        // AUTHORIZATION: Verify this coordinator is assigned to this request
+        if ($defenseRequest->coordinator_user_id !== $user->id) {
+            Log::warning('Unauthorized coordinator action attempt', [
+                'defense_request_id' => $defenseRequest->id,
+                'assigned_coordinator_id' => $defenseRequest->coordinator_user_id,
+                'attempted_by_user_id' => $user->id,
+                'attempted_by_email' => $user->email,
+            ]);
+
+            return response()->json([
+                'error' => 'You are not authorized to act on this defense request. This request is assigned to another coordinator.'
+            ], 403);
+        }
+
         $data = $request->validate([
             'decision' => 'required|in:approve,reject',
             'comment'  => 'nullable|string|max:3000'
@@ -385,6 +459,28 @@ class DefenseRequestController extends Controller
             $defenseRequest->workflow_history = $hist;
 
             $defenseRequest->save();
+            
+            // Send email notification to student
+            $student = User::find($defenseRequest->submitted_by);
+            if ($student && $student->email) {
+                if ($data['decision'] === 'approve') {
+                    Mail::to($student->email)
+                        ->queue(new DefenseRequestApproved(
+                            $defenseRequest,
+                            $student,
+                            'coordinator',
+                            $comment
+                        ));
+                } else {
+                    Mail::to($student->email)
+                        ->queue(new DefenseRequestRejected(
+                            $defenseRequest,
+                            $student,
+                            'coordinator',
+                            $comment
+                        ));
+                }
+            }
 
             return response()->json([
                 'ok'=>true,
@@ -395,7 +491,7 @@ class DefenseRequestController extends Controller
                 'workflow_history'=>$defenseRequest->workflow_history
             ]);
         } catch (\Throwable $e) {
-            \Log::error('coordinatorDecision error',[
+            Log::error('coordinatorDecision error',[
                 'id'=>$defenseRequest->id,
                 'error'=>$e->getMessage()
             ]);
@@ -497,7 +593,7 @@ class DefenseRequestController extends Controller
                 'coordinator_status' => $defenseRequest->coordinator_status,
             ]);
         } catch (\Throwable $e) {
-            \Log::error('updateStatus error',[
+            Log::error('updateStatus error',[
                 'id'=>$defenseRequest->id,
                 'error'=>$e->getMessage()
             ]);
@@ -558,7 +654,7 @@ class DefenseRequestController extends Controller
             DB::commit();
         } catch (\Throwable $e) {
             DB::rollBack();
-            \Log::error('bulkUpdateStatus error',['error'=>$e->getMessage()]);
+            Log::error('bulkUpdateStatus error',['error'=>$e->getMessage()]);
             return response()->json(['error'=>'Bulk status update failed'],500);
         }
 
@@ -594,7 +690,7 @@ class DefenseRequestController extends Controller
             DB::commit();
         } catch (\Throwable $e) {
             DB::rollBack();
-            \Log::error('bulkUpdatePriority error',['error'=>$e->getMessage()]);
+            Log::error('bulkUpdatePriority error',['error'=>$e->getMessage()]);
             return response()->json(['error'=>'Bulk priority update failed'],500);
         }
 
@@ -785,6 +881,42 @@ class DefenseRequestController extends Controller
             })->values();
 
         return response()->json($rows);
+    }
+
+    /**
+     * API endpoint to get defense request counts
+     */
+    public function count(Request $request)
+    {
+        try {
+            $user = Auth::user();
+            if (!$user) {
+                return response()->json(['error' => 'Unauthorized'], 401);
+            }
+
+            // Get counts based on user role
+            $counts = [
+                'total' => DefenseRequest::count(),
+                'pending' => DefenseRequest::whereIn('workflow_state', ['submitted', 'pending', 'adviser-pending'])->count(),
+                'approved' => DefenseRequest::whereIn('workflow_state', ['adviser-approved', 'coordinator-approved', 'scheduled'])->count(),
+                'completed' => DefenseRequest::where('workflow_state', 'completed')->count(),
+                'rejected' => DefenseRequest::whereIn('workflow_state', ['adviser-rejected', 'coordinator-rejected'])->count(),
+            ];
+
+            // Add role-specific counts
+            if (in_array($user->role, ['Coordinator', 'Administrative Assistant', 'Dean'])) {
+                $counts['coordinator_review'] = DefenseRequest::where('workflow_state', 'coordinator-review')->count();
+            }
+
+            if (in_array($user->role, ['Faculty', 'Adviser'])) {
+                $counts['adviser_review'] = DefenseRequest::where('workflow_state', 'adviser-review')->count();
+            }
+
+            return response()->json($counts);
+        } catch (\Exception $e) {
+            Log::error('Defense request count error: ' . $e->getMessage());
+            return response()->json(['error' => 'Unable to fetch counts'], 500);
+        }
     }
 
     private function normalizeStatusForCoordinator(DefenseRequest $r): string

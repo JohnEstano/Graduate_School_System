@@ -136,6 +136,15 @@ Route::get('/coordinator/defense-requests/all-defense-requests', [\App\Http\Cont
 
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
+    /* Coordinator Program Assignments - Super Admin only */
+    Route::prefix('api/coordinator-assignments')->group(function() {
+        Route::get('/', [\App\Http\Controllers\CoordinatorProgramAssignmentController::class, 'index'])->name('coordinator-assignments.index');
+        Route::get('/coordinators', [\App\Http\Controllers\CoordinatorProgramAssignmentController::class, 'getCoordinators'])->name('coordinator-assignments.coordinators');
+        Route::get('/programs', [\App\Http\Controllers\CoordinatorProgramAssignmentController::class, 'getAvailablePrograms'])->name('coordinator-assignments.programs');
+        Route::post('/', [\App\Http\Controllers\CoordinatorProgramAssignmentController::class, 'store'])->name('coordinator-assignments.store');
+        Route::delete('/{id}', [\App\Http\Controllers\CoordinatorProgramAssignmentController::class, 'destroy'])->name('coordinator-assignments.destroy');
+    });
+
     // Logout
     Route::post('/logout', function (\Illuminate\Http\Request $r) {
         Auth::logout();
@@ -474,6 +483,14 @@ Route::get('/faculty/class-list', [\App\Http\Controllers\InstructorClassListCont
 Route::get('/legacy/faculty/class-list', [\App\Http\Controllers\InstructorClassListController::class, 'index'])
     ->name('legacy.faculty.class-list');
 
+// Temporary test route for comprehensive exam eligibility
+Route::get('/test-eligibility', [\App\Http\Controllers\Api\ComprehensiveExamEligibilityController::class, 'checkEligibility'])
+    ->middleware('auth');
+
+// Debug route to check academic records data
+Route::get('/debug-academic-records', [\App\Http\Controllers\DebugController::class, 'academicRecordsDebug'])
+    ->middleware('auth');
+
 /*
 |--------------------------------------------------------------------------
 | Include default auth scaffolding (login, password, etc.)
@@ -491,6 +508,15 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/api/adviser/register-with-code', [AdviserStudentController::class, 'registerWithCode']);
     Route::get('/api/adviser/code', [AdviserStudentController::class, 'getAdviserCode']);
     Route::delete('/api/adviser/students/{student}', [AdviserStudentController::class, 'destroy']);
+    
+    // Student search for autocomplete
+    Route::get('/api/students/search', [App\Http\Controllers\Api\StudentSearchController::class, 'search']);
+    
+    // Comprehensive exam eligibility API
+    Route::get('/api/comprehensive-exam/eligibility', [App\Http\Controllers\Api\ComprehensiveExamEligibilityController::class, 'checkEligibility']);
+    
+    // Manual data scraping endpoint for testing
+    Route::post('/api/comprehensive-exam/scrape-data', [App\Http\Controllers\Api\ComprehensiveExamEligibilityController::class, 'manualDataScraping']);
 
 });
 

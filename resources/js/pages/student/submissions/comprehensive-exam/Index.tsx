@@ -63,16 +63,6 @@ type Eligibility = {
   error?: string | null;
 };
 
-// DEV: simulation (remove/disable when API is ready)
-const DEV_SIMULATE = true;
-// Toggle these to simulate your state
-const SIM_ELIG = {
-  examOpen: true,            // set false to simulate "exam closed"
-  gradesComplete: true,      // set false to simulate not complete
-  documentsComplete: true,   // set false to simulate not complete
-  noOutstandingBalance: true // set false to simulate with balance
-};
-
 export default function ComprehensiveExamIndex() {
   const { props } = usePage<PageProps>();
   const { application } = props;
@@ -90,64 +80,74 @@ export default function ComprehensiveExamIndex() {
   });
 
   const [showEligDialog, setShowEligDialog] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
 
   async function fetchEligibility() {
-    // Simulation short-circuit
-    if (DEV_SIMULATE) {
-      // Optional: override via URL, e.g. ?open=1&grades=1&docs=0&bal=1
-      const q = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
-      const getBool = (k: string, fallback: boolean) =>
-        q?.has(k) ? q.get(k) === '1' : fallback;
-
-      setElig({
-        examOpen: getBool('open', SIM_ELIG.examOpen),
-        gradesComplete: getBool('grades', SIM_ELIG.gradesComplete),
-        documentsComplete: getBool('docs', SIM_ELIG.documentsComplete),
-        noOutstandingBalance: getBool('bal', SIM_ELIG.noOutstandingBalance),
-        loading: false,
-        error: null,
-      });
-      return;
-    }
-
     setElig((e) => ({ ...e, loading: true, error: null }));
+    
     try {
-      // Adjust these endpoints to your backend/API gateway.
-      const [examStatusRes, studentEligRes] = await Promise.allSettled([
-        fetch('/api/comprehensive-exam/status', { credentials: 'include' }),
-        fetch('/api/comprehensive-exam/eligibility', { credentials: 'include' }),
-      ]);
+      // Get CSRF token
+      const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+      
+      // Call the comprehensive exam eligibility API
+      const response = await fetch('/api/comprehensive-exam/eligibility', { 
+        credentials: 'include',
+        headers: {
+          'Accept': 'application/json',
+          'X-Requested-With': 'XMLHttpRequest',
+          'X-CSRF-TOKEN': csrfToken || '',
+        }
+      });
 
-      let examOpen: boolean | null = null;
-      if (examStatusRes.status === 'fulfilled' && examStatusRes.value.ok) {
-        const j = await examStatusRes.value.json();
-        examOpen = !!(j?.open ?? j?.isOpen);
+      if (!response.ok) {
+        throw new Error(`API error: ${response.status}`);
       }
 
-      let gradesComplete: boolean | null = null;
-      let documentsComplete: boolean | null = null;
-      let noOutstandingBalance: boolean | null = null;
-      if (studentEligRes.status === 'fulfilled' && studentEligRes.value.ok) {
-        const j = await studentEligRes.value.json();
-        gradesComplete = !!(j?.gradesComplete ?? j?.completeGrades);
-        documentsComplete = !!(j?.documentsComplete ?? j?.completeDocuments);
-        noOutstandingBalance = !!(j?.noOutstandingBalance ?? j?.hasNoOutstandingBalance);
-      }
+      const data = await response.json();
 
-      setElig({
-        examOpen,
-        gradesComplete,
-        documentsComplete,
-        noOutstandingBalance,
+      // Extract eligibility from the requirements array
+      const requirements = data.requirements || [];
+      const documentsReq = requirements.find((r: any) => r.name === 'Complete documents submitted');
+      const gradesReq = requirements.find((r: any) => r.name === 'Complete grades (registrar verified)');
+      const balanceReq = requirements.find((r: any) => r.name === 'No outstanding tuition balance');
+
+      const newElig = {
+        examOpen: true, // This would need to be determined from semester settings
+        gradesComplete: gradesReq?.completed ?? null,
+        documentsComplete: documentsReq?.completed ?? null,
+        noOutstandingBalance: balanceReq?.completed ?? null,
         loading: false,
         error: null,
-      });
-    } catch (e: any) {
-      setElig((prev) => ({
-        ...prev,
+      };
+      
+      setElig(newElig);
+      
+      // If data is still loading (all null) and we haven't retried too many times, retry after 3 seconds
+      if (newElig.gradesComplete === null && newElig.documentsComplete === null && newElig.noOutstandingBalance === null) {
+        if (retryCount < 5) {
+          console.log(`Data still loading, will retry in 3 seconds (attempt ${retryCount + 1}/5)`);
+          setTimeout(() => {
+            setRetryCount(c => c + 1);
+            fetchEligibility();
+          }, 3000);
+        }
+      } else {
+        // Reset retry count on success
+        setRetryCount(0);
+      }
+      
+    } catch (error) {
+      console.error('=== API ERROR ===', error);
+      
+      // Set all to null (Unknown) when API fails
+      setElig({
+        examOpen: null,
+        gradesComplete: null,
+        documentsComplete: null,
+        noOutstandingBalance: null,
         loading: false,
-        error: 'Unable to verify eligibility at this time.',
-      }));
+        error: error instanceof Error ? error.message : 'API call failed',
+      });
     }
   }
 
