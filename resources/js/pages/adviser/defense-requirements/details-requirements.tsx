@@ -18,6 +18,7 @@ import {
   Send,
   UserCheck,
   Signature,
+  ArrowRightLeft,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -52,14 +53,14 @@ type DefenseRequestFull = {
   last_status_updated_at?: string;
   ai_detection_certificate?: string;
   endorsement_form?: string;
-  adviser_status?: string;      
-  coordinator_status?: string;  
-  defense_venue?: string;       
-  defense_mode?: string;       
-  scheduling_notes?: string;    
-  scheduled_time?: string;      
+  adviser_status?: string;
+  coordinator_status?: string;
+  defense_venue?: string;
+  defense_mode?: string;
+  scheduling_notes?: string;
+  scheduled_time?: string;
   scheduled_date?: string;
-  scheduled_end_time?: string;  
+  scheduled_end_time?: string;
 };
 
 interface PageProps {
@@ -163,8 +164,17 @@ export default function DetailsRequirementsPage(rawProps: any) {
         setMissingDocsAlert(
           'You must upload both the AI Detection Certificate and Endorsement Form before endorsing this request.'
         );
-        setConfirm({ open: false, action: null }); // <-- CLOSE DIALOG
+        setConfirm({ open: false, action: null });
         toast.error('You must upload both the AI Detection Certificate and Endorsement Form before endorsing.');
+        return;
+      }
+      // Restrict Endorse if no coordinator relationship exists
+      if (!coordinators.length || !coordinators[0].id) {
+        setMissingDocsAlert(
+          'You must have a coordinator linked before you can endorse this request.'
+        );
+        setConfirm({ open: false, action: null });
+        toast.error('You must have a coordinator linked before you can endorse.');
         return;
       }
     }
@@ -505,14 +515,16 @@ export default function DetailsRequirementsPage(rawProps: any) {
   const missingDocsAlertMsg = !request.ai_detection_certificate && !request.endorsement_form
     ? "*You haven't uploaded the AI Detection Certificate and Endorsement Form yet."
     : !request.ai_detection_certificate
-    ? "*You haven't uploaded the AI Detection Certificate yet."
-    : !request.endorsement_form
-    ? "*You haven't uploaded the Endorsement Form yet."
-    : null;
+      ? "*You haven't uploaded the AI Detection Certificate yet."
+      : !request.endorsement_form
+        ? "*You haven't uploaded the Endorsement Form yet."
+        : null;
 
-  // New state and effect for coordinators
+
   const coordinators = props.coordinators ?? [];
   const loadingCoordinators = false; // No need to fetch, already loaded
+
+
 
   return (
     <AppLayout breadcrumbs={breadcrumbs}>
@@ -539,8 +551,8 @@ export default function DetailsRequirementsPage(rawProps: any) {
                 </TabsTrigger>
               </TabsList>
             </Tabs>
-            {/* Move missing docs alert here, always visible if missing */}
-            {tab === 'link-documents' && missingDocs && (
+            {/* Always show missing docs alert here, regardless of tab */}
+            {missingDocs && (
               <span className="ml-4 text-xs text-rose-600 font-medium">
                 {missingDocsAlertMsg}
               </span>
@@ -551,7 +563,11 @@ export default function DetailsRequirementsPage(rawProps: any) {
               size="sm"
               variant="outline"
               onClick={() => setConfirm({ open: true, action: 'approve' })}
-              disabled={isLoading || request.adviser_status === 'Approved'}
+              disabled={
+                isLoading ||
+                request.adviser_status === 'Approved' ||
+                !coordinators.length || !coordinators[0].id // Disable if no coordinator
+              }
             >
               <CheckCircle className="h-4 w-4 mr-1 text-green-600" />
               Endorse
@@ -577,35 +593,9 @@ export default function DetailsRequirementsPage(rawProps: any) {
           </div>
         </div>
 
-        {/* New coordinator info box */}
-        <div className="mb-4">
-          <div className="rounded-lg border bg-white dark:bg-zinc-900 p-4 flex items-center gap-4 shadow-sm">
-            <div>
-              <div className="font-semibold text-sm mb-1">Your Coordinator{coordinators.length > 1 ? 's' : ''}</div>
-              {coordinators.length === 0 ? (
-                <span className="text-xs text-red-500">No coordinator registered.</span>
-              ) : (
-                <ul className="text-xs">
-                  {coordinators.map((c, i) => (
-                    <li key={i}>
-                      <span className="font-medium">{c.name}</span>
-                      {c.email && (
-                        <span className="ml-2 text-muted-foreground">({c.email})</span>
-                      )}
-                      {c.id && (
-                        <span className="ml-2 text-blue-600">[ID: {c.id}]</span>
-                      )}
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-          </div>
-        </div>
-
         {/* Main content and sidebar layout */}
         <div className="flex flex-col md:flex-row gap-5 mb-2">
-          {/* Main column: all cards stacked, fixed width */}
+          {/* Main column */}
           <div className="w-full md:max-w-3xl mx-auto flex flex-col gap-5">
             <Tabs value={tab} onValueChange={v => setTab(v as typeof tab)} className="w-full">
               {/* DETAILS TAB */}
@@ -621,15 +611,14 @@ export default function DetailsRequirementsPage(rawProps: any) {
                     <div className="flex flex-col md:items-end gap-1">
                       {/* Adviser Status */}
                       <span
-                        className={`text-xs font-semibold px-2 py-0.5 rounded-full mt-2 md:mt-0 ${
-                          request.adviser_status === 'Approved'
+                        className={`text-xs font-semibold px-2 py-0.5 rounded-full mt-2 md:mt-0 ${request.adviser_status === 'Approved'
                             ? 'bg-green-100 text-green-600'
                             : request.adviser_status === 'Rejected'
-                            ? 'bg-red-100 text-red-600'
-                            : request.adviser_status === 'Pending'
-                            ? 'bg-yellow-100 text-yellow-700'
-                            : 'bg-gray-100 text-gray-600'
-                        }`}
+                              ? 'bg-red-100 text-red-600'
+                              : request.adviser_status === 'Pending'
+                                ? 'bg-yellow-100 text-yellow-700'
+                                : 'bg-gray-100 text-gray-600'
+                          }`}
                       >
                         Adviser Status: {getAdviserStatusDisplay(request.adviser_status)}
                       </span>
@@ -693,15 +682,14 @@ export default function DetailsRequirementsPage(rawProps: any) {
                     <div>
                       <div className="text-xs text-muted-foreground mb-1">Coordinator Status</div>
                       <span
-                        className={`text-xs font-semibold px-2 py-0.5 rounded-full mt-1 inline-block ${
-                          request.coordinator_status === 'Approved'
+                        className={`text-xs font-semibold px-2 py-0.5 rounded-full mt-1 inline-block ${request.coordinator_status === 'Approved'
                             ? 'bg-green-100 text-green-600'
                             : request.coordinator_status === 'Rejected'
-                            ? 'bg-red-100 text-red-600'
-                            : request.coordinator_status === 'Pending'
-                            ? 'bg-yellow-100 text-yellow-700'
-                            : 'bg-gray-100 text-gray-600'
-                        }`}
+                              ? 'bg-red-100 text-red-600'
+                              : request.coordinator_status === 'Pending'
+                                ? 'bg-yellow-100 text-yellow-700'
+                                : 'bg-gray-100 text-gray-600'
+                          }`}
                       >
                         {getCoordinatorStatusDisplay(request.coordinator_status)}
                       </span>
@@ -793,7 +781,7 @@ export default function DetailsRequirementsPage(rawProps: any) {
                         <p className="text-sm text-muted-foreground">
                           No attachments.
                         </p>
-                    )}
+                      )}
                   </div>
                 </div>
 
@@ -947,8 +935,8 @@ export default function DetailsRequirementsPage(rawProps: any) {
                             {autoGenerating || templatesLoading ? (
                               <span className="flex items-center gap-2">
                                 <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
-                                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/>
-                                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+                                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
                                 </svg>
                                 Generating...
                               </span>
@@ -980,7 +968,8 @@ export default function DetailsRequirementsPage(rawProps: any) {
 
           {/* Workflow Progress Stepper sidebar */}
           <div className="w-full md:w-[340px] flex-shrink-0">
-            <div className="rounded-xl border p-5 bg-white dark:bg-zinc-900 sticky top-24 h-fit">
+            <div className="rounded-xl border p-5 bg-white dark:bg-zinc-900 h-fit">
+              {/* Removed 'sticky top-24' */}
               <h2 className="text-xs font-semibold mb-8 flex items-center gap-2">
                 <Clock className="h-4 w-4" /> Workflow Progress
               </h2>
@@ -1025,7 +1014,7 @@ export default function DetailsRequirementsPage(rawProps: any) {
                               </span>
                             )}
                           </div>
-                          {/* Optionally show comment if present */}
+
                           {item.comment && (
                             <div className="text-xs text-muted-foreground mt-1">{item.comment}</div>
                           )}
@@ -1037,7 +1026,35 @@ export default function DetailsRequirementsPage(rawProps: any) {
                   <div className="text-xs text-muted-foreground">No workflow history yet.</div>
                 )}
               </div>
+
+
             </div>
+            {/* Adviser-Coordinator Relationship Bar - moved here */}
+            <div className="w-full flex items-center gap-2 bg-black sticky text-white rounded-lg px-4  text-xs font-medium shadow mt-3">
+              <span className="flex items-center gap-1">
+                Adviser <span className="font-semibold">(You)</span>
+              </span>
+              <ArrowRightLeft className="h-4 w-4 mx-2" />
+              <span className="flex items-center gap-1">
+                <Users className="h-4 w-4 mr-1" />
+                Coordinator
+                <span className="font-semibold ml-1">
+                  {coordinators.length > 0
+                    ? coordinators.map((c, i) => (
+                      <span key={i}>
+                        {c.name}
+                        {c.email && (
+                          <span className="ml-1 text-zinc-300">({c.email})</span>
+                        )}
+                        {i < coordinators.length - 1 && <span>, </span>}
+                      </span>
+                    ))
+                    : <span className="italic text-zinc-300">No coordinator registered</span>
+                  }
+                </span>
+              </span>
+            </div>
+            {/* End Adviser-Coordinator Relationship Bar */}
           </div>
         </div>
 
@@ -1066,8 +1083,8 @@ export default function DetailsRequirementsPage(rawProps: any) {
                 {confirm.action === 'approve'
                   ? 'Endorsed'
                   : confirm.action === 'reject'
-                  ? 'Rejected'
-                  : 'Pending'}
+                    ? 'Rejected'
+                    : 'Pending'}
               </span>?
             </p>
             {confirm.action === 'approve' && coordinators.length > 0 && (
@@ -1124,3 +1141,5 @@ function csrf(): string {
       ?.content || ''
   );
 }
+
+// (Removed unused handleAssignPanels function)

@@ -69,6 +69,11 @@ class DefenseRequirementController extends Controller
               ->orWhere('assigned_to_user_id', $user->id)
               ->orWhereRaw('LOWER(defense_adviser) = ?', [strtolower(trim($user->first_name . ' ' . $user->last_name))]);
         })
+        // Exclude cancelled workflow_state or status
+        ->where('workflow_state', '!=', 'cancelled')
+        ->where(function($q) {
+            $q->whereNull('status')->orWhere('status', '!=', 'Cancelled');
+        })
         ->orderByDesc('created_at')
         ->get();
 

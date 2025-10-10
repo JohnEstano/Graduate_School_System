@@ -137,6 +137,10 @@ class DefenseRequestController extends Controller
 
         // Student view
         $requirements = DefenseRequest::where('submitted_by', $user->id)
+            ->where('workflow_state', '!=', 'cancelled')
+            ->where(function($q) {
+                $q->whereNull('status')->orWhere('status', '!=', 'Cancelled');
+            })
             ->orderByDesc('created_at')
             ->get();
 
@@ -526,6 +530,8 @@ class DefenseRequestController extends Controller
             'defense_venue' => $defenseRequest->defense_venue,
             'defense_mode' => $defenseRequest->defense_mode,
             'panels_assigned_at' => $defenseRequest->panels_assigned_at,
+            'request' => $defenseRequest,
+            'coordinator_status_display' => $defenseRequest->coordinator_status_display,
         ]);
     }
 
@@ -775,6 +781,11 @@ class DefenseRequestController extends Controller
                 $q->where('adviser_user_id', $user->id)
                   ->orWhere('assigned_to_user_id', $user->id)
                   ->orWhereRaw('LOWER(defense_adviser) = ?', [$fullName]);
+            })
+            // Exclude cancelled workflow_state or status
+            ->where('workflow_state', '!=', 'cancelled')
+            ->where(function($q) {
+                $q->whereNull('status')->orWhere('status', '!=', 'Cancelled');
             });
 
         if ($s = $request->input('search')) {
@@ -1236,5 +1247,57 @@ class DefenseRequestController extends Controller
             });
 
         return response()->json($rows);
+    }
+
+    public function savePanels(Request $request, DefenseRequest $defenseRequest)
+    {
+        $user = Auth::user();
+        if (!$user || !in_array($user->role, ['Coordinator','Administrative Assistant','Dean'])) {
+            return response()->json(['error'=>'Unauthorized'],403);
+        }
+
+        $data = $request->validate([
+            'defense_chairperson' => 'nullable|string|max:255',
+            'defense_panelist1' => 'nullable|string|max:255',
+            'defense_panelist2' => 'nullable|string|max:255',
+            'defense_panelist3' => 'nullable|string|max:255',
+            'defense_panelist4' => 'nullable|string|max:255',
+        ]);
+
+        $originalState = $defenseRequest->workflow_state;
+
+        // Save panel assignments
+        $defenseRequest->defense_chairperson = $data['defense_chairperson'] ?? null;
+        $defenseRequest->defense_panelist1 = $data['defense_panelist1'] ?? null;
+        $defenseRequest->defense_panelist2 = $data['defense_panelist2'] ?? null;
+        $defenseRequest->defense_panelist3 = $data['defense_panelist3'] ?? null;
+        $defenseRequest->defense_panelist4 = $data['defense_panelist4'] ?? null;
+        $defenseRequest->panels_assigned_at = now();
+
+        // Always update workflow_state/history if any panel field changes
+        $defenseRequest->workflow_state = 'panels-assigned';
+
+        // Add workflow history entry
+        $hist = $defenseRequest->workflow_history ?? [];
+        $hist[] = [
+            'action' => 'Panels Assigned',
+            'timestamp' => now()->toISOString(),
+            'user_id' => $user->id,
+            'user_name' => $user->first_name . ' ' . $user->last_name,
+            'from_state' => $originalState,
+            'to_state' => 'panels-assigned'
+        ];
+        $defenseRequest->workflow_history = $hist;
+
+        $defenseRequest->last_status_updated_at = now();
+        $defenseRequest->last_status_updated_by = $user->id;
+        $defenseRequest->save();
+
+        return response()->json([
+            'ok' => true,
+            'request' => $defenseRequest,
+            'workflow_history' => $defenseRequest->workflow_history,
+            'workflow_state' => $defenseRequest->workflow_state,
+        ]);
     }
 }
