@@ -195,6 +195,13 @@ class DefenseRequestController extends Controller
             'referenceNo' => 'required|string|max:100',
         ]);
 
+        Log::info('=== DEFENSE REQUEST SUBMISSION STARTED ===', [
+            'student' => $data['firstName'] . ' ' . $data['lastName'],
+            'adviser_name' => $data['defenseAdviser'],
+            'thesis_title' => $data['thesisTitle'],
+            'timestamp' => now()
+        ]);
+
         foreach (['advisersEndorsement','recEndorsement','proofOfPayment'] as $f) {
             if ($request->hasFile($f)) {
                 $data[$f] = $request->file($f)->store('defense-attachments');
@@ -203,6 +210,26 @@ class DefenseRequestController extends Controller
 
         try {
             DB::beginTransaction();
+            
+            // Find adviser FIRST using flexible name matching
+            Log::info('Defense Request: Looking for adviser', [
+                'adviser_name' => $data['defenseAdviser'],
+                'student' => $data['firstName'] . ' ' . $data['lastName']
+            ]);
+            
+            $adviserUser = User::findByFullName($data['defenseAdviser'], 'Faculty')->first();
+            
+            if (!$adviserUser) {
+                Log::error('Defense Request: Adviser not found', [
+                    'adviser_name_searched' => $data['defenseAdviser'],
+                    'available_faculty' => User::where('role', 'Faculty')
+                        ->get(['id', 'first_name', 'middle_name', 'last_name', 'email'])
+                        ->map(fn($u) => $u->full_name)
+                        ->toArray()
+                ]);
+            }
+            
+            // Create defense request WITH adviser already set
             $defenseRequest = DefenseRequest::create([
                 'first_name' => $data['firstName'],
                 'middle_name' => $data['middleName'],
@@ -217,6 +244,8 @@ class DefenseRequestController extends Controller
                 'proof_of_payment' => $data['proofOfPayment'] ?? null,
                 'reference_no' => $data['referenceNo'] ?? null,
                 'submitted_by' => Auth::id(),
+                'adviser_user_id' => $adviserUser?->id,  // Set adviser immediately
+                'assigned_to_user_id' => $adviserUser?->id,  // Set assignment immediately
                 'status' => 'Pending',
                 'priority' => 'Medium',
                 'workflow_state' => 'submitted',
@@ -231,31 +260,32 @@ class DefenseRequestController extends Controller
                 ]]
             ]);
 
-            // Find adviser using flexible name matching
-            Log::info('Defense Request: Looking for adviser', [
+            Log::info('Defense Request: Created with adviser', [
                 'defense_request_id' => $defenseRequest->id,
-                'adviser_name' => $defenseRequest->defense_adviser,
-                'student' => $defenseRequest->first_name . ' ' . $defenseRequest->last_name
+                'adviser_id' => $defenseRequest->adviser_user_id,
+                'adviser_name' => $adviserUser?->full_name ?? 'Not found'
             ]);
             
-            $adviserUser = User::findByFullName($defenseRequest->defense_adviser, 'Faculty')->first();
-            
             if ($adviserUser) {
-                Log::info('Defense Request: Adviser found', [
+                Log::info('Defense Request: Adviser found and assigned', [
                     'adviser_id' => $adviserUser->id,
                     'adviser_name' => $adviserUser->full_name,
                     'adviser_email' => $adviserUser->email
                 ]);
                 
-                $defenseRequest->adviser_user_id = $adviserUser->id;
-                $defenseRequest->assigned_to_user_id = $adviserUser->id;
-                $defenseRequest->save();
+                // Create notification for adviser
                 Notification::create([
                     'user_id'=>$adviserUser->id,
                     'type'=>'defense-request',
                     'title'=>'New Defense Request',
                     'message'=>"Review needed for {$defenseRequest->defense_type} request ({$defenseRequest->thesis_title}).",
                     'link'=>url("/defense-request/{$defenseRequest->id}")
+                ]);
+                
+                Log::info('=== ABOUT TO SEND EMAIL ===', [
+                    'adviser_email' => $adviserUser->email,
+                    'has_email' => !empty($adviserUser->email),
+                    'defense_request_id' => $defenseRequest->id
                 ]);
                 
                 // Send email notification to adviser
@@ -284,24 +314,27 @@ class DefenseRequestController extends Controller
                         'adviser_name' => $adviserUser->full_name
                     ]);
                 }
-            } else {
-                Log::error('Defense Request: Adviser not found', [
-                    'defense_request_id' => $defenseRequest->id,
-                    'adviser_name_searched' => $defenseRequest->defense_adviser,
-                    'available_faculty' => User::where('role', 'Faculty')
-                        ->get(['id', 'first_name', 'middle_name', 'last_name', 'email'])
-                        ->map(fn($u) => $u->full_name)
-                        ->toArray()
-                ]);
             }
 
             DB::commit();
+            
+            // Reload with relationships to ensure fresh data
+            $defenseRequest->refresh();
+            $defenseRequest->load('adviserUser');
+            
             if ($request->expectsJson()) {
                 return response()->json([
-                    'success'=>true,
-                    'id'=>$defenseRequest->id,
-                    'workflow_state'=>$defenseRequest->workflow_state
-                ],201);
+                    'success' => true,
+                    'id' => $defenseRequest->id,
+                    'workflow_state' => $defenseRequest->workflow_state,
+                    'adviser_user_id' => $defenseRequest->adviser_user_id,
+                    'adviser' => $defenseRequest->adviserUser ? [
+                        'id' => $defenseRequest->adviserUser->id,
+                        'name' => trim($defenseRequest->adviserUser->first_name . ' ' . $defenseRequest->adviserUser->last_name),
+                        'email' => $defenseRequest->adviserUser->email,
+                    ] : null,
+                    'message' => 'Defense request submitted successfully'
+                ], 201);
             }
             return Redirect::back()->with('success','Defense request submitted.');
         } catch (\Throwable $e) {
