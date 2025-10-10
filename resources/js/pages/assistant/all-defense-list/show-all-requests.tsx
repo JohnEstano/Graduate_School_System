@@ -25,7 +25,7 @@ import {
   Filter
 } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
-import TableAllDefenseRequests from './table-all-defense-list';
+import TableAllDefenseList from './table-all-defense-list';
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
@@ -60,15 +60,31 @@ interface ShowAllRequestsProps {
   withLayout?: boolean;
 }
 
-function PaginationBar({ page, totalPages, onPageChange }: { page: number; totalPages: number; onPageChange: (p: number) => void }) {
+function PaginationBar({
+  page,
+  totalPages,
+  onPageChange,
+  showingCount,
+  totalCount,
+}: {
+  page: number;
+  totalPages: number;
+  onPageChange: (p: number) => void;
+  showingCount: number;
+  totalCount: number;
+}) {
   return (
     <div className="flex justify-between items-center gap-2 px-4 py-2">
       <span className="text-xs">Page {page} of {totalPages}</span>
-      <div className="flex gap-1">
+      <div className="flex gap-1 items-center">
         <Button size="sm" variant="outline" disabled={page === 1} onClick={() => onPageChange(1)}>&laquo;</Button>
         <Button size="sm" variant="outline" disabled={page === 1} onClick={() => onPageChange(page - 1)}>&lsaquo;</Button>
         <Button size="sm" variant="outline" disabled={page === totalPages} onClick={() => onPageChange(page + 1)}>&rsaquo;</Button>
         <Button size="sm" variant="outline" disabled={page === totalPages} onClick={() => onPageChange(totalPages)}>&raquo;</Button>
+        <span className="ml-4 text-xs text-muted-foreground">
+          Showing {showingCount} record{showingCount !== 1 ? 's' : ''}
+          {typeof totalCount === 'number' && <> of {totalCount} total</>}
+        </span>
       </div>
     </div>
   );
@@ -186,8 +202,18 @@ function ShowAllRequestsInner({ defenseRequests: initial, onStatusChange }: Show
         (`${r.first_name} ${r.last_name} ${r.thesis_title}`).toLowerCase().includes(q)
       );
     }
-    if (statusFilter.length) result = result.filter(r => statusFilter.includes(r.status));
-    if (typeFilter.length) result = result.filter(r => typeFilter.includes(r.defense_type));
+    if (statusFilter.length)
+      result = result.filter(r =>
+        statusFilter.some(f =>
+          (r.status || '').trim().toLowerCase() === f.trim().toLowerCase()
+        )
+      );
+    if (typeFilter.length)
+      result = result.filter(r =>
+        typeFilter.some(f =>
+          (r.defense_type || '').trim().toLowerCase() === f.trim().toLowerCase()
+        )
+      );
     if (dateRange?.from && dateRange?.to) {
       const start = startOfDay(dateRange.from);
       const end = endOfDay(dateRange.to);
@@ -209,14 +235,29 @@ function ShowAllRequestsInner({ defenseRequests: initial, onStatusChange }: Show
     });
   }, [filtered, sortDir]);
 
-  const totalPages = Math.max(1, Math.ceil(sorted.length / 10));
-  const paged = sorted.slice((page - 1) * 10, page * 10);
+  const pageSize = 20; // <--- Set page size here
+
+  const totalPages = Math.max(1, Math.ceil(sorted.length / pageSize));
+  const paged = sorted.slice((page - 1) * pageSize, page * pageSize);
 
   const selected = selectedByTab['all'] || [];
   const setSelected = (arr: number[]) => setSelectedByTab(prev => ({ ...prev, all: arr }));
-  const headerChecked = selected.length === paged.length && paged.length > 0;
-  const toggleSelectAll = () => setSelected(headerChecked ? [] : paged.map(r => r.id));
-  const toggleSelectOne = (id: number) => setSelected(selected.includes(id) ? selected.filter(x => x !== id) : [...selected, id]);
+
+  // Bulk select: only select visible page's IDs
+  const headerChecked = paged.length > 0 && paged.every(r => selected.includes(r.id));
+  const toggleSelectAll = () => {
+    const pageIds = paged.map(r => r.id);
+    if (headerChecked) {
+      // Deselect only those on this page
+      setSelected(selected.filter(id => !pageIds.includes(id)));
+    } else {
+      // Add only those not already selected
+      setSelected([...selected, ...pageIds.filter(id => !selected.includes(id))]);
+    }
+  };
+  const toggleSelectOne = (id: number) =>
+    setSelected(selected.includes(id) ? selected.filter(x => x !== id) : [...selected, id]);
+
   const toggleSort = () => setSortDir(d => (d === 'asc' ? 'desc' : d === 'desc' ? null : 'asc'));
   const toggleColumn = (key: string) => setColumns(cols => ({ ...cols, [key]: !cols[key] }));
 
@@ -516,18 +557,22 @@ function ShowAllRequestsInner({ defenseRequests: initial, onStatusChange }: Show
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-44 p-1" side="bottom" align="start">
-                  {['Pending', 'Approved', 'Rejected', 'Completed'].map(s => (
-                    <div
-                      key={s}
-                      onClick={() =>
-                        setStatusFilter(fs => (fs.includes(s) ? fs.filter(x => x !== s) : [...fs, s]))
-                      }
-                      className="flex items-center gap-2 p-2 rounded hover:bg-muted cursor-pointer"
-                    >
-                      <Checkbox checked={statusFilter.includes(s)} />
-                      <span className="text-sm">{s}</span>
-                    </div>
-                  ))}
+                  {Array.from(new Set(defenseRequests.map(r => (r.status || '').trim())))
+                    .filter(Boolean)
+                    .map(s => (
+                      <div
+                        key={s}
+                        onClick={() =>
+                          setStatusFilter(fs =>
+                            fs.includes(s) ? fs.filter(x => x !== s) : [...fs, s]
+                          )
+                        }
+                        className="flex items-center gap-2 p-2 rounded hover:bg-muted cursor-pointer"
+                      >
+                        <Checkbox checked={statusFilter.includes(s)} />
+                        <span className="text-sm">{s}</span>
+                      </div>
+                    ))}
                   <Button size="sm" variant="ghost" className="w-full mt-2" onClick={() => setStatusFilter([])}>
                     Clear
                   </Button>
@@ -550,18 +595,22 @@ function ShowAllRequestsInner({ defenseRequests: initial, onStatusChange }: Show
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-44 p-1" side="bottom" align="start">
-                  {['Proposal', 'Prefinal', 'Final'].map(t => (
-                    <div
-                      key={t}
-                      onClick={() =>
-                        setTypeFilter(ft => (ft.includes(t) ? ft.filter(x => x !== t) : [...ft, t]))
-                      }
-                      className="flex items-center gap-2 p-2 rounded hover:bg-muted cursor-pointer"
-                    >
-                      <Checkbox checked={typeFilter.includes(t)} />
-                      <span className="text-sm">{t}</span>
-                    </div>
-                  ))}
+                  {Array.from(new Set(defenseRequests.map(r => (r.defense_type || '').trim())))
+                    .filter(Boolean)
+                    .map(t => (
+                      <div
+                        key={t}
+                        onClick={() =>
+                          setTypeFilter(ft =>
+                            ft.includes(t) ? ft.filter(x => x !== t) : [...ft, t]
+                          )
+                        }
+                        className="flex items-center gap-2 p-2 rounded hover:bg-muted cursor-pointer"
+                      >
+                        <Checkbox checked={typeFilter.includes(t)} />
+                        <span className="text-sm">{t}</span>
+                      </div>
+                    ))}
                   <Button size="sm" variant="ghost" className="w-full mt-2" onClick={() => setTypeFilter([])}>
                     Clear
                   </Button>
@@ -656,8 +705,8 @@ function ShowAllRequestsInner({ defenseRequests: initial, onStatusChange }: Show
             <div className="relative w-full max-w-full">
               <div className="w-full max-w-full">
                 {/* Remove overflow-x-auto here, let ScrollArea handle it */}
-                <TableAllDefenseRequests
-                  paged={paged}
+                <TableAllDefenseList
+                  paged={paged} // <-- Only pass the current page's records!
                   columns={{
                     title: columns.title,
                     presenter: columns.presenter,
@@ -679,10 +728,17 @@ function ShowAllRequestsInner({ defenseRequests: initial, onStatusChange }: Show
                   onRowReject={id => openConfirmSingle(id, 'reject')}
                   onRowRetrieve={id => openConfirmSingle(id, 'retrieve')}
                   onViewDetails={id => router.visit(`/assistant/all-defense-list/${id}/details`)}
+                  totalCount={sorted.length}
                 />
               </div>
             </div>
-            <PaginationBar page={page} totalPages={totalPages} onPageChange={setPage} />
+            <PaginationBar
+              page={page}
+              totalPages={totalPages}
+              onPageChange={setPage}
+              showingCount={paged.length}
+              totalCount={sorted.length}
+            />
           </div>
         </div>
 

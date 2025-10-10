@@ -7,6 +7,8 @@ import { format, formatDistanceToNowStrict } from 'date-fns';
 import { router } from '@inertiajs/react';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@/components/ui/dropdown-menu';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { getProgramAbbreviation } from '@/utils/program-abbreviations';
+import { useState } from 'react';
 
 export type DefenseRequestSummary = {
   id: number;
@@ -47,7 +49,17 @@ export type TableAllDefenseListProps = {
   highlightMissingDateMode?: boolean;
   hideActions?: boolean;
   hideSelect?: boolean;
+  isSidebarCollapsed?: boolean;
+  sidebarWidth?: number;
+  totalCount?: number; // <-- add this prop for total records
 };
+
+function safeFormatDate(dateString?: string, formatStr = 'MMM dd, yyyy') {
+  if (!dateString) return '—';
+  const d = new Date(dateString);
+  if (isNaN(d.getTime())) return '—';
+  return d.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+}
 
 export default function TableAllDefenseList({
   paged,
@@ -65,7 +77,10 @@ export default function TableAllDefenseList({
   onRowRetrieve,
   highlightMissingDateMode,
   hideActions,
-  hideSelect
+  hideSelect,
+  isSidebarCollapsed = false,
+  sidebarWidth = 260,
+  totalCount,
 }: TableAllDefenseListProps) {
   // Helper for status indicator with checklist tooltip
   function getIndicator(r: DefenseRequestSummary) {
@@ -127,9 +142,36 @@ export default function TableAllDefenseList({
     );
   }
 
+  // Pagination state
+  const pageSize = 20; // <-- Set this to 20
+  const [page, setPage] = useState(1);
+
+  const totalPages = Math.max(1, Math.ceil(paged.length / pageSize));
+  const startIdx = (page - 1) * pageSize;
+  const endIdx = startIdx + pageSize;
+  const visibleRows = paged.slice(startIdx, endIdx);
+
+  const isPageHeaderChecked = selected.length === visibleRows.length && visibleRows.length > 0;
+  const toggleSelectAllHandler = () => {
+    toggleSelectAll();
+  };
+
   return (
-    <div className="relative w-full">
-      <div className="overflow-x-auto w-full rounded-md border border-border bg-background">
+    <div
+      className="
+        w-full
+        box-border
+        overflow-x-auto
+        max-w-full
+        border
+        border-zinc-200
+        rounded-md
+        bg-background
+        transition-all
+        duration-200
+      "
+    >
+      <div className="min-w-full">
         <Table className="w-full text-sm table-auto">
           <TableHeader>
             <TableRow>
@@ -138,12 +180,10 @@ export default function TableAllDefenseList({
                   <Checkbox checked={headerChecked} onCheckedChange={toggleSelectAll} />
                 </TableHead>
               )}
-              {columns.title && <TableHead className="px-3 min-w-[180px]">Title</TableHead>}
+              {columns.title && <TableHead className="px-3 min-w-[180px]">Thesis Title</TableHead>}
               {columns.presenter && <TableHead className="px-2 min-w-[120px]">Presenter</TableHead>}
               {columns.adviser && <TableHead className="px-2 min-w-[120px]">Adviser</TableHead>}
               {columns.program && <TableHead className="px-2 min-w-[100px]">Program</TableHead>}
-              {columns.type && <TableHead className="text-center px-2 min-w-[90px]">Type</TableHead>}
-              {columns.submitted_at && <TableHead className="px-2 min-w-[130px] text-center">Submitted</TableHead>}
               {columns.status && <TableHead className="px-2 min-w-[100px] text-center">Status</TableHead>}
             </TableRow>
           </TableHeader>
@@ -182,8 +222,16 @@ export default function TableAllDefenseList({
                     </TableCell>
                   )}
                   {columns.title && (
-                    <TableCell className="px-3 py-2 font-medium truncate leading-tight align-middle" title={r.thesis_title}>
-                      {r.thesis_title}
+                    <TableCell
+                      className="px-3 py-2 font-medium truncate leading-tight align-middle flex items-center gap-2"
+                      title={r.thesis_title}
+                    >
+                      <Badge variant="outline" className="shrink-0">{r.defense_type || '—'}</Badge>
+                      <span className="truncate">
+                        {(r.thesis_title && r.thesis_title.length > 32)
+                          ? r.thesis_title.slice(0, 32) + '…'
+                          : r.thesis_title}
+                      </span>
                     </TableCell>
                   )}
                   {columns.presenter && (
@@ -197,20 +245,11 @@ export default function TableAllDefenseList({
                     </TableCell>
                   )}
                   {columns.program && (
-                    <TableCell className="px-2 py-2 text-xs text-muted-foreground whitespace-nowrap align-middle">
-                      {r.program || '—'}
-                    </TableCell>
-                  )}
-                  {columns.type && (
-                    <TableCell className="px-2 py-2 text-center align-middle">
-                      <Badge variant="outline">{r.defense_type || '—'}</Badge>
-                    </TableCell>
-                  )}
-                  {columns.submitted_at && (
-                    <TableCell className="px-2 py-2 text-xs text-muted-foreground whitespace-nowrap text-center align-middle">
-                      {r.submitted_at
-                        ? format(new Date(r.submitted_at), 'yyyy-MM-dd hh:mm a')
-                        : '—'}
+                    <TableCell
+                      className="px-2 py-2 text-xs text-muted-foreground whitespace-nowrap align-middle"
+                      title={r.program || '—'}
+                    >
+                      {getProgramAbbreviation(r.program || '—')}
                     </TableCell>
                   )}
                   {columns.status && (
@@ -241,25 +280,14 @@ export default function TableAllDefenseList({
             })}
             {paged.length === 0 && (
               <TableRow>
-                <TableCell
-                  colSpan={
-                    (hideSelect ? 0 : 1) +
-                    (columns.title ? 1 : 0) +
-                    (columns.presenter ? 1 : 0) +
-                    (columns.adviser ? 1 : 0) +
-                    (columns.program ? 1 : 0) +
-                    (columns.type ? 1 : 0) +
-                    (columns.submitted_at ? 1 : 0) +
-                    (columns.status ? 1 : 0)
-                  }
-                  className="text-center py-10 text-muted-foreground"
-                >
-                  No requests found.
+                <TableCell colSpan={Object.keys(columns).length + (hideSelect ? 0 : 1)}>
+                  No defense requests found.
                 </TableCell>
               </TableRow>
             )}
           </TableBody>
         </Table>
+        
       </div>
     </div>
   );

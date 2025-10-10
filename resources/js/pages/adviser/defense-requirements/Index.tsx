@@ -34,7 +34,7 @@ export default function Index({
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="All Defense Requirements" />
-            <div className="flex h-full flex-1 flex-col gap-4 overflow-auto rounded-xl pt-5 pr-7 pl-7">
+            <div className="flex h-full flex-1 flex-col gap-4 overflow-auto rounded-xl pt-5  pl-7">
                 <ShowAllDefenseRequests 
                     defenseRequests={allRequests}
                     coordinator={coordinator} // <-- pass coordinator prop

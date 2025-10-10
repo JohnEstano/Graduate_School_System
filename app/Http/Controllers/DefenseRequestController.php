@@ -40,6 +40,11 @@ class DefenseRequestController extends Controller
             // Coordinator view: show queue of adviser-approved onward
             $query = DefenseRequest::query();
 
+            // --- AA filter ---
+            if ($user->role === 'Administrative Assistant') {
+                $query->where('coordinator_status', 'Approved');
+            }
+
             Log::info('Coordinator dashboard filter applied', [
                 'coordinator_id' => $user->id,
                 'coordinator_email' => $user->email,
@@ -65,7 +70,8 @@ class DefenseRequestController extends Controller
                     'scheduled_date','scheduled_time','scheduled_end_time',
                     'defense_mode','defense_venue','panels_assigned_at',
                     'defense_adviser','adviser_reviewed_at',
-                    'defense_chairperson','defense_panelist1','defense_panelist2','defense_panelist3','defense_panelist4'
+                    'defense_chairperson','defense_panelist1','defense_panelist2','defense_panelist3','defense_panelist4',
+                    'coordinator_status' // <-- ADDED
                 ])->map(function($r){
                     // Helper to resolve panelist info
                     $panelistFields = [
@@ -115,6 +121,8 @@ class DefenseRequestController extends Controller
                             : '—',
                         // ADD THIS LINE:
                         'panelists' => $panelists,
+                        // <-- ADDED
+                        'coordinator_status' => $r->coordinator_status, // <-- ADDED
                     ];
                 });
 
@@ -1205,6 +1213,11 @@ class DefenseRequestController extends Controller
             'coordinator-rejected'
         ]);
 
+        // --- AA filter ---
+        if ($user->role === 'Administrative Assistant') {
+            $query->where('coordinator_status', 'Approved');
+        }
+
         if ($s = $request->input('search')) {
             $query->where(function($q) use ($s){
                 $q->where('thesis_title','like',"%$s%")
@@ -1221,7 +1234,8 @@ class DefenseRequestController extends Controller
                 'id','first_name','middle_name','last_name','school_id','program',
                 'thesis_title','defense_type','status','priority','workflow_state',
                 'scheduled_date','defense_mode','defense_venue','panels_assigned_at',
-                'defense_adviser','submitted_at'
+                'defense_adviser','submitted_at',
+                'coordinator_status' // <-- ADDED
             ])
             ->map(function($r){
                 return [
@@ -1243,6 +1257,7 @@ class DefenseRequestController extends Controller
                     'mode_defense' => $r->defense_mode,
                     'adviser' => $r->defense_adviser ?? '—',
                     'submitted_at' => $r->submitted_at ? \Carbon\Carbon::parse($r->submitted_at)->format('Y-m-d H:i:s') : null,
+                    'coordinator_status' => $r->coordinator_status, // <-- ADDED
                 ];
             });
 

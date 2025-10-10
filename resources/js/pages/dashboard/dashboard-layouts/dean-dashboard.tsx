@@ -235,11 +235,9 @@ export default function DeanDashboard() {
                         </div>
                         <div className="flex items-center">
                             <div className="h-12 w-px mx-4 bg-gray-300 dark:bg-gray-700 opacity-60" />
-                            {/*  
-                            <div className="mr-8"> 
+                            <div className="mr-8">
                                 <QuickActionsWidget userRole={user?.role} />
                             </div>
-                            */ }
                         </div>
                     </div>
 
@@ -247,7 +245,7 @@ export default function DeanDashboard() {
                     <Tabs defaultValue="overview" className="w-full px-7">
                         <TabsList className="mb-4">
                             <TabsTrigger value="overview">Overview</TabsTrigger>
-                            <TabsTrigger value="detailed">Detailed Statistics</TabsTrigger>
+                            <TabsTrigger value="detailed">Analytics</TabsTrigger>
                         </TabsList>
                         <TabsContent value="overview">
                             {/* Metrics Cards */}
