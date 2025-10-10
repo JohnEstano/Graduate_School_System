@@ -703,4 +703,12 @@ Route::middleware(['auth'])->get('/api/adviser/coordinators', function (Request 
 
 Route::middleware(['auth'])->get('/api/adviser/registered-coordinator', [\App\Http\Controllers\CoordinatorAdviserController::class, 'getRegisteredCoordinator']);
 
+/*
+|--------------------------------------------------------------------------
+| Student Documents
+|--------------------------------------------------------------------------
+*/
+Route::get('/student/documents', [\App\Http\Controllers\StudentDocumentController::class, 'index'])
+    ->name('student.documents');
+
 

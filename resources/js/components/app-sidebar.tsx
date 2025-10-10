@@ -34,6 +34,11 @@ const studentNavItems: MainNavItem[] = [
         ],
     },
     {
+        title: 'My Documents', // <-- Add this block
+        href: '/student/documents',
+        icon: FileText,
+    },
+    {
         title: 'Academic Records',
         href: '/academic-records',
         icon: LibraryBig,

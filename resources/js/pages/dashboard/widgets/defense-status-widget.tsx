@@ -14,6 +14,7 @@ type RawDefenseRequest = {
 type Props = {
     recentRequests?: RawDefenseRequest[];
     loading?: boolean;
+    compact?: boolean; // Add compact prop for card style
 };
 
 const TERMINAL = new Set(['cancelled','adviser-rejected','coordinator-rejected','completed']);
@@ -45,7 +46,7 @@ function resolveWorkflowLabel(r: RawDefenseRequest): WorkflowInfo {
     return { label: 'Submitted', icon: <Hourglass className="h-4 w-4 text-gray-500" /> };
 }
 
-const DefenseStatusWidget: React.FC<Props> = ({ recentRequests = [], loading = false }) => {
+const DefenseStatusWidget: React.FC<Props> = ({ recentRequests = [], loading = false, compact = false }) => {
     const sorted = [...recentRequests].sort((a,b) => {
         const at = a.created_at ? new Date(a.created_at).getTime() : 0;
         const bt = b.created_at ? new Date(b.created_at).getTime() : 0;
@@ -54,6 +55,45 @@ const DefenseStatusWidget: React.FC<Props> = ({ recentRequests = [], loading = f
 
     const active = sorted.find(r => !TERMINAL.has((r.workflow_state || '').toLowerCase())) || sorted[0];
     const list = active ? [active] : [];
+
+    // --- COMPACT CARD STYLE (for dashboard metric row) ---
+    if (compact) {
+        const { label, icon } = list[0] ? resolveWorkflowLabel(list[0]) : { label: "No Submission", icon: <Hourglass className="h-4 w-4 text-rose-500" /> };
+        return (
+            <div className="col-span-1 rounded-xl border border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-sm flex flex-col justify-between p-0 min-h-0 h-[92px] transition hover:shadow-md" style={{ minWidth: 0 }}>
+                <div className="flex items-center justify-between px-5 pt-3 pb-0">
+                    <div className="text-sm font-medium text-gray-700 dark:text-gray-200">
+                        Defense Status
+                    </div>
+                    <a href="/defense-requirements" className="font-semibold text-xs text-gray-900 dark:text-white hover:text-rose-500 transition">
+                        View More
+                    </a>
+                </div>
+                <div className="flex items-end justify-between px-5 pb-2 pt-1">
+                    <div>
+                        <div className="flex items-center gap-2">
+                            <span className="text-[1.1rem] font-bold text-gray-900 dark:text-white flex items-center gap-1">
+                                {icon}
+                                {loading ? (
+                                    <span className="animate-pulse bg-gray-200 dark:bg-zinc-800 rounded w-16 h-5 inline-block" />
+                                ) : (
+                                    <span>{label}</span>
+                                )}
+                            </span>
+                        </div>
+                        <div className="text-xs italic text-gray-400 dark:text-gray-500 mt-0.5 leading-tight max-w-[140px] truncate">
+                            {list[0]?.thesis_title
+                                ? (list[0]?.thesis_title.length > 22 ? list[0]?.thesis_title.slice(0, 22) + '…' : list[0]?.thesis_title)
+                                : "Untitled Thesis"}
+                        </div>
+                    </div>
+                    <div className="rounded-full bg-gray-50 dark:bg-zinc-800 p-1.5 flex items-center justify-center">
+                        <GraduationCap className="size-4 text-rose-500 dark:text-rose-400" />
+                    </div>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="flex-1 border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-5 bg-white dark:bg-zinc-900 flex flex-col min-h-[180px]">

@@ -2,7 +2,6 @@ import { CalendarDays, Receipt, Settings, BookOpen, User2, BadgeDollarSign, User
 import { Link } from "@inertiajs/react";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 
-
 type Props = {
     userRole?: string;
 };
@@ -11,48 +10,40 @@ const STUDENT_ACTIONS = [
     {
         label: "Academic Records",
         href: "/academic-records",
-        icon: <BookOpen className="size-5 text-white" size={20} />,
-        bg: "bg-rose-500",
+        icon: <BookOpen className="size-5 text-zinc-800 dark:text-zinc-100 font-extrabold" size={20} />,
     },
     {
         label: "Payments",
         href: "/payments",
-        icon: <Receipt className="size-5 text-white" size={20} />,
-        bg: "bg-rose-500",
+        icon: <Receipt className="size-5 text-zinc-800 dark:text-zinc-100 font-extrabold" size={20} />,
     },
     {
         label: "Settings",
         href: "/settings",
-        icon: <Settings className="size-5 text-white" size={20} />,
-        bg: "bg-slate-400",
+        icon: <Settings className="size-5 text-zinc-800 dark:text-zinc-100 font-extrabold" size={20} />,
     },
 ];
 
 const ADMIN_ACTIONS = [
- 
     {
         label: "Payments",
         href: "/payments",
-        icon: <Receipt className="size-5 text-white" size={20} />,
-        bg: "bg-rose-500",
+        icon: <Receipt className="size-5 text-zinc-800 dark:text-zinc-100 font-extrabold" size={20} />,
     },
     {
         label: "Honorariums",
         href: "/honorariums",
-        icon: <BadgeDollarSign className="size-5 text-white" size={20} />,
-        bg: "bg-rose-500",
+        icon: <BadgeDollarSign className="size-5 text-zinc-800 dark:text-zinc-100 font-extrabold" size={20} />,
     },
     {
         label: "Panelists",
         href: "/panelists",
-        icon: <Users className="size-5 text-white" size={20} />,
-        bg: "bg-rose-500",
+        icon: <Users className="size-5 text-zinc-800 dark:text-zinc-100 font-extrabold" size={20} />,
     },
     {
         label: "Settings",
         href: "/settings",
-        icon: <Settings className="size-5 text-white" size={20} />,
-        bg: "bg-slate-400",
+        icon: <Settings className="size-5 text-zinc-800 dark:text-zinc-100 font-extrabold" size={20} />,
     },
 ];
 
@@ -60,14 +51,12 @@ const FACULTY_ACTIONS = [
     {
         label: "My Students",
         href: "/adviser/students-list",
-        icon: <User2 className="size-5 text-white" size={20} />,
-        bg: "bg-rose-500",
+        icon: <User2 className="size-5 text-zinc-800 dark:text-zinc-100 font-extrabold" size={20} />,
     },
     {
         label: "Settings",
         href: "/settings",
-        icon: <Settings className="size-5 text-white" size={20} />,
-        bg: "bg-slate-400",
+        icon: <Settings className="size-5 text-zinc-800 dark:text-zinc-100 font-extrabold" size={20} />,
     },
 ];
 
@@ -84,25 +73,25 @@ export default function QuickActionsWidget({ userRole }: Props) {
     }
 
     return (
-        <div className="dark:bg-zinc-900 rounded-xl p-4">
+        <div className="dark:bg-zinc-900 rounded-xl p-2">
             <h2 className="text-sm font-semibold mb-3 text-gray-900 dark:text-white">Quick Actions</h2>
-            <div className="flex gap-4 justify-center">
+            <div className="flex gap-1 md:gap-1 justify-center">
                 {actions.map((action) => (
                     <Tooltip key={action.label}>
                         <TooltipTrigger asChild>
                             <Link
                                 href={action.href}
-                                className="flex flex-col items-center gap-2 group"
+                                className="flex flex-col items-center gap-1 group"
                             >
                                 <span
-                                    className={`rounded-full ${action.bg} flex items-center justify-center w-10 h-10 transition group-hover:scale-105`}
+                                    className="flex items-center justify-center w-10 h-10"
                                 >
                                     {action.icon}
                                 </span>
                             </Link>
                         </TooltipTrigger>
-                        <TooltipContent 
-                            side="bottom" 
+                        <TooltipContent
+                            side="bottom"
                             className="bg-black text-white border-none shadow-lg"
                         >
                             {action.label}
