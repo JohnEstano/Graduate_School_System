@@ -29,6 +29,7 @@ class DefenseRequest extends Model
         'scheduled_end_time'         => 'string',
         'coordinator_assigned_at'    => 'datetime',
         'coordinator_manually_assigned' => 'boolean',
+        'amount' => 'decimal:2',
     ];
 
     public function user()                { return $this->belongsTo(User::class,'submitted_by'); }

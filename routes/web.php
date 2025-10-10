@@ -671,7 +671,12 @@ Route::get('/assistant/all-defense-list/{id}/details', function ($id) {
             'defense_chairperson' => $defenseRequest->defense_chairperson,
             'defense_panelist1' => $defenseRequest->defense_panelist1,
             'defense_panelist2' => $defenseRequest->defense_panelist2,
-            'defense_panelist3' => $defenseRequest->defense,
+            'defense_panelist3' => $defenseRequest->defense_panelist3,
+            'defense_panelist4' => $defenseRequest->defense_panelist4,
+            // --- ADD THESE LINES ---
+            'amount' => $defenseRequest->amount,
+            'reference_no' => $defenseRequest->reference_no,
+            // --- END ADD ---
             'attachments' => [
                 'advisers_endorsement' => $defenseRequest->advisers_endorsement,
                 'rec_endorsement' => $defenseRequest->rec_endorsement,
@@ -682,10 +687,15 @@ Route::get('/assistant/all-defense-list/{id}/details', function ($id) {
                 'ai_detection_certificate' => $defenseRequest->ai_detection_certificate,
                 'endorsement_form' => $defenseRequest->endorsement_form,
             ],
+            // If you want to include workflow history, etc., add here as well
+            'last_status_updated_by' => $defenseRequest->last_status_updated_by,
+            'last_status_updated_at' => $defenseRequest->last_status_updated_at,
+            'workflow_history' => $defenseRequest->workflow_history ?? [],
+            'adviser_status' => $defenseRequest->adviser_status ?? null,
+            'coordinator_status' => $defenseRequest->coordinator_status ?? null,
         ],
     ]);
-})->name('assistant.all-defense-list.details');
-
+});
 
 Route::middleware(['auth'])->get('/api/adviser/coordinators', function (Request $request) {
     $user = $request->user();

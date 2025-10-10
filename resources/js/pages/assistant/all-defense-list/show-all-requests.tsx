@@ -226,14 +226,28 @@ function ShowAllRequestsInner({ defenseRequests: initial, onStatusChange }: Show
     return result;
   }, [search, statusFilter, typeFilter, defenseRequests, dateRange]);
 
+  // Add tab state for Masteral/Doctorate filter
+  const [programTab, setProgramTab] = useState<'All' | 'Masteral' | 'Doctorate'>('All');
+
+  // Filter by program based on tab
+  const filteredByProgram = useMemo(() => {
+    let result = filtered;
+    if (programTab !== 'All') {
+      result = result.filter(r =>
+        r.program?.toLowerCase().includes(programTab.toLowerCase())
+      );
+    }
+    return result;
+  }, [filtered, programTab]);
+
   const sorted = useMemo(() => {
-    if (!sortDir) return filtered;
-    return [...filtered].sort((a, b) => {
+    if (!sortDir) return filteredByProgram;
+    return [...filteredByProgram].sort((a, b) => {
       const ta = a.date_of_defense ? new Date(a.date_of_defense).getTime() : 0;
       const tb = b.date_of_defense ? new Date(b.date_of_defense).getTime() : 0;
       return sortDir === 'asc' ? ta - tb : tb - ta;
     });
-  }, [filtered, sortDir]);
+  }, [filteredByProgram, sortDir]);
 
   const pageSize = 20; // <--- Set page size here
 
@@ -658,6 +672,17 @@ function ShowAllRequestsInner({ defenseRequests: initial, onStatusChange }: Show
             </div>
             {/* You can add a right-side button here if needed */}
           </div>
+        </div>
+
+        {/* SHADCN Tabs for Masteral/Doctorate */}
+        <div className="mb-2">
+          <Tabs value={programTab} onValueChange={v => setProgramTab(v as any)}>
+            <TabsList>
+              <TabsTrigger value="All">All</TabsTrigger>
+              <TabsTrigger value="Masteral">Masteral</TabsTrigger>
+              <TabsTrigger value="Doctorate">Doctorate</TabsTrigger>
+            </TabsList>
+          </Tabs>
         </div>
 
         {/* Table and bulk bar */}

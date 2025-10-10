@@ -540,6 +540,11 @@ class DefenseRequestController extends Controller
             'panels_assigned_at' => $defenseRequest->panels_assigned_at,
             'request' => $defenseRequest,
             'coordinator_status_display' => $defenseRequest->coordinator_status_display,
+            // ADD THESE:
+            'amount' => $defenseRequest->amount,
+            'reference_no' => $defenseRequest->reference_no,
+            // If you want to send attachments as well:
+            'attachments' => $defenseRequest->attachments,
         ]);
     }
 
