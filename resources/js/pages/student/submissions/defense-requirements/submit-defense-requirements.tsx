@@ -202,7 +202,9 @@ export default function SubmitDefenseRequirements({ onFinish, open, onOpenChange
                     'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
                     'image/jpeg',
                     'image/png',
-                    'image/jpg'
+                    'image/jpg',
+                    'image/gif',
+                    'image/webp'
                 ];
 
                 // Check file size

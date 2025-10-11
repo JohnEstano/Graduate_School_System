@@ -22,6 +22,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"; // Make sure this import exists
+import PaymentValidationSection from "./payment-validation";
 
 type DefenseRequestDetails = {
   id: number;
@@ -486,63 +487,7 @@ export default function Details({ id, defenseRequest: initialDefenseRequest }: P
                 </div>
               </TabsContent>
               <TabsContent value="payment">
-                <div className="rounded-xl border p-8 bg-white dark:bg-zinc-900 space-y-6">
-                  <h2 className="text-lg font-semibold flex items-center gap-2 mb-4">
-                    <FileText className="h-5 w-5" /> Payment Validation
-                  </h2>
-                  <Separator className="mb-4" />
-
-                  {/* Proof of Payment */}
-                  <div>
-                    <div className="text-xs text-muted-foreground mb-1">Proof of Payment</div>
-                    {details?.attachments?.proof_of_payment ? (
-                      <a
-                        href={resolveFileUrl(details.attachments.proof_of_payment)!}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center gap-2 px-3 py-2 rounded-md border bg-white dark:bg-zinc-900 hover:bg-muted transition w-fit"
-                      >
-                        <FileText className="h-4 w-4" />
-                        <span className="font-medium">Download</span>
-                        <span className="text-xs text-muted-foreground ml-2 truncate max-w-[180px]">
-                          {resolveFileUrl(details.attachments.proof_of_payment)?.split('/').pop()}
-                        </span>
-                      </a>
-                    ) : (
-                      <span className="text-muted-foreground text-sm">No file uploaded.</span>
-                    )}
-                  </div>
-
-                  {/* Amount */}
-                  <div>
-                    <div className="text-xs text-muted-foreground mb-1">Amount</div>
-                    <div className="font-medium text-sm">
-                      {details?.amount !== undefined && details?.amount !== null
-                        ? `₱${Number(details.amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}`
-                        : '—'}
-                    </div>
-                  </div>
-
-                  {/* Suggested Amount (dummy input) */}
-                  <div>
-                    <div className="text-xs text-muted-foreground mb-1">Suggested Amount</div>
-                    <input
-                      type="number"
-                      className="border rounded px-3 py-2 w-40 text-sm"
-                      placeholder="Enter suggested amount"
-                      disabled
-                      value=""
-                      onChange={() => {}}
-                    />
-                    <span className="ml-2 text-xs text-muted-foreground">(dummy input)</span>
-                  </div>
-
-                  {/* Reference No. */}
-                  <div>
-                    <div className="text-xs text-muted-foreground mb-1">Reference No.</div>
-                    <div className="font-medium text-sm">{details?.reference_no || '—'}</div>
-                  </div>
-                </div>
+                <PaymentValidationSection details={details!} resolveFileUrl={resolveFileUrl} />
               </TabsContent>
             </Tabs>
           </div>
