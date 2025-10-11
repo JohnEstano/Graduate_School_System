@@ -30,6 +30,7 @@ use App\Http\Controllers\GeneratedDocumentController;
 use App\Http\Controllers\AdviserStudentController;
 use App\Http\Controllers\PanelistHonorariumSpecController;
 use App\Http\Controllers\CoordinatorAdviserController;
+use App\Http\Controllers\PaymentRateController;
 
 /*
 |--------------------------------------------------------------------------
@@ -81,13 +82,22 @@ Route::get('/test-upload-limits', function () {
 |--------------------------------------------------------------------------
 */
 Route::middleware(['auth', 'verified'])->group(function () {
-Route::get('/coordinator/defense-requests/all-defense-requests', [\App\Http\Controllers\DefenseRequestController::class, 'allForCoordinator'])->middleware('auth');
+    Route::get('/coordinator/defense-requests/all-defense-requests', [\App\Http\Controllers\DefenseRequestController::class, 'allForCoordinator'])->middleware('auth');
     Route::get('/api/coordinator/code', [CoordinatorAdviserController::class, 'getCoordinatorCode']);
     Route::post('/api/adviser/register-with-coordinator-code', [\App\Http\Controllers\CoordinatorAdviserController::class, 'registerWithCode']);
 
     Route::get('/panelists/honorarium-specs', [PanelistHonorariumSpecController::class, 'index']);
     Route::put('/panelists/honorarium-specs', [PanelistHonorariumSpecController::class, 'update'])
         ->name('panelists.honorarium-specs.update');
+
+    //PAYMENT RATESS ETC.
+    Route::post('/dean/payment-rates', [\App\Http\Controllers\PaymentRateController::class, 'update'])
+        ->name('dean.payment-rates.update');
+    Route::get('/dean/payment-rates', [\App\Http\Controllers\PaymentRateController::class, 'index'])
+        ->name('dean.payment-rates.index');
+    Route::get('/dean/payment-rates/data', [\App\Http\Controllers\PaymentRateController::class, 'data'])
+    ->name('dean.payment-rates.data')
+    ->middleware(['auth', 'verified']);
 
 
     // Settings: Document Templates (Dean / Coordinator only)
@@ -137,7 +147,7 @@ Route::get('/coordinator/defense-requests/all-defense-requests', [\App\Http\Cont
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
     /* Coordinator Program Assignments - Super Admin only */
-    Route::prefix('api/coordinator-assignments')->group(function() {
+    Route::prefix('api/coordinator-assignments')->group(function () {
         Route::get('/', [\App\Http\Controllers\CoordinatorProgramAssignmentController::class, 'index'])->name('coordinator-assignments.index');
         Route::get('/coordinators', [\App\Http\Controllers\CoordinatorProgramAssignmentController::class, 'getCoordinators'])->name('coordinator-assignments.coordinators');
         Route::get('/programs', [\App\Http\Controllers\CoordinatorProgramAssignmentController::class, 'getAvailablePrograms'])->name('coordinator-assignments.programs');
@@ -417,8 +427,8 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/api/signatures', [UserSignatureController::class, 'store']);
     Route::patch('/api/signatures/{signature}/activate', [UserSignatureController::class, 'activate']);
 
-Route::get('/generated-documents/{doc}', [GeneratedDocumentController::class, 'show'])
-    ->name('generated-documents.show');
+    Route::get('/generated-documents/{doc}', [GeneratedDocumentController::class, 'show'])
+        ->name('generated-documents.show');
 });
 
 /*
@@ -508,13 +518,13 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/api/adviser/register-with-code', [AdviserStudentController::class, 'registerWithCode']);
     Route::get('/api/adviser/code', [AdviserStudentController::class, 'getAdviserCode']);
     Route::delete('/api/adviser/students/{student}', [AdviserStudentController::class, 'destroy']);
-    
+
     // Student search for autocomplete
     Route::get('/api/students/search', [App\Http\Controllers\Api\StudentSearchController::class, 'search']);
-    
+
     // Comprehensive exam eligibility API
     Route::get('/api/comprehensive-exam/eligibility', [App\Http\Controllers\Api\ComprehensiveExamEligibilityController::class, 'checkEligibility']);
-    
+
     // Manual data scraping endpoint for testing
     Route::post('/api/comprehensive-exam/scrape-data', [App\Http\Controllers\Api\ComprehensiveExamEligibilityController::class, 'manualDataScraping']);
 
@@ -577,26 +587,6 @@ Route::post('/api/generate-document', [GeneratedDocumentController::class, 'gene
 Route::patch('/adviser/defense-requirements/{defenseRequest}/adviser-status', [\App\Http\Controllers\DefenseRequestController::class, 'updateAdviserStatus'])
     ->name('adviser.defense-requirements.update-adviser-status');
 
-Route::post('/login', function (Request $request) {
-    $credentials = $request->validate([
-        'identifier' => 'required|string',
-        'password' => 'required|string',
-    ]);
-
-    $user = User::where('email', $credentials['identifier'])
-        ->orWhere('school_id', $credentials['identifier'])
-        ->first();
-
-    if ($user && $user->password && Hash::check($credentials['password'], $user->password)) {
-        Auth::login($user, $request->boolean('remember'));
-        return redirect()->intended('/dashboard');
-    }
-
-    return response()->json([
-        'message' => 'These credentials do not match our records.',
-        'errors' => ['identifier' => 'These credentials do not match our records.']
-    ], 422);
-});
 
 
 Route::get('/assistant/all-defense-list', function () {
@@ -720,5 +710,9 @@ Route::middleware(['auth'])->get('/api/adviser/registered-coordinator', [\App\Ht
 */
 Route::get('/student/documents', [\App\Http\Controllers\StudentDocumentController::class, 'index'])
     ->name('student.documents');
+
+Route::put('/test-put', function () {
+    return response()->json(['ok' => true]);
+});
 
 

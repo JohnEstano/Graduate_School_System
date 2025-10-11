@@ -114,6 +114,7 @@ const deanNavItems: MainNavItem[] = [
     { title: 'Users', href: '/dean/users', icon: Users },
     { title: 'Defense Requests', href: '/dean/defense-requests', icon: FileText },
     { title: 'Schedules', href: '/dean/schedules', icon: CalendarFold },
+    { title: 'Payment Rates', href: '/dean/payment-rates', icon: DollarSign },
 ];
 
 const footerNavItems: NavItem[] = [];
