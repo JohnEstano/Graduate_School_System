@@ -314,7 +314,8 @@ class User extends Authenticatable
     {
         static::creating(function ($user) {
             if ($user->isCoordinator() && !$user->coordinator_code) {
-                $user->generateCoordinatorCode();
+                // Just set the code, do NOT call save()
+                $user->coordinator_code = strtoupper(bin2hex(random_bytes(4)));
             }
         });
     }

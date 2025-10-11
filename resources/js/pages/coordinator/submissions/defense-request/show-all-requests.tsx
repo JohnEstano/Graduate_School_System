@@ -171,19 +171,24 @@ function ShowAllRequestsInner({ defenseRequests: initial, onStatusChange }: Show
   // NOTE: We no longer drop items by workflow_state on the frontend;
   // we rely on the backend "status" normalization.
   const fetchDefenseRequests = useCallback(async () => {
+    // Show loading toast and keep its id
+    const toastId = toast.loading('Fetching table data...');
     setIsLoading(true);
     try {
       const response = await fetch('/coordinator/defense-requests/all-defense-requests');
       if (response.ok) {
         const data: DefenseRequestSummary[] = await response.json();
         setDefenseRequests(normalizeRequests(data));
+        toast.success('Table data loaded!', { id: toastId });
       } else {
-        toast.error('Failed to fetch defense requests');
+        toast.error('Failed to fetch defense requests', { id: toastId });
       }
     } catch {
-      toast.error('Error fetching defense requests');
+      toast.error('Error fetching defense requests', { id: toastId });
     } finally {
       setIsLoading(false);
+      // If not already closed, dismiss after a short delay
+      setTimeout(() => toast.dismiss(toastId), 1000);
     }
   }, []);
 

@@ -8,15 +8,35 @@ use Illuminate\Support\Str;
 use App\Models\User;
 use App\Models\DefenseRequest;
 use App\Models\Panelist;
+use Illuminate\Support\Facades\DB;
 use Faker\Factory as Faker;
 
 class DefenseRequestSeeder extends Seeder
 {
     public function run()
     {
+        // Disable foreign key checks
+        DB::statement('SET FOREIGN_KEY_CHECKS=0;');
+        // Truncate tables
+        DB::table('defense_requests')->truncate();
+        DB::table('panelists')->truncate();
+        DB::table('users')->truncate();
+        if (DB::getSchemaBuilder()->hasTable('coordinator_program_assignments')) {
+            DB::table('coordinator_program_assignments')->truncate();
+        }
+        // Reset auto-increment
+        DB::statement('ALTER TABLE users AUTO_INCREMENT = 1;');
+        DB::statement('ALTER TABLE defense_requests AUTO_INCREMENT = 1;');
+        DB::statement('ALTER TABLE panelists AUTO_INCREMENT = 1;');
+        if (DB::getSchemaBuilder()->hasTable('coordinator_program_assignments')) {
+            DB::statement('ALTER TABLE coordinator_program_assignments AUTO_INCREMENT = 1;');
+        }
+        // Re-enable foreign key checks
+        DB::statement('SET FOREIGN_KEY_CHECKS=1;');
+
         $faker = Faker::create();
 
-        // List of all programs (full list as provided)
+        // Programs
         $programs = [
             'Master of Arts in Education major in English',
             'Master of Arts in Education major in Sociology',
@@ -50,7 +70,7 @@ class DefenseRequestSeeder extends Seeder
         ];
 
         // 1. Create Dean
-        $dean = User::create([
+        $dean = User::factory()->create([
             'first_name' => 'Maria',
             'last_name' => 'Lopez',
             'email' => 'dean@school.edu',
@@ -61,20 +81,20 @@ class DefenseRequestSeeder extends Seeder
         // 2. Create 2 Administrative Assistants
         $aas = [];
         $aaNames = [['James', 'Smith'], ['Emily', 'Johnson']];
-        for ($i = 0; $i < 2; $i++) {
-            $aas[] = User::create([
-                'first_name' => $aaNames[$i][0],
-                'last_name' => $aaNames[$i][1],
+        foreach ($aaNames as $i => $name) {
+            $aas[] = User::factory()->create([
+                'first_name' => $name[0],
+                'last_name' => $name[1],
                 'email' => "aa" . ($i+1) . "@school.edu",
                 'password' => Hash::make('password'),
                 'role' => 'Administrative Assistant',
             ]);
         }
 
-        // 3. Create 10 Program Coordinators
+        // 3. Create 10 Coordinators, each assigned to a program
         $coordinators = [];
-        for ($i = 0; $i < 10; $i++) {
-            $coordinators[] = User::create([
+        foreach (range(0, 9) as $i) {
+            $coordinators[] = User::factory()->create([
                 'first_name' => $faker->firstName,
                 'last_name' => $faker->lastName,
                 'email' => "coordinator" . ($i+1) . "@school.edu",
@@ -84,10 +104,10 @@ class DefenseRequestSeeder extends Seeder
             ]);
         }
 
-        // 4. Create 10 Faculty/Advisers
+        // 4. Create 10 Advisers, each assigned to a program
         $advisers = [];
-        for ($i = 0; $i < 10; $i++) {
-            $advisers[] = User::create([
+        foreach (range(0, 9) as $i) {
+            $advisers[] = User::factory()->create([
                 'first_name' => $faker->firstName,
                 'last_name' => $faker->lastName,
                 'email' => "adviser" . ($i+1) . "@school.edu",
@@ -97,17 +117,33 @@ class DefenseRequestSeeder extends Seeder
             ]);
         }
 
-        // 5. Create 50 Students, each with a defense request
+        // 5. Attach advisers to coordinators (adviser_coordinator pivot)
+        foreach ($advisers as $i => $adviser) {
+            $coordinator = $coordinators[$i % count($coordinators)];
+            $adviser->coordinators()->attach($coordinator->id);
+        }
+
+        // 6. Create 50 Students, each with adviser(s) and a defense request
         $statuses = ['Pending', 'Approved', 'Rejected', 'Completed'];
         $defenseTypes = ['Proposal', 'Prefinal', 'Final'];
         $priorities = ['Low', 'Medium', 'High'];
+        // Add this array for workflow states that coordinators can see
+        $workflowStates = [
+            'adviser-approved',
+            'coordinator-review',
+            'coordinator-approved',
+            'panels-assigned',
+            'scheduled',
+            'completed',
+            'coordinator-rejected'
+        ];
 
-        for ($i = 1; $i <= 50; $i++) {
+        foreach (range(1, 50) as $i) {
             $program = $programs[($i - 1) % count($programs)];
             $coordinator = $coordinators[($i - 1) % count($coordinators)];
             $adviser = $advisers[($i - 1) % count($advisers)];
 
-            $student = User::create([
+            $student = User::factory()->create([
                 'first_name' => $faker->firstName,
                 'middle_name' => $faker->firstName,
                 'last_name' => $faker->lastName,
@@ -118,6 +154,10 @@ class DefenseRequestSeeder extends Seeder
                 'school_id' => "2025" . str_pad($i, 4, '0', STR_PAD_LEFT),
             ]);
 
+            // Attach adviser to student (adviser_student pivot)
+            $student->advisers()->attach($adviser->id);
+
+            // Defense Request
             $defenseRequest = DefenseRequest::create([
                 'first_name' => $student->first_name,
                 'middle_name' => $student->middle_name,
@@ -128,7 +168,8 @@ class DefenseRequestSeeder extends Seeder
                 'defense_type' => $defenseTypes[array_rand($defenseTypes)],
                 'status' => $statuses[array_rand($statuses)],
                 'priority' => $priorities[array_rand($priorities)],
-                'workflow_state' => 'submitted',
+                // PATCH: Use a workflow state visible to coordinators
+                'workflow_state' => $workflowStates[array_rand($workflowStates)],
                 'scheduled_date' => now()->addDays($i),
                 'scheduled_time' => '09:00',
                 'scheduled_end_time' => '11:00',
@@ -159,9 +200,9 @@ class DefenseRequestSeeder extends Seeder
 
             // Assign panelists (create dummy panelists if needed)
             $panelists = [];
-            for ($p = 1; $p <= 5; $p++) {
+            foreach (range(1, 5) as $p) {
                 $panelist = Panelist::firstOrCreate([
-                    'email' => "panelist{$i}_{$p}@school.edu", // unique email
+                    'email' => "panelist{$i}_{$p}@school.edu",
                 ], [
                     'name' => $faker->name,
                     'role' => $p === 1 ? 'Chairperson' : 'Panel Member',
@@ -175,6 +216,21 @@ class DefenseRequestSeeder extends Seeder
             $defenseRequest->defense_panelist3 = $panelists[3]->id;
             $defenseRequest->defense_panelist4 = $panelists[4]->id;
             $defenseRequest->save();
+        }
+
+        // 7. Coordinator-Program Assignments (if using coordinator_program_assignments table)
+        if (DB::getSchemaBuilder()->hasTable('coordinator_program_assignments')) {
+            foreach ($coordinators as $i => $coordinator) {
+                DB::table('coordinator_program_assignments')->insert([
+                    'coordinator_user_id' => $coordinator->id,
+                    'program_name' => $coordinator->program,
+                    'assigned_by' => $dean->id,
+                    'notes' => 'Auto-assigned by seeder',
+                    'is_active' => true,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+            }
         }
     }
 }
