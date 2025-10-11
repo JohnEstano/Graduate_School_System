@@ -15,8 +15,17 @@ import {
     DialogDescription,
     DialogTrigger,
 } from '@/components/ui/dialog';
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { usePage } from '@inertiajs/react';
-import { Check, Paperclip } from 'lucide-react';
+import { Check, Paperclip, AlertCircle } from 'lucide-react';
 
 
 type FacultyUser = {
@@ -186,6 +195,8 @@ export default function SubmitDefenseRequirements({ onFinish, open, onOpenChange
     const [openDialog, setOpenDialog] = useState(false);
     const [currentStep, setCurrentStep] = useState(0);
     const [showSuccessPanel, setShowSuccessPanel] = useState(false);
+    const [showValidationAlert, setShowValidationAlert] = useState(false);
+    const [validationMessage, setValidationMessage] = useState('');
 
     function handleFile(field: keyof typeof data) {
         return (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -205,14 +216,16 @@ export default function SubmitDefenseRequirements({ onFinish, open, onOpenChange
 
                 // Check file size
                 if (file.size > maxSize) {
-                    alert(`File size too large. Maximum allowed size is 200MB. Your file is ${(file.size / (1024 * 1024)).toFixed(2)}MB.`);
+                    setValidationMessage(`File size too large. Maximum allowed size is 200MB. Your file is ${(file.size / (1024 * 1024)).toFixed(2)}MB.`);
+                    setShowValidationAlert(true);
                     e.target.value = '';
                     return;
                 }
 
                 // Check file type
                 if (!allowedTypes.includes(file.type)) {
-                    alert(`File type not allowed. Please upload PDF, Word documents, or images (JPEG, PNG).`);
+                    setValidationMessage(`File type not allowed. Please upload PDF, Word documents, or images (JPEG, PNG).`);
+                    setShowValidationAlert(true);
                     e.target.value = '';
                     return;
                 }
@@ -232,12 +245,15 @@ export default function SubmitDefenseRequirements({ onFinish, open, onOpenChange
                 console.error('Submission failed:', errors);
                 
                 if (errors.message && errors.message.includes('POST Content-Length')) {
-                    alert('File upload failed: Files are too large. Please ensure each file is under 200MB and try again.');
+                    setValidationMessage('File upload failed: Files are too large. Please ensure each file is under 200MB and try again.');
+                    setShowValidationAlert(true);
                 } else if (errors.message && errors.message.includes('PostTooLargeException')) {
-                    alert('Upload size limit exceeded. Please reduce file sizes and try again.');
+                    setValidationMessage('Upload size limit exceeded. Please reduce file sizes and try again.');
+                    setShowValidationAlert(true);
                 } else {
                     const errorMessages = Object.values(errors).flat().join('\n');
-                    alert(`Submission failed:\n${errorMessages}`);
+                    setValidationMessage(`Submission failed:\n${errorMessages}`);
+                    setShowValidationAlert(true);
                 }
             },
             onProgress: (progress) => {
@@ -273,7 +289,8 @@ export default function SubmitDefenseRequirements({ onFinish, open, onOpenChange
         // If on Step 2, validate required fields
         if (currentStep === 1) {
             if (!isStepTwoValid()) {
-                alert('Please fill in all required fields and upload all required documents before proceeding.');
+                setValidationMessage('Please fill in all required fields and upload all required documents before proceeding.');
+                setShowValidationAlert(true);
                 return;
             }
             setCurrentStep(currentStep + 1);
@@ -687,6 +704,28 @@ export default function SubmitDefenseRequirements({ onFinish, open, onOpenChange
                     </div>
                 )}
             </DialogContent>
+
+            {/* Validation Alert Dialog */}
+            <AlertDialog open={showValidationAlert} onOpenChange={setShowValidationAlert}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <div className="flex items-center gap-3">
+                            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-amber-100">
+                                <AlertCircle className="h-5 w-5 text-amber-600" />
+                            </div>
+                            <AlertDialogTitle className="text-lg">Required Fields Missing</AlertDialogTitle>
+                        </div>
+                        <AlertDialogDescription className="pt-3 text-base whitespace-pre-line">
+                            {validationMessage}
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogAction className="bg-rose-600 hover:bg-rose-700">
+                            OK
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </Dialog>
     );
 }

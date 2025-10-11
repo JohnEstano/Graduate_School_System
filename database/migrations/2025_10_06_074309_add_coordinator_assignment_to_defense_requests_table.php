@@ -16,11 +16,8 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('defense_requests', function (Blueprint $table) {
-            // Coordinator assignment
-            $table->foreignId('coordinator_user_id')->nullable()->after('adviser_user_id')
-                ->constrained('users')
-                ->nullOnDelete()
-                ->comment('The coordinator assigned to this defense request based on program');
+            // NOTE: coordinator_user_id column already exists from 2025_10_02_142601 migration
+            // Only add the NEW tracking fields
             
             // Coordinator assignment tracking
             $table->timestamp('coordinator_assigned_at')->nullable()->after('coordinator_reviewed_at')
@@ -38,8 +35,7 @@ return new class extends Migration
             $table->text('coordinator_assignment_notes')->nullable()->after('coordinator_manually_assigned')
                 ->comment('Notes about coordinator assignment or reassignment');
             
-            // Add indexes for performance
-            $table->index('coordinator_user_id', 'idx_defense_requests_coordinator');
+            // Add indexes for performance (skip coordinator_user_id as it may already have an index)
             $table->index(['program', 'workflow_state'], 'idx_defense_requests_program_state');
             $table->index(['coordinator_user_id', 'workflow_state'], 'idx_defense_requests_coord_state');
         });
@@ -51,18 +47,15 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('defense_requests', function (Blueprint $table) {
-            // Drop indexes first
-            $table->dropIndex('idx_defense_requests_coordinator');
+            // Drop foreign key FIRST (before dropping indexes)
+            $table->dropForeign(['coordinator_assigned_by']);
+            
+            // Drop indexes
             $table->dropIndex('idx_defense_requests_program_state');
             $table->dropIndex('idx_defense_requests_coord_state');
             
-            // Drop foreign keys
-            $table->dropForeign(['coordinator_user_id']);
-            $table->dropForeign(['coordinator_assigned_by']);
-            
-            // Drop columns
+            // Drop columns (NOT coordinator_user_id as it's managed by earlier migration)
             $table->dropColumn([
-                'coordinator_user_id',
                 'coordinator_assigned_at',
                 'coordinator_assigned_by',
                 'coordinator_manually_assigned',

@@ -263,16 +263,23 @@ class DefenseRequestController extends Controller
                 // Send email notification to adviser
                 if ($adviserUser->email) {
                     try {
-                        Mail::to($adviserUser->email)
-                            ->queue(new DefenseRequestSubmitted($defenseRequest, $adviserUser));
+                        Log::info('Defense Request: About to send email', [
+                            'defense_request_id' => $defenseRequest->id,
+                            'adviser_email' => $adviserUser->email,
+                            'adviser_name' => $adviserUser->full_name
+                        ]);
                         
-                        Log::info('Defense Request: Email queued successfully', [
+                        // Send email IMMEDIATELY (not queued) to ensure it's sent
+                        Mail::to($adviserUser->email)
+                            ->send(new DefenseRequestSubmitted($defenseRequest, $adviserUser));
+                        
+                        Log::info('Defense Request: Email sent successfully', [
                             'defense_request_id' => $defenseRequest->id,
                             'adviser_email' => $adviserUser->email,
                             'email_type' => 'DefenseRequestSubmitted'
                         ]);
                     } catch (\Exception $e) {
-                        Log::error('Defense Request: Failed to queue email', [
+                        Log::error('Defense Request: Failed to send email', [
                             'defense_request_id' => $defenseRequest->id,
                             'adviser_email' => $adviserUser->email,
                             'error' => $e->getMessage(),

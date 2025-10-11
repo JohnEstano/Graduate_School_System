@@ -3,10 +3,14 @@
 namespace App\Http\Controllers;
 
 use App\Models\DefenseRequest;
+use App\Models\User;
+use App\Models\Notification;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Mail;
+use App\Mail\DefenseRequestSubmitted;
 
 class DefenseRequirementController extends Controller
 {
@@ -188,6 +192,73 @@ class DefenseRequirementController extends Controller
                 null,
                 'submitted'
             )->save();
+
+            // Send email notification to adviser
+            if ($dr->adviser_user_id) {
+                $adviserUser = User::find($dr->adviser_user_id);
+                
+                if ($adviserUser) {
+                    Log::info('Defense Request: Adviser found', [
+                        'defense_request_id' => $dr->id,
+                        'adviser_id' => $adviserUser->id,
+                        'adviser_name' => $adviserUser->full_name,
+                        'adviser_email' => $adviserUser->email
+                    ]);
+                    
+                    // Create in-app notification
+                    Notification::create([
+                        'user_id' => $adviserUser->id,
+                        'type' => 'defense-request',
+                        'title' => 'New Defense Request',
+                        'message' => "Review needed for {$dr->defense_type} request ({$dr->thesis_title}).",
+                        'link' => url("/defense-request/{$dr->id}")
+                    ]);
+                    
+                    // Send email notification
+                    if ($adviserUser->email) {
+                        try {
+                            Log::info('Defense Request: About to send email', [
+                                'defense_request_id' => $dr->id,
+                                'adviser_email' => $adviserUser->email,
+                                'adviser_name' => $adviserUser->full_name
+                            ]);
+                            
+                            // Send email IMMEDIATELY (not queued) to ensure it's sent
+                            Mail::to($adviserUser->email)
+                                ->send(new DefenseRequestSubmitted($dr, $adviserUser));
+                            
+                            Log::info('Defense Request: Email sent successfully', [
+                                'defense_request_id' => $dr->id,
+                                'adviser_email' => $adviserUser->email,
+                                'email_type' => 'DefenseRequestSubmitted'
+                            ]);
+                        } catch (\Exception $e) {
+                            Log::error('Defense Request: Failed to send email', [
+                                'defense_request_id' => $dr->id,
+                                'adviser_email' => $adviserUser->email,
+                                'error' => $e->getMessage(),
+                                'trace' => $e->getTraceAsString()
+                            ]);
+                        }
+                    } else {
+                        Log::warning('Defense Request: Adviser has no email address', [
+                            'defense_request_id' => $dr->id,
+                            'adviser_id' => $adviserUser->id,
+                            'adviser_name' => $adviserUser->full_name
+                        ]);
+                    }
+                } else {
+                    Log::warning('Defense Request: Adviser user not found in database', [
+                        'defense_request_id' => $dr->id,
+                        'adviser_user_id' => $dr->adviser_user_id
+                    ]);
+                }
+            } else {
+                Log::warning('Defense Request: No adviser assigned', [
+                    'defense_request_id' => $dr->id,
+                    'defense_adviser' => $dr->defense_adviser
+                ]);
+            }
 
         } catch (\Throwable $e) {
             Log::error('Defense request create failed', ['err'=>$e->getMessage()]);
