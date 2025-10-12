@@ -118,19 +118,6 @@ export default function PaymentValidationSection({ details, resolveFileUrl }: Pa
         </div>
       </div>
 
-      {/* Suggested Amount (dummy input) */}
-      <div>
-        <div className="text-xs text-muted-foreground mb-1">Suggested Amount</div>
-        <input
-          type="number"
-          className="border rounded px-3 py-2 w-40 text-sm"
-          placeholder="Enter suggested amount"
-          disabled
-          value=""
-          onChange={() => {}}
-        />
-        <span className="ml-2 text-xs text-muted-foreground">(dummy input)</span>
-      </div>
 
       {/* Reference No. */}
       <div>

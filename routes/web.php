@@ -724,4 +724,74 @@ Route::put('/test-put', function () {
     return response()->json(['ok' => true]);
 });
 
+Route::get('/assistant/all-defense-list/data', function () {
+    $user = Auth::user();
+    if (!$user || !in_array($user->role, ['Administrative Assistant', 'Dean'])) {
+        abort(403);
+    }
+
+    $rows = \App\Models\DefenseRequest::query()
+        ->where('coordinator_status', 'Approved') // <-- Only fetch Approved
+        ->orderByDesc('created_at')
+        ->limit(500)
+        ->get([
+            'id','first_name','middle_name','last_name','school_id','program',
+            'thesis_title','defense_type','status','priority','workflow_state',
+            'scheduled_date','defense_mode','defense_venue','panels_assigned_at',
+            'defense_adviser','submitted_at',
+            'coordinator_status',
+            'amount',
+            'reference_no',
+            'coordinator_user_id',
+        ])
+        ->map(function($r){
+            $expectedTotal = 0;
+            if ($r->program && $r->defense_type) {
+                $programLevel = \App\Helpers\ProgramLevel::getLevel($r->program);
+                $expectedTotal = \App\Models\PaymentRate::where('program_level', $programLevel)
+                    ->where('defense_type', $r->defense_type)
+                    ->sum('amount');
+            }
+
+            $coordinator = null;
+            if ($r->coordinator_user_id) {
+                $coordUser = \App\Models\User::find($r->coordinator_user_id);
+                if ($coordUser) {
+                    $coordinator = trim(
+                        $coordUser->first_name . ' ' .
+                        ($coordUser->middle_name ? strtoupper($coordUser->middle_name[0]) . '. ' : '') .
+                        $coordUser->last_name
+                    );
+                }
+            }
+
+            return [
+                'id' => $r->id,
+                'first_name' => $r->first_name,
+                'middle_name' => $r->middle_name,
+                'last_name' => $r->last_name,
+                'program' => $r->program,
+                'thesis_title' => $r->thesis_title,
+                'defense_type' => $r->defense_type,
+                'priority' => $r->priority,
+                'workflow_state' => $r->workflow_state,
+                'status' => $r->status,
+                'scheduled_date' => $r->scheduled_date?->format('Y-m-d'),
+                'date_of_defense' => $r->scheduled_date
+                    ? $r->scheduled_date->format('Y-m-d')
+                    : ($r->created_at ? $r->created_at->format('Y-m-d') : null),
+                'defense_mode' => $r->defense_mode,
+                'mode_defense' => $r->defense_mode,
+                'adviser' => $r->defense_adviser ?? '—',
+                'submitted_at' => $r->submitted_at ? \Carbon\Carbon::parse($r->submitted_at)->format('Y-m-d H:i:s') : null,
+                'coordinator_status' => $r->coordinator_status,
+                'expected_rate' => $expectedTotal,
+                'amount' => $r->amount ?? null,
+                'reference_no' => $r->reference_no ?? null,
+                'coordinator' => $coordinator,
+            ];
+        });
+
+    return response()->json($rows->values());
+});
 

@@ -2,10 +2,8 @@ import { Button } from '@/components/ui/button';
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/table';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
-import { ArrowUp, ArrowDown, ChevronsUpDown, Eye, CheckCircle, CircleX, CircleArrowLeft, CalendarX, UserSearch, Check, X, AlertCircle, FileText } from 'lucide-react';
-import { format, formatDistanceToNowStrict } from 'date-fns';
+import { Eye, Check, X, AlertCircle, CheckCircle } from 'lucide-react';
 import { router } from '@inertiajs/react';
-import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@/components/ui/dropdown-menu';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { getProgramAbbreviation } from '@/utils/program-abbreviations';
 import { useState } from 'react';
@@ -147,7 +145,7 @@ export default function TableAllDefenseList({
   }
 
   // Pagination state
-  const pageSize = 20; // <-- Set this to 20
+  const pageSize = 20;
   const [page, setPage] = useState(1);
 
   const totalPages = Math.max(1, Math.ceil(paged.length / pageSize));
@@ -189,13 +187,13 @@ export default function TableAllDefenseList({
               {columns.adviser && <TableHead className="px-2 min-w-[120px]">Adviser</TableHead>}
               {columns.submitted_at && <TableHead className="px-2 min-w-[120px]">Submitted At</TableHead>}
               {columns.program && <TableHead className="px-2 min-w-[100px]">Program</TableHead>}
+              {columns.coordinator && <TableHead className="px-2 min-w-[140px]">Program Coordinator</TableHead>}
+              {columns.scheduled_date && <TableHead className="px-2 min-w-[120px]">Scheduled Date</TableHead>} {/* moved here */}
               {columns.expected_amount && <TableHead className="px-2 min-w-[120px]">Expected Amount</TableHead>}
               {columns.amount_paid && <TableHead className="px-2 min-w-[120px]">Amount Paid</TableHead>}
               {columns.reference_no && <TableHead className="px-2 min-w-[120px]">Reference/OR No.</TableHead>}
-              {columns.coordinator && <TableHead className="px-2 min-w-[140px]">Program Coordinator</TableHead>}
-              {columns.status && <TableHead className="px-2 min-w-[100px] text-center">Status</TableHead>}
-              {columns.type && <TableHead className="px-2 min-w-[100px]">Defense Type</TableHead>}
               {columns.priority && <TableHead className="px-2 min-w-[80px]">Priority</TableHead>}
+              {columns.status && <TableHead className="px-2 min-w-[100px] text-center">Status</TableHead>}
               {columns.actions && <TableHead className="px-2 min-w-[80px] text-center">Actions</TableHead>}
             </TableRow>
           </TableHeader>
@@ -278,17 +276,29 @@ export default function TableAllDefenseList({
                       {getProgramAbbreviation(r.program || '—')}
                     </TableCell>
                   )}
+                  {columns.coordinator && (
+                    <TableCell className="px-2 py-2 text-xs text-muted-foreground whitespace-nowrap align-middle">
+                      {r.coordinator || '—'}
+                    </TableCell>
+                  )}
+                  {columns.scheduled_date && (
+                    <TableCell className="px-2 py-2 text-xs text-muted-foreground whitespace-nowrap align-middle">
+                      {r.scheduled_date
+                        ? safeFormatDate(r.scheduled_date)
+                        : '—'}
+                    </TableCell>
+                  )}
                   {columns.expected_amount && (
                     <TableCell className="px-2 py-2 text-xs text-muted-foreground whitespace-nowrap align-middle">
-                      {typeof r.expected_rate === 'number'
-                        ? `₱${r.expected_rate.toLocaleString(undefined, { minimumFractionDigits: 2 })}`
+                      {r.expected_rate != null
+                        ? `₱${Number(r.expected_rate).toLocaleString(undefined, { minimumFractionDigits: 2 })}`
                         : '—'}
                     </TableCell>
                   )}
                   {columns.amount_paid && (
                     <TableCell className="px-2 py-2 text-xs text-muted-foreground whitespace-nowrap align-middle">
-                      {typeof r.amount === 'number'
-                        ? `₱${r.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}`
+                      {r.amount != null
+                        ? `₱${Number(r.amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}`
                         : '—'}
                     </TableCell>
                   )}
@@ -297,9 +307,9 @@ export default function TableAllDefenseList({
                       {r.reference_no || '—'}
                     </TableCell>
                   )}
-                  {columns.coordinator && (
+                  {columns.priority && (
                     <TableCell className="px-2 py-2 text-xs text-muted-foreground whitespace-nowrap align-middle">
-                      {r.coordinator || '—'}
+                      {r.priority}
                     </TableCell>
                   )}
                   {columns.status && (
@@ -325,16 +335,6 @@ export default function TableAllDefenseList({
                       </Badge>
                     </TableCell>
                   )}
-                  {columns.type && (
-                    <TableCell className="px-2 py-2 text-xs text-muted-foreground whitespace-nowrap align-middle">
-                      {r.defense_type || '—'}
-                    </TableCell>
-                  )}
-                  {columns.priority && (
-                    <TableCell className="px-2 py-2 text-xs text-muted-foreground whitespace-nowrap align-middle">
-                      {r.priority}
-                    </TableCell>
-                  )}
                   {columns.actions && (
                     <TableCell className="px-2 py-2 text-xs text-center align-middle">
                       <Button
@@ -355,8 +355,11 @@ export default function TableAllDefenseList({
             })}
             {paged.length === 0 && (
               <TableRow>
-                <TableCell colSpan={Object.keys(columns).length + (hideSelect ? 0 : 1)}>
-                  No defense requests found.
+                <TableCell
+                  colSpan={Object.keys(columns).length + (hideSelect ? 0 : 1)}
+                  className="py-32 text-center text-sm text-muted-foreground"
+                >
+                  no results
                 </TableCell>
               </TableRow>
             )}

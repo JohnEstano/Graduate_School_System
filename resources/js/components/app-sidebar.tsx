@@ -4,7 +4,7 @@ import { NavUser } from '@/components/nav-user';
 import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '@/components/ui/sidebar';
 import { MainNavItem, type NavItem } from '@/types';
 import { Link, usePage } from '@inertiajs/react';
-import { CalendarFold, Calendar, CreditCard, DollarSign, FileText, GraduationCap, LayoutGrid, MessageSquareText, ScrollText, SquareUserRound, Users, Box, LibraryBig, Send } from 'lucide-react';
+import { CalendarFold, Calendar, CreditCard, DollarSign, FileText, GraduationCap, LayoutGrid, MessageSquareText, ScrollText, SquareUserRound, Users, Box, LibraryBig, Send, BadgeDollarSign } from 'lucide-react';
 import AppLogo from './app-logo';
 import { useEffect, useState } from "react";
 
@@ -86,7 +86,16 @@ const coordinatorNavItems: MainNavItem[] = [
 
 const assistantNavItems: MainNavItem[] = [
     { title: 'Dashboard', href: '/dashboard', icon: LayoutGrid },
-    { title: 'Defense Requests', href: '/assistant/all-defense-list', icon: FileText }, // Only this for AA
+      {
+        title: 'Finance & Payments',
+        href: '/',
+        icon: BadgeDollarSign,
+        subItems: [
+            { title: 'Defense Requests', href: '/assistant/all-defense-list', icon: FileText }, 
+            { title: 'Defense Batches', href: '/assistant/all-defense-batches', icon: FileText },
+        ],
+    },
+   
     {
         title: 'Applications',
         href: '/defense',

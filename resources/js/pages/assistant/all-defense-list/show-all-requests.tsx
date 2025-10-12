@@ -23,7 +23,8 @@ import {
   CircleArrowLeft,
   Signature,
   Filter,
-  MoreHorizontal
+  MoreHorizontal,
+  Send, // <-- Add this import
 } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import TableAllDefenseList from './table-all-defense-list';
@@ -90,20 +91,34 @@ function ShowAllRequestsInner({ defenseRequests: initial, onStatusChange }: Show
     return el?.content || '';
   }
 
+  // --- FINAL FIX: Only use expected_rate and amount ---
   const normalizeRequests = (list: DefenseRequestSummary[]) =>
     list.map(r => ({
       ...r,
+      expected_rate: r.expected_rate !== undefined && r.expected_rate !== null ? Number(r.expected_rate) : null,
+      amount: r.amount !== undefined && r.amount !== null ? Number(r.amount) : null,
       date_of_defense: r.date_of_defense || r.scheduled_date || undefined,
       mode_defense: r.mode_defense || r.defense_mode || undefined
     }));
 
-  const [defenseRequests, setDefenseRequests] = useState<DefenseRequestSummary[]>(() =>
-    initial ? normalizeRequests(initial) : []
-  );
+  const [defenseRequests, setDefenseRequests] = useState<DefenseRequestSummary[]>([]);
 
+  // Fetch from the correct endpoint!
   useEffect(() => {
-    if (initial) setDefenseRequests(normalizeRequests(initial));
-  }, [initial]);
+    fetch('/assistant/all-defense-list/data')
+      .then(res => res.json())
+      .then(data => {
+        setDefenseRequests(
+          data.map((r: any) => ({
+            ...r,
+            expected_rate: r.expected_rate !== undefined && r.expected_rate !== null ? Number(r.expected_rate) : null,
+            amount: r.amount !== undefined && r.amount !== null ? Number(r.amount) : null,
+            date_of_defense: r.date_of_defense || r.scheduled_date || undefined,
+            mode_defense: r.mode_defense || r.defense_mode || undefined
+          }))
+        );
+      });
+  }, []);
 
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string[]>([]);
@@ -114,22 +129,23 @@ function ShowAllRequestsInner({ defenseRequests: initial, onStatusChange }: Show
 
   const [selectedByTab, setSelectedByTab] = useState<{ [k: string]: number[] }>({ pending: [], rejected: [], approved: [] });
 
-  // Update columns state to reflect new columns for each tab
+  // --- FINAL FIX: Only use expected_amount and amount_paid as column keys, but data is from expected_rate and amount ---
   const [columns, setColumns] = useState<Record<string, boolean>>({
     title: true,
     presenter: true,
     adviser: true,
     submitted_at: true,
     program: true,
-    expected_amount: false, // NEW
-    amount_paid: false,     // NEW
-    reference_no: false,    // NEW
-    coordinator: false,     // NEW
-    actions: true,          // NEW
+    expected_amount: true,
+    amount_paid: true,
+    reference_no: true,
+    coordinator: true,
+    scheduled_date: true, // <-- Add this line
+    actions: true,
     date: true,
     mode: true,
-    type: true,
-    priority: true
+    type: false,
+    priority: false
   });
 
   // Helper to get columns per tab
@@ -175,7 +191,10 @@ function ShowAllRequestsInner({ defenseRequests: initial, onStatusChange }: Show
   const fetchDefenseRequests = useCallback(async () => {
     setIsLoading(true);
     try {
-      const response = await fetch('/coordinator/defense-requests/all-defense-requests');
+      // WRONG ENDPOINT:
+      // const response = await fetch('/coordinator/defense-requests/all-defense-requests');
+      // RIGHT ENDPOINT:
+      const response = await fetch('/assistant/all-defense-list/data');
       if (response.ok) {
         const data: DefenseRequestSummary[] = await response.json();
         setDefenseRequests(normalizeRequests(data));
@@ -513,6 +532,18 @@ function ShowAllRequestsInner({ defenseRequests: initial, onStatusChange }: Show
     }
   };
 
+  useEffect(() => {
+    let toastId: string | number | undefined;
+    if (isLoading) {
+      toastId = toast.loading('Loading defense requests...');
+    } else {
+      toast.dismiss();
+    }
+    return () => {
+      if (toastId) toast.dismiss(toastId);
+    };
+  }, [isLoading]);
+
   return (
     <>
       <Head title="Defense Requests" />
@@ -523,8 +554,8 @@ function ShowAllRequestsInner({ defenseRequests: initial, onStatusChange }: Show
         <div className="w-full bg-white dark:bg-zinc-900 border border-border rounded-lg overflow-hidden mb-2">
           <div className="flex flex-row dark:bg-zinc-900 items-center justify-between w-full p-3 border-b bg-white">
             <div className="flex dark:bg-zinc-900 items-center gap-2">
-              <div className="h-10 w-10 flex items-center justify-center rounded-full bg-blue-500/10 border border-blue-500">
-                <Signature className="h-5 w-5 text-blue-400" />
+              <div className="h-10 w-10 flex items-center justify-center rounded-full bg-rose-500/10 border border-rose-500">
+                <Send className="h-5 w-5 text-rose-500" /> 
               </div>
               <div>
                 <span className="text-base font-semibold">
@@ -600,16 +631,10 @@ function ShowAllRequestsInner({ defenseRequests: initial, onStatusChange }: Show
                     Program Coordinator
                   </DropdownMenuCheckboxItem>
                   <DropdownMenuCheckboxItem
-                    checked={columns.type}
-                    onCheckedChange={() => toggleColumn('type')}
+                    checked={columns.scheduled_date}
+                    onCheckedChange={() => toggleColumn('scheduled_date')}
                   >
-                    Defense Type
-                  </DropdownMenuCheckboxItem>
-                  <DropdownMenuCheckboxItem
-                    checked={columns.priority}
-                    onCheckedChange={() => toggleColumn('priority')}
-                  >
-                    Priority
+                    Scheduled Date
                   </DropdownMenuCheckboxItem>
                   <DropdownMenuCheckboxItem
                     checked={columns.actions}
@@ -806,14 +831,14 @@ function ShowAllRequestsInner({ defenseRequests: initial, onStatusChange }: Show
         )}
 
         {/* Table */}
-        <div className="flex-1 flex flex-col gap-4 w-full min-h-[90vh]">
+        <div className="flex-1 flex flex-col gap-4 w-full min-h-screen">
           <div className="flex flex-col w-full min-h-0 overflow-x-hidden">
             {/* Only the table is horizontally scrollable */}
             <div className="relative w-full max-w-full">
               <div className="w-full max-w-full">
                 {/* Remove overflow-x-auto here, let ScrollArea handle it */}
                 <TableAllDefenseList
-                  paged={paged}
+                  paged={paged} // <-- Use the filtered, sorted, paginated array!
                   columns={{
                     title: columns.title,
                     presenter: columns.presenter,
@@ -824,6 +849,7 @@ function ShowAllRequestsInner({ defenseRequests: initial, onStatusChange }: Show
                     amount_paid: columns.amount_paid,
                     reference_no: columns.reference_no,
                     coordinator: columns.coordinator,
+                    scheduled_date: columns.scheduled_date, // <-- Add this line
                     status: true,
                     type: columns.type,
                     priority: columns.priority,

@@ -1220,13 +1220,6 @@ class DefenseRequestController extends Controller
             'coordinator-rejected'
         ]);
 
-        // --- ADDED: Also include requests where the coordinator is the assigned panel chair ---
-        $query->orWhere(function($q) use ($user) {
-            $q->where('defense_chairperson', $user->id)
-              ->whereIn('workflow_state', ['panels-assigned', 'scheduled', 'completed']);
-        });
-
-        // --- AA filter ---
         if ($user->role === 'Administrative Assistant') {
             $query->where('coordinator_status', 'Approved');
         }
@@ -1248,9 +1241,29 @@ class DefenseRequestController extends Controller
                 'thesis_title','defense_type','status','priority','workflow_state',
                 'scheduled_date','defense_mode','defense_venue','panels_assigned_at',
                 'defense_adviser','submitted_at',
-                'coordinator_status' // <-- ADDED
+                'coordinator_status',
+                'amount',           // <-- must be present
+                'reference_no',     // <-- must be present
+                'coordinator_user_id', // <-- must be present
             ])
             ->map(function($r){
+                // Get program level
+                $programLevel = \App\Helpers\ProgramLevel::getLevel($r->program);
+
+                // Sum all rates for this program level and defense type
+                $expectedTotal = \App\Models\PaymentRate::where('program_level', $programLevel)
+                    ->where('defense_type', $r->defense_type)
+                    ->sum('amount');
+
+                // Get coordinator name
+                $coordinator = null;
+                if ($r->coordinator_user_id) {
+                    $coordUser = \App\Models\User::find($r->coordinator_user_id);
+                    if ($coordUser) {
+                        $coordinator = trim($coordUser->first_name . ' ' . ($coordUser->middle_name ? strtoupper($coordUser->middle_name[0]) . '. ' : '') . $coordUser->last_name);
+                    }
+                }
+
                 return [
                     'id' => $r->id,
                     'first_name' => $r->first_name,
@@ -1270,7 +1283,12 @@ class DefenseRequestController extends Controller
                     'mode_defense' => $r->defense_mode,
                     'adviser' => $r->defense_adviser ?? '—',
                     'submitted_at' => $r->submitted_at ? \Carbon\Carbon::parse($r->submitted_at)->format('Y-m-d H:i:s') : null,
-                    'coordinator_status' => $r->coordinator_status, // <-- ADDED
+                    'coordinator_status' => $r->coordinator_status,
+                    // --- ADD THESE FIELDS ---
+                    'expected_rate' => $expectedTotal,
+                    'amount' => $r->amount,
+                    'reference_no' => $r->reference_no,
+                    'coordinator' => $coordinator,
                 ];
             });
 
