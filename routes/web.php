@@ -31,6 +31,7 @@ use App\Http\Controllers\AdviserStudentController;
 use App\Http\Controllers\PanelistHonorariumSpecController;
 use App\Http\Controllers\CoordinatorAdviserController;
 use App\Http\Controllers\PaymentRateController;
+use App\Models\PaymentRate; // Add this at the top
 
 /*
 |--------------------------------------------------------------------------
@@ -605,12 +606,22 @@ Route::get('/coordinator/defense-requests', function () {
     return Inertia::render('coordinator/submissions/defense-request/Index');
 })->name('coordinator.defense-requests');
 
+
+
 Route::get('/assistant/all-defense-list/{id}/details', function ($id) {
     $user = Auth::user();
     if (!$user || !in_array($user->role, ['Administrative Assistant', 'Dean'])) {
         abort(403);
     }
     $defenseRequest = DefenseRequest::findOrFail($id);
+
+    // Get program level using helper
+    $programLevel = \App\Helpers\ProgramLevel::getLevel($defenseRequest->program);
+
+    // Sum all rates for this program level and defense type
+    $expectedTotal = PaymentRate::where('program_level', $programLevel)
+        ->where('defense_type', $defenseRequest->defense_type)
+        ->sum('amount');
 
     // Compose the full data structure, similar to coordinator view
     $panelistFields = [
@@ -663,10 +674,9 @@ Route::get('/assistant/all-defense-list/{id}/details', function ($id) {
             'defense_panelist2' => $defenseRequest->defense_panelist2,
             'defense_panelist3' => $defenseRequest->defense_panelist3,
             'defense_panelist4' => $defenseRequest->defense_panelist4,
-            // --- ADD THESE LINES ---
             'amount' => $defenseRequest->amount,
             'reference_no' => $defenseRequest->reference_no,
-            // --- END ADD ---
+            'expected_rate' => $expectedTotal, // <-- This is now the total!
             'attachments' => [
                 'advisers_endorsement' => $defenseRequest->advisers_endorsement,
                 'rec_endorsement' => $defenseRequest->rec_endorsement,
@@ -677,7 +687,6 @@ Route::get('/assistant/all-defense-list/{id}/details', function ($id) {
                 'ai_detection_certificate' => $defenseRequest->ai_detection_certificate,
                 'endorsement_form' => $defenseRequest->endorsement_form,
             ],
-            // If you want to include workflow history, etc., add here as well
             'last_status_updated_by' => $defenseRequest->last_status_updated_by,
             'last_status_updated_at' => $defenseRequest->last_status_updated_at,
             'workflow_history' => $defenseRequest->workflow_history ?? [],

@@ -22,7 +22,7 @@ export type DefenseRequestSummary = {
   defense_type: string;
   mode_defense?: string;
   defense_mode?: string;
-  status: 'Pending' | 'In progress' | 'Approved' | 'Rejected' | 'Needs-info' | 'Completed'; // <-- add Completed
+  status: 'Pending' | 'In progress' | 'Approved' | 'Rejected' | 'Needs-info' | 'Completed';
   priority: 'Low' | 'Medium' | 'High';
   last_status_updated_by?: string;
   last_status_updated_at?: string;
@@ -30,6 +30,10 @@ export type DefenseRequestSummary = {
   adviser?: string;
   submitted_at?: string;
   panelists?: any[];
+  expected_rate?: number | null; // <-- for Expected Amount
+  amount?: number | null;        // <-- for Amount Paid
+  reference_no?: string | null;  // <-- for Reference/OR No.
+  coordinator?: string | null;   // <-- for Program Coordinator
 };
 
 export type TableAllDefenseListProps = {
@@ -51,7 +55,7 @@ export type TableAllDefenseListProps = {
   hideSelect?: boolean;
   isSidebarCollapsed?: boolean;
   sidebarWidth?: number;
-  totalCount?: number; // <-- add this prop for total records
+  totalCount?: number;
 };
 
 function safeFormatDate(dateString?: string, formatStr = 'MMM dd, yyyy') {
@@ -183,8 +187,16 @@ export default function TableAllDefenseList({
               {columns.title && <TableHead className="px-3 min-w-[180px]">Thesis Title</TableHead>}
               {columns.presenter && <TableHead className="px-2 min-w-[120px]">Presenter</TableHead>}
               {columns.adviser && <TableHead className="px-2 min-w-[120px]">Adviser</TableHead>}
+              {columns.submitted_at && <TableHead className="px-2 min-w-[120px]">Submitted At</TableHead>}
               {columns.program && <TableHead className="px-2 min-w-[100px]">Program</TableHead>}
+              {columns.expected_amount && <TableHead className="px-2 min-w-[120px]">Expected Amount</TableHead>}
+              {columns.amount_paid && <TableHead className="px-2 min-w-[120px]">Amount Paid</TableHead>}
+              {columns.reference_no && <TableHead className="px-2 min-w-[120px]">Reference/OR No.</TableHead>}
+              {columns.coordinator && <TableHead className="px-2 min-w-[140px]">Program Coordinator</TableHead>}
               {columns.status && <TableHead className="px-2 min-w-[100px] text-center">Status</TableHead>}
+              {columns.type && <TableHead className="px-2 min-w-[100px]">Defense Type</TableHead>}
+              {columns.priority && <TableHead className="px-2 min-w-[80px]">Priority</TableHead>}
+              {columns.actions && <TableHead className="px-2 min-w-[80px] text-center">Actions</TableHead>}
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -244,12 +256,50 @@ export default function TableAllDefenseList({
                       {r.adviser || '—'}
                     </TableCell>
                   )}
+                  {columns.submitted_at && (
+                    <TableCell className="px-2 py-2 text-xs text-muted-foreground whitespace-nowrap align-middle">
+                      {r.submitted_at
+                        ? (() => {
+                            try {
+                              const d = new Date(r.submitted_at);
+                              return d.toLocaleString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+                            } catch {
+                              return r.submitted_at;
+                            }
+                          })()
+                        : '—'}
+                    </TableCell>
+                  )}
                   {columns.program && (
                     <TableCell
                       className="px-2 py-2 text-xs text-muted-foreground whitespace-nowrap align-middle"
                       title={r.program || '—'}
                     >
                       {getProgramAbbreviation(r.program || '—')}
+                    </TableCell>
+                  )}
+                  {columns.expected_amount && (
+                    <TableCell className="px-2 py-2 text-xs text-muted-foreground whitespace-nowrap align-middle">
+                      {typeof r.expected_rate === 'number'
+                        ? `₱${r.expected_rate.toLocaleString(undefined, { minimumFractionDigits: 2 })}`
+                        : '—'}
+                    </TableCell>
+                  )}
+                  {columns.amount_paid && (
+                    <TableCell className="px-2 py-2 text-xs text-muted-foreground whitespace-nowrap align-middle">
+                      {typeof r.amount === 'number'
+                        ? `₱${r.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}`
+                        : '—'}
+                    </TableCell>
+                  )}
+                  {columns.reference_no && (
+                    <TableCell className="px-2 py-2 text-xs text-muted-foreground whitespace-nowrap align-middle">
+                      {r.reference_no || '—'}
+                    </TableCell>
+                  )}
+                  {columns.coordinator && (
+                    <TableCell className="px-2 py-2 text-xs text-muted-foreground whitespace-nowrap align-middle">
+                      {r.coordinator || '—'}
                     </TableCell>
                   )}
                   {columns.status && (
@@ -275,6 +325,31 @@ export default function TableAllDefenseList({
                       </Badge>
                     </TableCell>
                   )}
+                  {columns.type && (
+                    <TableCell className="px-2 py-2 text-xs text-muted-foreground whitespace-nowrap align-middle">
+                      {r.defense_type || '—'}
+                    </TableCell>
+                  )}
+                  {columns.priority && (
+                    <TableCell className="px-2 py-2 text-xs text-muted-foreground whitespace-nowrap align-middle">
+                      {r.priority}
+                    </TableCell>
+                  )}
+                  {columns.actions && (
+                    <TableCell className="px-2 py-2 text-xs text-center align-middle">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="action-btn"
+                        onClick={e => {
+                          e.stopPropagation();
+                          if (onViewDetails) onViewDetails(r.id);
+                        }}
+                      >
+                        <Eye className="h-4 w-4" />
+                      </Button>
+                    </TableCell>
+                  )}
                 </TableRow>
               );
             })}
@@ -287,7 +362,6 @@ export default function TableAllDefenseList({
             )}
           </TableBody>
         </Table>
-        
       </div>
     </div>
   );

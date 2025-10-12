@@ -113,7 +113,7 @@ const deanNavItems: MainNavItem[] = [
     { title: 'Programs', href: '/dean/programs', icon: LibraryBig },
     { title: 'Users', href: '/dean/users', icon: Users },
     { title: 'Defense Requests', href: '/dean/defense-requests', icon: FileText },
-    { title: 'Schedules', href: '/dean/schedules', icon: CalendarFold },
+    { title: 'Schedules', href: '/schedules', icon: CalendarFold },
     { title: 'Payment Rates', href: '/dean/payment-rates', icon: DollarSign },
 ];
 

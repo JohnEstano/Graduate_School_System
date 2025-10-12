@@ -22,7 +22,8 @@ import {
   Clock4,
   CircleArrowLeft,
   Signature,
-  Filter
+  Filter,
+  MoreHorizontal
 } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import TableAllDefenseList from './table-all-defense-list';
@@ -34,32 +35,21 @@ import { DateRange } from 'react-day-picker';
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
 import AppLayout from '@/layouts/app-layout';
 import type { BreadcrumbItem } from '@/types';
-
-export type DefenseRequestSummary = {
-  id: number;
-  first_name: string;
-  middle_name: string | null;
-  last_name: string;
-  program: string;
-  thesis_title: string;
-  date_of_defense?: string;
-  scheduled_date?: string;       // backend name
-  mode_defense?: string;
-  defense_mode?: string;         // backend name
-  defense_type: string;
-  status: 'Pending' | 'In progress' | 'Approved' | 'Rejected' | 'Needs-info' | 'Completed';
-  priority: 'Low' | 'Medium' | 'High';
-  last_status_updated_by?: string;
-  last_status_updated_at?: string;
-  workflow_state?: string;
-};
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuCheckboxItem,
+} from '@/components/ui/dropdown-menu';
+import type { DefenseRequestSummary } from './table-all-defense-list';
 
 interface ShowAllRequestsProps {
   defenseRequests?: DefenseRequestSummary[];
   onStatusChange?: (id: number, newStatus: DefenseRequestSummary['status']) => void;
   withLayout?: boolean;
 }
-
+  
 function PaginationBar({
   page,
   totalPages,
@@ -91,8 +81,8 @@ function PaginationBar({
 }
 
 function ShowAllRequestsInner({ defenseRequests: initial, onStatusChange }: ShowAllRequestsProps) {
-  const [singleConfirm, setSingleConfirm] = useState<{open:boolean,id:number|null,action:'approve'|'reject'|'retrieve'|null}>({
-    open:false,id:null,action:null
+  const [singleConfirm, setSingleConfirm] = useState<{ open: boolean, id: number | null, action: 'approve' | 'reject' | 'retrieve' | null }>({
+    open: false, id: null, action: null
   });
 
   function getCsrfToken(): string {
@@ -128,9 +118,14 @@ function ShowAllRequestsInner({ defenseRequests: initial, onStatusChange }: Show
   const [columns, setColumns] = useState<Record<string, boolean>>({
     title: true,
     presenter: true,
-    adviser: true,      // Added
-    submitted_at: true, // Added
-    program: true,      // Added
+    adviser: true,
+    submitted_at: true,
+    program: true,
+    expected_amount: false, // NEW
+    amount_paid: false,     // NEW
+    reference_no: false,    // NEW
+    coordinator: false,     // NEW
+    actions: true,          // NEW
     date: true,
     mode: true,
     type: true,
@@ -146,6 +141,11 @@ function ShowAllRequestsInner({ defenseRequests: initial, onStatusChange }: Show
         adviser: columns.adviser,
         submitted_at: columns.submitted_at,
         program: columns.program,
+        expected_amount: columns.expected_amount,
+        amount_paid: columns.amount_paid,
+        reference_no: columns.reference_no,
+        coordinator: columns.coordinator,
+        actions: columns.actions,
         type: columns.type,
         priority: columns.priority
       };
@@ -430,13 +430,13 @@ function ShowAllRequestsInner({ defenseRequests: initial, onStatusChange }: Show
     }
   }, [onStatusChange]);
 
-  function openConfirmSingle(id:number, action:'approve'|'reject'|'retrieve') {
-    setSingleConfirm({open:true,id,action});
+  function openConfirmSingle(id: number, action: 'approve' | 'reject' | 'retrieve') {
+    setSingleConfirm({ open: true, id, action });
   }
 
   async function handleSingleConfirm() {
     if (!singleConfirm.id || !singleConfirm.action) {
-      setSingleConfirm({open:false,id:null,action:null});
+      setSingleConfirm({ open: false, id: null, action: null });
       return;
     }
     let newStatus: DefenseRequestSummary['status'] = 'Pending';
@@ -444,7 +444,7 @@ function ShowAllRequestsInner({ defenseRequests: initial, onStatusChange }: Show
     else if (singleConfirm.action === 'reject') newStatus = 'Rejected';
     else if (singleConfirm.action === 'retrieve') newStatus = 'Pending';
     await updateOneStatus(singleConfirm.id, newStatus);
-    setSingleConfirm({open:false,id:null,action:null});
+    setSingleConfirm({ open: false, id: null, action: null });
   }
 
   async function handleBulkStatusChange(newStatus: 'Pending' | 'Approved' | 'Rejected') {
@@ -536,7 +536,89 @@ function ShowAllRequestsInner({ defenseRequests: initial, onStatusChange }: Show
               </div>
             </div>
             <div className="flex items-center gap-2 ml-auto">
-              {/* Removed Mark as Completed button from header */}
+              {/* Column selector dropdown */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm" className="h-8 px-2 flex items-center gap-1">
+                    <Settings2 className="h-4 w-4" />
+                    Columns
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="min-w-[220px]">
+                  <DropdownMenuCheckboxItem
+                    checked={columns.title}
+                    onCheckedChange={() => toggleColumn('title')}
+                  >
+                    Thesis Title
+                  </DropdownMenuCheckboxItem>
+                  <DropdownMenuCheckboxItem
+                    checked={columns.presenter}
+                    onCheckedChange={() => toggleColumn('presenter')}
+                  >
+                    Presenter
+                  </DropdownMenuCheckboxItem>
+                  <DropdownMenuCheckboxItem
+                    checked={columns.adviser}
+                    onCheckedChange={() => toggleColumn('adviser')}
+                  >
+                    Adviser
+                  </DropdownMenuCheckboxItem>
+                  <DropdownMenuCheckboxItem
+                    checked={columns.submitted_at}
+                    onCheckedChange={() => toggleColumn('submitted_at')}
+                  >
+                    Submitted At
+                  </DropdownMenuCheckboxItem>
+                  <DropdownMenuCheckboxItem
+                    checked={columns.program}
+                    onCheckedChange={() => toggleColumn('program')}
+                  >
+                    Program
+                  </DropdownMenuCheckboxItem>
+                  <DropdownMenuCheckboxItem
+                    checked={columns.expected_amount}
+                    onCheckedChange={() => toggleColumn('expected_amount')}
+                  >
+                    Expected Amount
+                  </DropdownMenuCheckboxItem>
+                  <DropdownMenuCheckboxItem
+                    checked={columns.amount_paid}
+                    onCheckedChange={() => toggleColumn('amount_paid')}
+                  >
+                    Amount Paid
+                  </DropdownMenuCheckboxItem>
+                  <DropdownMenuCheckboxItem
+                    checked={columns.reference_no}
+                    onCheckedChange={() => toggleColumn('reference_no')}
+                  >
+                    Reference/OR No.
+                  </DropdownMenuCheckboxItem>
+                  <DropdownMenuCheckboxItem
+                    checked={columns.coordinator}
+                    onCheckedChange={() => toggleColumn('coordinator')}
+                  >
+                    Program Coordinator
+                  </DropdownMenuCheckboxItem>
+                  <DropdownMenuCheckboxItem
+                    checked={columns.type}
+                    onCheckedChange={() => toggleColumn('type')}
+                  >
+                    Defense Type
+                  </DropdownMenuCheckboxItem>
+                  <DropdownMenuCheckboxItem
+                    checked={columns.priority}
+                    onCheckedChange={() => toggleColumn('priority')}
+                  >
+                    Priority
+                  </DropdownMenuCheckboxItem>
+                  <DropdownMenuCheckboxItem
+                    checked={columns.actions}
+                    onCheckedChange={() => toggleColumn('actions')}
+                  >
+                    Actions
+                  </DropdownMenuCheckboxItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </div>
           {/* Search bar row with filters */}
@@ -731,16 +813,21 @@ function ShowAllRequestsInner({ defenseRequests: initial, onStatusChange }: Show
               <div className="w-full max-w-full">
                 {/* Remove overflow-x-auto here, let ScrollArea handle it */}
                 <TableAllDefenseList
-                  paged={paged} // <-- Only pass the current page's records!
+                  paged={paged}
                   columns={{
                     title: columns.title,
                     presenter: columns.presenter,
                     adviser: columns.adviser,
                     submitted_at: columns.submitted_at,
                     program: columns.program,
+                    expected_amount: columns.expected_amount,
+                    amount_paid: columns.amount_paid,
+                    reference_no: columns.reference_no,
+                    coordinator: columns.coordinator,
                     status: true,
                     type: columns.type,
-                    priority: columns.priority
+                    priority: columns.priority,
+                    actions: columns.actions
                   }}
                   selected={selected}
                   toggleSelectOne={toggleSelectOne}
@@ -768,7 +855,7 @@ function ShowAllRequestsInner({ defenseRequests: initial, onStatusChange }: Show
         </div>
 
         {/* Single row confirm dialog */}
-        <Dialog open={singleConfirm.open} onOpenChange={o => { if(!o) setSingleConfirm({open:false,id:null,action:null}); }}>
+        <Dialog open={singleConfirm.open} onOpenChange={o => { if (!o) setSingleConfirm({ open: false, id: null, action: null }); }}>
           <DialogContent>
             <DialogTitle>Confirm Action</DialogTitle>
             <DialogDescription>
@@ -784,8 +871,8 @@ function ShowAllRequestsInner({ defenseRequests: initial, onStatusChange }: Show
                     {singleConfirm.action === 'approve'
                       ? 'Approved'
                       : singleConfirm.action === 'reject'
-                      ? 'Rejected'
-                      : 'Pending'}
+                        ? 'Rejected'
+                        : 'Pending'}
                   </span>?
                 </p>
               )}
@@ -802,7 +889,7 @@ function ShowAllRequestsInner({ defenseRequests: initial, onStatusChange }: Show
               )}
             </div>
             <div className="flex justify-end gap-2 mt-4">
-              <Button variant="ghost" onClick={() => setSingleConfirm({open:false,id:null,action:null})}>Cancel</Button>
+              <Button variant="ghost" onClick={() => setSingleConfirm({ open: false, id: null, action: null })}>Cancel</Button>
               <Button onClick={handleSingleConfirm}>Confirm</Button>
             </div>
           </DialogContent>
@@ -824,8 +911,8 @@ function ShowAllRequestsInner({ defenseRequests: initial, onStatusChange }: Show
                   {confirmAction === 'approve'
                     ? 'Approved'
                     : confirmAction === 'reject'
-                    ? 'Rejected'
-                    : 'Pending'}
+                      ? 'Rejected'
+                      : 'Pending'}
                 </span>?
               </p>
               {confirmAction === 'approve' && (
@@ -864,7 +951,7 @@ function ShowAllRequestsInner({ defenseRequests: initial, onStatusChange }: Show
       </div>
 
       {/* Single row confirm dialog */}
-      <Dialog open={singleConfirm.open} onOpenChange={o => { if(!o) setSingleConfirm({open:false,id:null,action:null}); }}>
+      <Dialog open={singleConfirm.open} onOpenChange={o => { if (!o) setSingleConfirm({ open: false, id: null, action: null }); }}>
         <DialogContent>
           <DialogTitle>Confirm Action</DialogTitle>
           <DialogDescription>
@@ -880,8 +967,8 @@ function ShowAllRequestsInner({ defenseRequests: initial, onStatusChange }: Show
                   {singleConfirm.action === 'approve'
                     ? 'Approved'
                     : singleConfirm.action === 'reject'
-                    ? 'Rejected'
-                    : 'Pending'}
+                      ? 'Rejected'
+                      : 'Pending'}
                 </span>?
               </p>
             )}
@@ -898,7 +985,7 @@ function ShowAllRequestsInner({ defenseRequests: initial, onStatusChange }: Show
             )}
           </div>
           <div className="flex justify-end gap-2 mt-4">
-            <Button variant="ghost" onClick={() => setSingleConfirm({open:false,id:null,action:null})}>Cancel</Button>
+            <Button variant="ghost" onClick={() => setSingleConfirm({ open: false, id: null, action: null })}>Cancel</Button>
             <Button onClick={handleSingleConfirm}>Confirm</Button>
           </div>
         </DialogContent>
@@ -920,8 +1007,8 @@ function ShowAllRequestsInner({ defenseRequests: initial, onStatusChange }: Show
                 {confirmAction === 'approve'
                   ? 'Approved'
                   : confirmAction === 'reject'
-                  ? 'Rejected'
-                  : 'Pending'}
+                    ? 'Rejected'
+                    : 'Pending'}
               </span>?
             </p>
             {confirmAction === 'approve' && (

@@ -7,6 +7,7 @@ type PaymentValidationProps = {
     attachments?: any;
     amount?: number;
     reference_no?: string;
+    expected_rate?: number | string; // <-- Add this
   };
   resolveFileUrl: (url?: string | null) => string | null;
 };
@@ -22,6 +23,19 @@ export default function PaymentValidationSection({ details, resolveFileUrl }: Pa
     if (!url) return false;
     return /\.(jpg|jpeg|png|gif|webp)$/i.test(url);
   }
+
+  // Helper to format PHP currency
+  function formatPhp(val: number | string | undefined | null) {
+    if (val === undefined || val === null || val === "") return "—";
+    const num = typeof val === "string" ? parseFloat(val) : val;
+    if (isNaN(num)) return "—";
+    return `₱${num.toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
+  }
+
+  // Compare paid vs expected
+  const paid = details?.amount ?? null;
+  const expected = details?.expected_rate ?? null;
+  const isMatch = paid !== null && expected !== null && Number(paid) === Number(expected);
 
   return (
     <div className="rounded-xl border p-8 bg-white dark:bg-zinc-900 space-y-6">
@@ -87,13 +101,20 @@ export default function PaymentValidationSection({ details, resolveFileUrl }: Pa
         )}
       </div>
 
-      {/* Amount */}
+      {/* Amount Paid */}
       <div>
-        <div className="text-xs text-muted-foreground mb-1">Amount</div>
-        <div className="font-medium text-sm">
-          {details?.amount !== undefined && details?.amount !== null
-            ? `₱${Number(details.amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}`
-            : '—'}
+        <div className="text-xs text-muted-foreground mb-1">Amount Paid</div>
+        <div className="font-medium text-sm">{formatPhp(paid)}</div>
+      </div>
+
+      {/* Expected Amount */}
+      <div>
+        <div className="text-xs text-muted-foreground mb-1">Expected Amount</div>
+        <div className={`font-medium text-sm ${isMatch ? "text-green-700" : "text-red-600"}`}>
+          {formatPhp(expected)}
+          {paid !== null && expected !== null && !isMatch && (
+            <span className="ml-2 text-xs text-red-600 font-semibold">(Mismatch)</span>
+          )}
         </div>
       </div>
 
