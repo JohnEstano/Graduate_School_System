@@ -222,10 +222,11 @@ function ShowAllRequestsInner({ defenseRequests: initial, onStatusChange }: Show
         (`${r.first_name} ${r.last_name} ${r.thesis_title}`).toLowerCase().includes(q)
       );
     }
+    // This will match the three statuses above
     if (statusFilter.length)
       result = result.filter(r =>
         statusFilter.some(f =>
-          (r.status || '').trim().toLowerCase() === f.trim().toLowerCase()
+          (r.aa_verification_status || '').trim().toLowerCase() === f.trim().toLowerCase()
         )
       );
     if (typeFilter.length)
@@ -732,22 +733,21 @@ function ShowAllRequestsInner({ defenseRequests: initial, onStatusChange }: Show
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-44 p-1" side="bottom" align="start">
-                  {Array.from(new Set(defenseRequests.map(r => (r.status || '').trim())))
-                    .filter(Boolean)
-                    .map(s => (
-                      <div
-                        key={s}
-                        onClick={() =>
-                          setStatusFilter(fs =>
-                            fs.includes(s) ? fs.filter(x => x !== s) : [...fs, s]
-                          )
-                        }
-                        className="flex items-center gap-2 p-2 rounded hover:bg-muted cursor-pointer"
-                      >
-                        <Checkbox checked={statusFilter.includes(s)} />
-                        <span className="text-sm">{s}</span>
-                      </div>
-                    ))}
+                  {/* Only show Pending, Verified, Rejected */}
+                  {['Pending', 'Verified', 'Rejected'].map(s => (
+                    <div
+                      key={s}
+                      onClick={() =>
+                        setStatusFilter(fs =>
+                          fs.includes(s) ? fs.filter(x => x !== s) : [...fs, s]
+                        )
+                      }
+                      className="flex items-center gap-2 p-2 rounded hover:bg-muted cursor-pointer"
+                    >
+                      <Checkbox checked={statusFilter.includes(s)} />
+                      <span className="text-sm">{s}</span>
+                    </div>
+                  ))}
                   <Button size="sm" variant="ghost" className="w-full mt-2" onClick={() => setStatusFilter([])}>
                     Clear
                   </Button>

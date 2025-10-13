@@ -2,7 +2,7 @@ import { Button } from '@/components/ui/button';
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/table';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
-import { Eye, Check, X, AlertCircle, CheckCircle } from 'lucide-react';
+import { Eye, Check, X, AlertCircle, CheckCircle, CircleCheck } from 'lucide-react'; // <-- Add CircleCheck
 import { router } from '@inertiajs/react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { getProgramAbbreviation } from '@/utils/program-abbreviations';
@@ -107,7 +107,14 @@ export default function TableAllDefenseList({
           <TableHeader>
             <TableRow>
               {!hideSelect && (
-                <TableHead className="w-[40px] py-2">
+                <TableHead
+                  className="w-[56px] py-2 sticky left-0 z-20 bg-background"
+                  style={{
+                    boxShadow: '2px 0 4px -2px rgba(0,0,0,0.04)',
+                    paddingLeft: '12px',
+                    paddingRight: '12px',
+                  }}
+                >
                   <Checkbox checked={headerChecked} onCheckedChange={toggleSelectAll} />
                 </TableHead>
               )}
@@ -123,7 +130,14 @@ export default function TableAllDefenseList({
               {columns.reference_no && <TableHead className="px-2 min-w-[120px]">Reference/OR No.</TableHead>}
               {columns.priority && <TableHead className="px-2 min-w-[80px]">Priority</TableHead>}
               {columns.status && <TableHead className="px-2 min-w-[100px] text-center">AA Status</TableHead>}
-              {columns.actions && <TableHead className="px-2 min-w-[80px] text-center">Actions</TableHead>}
+              {columns.actions && (
+                <TableHead
+                  className="px-2 min-w-[80px] text-center sticky right-0 z-20 bg-background"
+                  style={{ boxShadow: '-2px 0 4px -2px rgba(0,0,0,0.04)' }}
+                >
+                  Actions
+                </TableHead>
+              )}
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -151,7 +165,14 @@ export default function TableAllDefenseList({
                   onClick={handleRowClick}
                 >
                   {!hideSelect && (
-                    <TableCell className="px-2 py-2">
+                    <TableCell
+                      className="px-3 py-2 sticky left-0 z-10 bg-background"
+                      style={{
+                        boxShadow: '2px 0 4px -2px rgba(0,0,0,0.04)',
+                        paddingLeft: '12px',
+                        paddingRight: '12px',
+                      }}
+                    >
                       <Checkbox
                         checked={isSelected}
                         onCheckedChange={() => toggleSelectOne(r.id)}
@@ -241,22 +262,14 @@ export default function TableAllDefenseList({
                     </TableCell>
                   )}
                   {columns.actions && (
-                    <TableCell className="px-2 py-2 text-xs text-center align-middle">
+                    <TableCell
+                      className="px-2 py-2 text-xs text-center align-middle sticky right-0 z-10 bg-background"
+                      style={{ boxShadow: '-2px 0 4px -2px rgba(0,0,0,0.04)' }}
+                    >
+                      {/* Approve button with CircleCheck icon */}
                       <Button
                         size="sm"
                         variant="outline"
-                        className="action-btn"
-                        onClick={e => {
-                          e.stopPropagation();
-                          if (onViewDetails) onViewDetails(r.id);
-                        }}
-                      >
-                        <Eye className="h-4 w-4" />
-                      </Button>
-                      {/* AA Status Action Buttons */}
-                      <Button
-                        size="sm"
-                        variant="ghost"
                         className="ml-1 action-btn"
                         onClick={e => {
                           e.stopPropagation();
@@ -265,11 +278,11 @@ export default function TableAllDefenseList({
                         }}
                         disabled={r.aa_verification_status === 'verified'}
                       >
-                        <Check className="h-4 w-4 text-green-600" />
+                        <CircleCheck className="h-4 w-4 text-emerald-600" />
                       </Button>
                       <Button
                         size="sm"
-                        variant="ghost"
+                        variant="outline"
                         className="ml-1 action-btn"
                         onClick={e => {
                           e.stopPropagation();
