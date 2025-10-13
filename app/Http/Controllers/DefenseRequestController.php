@@ -496,6 +496,19 @@ class DefenseRequestController extends Controller
                 }
             }
 
+            // --- NEW: Auto-create payment verification record if approved ---
+            if ($defenseRequest->coordinator_status === 'Approved') {
+                $existing = \App\Models\AaPaymentVerification::where('defense_request_id', $defenseRequest->id)->first();
+                if (!$existing) {
+                    \App\Models\AaPaymentVerification::create([
+                        'defense_request_id' => $defenseRequest->id,
+                        'assigned_to' => null, // or set to an AA user id if you want
+                        'status' => 'pending',
+                        'remarks' => null,
+                    ]);
+                }
+            }
+
             return response()->json([
                 'ok'=>true,
                 'workflow_state'=>$defenseRequest->workflow_state,

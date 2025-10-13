@@ -114,7 +114,8 @@ function ShowAllRequestsInner({ defenseRequests: initial, onStatusChange }: Show
             expected_rate: r.expected_rate !== undefined && r.expected_rate !== null ? Number(r.expected_rate) : null,
             amount: r.amount !== undefined && r.amount !== null ? Number(r.amount) : null,
             date_of_defense: r.date_of_defense || r.scheduled_date || undefined,
-            mode_defense: r.mode_defense || r.defense_mode || undefined
+            mode_defense: r.mode_defense || r.defense_mode || undefined,
+            aa_verification_id: r.aa_verification_id, // <-- ENSURE THIS IS PRESENT
           }))
         );
       });
@@ -271,7 +272,11 @@ function ShowAllRequestsInner({ defenseRequests: initial, onStatusChange }: Show
   const pageSize = 20; // <--- Set page size here
 
   const totalPages = Math.max(1, Math.ceil(sorted.length / pageSize));
-  const paged = sorted.slice((page - 1) * pageSize, page * pageSize);
+  const [paged, setPaged] = useState<DefenseRequestSummary[]>([]);
+
+  useEffect(() => {
+    setPaged(sorted.slice((page - 1) * pageSize, page * pageSize));
+  }, [sorted, page, pageSize]);
 
   const selected = selectedByTab['all'] || [];
   const setSelected = (arr: number[]) => setSelectedByTab(prev => ({ ...prev, all: arr }));
@@ -357,16 +362,55 @@ function ShowAllRequestsInner({ defenseRequests: initial, onStatusChange }: Show
   const handleConfirmBulk = async () => {
     if (!confirmAction || selected.length === 0) {
       setConfirmDialogOpen(false);
+      setConfirmAction(null);
       return;
     }
-    let newStatus: DefenseRequestSummary['status'] = 'Pending';
-    if (confirmAction === 'approve') newStatus = 'Approved';
-    else if (confirmAction === 'reject') newStatus = 'Rejected';
-    else if (confirmAction === 'retrieve') newStatus = 'Pending';
-    await bulkUpdateStatus(newStatus);
-    setConfirmDialogOpen(false);
-    setConfirmAction(null);
-    toast.success(`Updated to ${newStatus}`);
+    setIsLoading(true);
+    try {
+      // Get all aa_verification_ids for selected rows
+      const verificationIds = defenseRequests
+        .filter(r => selected.includes(r.id))
+        .map(r => r.aa_verification_id)
+        .filter((id): id is number => !!id);
+
+      // Only allow 'approve' or 'reject' for AA verification
+      const status = confirmAction === 'approve' ? 'verified'
+        : confirmAction === 'reject' ? 'rejected'
+        : 'pending';
+
+      // POST to the correct endpoint for AA payment verification
+      const res = await fetch('/aa/payment-verifications/bulk-update', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRF-TOKEN': getCsrfToken(),
+        },
+        body: JSON.stringify({
+          verification_ids: verificationIds,
+          status,
+        }),
+      });
+
+      if (res.ok) {
+        setDefenseRequests(prev =>
+          prev.map(r =>
+            verificationIds.includes(r.aa_verification_id ?? -1)
+              ? { ...r, aa_verification_status: status }
+              : r
+          )
+        );
+        setSelected([]);
+        toast.success('Bulk AA status updated');
+      } else {
+        toast.error('Bulk AA update failed');
+      }
+    } catch {
+      toast.error('Bulk AA update error');
+    } finally {
+      setIsLoading(false);
+      setConfirmDialogOpen(false);
+      setConfirmAction(null);
+    }
   };
 
   const onPriorityChange = async (id: number, priority: string) => {
@@ -466,37 +510,47 @@ function ShowAllRequestsInner({ defenseRequests: initial, onStatusChange }: Show
     setSingleConfirm({ open: false, id: null, action: null });
   }
 
-  async function handleBulkStatusChange(newStatus: 'Pending' | 'Approved' | 'Rejected') {
+  async function handleBulkStatusChange(newStatus: 'pending' | 'verified' | 'rejected') {
     if (selected.length === 0) return;
     setIsLoading(true);
     try {
-      const res = await fetch('/defense-requests/bulk-status', {
-        method: 'PATCH',
+      // Map selected defense request IDs to their aa_verification_id
+      const verificationIds = defenseRequests
+        .filter(r => selected.includes(r.id))
+        .map(r => r.aa_verification_id)
+        .filter((id): id is number => !!id);
+
+      const res = await fetch('/aa/payment-verifications/bulk-update', {
+        method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'X-CSRF-TOKEN': getCsrfToken(),
         },
         body: JSON.stringify({
-          ids: selected,
-          status: newStatus,
+          verification_ids: verificationIds,
+          status: confirmAction === 'approve' ? 'verified' : 'rejected',
         }),
       });
-      const data = await res.json();
-      if (data.ok) {
-        // Update local state
+
+      if (res.ok) {
         setDefenseRequests(prev =>
           prev.map(r =>
-            selected.includes(r.id) ? { ...r, status: newStatus } : r
+            verificationIds.includes(r.aa_verification_id ?? -1)
+              ? { ...r, aa_verification_status: confirmAction === 'approve' ? 'verified' : 'rejected' }
+              : r
           )
         );
-        setSelected([]); // Clear selection
+        setSelected([]);
+        toast.success('Bulk status updated');
       } else {
-        // Handle error (show toast, etc.)
+        toast.error('Bulk update failed');
       }
-    } catch (e) {
-      // Handle error (show toast, etc.)
+    } catch {
+      toast.error('Bulk update error');
     } finally {
       setIsLoading(false);
+      setConfirmDialogOpen(false);
+      setConfirmAction(null);
     }
   }
 
@@ -798,7 +852,27 @@ function ShowAllRequestsInner({ defenseRequests: initial, onStatusChange }: Show
             <span className="font-semibold min-w-[70px] text-center">{selected.length} selected</span>
             <div className="flex gap-1">
               <Button
-                variant="ghost" // Changed from outline to ghost
+                variant="ghost"
+                size="sm"
+                className="px-3 py-1 h-7 w-auto text-xs flex items-center gap-1"
+                onClick={() => { setConfirmAction('approve'); setConfirmDialogOpen(true); }}
+                disabled={isLoading}
+              >
+                <CheckCircle size={13} className="text-green-600" />
+                Bulk Approve
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="px-3 py-1 h-7 w-auto text-xs flex items-center gap-1"
+                onClick={() => { setConfirmAction('reject'); setConfirmDialogOpen(true); }}
+                disabled={isLoading}
+              >
+                <X size={13} className="text-red-600" />
+                Bulk Reject
+              </Button>
+              <Button
+                variant="ghost"
                 size="sm"
                 className="px-3 py-1 h-7 w-auto text-xs flex items-center gap-1"
                 onClick={handleBulkMarkCompleted}
@@ -839,6 +913,7 @@ function ShowAllRequestsInner({ defenseRequests: initial, onStatusChange }: Show
                 {/* Remove overflow-x-auto here, let ScrollArea handle it */}
                 <TableAllDefenseList
                   paged={paged} // <-- Use the filtered, sorted, paginated array!
+                  setPaged={setPaged}
                   columns={{
                     title: columns.title,
                     presenter: columns.presenter,
@@ -935,7 +1010,7 @@ function ShowAllRequestsInner({ defenseRequests: initial, onStatusChange }: Show
                 Update {selected.length} request{selected.length !== 1 && 's'} to{' '}
                 <span className="font-semibold">
                   {confirmAction === 'approve'
-                    ? 'Approved'
+                    ? 'Verified'
                     : confirmAction === 'reject'
                       ? 'Rejected'
                       : 'Pending'}
@@ -1031,7 +1106,7 @@ function ShowAllRequestsInner({ defenseRequests: initial, onStatusChange }: Show
               Update {selected.length} request{selected.length !== 1 && 's'} to{' '}
               <span className="font-semibold">
                 {confirmAction === 'approve'
-                  ? 'Approved'
+                  ? 'Verified'
                   : confirmAction === 'reject'
                     ? 'Rejected'
                     : 'Pending'}

@@ -31,7 +31,8 @@ use App\Http\Controllers\AdviserStudentController;
 use App\Http\Controllers\PanelistHonorariumSpecController;
 use App\Http\Controllers\CoordinatorAdviserController;
 use App\Http\Controllers\PaymentRateController;
-use App\Models\PaymentRate; // Add this at the top
+use App\Models\PaymentRate;
+use App\Http\Controllers\AA\PaymentVerificationController;
 
 /*
 |--------------------------------------------------------------------------
@@ -91,14 +92,24 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::put('/panelists/honorarium-specs', [PanelistHonorariumSpecController::class, 'update'])
         ->name('panelists.honorarium-specs.update');
 
+    //PAYMENTVERIFIATION AA
+    Route::prefix('aa')->group(function () {
+        Route::get('/payment-verifications', [PaymentVerificationController::class, 'index'])->name('aa.payment-verifications');
+        Route::post('/payment-verifications/{id}/status', [PaymentVerificationController::class, 'updateStatus'])->name('aa.payment-verifications.update-status');
+        Route::post('/payment-verifications/batch', [PaymentVerificationController::class, 'addToBatch'])->name('aa.payment-verifications.batch');
+        Route::get('/payment-batch/{batchId}/export', [PaymentVerificationController::class, 'exportBatch'])->name('aa.payment-batch.export');
+        Route::post('/payment-verifications/bulk-update', [PaymentVerificationController::class, 'bulkUpdateStatus']);
+    });
+
     //PAYMENT RATESS ETC.
     Route::post('/dean/payment-rates', [\App\Http\Controllers\PaymentRateController::class, 'update'])
         ->name('dean.payment-rates.update');
+    
     Route::get('/dean/payment-rates', [\App\Http\Controllers\PaymentRateController::class, 'index'])
         ->name('dean.payment-rates.index');
     Route::get('/dean/payment-rates/data', [\App\Http\Controllers\PaymentRateController::class, 'data'])
-    ->name('dean.payment-rates.data')
-    ->middleware(['auth', 'verified']);
+        ->name('dean.payment-rates.data')
+        ->middleware(['auth', 'verified']);
 
 
     // Settings: Document Templates (Dean / Coordinator only)
@@ -114,6 +125,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
             'template' => $template
         ]);
     })->name('settings.documents.edit');
+
+
+
 
 
 
@@ -731,20 +745,33 @@ Route::get('/assistant/all-defense-list/data', function () {
     }
 
     $rows = \App\Models\DefenseRequest::query()
-        ->where('coordinator_status', 'Approved') // <-- Only fetch Approved
+        ->where('coordinator_status', 'Approved')
         ->orderByDesc('created_at')
         ->limit(500)
         ->get([
-            'id','first_name','middle_name','last_name','school_id','program',
-            'thesis_title','defense_type','status','priority','workflow_state',
-            'scheduled_date','defense_mode','defense_venue','panels_assigned_at',
-            'defense_adviser','submitted_at',
+            'id',
+            'first_name',
+            'middle_name',
+            'last_name',
+            'school_id',
+            'program',
+            'thesis_title',
+            'defense_type',
+            'status',
+            'priority',
+            'workflow_state',
+            'scheduled_date',
+            'defense_mode',
+            'defense_venue',
+            'panels_assigned_at',
+            'defense_adviser',
+            'submitted_at',
             'coordinator_status',
             'amount',
             'reference_no',
             'coordinator_user_id',
         ])
-        ->map(function($r){
+        ->map(function ($r) {
             $expectedTotal = 0;
             if ($r->program && $r->defense_type) {
                 $programLevel = \App\Helpers\ProgramLevel::getLevel($r->program);
@@ -764,6 +791,10 @@ Route::get('/assistant/all-defense-list/data', function () {
                     );
                 }
             }
+
+            $aaVerification = \App\Models\AaPaymentVerification::where('defense_request_id', $r->id)->first();
+            $aa_verification_status = $aaVerification ? $aaVerification->status : null;
+            $aa_verification_id = $aaVerification ? $aaVerification->id : null; // <-- ADD THIS
 
             return [
                 'id' => $r->id,
@@ -789,6 +820,8 @@ Route::get('/assistant/all-defense-list/data', function () {
                 'amount' => $r->amount ?? null,
                 'reference_no' => $r->reference_no ?? null,
                 'coordinator' => $coordinator,
+                'aa_verification_status' => $aa_verification_status,
+                'aa_verification_id' => $aa_verification_id, // <-- ADD THIS
             ];
         });
 
