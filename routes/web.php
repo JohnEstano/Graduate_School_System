@@ -33,6 +33,7 @@ use App\Http\Controllers\CoordinatorAdviserController;
 use App\Http\Controllers\PaymentRateController;
 use App\Models\PaymentRate;
 use App\Http\Controllers\AA\PaymentVerificationController;
+use App\Http\Controllers\Assistant\DefenseBatchController;
 
 /*
 |--------------------------------------------------------------------------
@@ -99,7 +100,14 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('/payment-verifications/batch', [PaymentVerificationController::class, 'addToBatch'])->name('aa.payment-verifications.batch');
         Route::get('/payment-batch/{batchId}/export', [PaymentVerificationController::class, 'exportBatch'])->name('aa.payment-batch.export');
         Route::post('/payment-verifications/bulk-update', [PaymentVerificationController::class, 'bulkUpdateStatus']);
+
+        
     });
+
+      Route::get('/assistant/defense-batches', [\App\Http\Controllers\Assistant\DefenseBatchController::class, 'index']);
+    Route::post('/assistant/defense-batches', [\App\Http\Controllers\Assistant\DefenseBatchController::class, 'store']);
+    Route::post('/assistant/defense-batches/{batch}/status', [\App\Http\Controllers\Assistant\DefenseBatchController::class, 'updateStatus']);
+
 
     //PAYMENT RATESS ETC.
     Route::post('/dean/payment-rates', [\App\Http\Controllers\PaymentRateController::class, 'update'])
