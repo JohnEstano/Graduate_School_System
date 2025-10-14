@@ -242,6 +242,9 @@ class LoginRequestV2 extends FormRequest
                 'has_legacy_account_id' => !empty($user->legacy_account_id)
             ]);
             
+            // Set flag for first login - will trigger page reload to get updated user data
+            session()->put('first_login', true);
+            
             // Base role pivot assignment
             if ($mappedNumeric) {
                 $user->addRole('Student');
