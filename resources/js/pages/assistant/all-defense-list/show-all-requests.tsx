@@ -22,10 +22,12 @@ import {
   Clock4,
   CircleArrowLeft,
   Signature,
-  Filter
+  Filter,
+  MoreHorizontal,
+  Send, // <-- Add this import
 } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
-import TableAllDefenseRequests from './table-all-defense-list';
+import TableAllDefenseList from './table-all-defense-list';
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
@@ -34,49 +36,54 @@ import { DateRange } from 'react-day-picker';
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
 import AppLayout from '@/layouts/app-layout';
 import type { BreadcrumbItem } from '@/types';
-
-export type DefenseRequestSummary = {
-  id: number;
-  first_name: string;
-  middle_name: string | null;
-  last_name: string;
-  program: string;
-  thesis_title: string;
-  date_of_defense?: string;
-  scheduled_date?: string;       // backend name
-  mode_defense?: string;
-  defense_mode?: string;         // backend name
-  defense_type: string;
-  status: 'Pending' | 'In progress' | 'Approved' | 'Rejected' | 'Needs-info' | 'Completed';
-  priority: 'Low' | 'Medium' | 'High';
-  last_status_updated_by?: string;
-  last_status_updated_at?: string;
-  workflow_state?: string;
-};
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuCheckboxItem,
+} from '@/components/ui/dropdown-menu';
+import type { DefenseRequestSummary } from './table-all-defense-list';
 
 interface ShowAllRequestsProps {
   defenseRequests?: DefenseRequestSummary[];
   onStatusChange?: (id: number, newStatus: DefenseRequestSummary['status']) => void;
   withLayout?: boolean;
 }
-
-function PaginationBar({ page, totalPages, onPageChange }: { page: number; totalPages: number; onPageChange: (p: number) => void }) {
+  
+function PaginationBar({
+  page,
+  totalPages,
+  onPageChange,
+  showingCount,
+  totalCount,
+}: {
+  page: number;
+  totalPages: number;
+  onPageChange: (p: number) => void;
+  showingCount: number;
+  totalCount: number;
+}) {
   return (
     <div className="flex justify-between items-center gap-2 px-4 py-2">
       <span className="text-xs">Page {page} of {totalPages}</span>
-      <div className="flex gap-1">
+      <div className="flex gap-1 items-center">
         <Button size="sm" variant="outline" disabled={page === 1} onClick={() => onPageChange(1)}>&laquo;</Button>
         <Button size="sm" variant="outline" disabled={page === 1} onClick={() => onPageChange(page - 1)}>&lsaquo;</Button>
         <Button size="sm" variant="outline" disabled={page === totalPages} onClick={() => onPageChange(page + 1)}>&rsaquo;</Button>
         <Button size="sm" variant="outline" disabled={page === totalPages} onClick={() => onPageChange(totalPages)}>&raquo;</Button>
+        <span className="ml-4 text-xs text-muted-foreground">
+          Showing {showingCount} record{showingCount !== 1 ? 's' : ''}
+          {typeof totalCount === 'number' && <> of {totalCount} total</>}
+        </span>
       </div>
     </div>
   );
 }
 
 function ShowAllRequestsInner({ defenseRequests: initial, onStatusChange }: ShowAllRequestsProps) {
-  const [singleConfirm, setSingleConfirm] = useState<{open:boolean,id:number|null,action:'approve'|'reject'|'retrieve'|null}>({
-    open:false,id:null,action:null
+  const [singleConfirm, setSingleConfirm] = useState<{ open: boolean, id: number | null, action: 'approve' | 'reject' | 'retrieve' | null }>({
+    open: false, id: null, action: null
   });
 
   function getCsrfToken(): string {
@@ -84,20 +91,35 @@ function ShowAllRequestsInner({ defenseRequests: initial, onStatusChange }: Show
     return el?.content || '';
   }
 
+  // --- FINAL FIX: Only use expected_rate and amount ---
   const normalizeRequests = (list: DefenseRequestSummary[]) =>
     list.map(r => ({
       ...r,
+      expected_rate: r.expected_rate !== undefined && r.expected_rate !== null ? Number(r.expected_rate) : null,
+      amount: r.amount !== undefined && r.amount !== null ? Number(r.amount) : null,
       date_of_defense: r.date_of_defense || r.scheduled_date || undefined,
       mode_defense: r.mode_defense || r.defense_mode || undefined
     }));
 
-  const [defenseRequests, setDefenseRequests] = useState<DefenseRequestSummary[]>(() =>
-    initial ? normalizeRequests(initial) : []
-  );
+  const [defenseRequests, setDefenseRequests] = useState<DefenseRequestSummary[]>([]);
 
+  // Fetch from the correct endpoint!
   useEffect(() => {
-    if (initial) setDefenseRequests(normalizeRequests(initial));
-  }, [initial]);
+    fetch('/assistant/all-defense-list/data')
+      .then(res => res.json())
+      .then(data => {
+        setDefenseRequests(
+          data.map((r: any) => ({
+            ...r,
+            expected_rate: r.expected_rate !== undefined && r.expected_rate !== null ? Number(r.expected_rate) : null,
+            amount: r.amount !== undefined && r.amount !== null ? Number(r.amount) : null,
+            date_of_defense: r.date_of_defense || r.scheduled_date || undefined,
+            mode_defense: r.mode_defense || r.defense_mode || undefined,
+            aa_verification_id: r.aa_verification_id, // <-- ENSURE THIS IS PRESENT
+          }))
+        );
+      });
+  }, []);
 
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string[]>([]);
@@ -108,17 +130,23 @@ function ShowAllRequestsInner({ defenseRequests: initial, onStatusChange }: Show
 
   const [selectedByTab, setSelectedByTab] = useState<{ [k: string]: number[] }>({ pending: [], rejected: [], approved: [] });
 
-  // Update columns state to reflect new columns for each tab
+  // --- FINAL FIX: Only use expected_amount and amount_paid as column keys, but data is from expected_rate and amount ---
   const [columns, setColumns] = useState<Record<string, boolean>>({
     title: true,
     presenter: true,
-    adviser: true,      // Added
-    submitted_at: true, // Added
-    program: true,      // Added
+    adviser: true,
+    submitted_at: true,
+    program: true,
+    expected_amount: true,
+    amount_paid: true,
+    reference_no: true,
+    coordinator: true,
+    scheduled_date: true, // <-- Add this line
+    actions: true,
     date: true,
     mode: true,
-    type: true,
-    priority: true
+    type: false,
+    priority: false
   });
 
   // Helper to get columns per tab
@@ -130,6 +158,11 @@ function ShowAllRequestsInner({ defenseRequests: initial, onStatusChange }: Show
         adviser: columns.adviser,
         submitted_at: columns.submitted_at,
         program: columns.program,
+        expected_amount: columns.expected_amount,
+        amount_paid: columns.amount_paid,
+        reference_no: columns.reference_no,
+        coordinator: columns.coordinator,
+        actions: columns.actions,
         type: columns.type,
         priority: columns.priority
       };
@@ -159,7 +192,10 @@ function ShowAllRequestsInner({ defenseRequests: initial, onStatusChange }: Show
   const fetchDefenseRequests = useCallback(async () => {
     setIsLoading(true);
     try {
-      const response = await fetch('/coordinator/defense-requests/all-defense-requests');
+      // WRONG ENDPOINT:
+      // const response = await fetch('/coordinator/defense-requests/all-defense-requests');
+      // RIGHT ENDPOINT:
+      const response = await fetch('/assistant/all-defense-list/data');
       if (response.ok) {
         const data: DefenseRequestSummary[] = await response.json();
         setDefenseRequests(normalizeRequests(data));
@@ -186,8 +222,19 @@ function ShowAllRequestsInner({ defenseRequests: initial, onStatusChange }: Show
         (`${r.first_name} ${r.last_name} ${r.thesis_title}`).toLowerCase().includes(q)
       );
     }
-    if (statusFilter.length) result = result.filter(r => statusFilter.includes(r.status));
-    if (typeFilter.length) result = result.filter(r => typeFilter.includes(r.defense_type));
+    // This will match the three statuses above
+    if (statusFilter.length)
+      result = result.filter(r =>
+        statusFilter.some(f =>
+          (r.aa_verification_status || '').trim().toLowerCase() === f.trim().toLowerCase()
+        )
+      );
+    if (typeFilter.length)
+      result = result.filter(r =>
+        typeFilter.some(f =>
+          (r.defense_type || '').trim().toLowerCase() === f.trim().toLowerCase()
+        )
+      );
     if (dateRange?.from && dateRange?.to) {
       const start = startOfDay(dateRange.from);
       const end = endOfDay(dateRange.to);
@@ -200,23 +247,56 @@ function ShowAllRequestsInner({ defenseRequests: initial, onStatusChange }: Show
     return result;
   }, [search, statusFilter, typeFilter, defenseRequests, dateRange]);
 
+  // Add tab state for Masteral/Doctorate filter
+  const [programTab, setProgramTab] = useState<'All' | 'Masteral' | 'Doctorate'>('All');
+
+  // Filter by program based on tab
+  const filteredByProgram = useMemo(() => {
+    let result = filtered;
+    if (programTab !== 'All') {
+      result = result.filter(r =>
+        r.program?.toLowerCase().includes(programTab.toLowerCase())
+      );
+    }
+    return result;
+  }, [filtered, programTab]);
+
   const sorted = useMemo(() => {
-    if (!sortDir) return filtered;
-    return [...filtered].sort((a, b) => {
+    if (!sortDir) return filteredByProgram;
+    return [...filteredByProgram].sort((a, b) => {
       const ta = a.date_of_defense ? new Date(a.date_of_defense).getTime() : 0;
       const tb = b.date_of_defense ? new Date(b.date_of_defense).getTime() : 0;
       return sortDir === 'asc' ? ta - tb : tb - ta;
     });
-  }, [filtered, sortDir]);
+  }, [filteredByProgram, sortDir]);
 
-  const totalPages = Math.max(1, Math.ceil(sorted.length / 10));
-  const paged = sorted.slice((page - 1) * 10, page * 10);
+  const pageSize = 20; // <--- Set page size here
+
+  const totalPages = Math.max(1, Math.ceil(sorted.length / pageSize));
+  const [paged, setPaged] = useState<DefenseRequestSummary[]>([]);
+
+  useEffect(() => {
+    setPaged(sorted.slice((page - 1) * pageSize, page * pageSize));
+  }, [sorted, page, pageSize]);
 
   const selected = selectedByTab['all'] || [];
   const setSelected = (arr: number[]) => setSelectedByTab(prev => ({ ...prev, all: arr }));
-  const headerChecked = selected.length === paged.length && paged.length > 0;
-  const toggleSelectAll = () => setSelected(headerChecked ? [] : paged.map(r => r.id));
-  const toggleSelectOne = (id: number) => setSelected(selected.includes(id) ? selected.filter(x => x !== id) : [...selected, id]);
+
+  // Bulk select: only select visible page's IDs
+  const headerChecked = paged.length > 0 && paged.every(r => selected.includes(r.id));
+  const toggleSelectAll = () => {
+    const pageIds = paged.map(r => r.id);
+    if (headerChecked) {
+      // Deselect only those on this page
+      setSelected(selected.filter(id => !pageIds.includes(id)));
+    } else {
+      // Add only those not already selected
+      setSelected([...selected, ...pageIds.filter(id => !selected.includes(id))]);
+    }
+  };
+  const toggleSelectOne = (id: number) =>
+    setSelected(selected.includes(id) ? selected.filter(x => x !== id) : [...selected, id]);
+
   const toggleSort = () => setSortDir(d => (d === 'asc' ? 'desc' : d === 'desc' ? null : 'asc'));
   const toggleColumn = (key: string) => setColumns(cols => ({ ...cols, [key]: !cols[key] }));
 
@@ -283,16 +363,55 @@ function ShowAllRequestsInner({ defenseRequests: initial, onStatusChange }: Show
   const handleConfirmBulk = async () => {
     if (!confirmAction || selected.length === 0) {
       setConfirmDialogOpen(false);
+      setConfirmAction(null);
       return;
     }
-    let newStatus: DefenseRequestSummary['status'] = 'Pending';
-    if (confirmAction === 'approve') newStatus = 'Approved';
-    else if (confirmAction === 'reject') newStatus = 'Rejected';
-    else if (confirmAction === 'retrieve') newStatus = 'Pending';
-    await bulkUpdateStatus(newStatus);
-    setConfirmDialogOpen(false);
-    setConfirmAction(null);
-    toast.success(`Updated to ${newStatus}`);
+    setIsLoading(true);
+    try {
+      // Get all aa_verification_ids for selected rows
+      const verificationIds = defenseRequests
+        .filter(r => selected.includes(r.id))
+        .map(r => r.aa_verification_id)
+        .filter((id): id is number => !!id);
+
+      // Only allow 'approve' or 'reject' for AA verification
+      const status = confirmAction === 'approve' ? 'verified'
+        : confirmAction === 'reject' ? 'rejected'
+        : 'pending';
+
+      // POST to the correct endpoint for AA payment verification
+      const res = await fetch('/aa/payment-verifications/bulk-update', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRF-TOKEN': getCsrfToken(),
+        },
+        body: JSON.stringify({
+          verification_ids: verificationIds,
+          status,
+        }),
+      });
+
+      if (res.ok) {
+        setDefenseRequests(prev =>
+          prev.map(r =>
+            verificationIds.includes(r.aa_verification_id ?? -1)
+              ? { ...r, aa_verification_status: status }
+              : r
+          )
+        );
+        setSelected([]);
+        toast.success('Bulk AA status updated');
+      } else {
+        toast.error('Bulk AA update failed');
+      }
+    } catch {
+      toast.error('Bulk AA update error');
+    } finally {
+      setIsLoading(false);
+      setConfirmDialogOpen(false);
+      setConfirmAction(null);
+    }
   };
 
   const onPriorityChange = async (id: number, priority: string) => {
@@ -375,13 +494,13 @@ function ShowAllRequestsInner({ defenseRequests: initial, onStatusChange }: Show
     }
   }, [onStatusChange]);
 
-  function openConfirmSingle(id:number, action:'approve'|'reject'|'retrieve') {
-    setSingleConfirm({open:true,id,action});
+  function openConfirmSingle(id: number, action: 'approve' | 'reject' | 'retrieve') {
+    setSingleConfirm({ open: true, id, action });
   }
 
   async function handleSingleConfirm() {
     if (!singleConfirm.id || !singleConfirm.action) {
-      setSingleConfirm({open:false,id:null,action:null});
+      setSingleConfirm({ open: false, id: null, action: null });
       return;
     }
     let newStatus: DefenseRequestSummary['status'] = 'Pending';
@@ -389,40 +508,50 @@ function ShowAllRequestsInner({ defenseRequests: initial, onStatusChange }: Show
     else if (singleConfirm.action === 'reject') newStatus = 'Rejected';
     else if (singleConfirm.action === 'retrieve') newStatus = 'Pending';
     await updateOneStatus(singleConfirm.id, newStatus);
-    setSingleConfirm({open:false,id:null,action:null});
+    setSingleConfirm({ open: false, id: null, action: null });
   }
 
-  async function handleBulkStatusChange(newStatus: 'Pending' | 'Approved' | 'Rejected') {
+  async function handleBulkStatusChange(newStatus: 'pending' | 'verified' | 'rejected') {
     if (selected.length === 0) return;
     setIsLoading(true);
     try {
-      const res = await fetch('/defense-requests/bulk-status', {
-        method: 'PATCH',
+      // Map selected defense request IDs to their aa_verification_id
+      const verificationIds = defenseRequests
+        .filter(r => selected.includes(r.id))
+        .map(r => r.aa_verification_id)
+        .filter((id): id is number => !!id);
+
+      const res = await fetch('/aa/payment-verifications/bulk-update', {
+        method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'X-CSRF-TOKEN': getCsrfToken(),
         },
         body: JSON.stringify({
-          ids: selected,
-          status: newStatus,
+          verification_ids: verificationIds,
+          status: confirmAction === 'approve' ? 'verified' : 'rejected',
         }),
       });
-      const data = await res.json();
-      if (data.ok) {
-        // Update local state
+
+      if (res.ok) {
         setDefenseRequests(prev =>
           prev.map(r =>
-            selected.includes(r.id) ? { ...r, status: newStatus } : r
+            verificationIds.includes(r.aa_verification_id ?? -1)
+              ? { ...r, aa_verification_status: confirmAction === 'approve' ? 'verified' : 'rejected' }
+              : r
           )
         );
-        setSelected([]); // Clear selection
+        setSelected([]);
+        toast.success('Bulk status updated');
       } else {
-        // Handle error (show toast, etc.)
+        toast.error('Bulk update failed');
       }
-    } catch (e) {
-      // Handle error (show toast, etc.)
+    } catch {
+      toast.error('Bulk update error');
     } finally {
       setIsLoading(false);
+      setConfirmDialogOpen(false);
+      setConfirmAction(null);
     }
   }
 
@@ -458,6 +587,18 @@ function ShowAllRequestsInner({ defenseRequests: initial, onStatusChange }: Show
     }
   };
 
+  useEffect(() => {
+    let toastId: string | number | undefined;
+    if (isLoading) {
+      toastId = toast.loading('Loading defense requests...');
+    } else {
+      toast.dismiss();
+    }
+    return () => {
+      if (toastId) toast.dismiss(toastId);
+    };
+  }, [isLoading]);
+
   return (
     <>
       <Head title="Defense Requests" />
@@ -468,8 +609,8 @@ function ShowAllRequestsInner({ defenseRequests: initial, onStatusChange }: Show
         <div className="w-full bg-white dark:bg-zinc-900 border border-border rounded-lg overflow-hidden mb-2">
           <div className="flex flex-row dark:bg-zinc-900 items-center justify-between w-full p-3 border-b bg-white">
             <div className="flex dark:bg-zinc-900 items-center gap-2">
-              <div className="h-10 w-10 flex items-center justify-center rounded-full bg-blue-500/10 border border-blue-500">
-                <Signature className="h-5 w-5 text-blue-400" />
+              <div className="h-10 w-10 flex items-center justify-center rounded-full bg-rose-500/10 border border-rose-500">
+                <Send className="h-5 w-5 text-rose-500" /> 
               </div>
               <div>
                 <span className="text-base font-semibold">
@@ -481,7 +622,83 @@ function ShowAllRequestsInner({ defenseRequests: initial, onStatusChange }: Show
               </div>
             </div>
             <div className="flex items-center gap-2 ml-auto">
-              {/* Removed Mark as Completed button from header */}
+              {/* Column selector dropdown */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm" className="h-8 px-2 flex items-center gap-1">
+                    <Settings2 className="h-4 w-4" />
+                    Columns
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="min-w-[220px]">
+                  <DropdownMenuCheckboxItem
+                    checked={columns.title}
+                    onCheckedChange={() => toggleColumn('title')}
+                  >
+                    Thesis Title
+                  </DropdownMenuCheckboxItem>
+                  <DropdownMenuCheckboxItem
+                    checked={columns.presenter}
+                    onCheckedChange={() => toggleColumn('presenter')}
+                  >
+                    Presenter
+                  </DropdownMenuCheckboxItem>
+                  <DropdownMenuCheckboxItem
+                    checked={columns.adviser}
+                    onCheckedChange={() => toggleColumn('adviser')}
+                  >
+                    Adviser
+                  </DropdownMenuCheckboxItem>
+                  <DropdownMenuCheckboxItem
+                    checked={columns.submitted_at}
+                    onCheckedChange={() => toggleColumn('submitted_at')}
+                  >
+                    Submitted At
+                  </DropdownMenuCheckboxItem>
+                  <DropdownMenuCheckboxItem
+                    checked={columns.program}
+                    onCheckedChange={() => toggleColumn('program')}
+                  >
+                    Program
+                  </DropdownMenuCheckboxItem>
+                  <DropdownMenuCheckboxItem
+                    checked={columns.expected_amount}
+                    onCheckedChange={() => toggleColumn('expected_amount')}
+                  >
+                    Expected Amount
+                  </DropdownMenuCheckboxItem>
+                  <DropdownMenuCheckboxItem
+                    checked={columns.amount_paid}
+                    onCheckedChange={() => toggleColumn('amount_paid')}
+                  >
+                    Amount Paid
+                  </DropdownMenuCheckboxItem>
+                  <DropdownMenuCheckboxItem
+                    checked={columns.reference_no}
+                    onCheckedChange={() => toggleColumn('reference_no')}
+                  >
+                    Reference/OR No.
+                  </DropdownMenuCheckboxItem>
+                  <DropdownMenuCheckboxItem
+                    checked={columns.coordinator}
+                    onCheckedChange={() => toggleColumn('coordinator')}
+                  >
+                    Program Coordinator
+                  </DropdownMenuCheckboxItem>
+                  <DropdownMenuCheckboxItem
+                    checked={columns.scheduled_date}
+                    onCheckedChange={() => toggleColumn('scheduled_date')}
+                  >
+                    Scheduled Date
+                  </DropdownMenuCheckboxItem>
+                  <DropdownMenuCheckboxItem
+                    checked={columns.actions}
+                    onCheckedChange={() => toggleColumn('actions')}
+                  >
+                    Actions
+                  </DropdownMenuCheckboxItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </div>
           {/* Search bar row with filters */}
@@ -516,11 +733,14 @@ function ShowAllRequestsInner({ defenseRequests: initial, onStatusChange }: Show
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-44 p-1" side="bottom" align="start">
-                  {['Pending', 'Approved', 'Rejected', 'Completed'].map(s => (
+                  {/* Only show Pending, Verified, Rejected */}
+                  {['Pending', 'Verified', 'Rejected'].map(s => (
                     <div
                       key={s}
                       onClick={() =>
-                        setStatusFilter(fs => (fs.includes(s) ? fs.filter(x => x !== s) : [...fs, s]))
+                        setStatusFilter(fs =>
+                          fs.includes(s) ? fs.filter(x => x !== s) : [...fs, s]
+                        )
                       }
                       className="flex items-center gap-2 p-2 rounded hover:bg-muted cursor-pointer"
                     >
@@ -550,18 +770,22 @@ function ShowAllRequestsInner({ defenseRequests: initial, onStatusChange }: Show
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-44 p-1" side="bottom" align="start">
-                  {['Proposal', 'Prefinal', 'Final'].map(t => (
-                    <div
-                      key={t}
-                      onClick={() =>
-                        setTypeFilter(ft => (ft.includes(t) ? ft.filter(x => x !== t) : [...ft, t]))
-                      }
-                      className="flex items-center gap-2 p-2 rounded hover:bg-muted cursor-pointer"
-                    >
-                      <Checkbox checked={typeFilter.includes(t)} />
-                      <span className="text-sm">{t}</span>
-                    </div>
-                  ))}
+                  {Array.from(new Set(defenseRequests.map(r => (r.defense_type || '').trim())))
+                    .filter(Boolean)
+                    .map(t => (
+                      <div
+                        key={t}
+                        onClick={() =>
+                          setTypeFilter(ft =>
+                            ft.includes(t) ? ft.filter(x => x !== t) : [...ft, t]
+                          )
+                        }
+                        className="flex items-center gap-2 p-2 rounded hover:bg-muted cursor-pointer"
+                      >
+                        <Checkbox checked={typeFilter.includes(t)} />
+                        <span className="text-sm">{t}</span>
+                      </div>
+                    ))}
                   <Button size="sm" variant="ghost" className="w-full mt-2" onClick={() => setTypeFilter([])}>
                     Clear
                   </Button>
@@ -611,13 +835,44 @@ function ShowAllRequestsInner({ defenseRequests: initial, onStatusChange }: Show
           </div>
         </div>
 
+        {/* SHADCN Tabs for Masteral/Doctorate */}
+        <div className="mb-2">
+          <Tabs value={programTab} onValueChange={v => setProgramTab(v as any)}>
+            <TabsList>
+              <TabsTrigger value="All">All</TabsTrigger>
+              <TabsTrigger value="Masteral">Masteral</TabsTrigger>
+              <TabsTrigger value="Doctorate">Doctorate</TabsTrigger>
+            </TabsList>
+          </Tabs>
+        </div>
+
         {/* Table and bulk bar */}
         {selected.length > 0 && (
           <div className="fixed left-1/2 z-30 -translate-x-1/2 bottom-4 md:bottom-6 flex items-center gap-1 bg-white border border-border shadow-lg rounded-lg px-4 py-1 text-xs animate-in fade-in slide-in-from-bottom-2 dark:bg-muted dark:text-muted-foreground dark:border-border">
             <span className="font-semibold min-w-[70px] text-center">{selected.length} selected</span>
             <div className="flex gap-1">
               <Button
-                variant="ghost" // Changed from outline to ghost
+                variant="ghost"
+                size="sm"
+                className="px-3 py-1 h-7 w-auto text-xs flex items-center gap-1"
+                onClick={() => { setConfirmAction('approve'); setConfirmDialogOpen(true); }}
+                disabled={isLoading}
+              >
+                <CheckCircle size={13} className="text-green-600" />
+                Bulk Approve
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="px-3 py-1 h-7 w-auto text-xs flex items-center gap-1"
+                onClick={() => { setConfirmAction('reject'); setConfirmDialogOpen(true); }}
+                disabled={isLoading}
+              >
+                <X size={13} className="text-red-600" />
+                Bulk Reject
+              </Button>
+              <Button
+                variant="ghost"
                 size="sm"
                 className="px-3 py-1 h-7 w-auto text-xs flex items-center gap-1"
                 onClick={handleBulkMarkCompleted}
@@ -650,23 +905,30 @@ function ShowAllRequestsInner({ defenseRequests: initial, onStatusChange }: Show
         )}
 
         {/* Table */}
-        <div className="flex-1 flex flex-col gap-4 w-full min-h-[90vh]">
+        <div className="flex-1 flex flex-col gap-4 w-full min-h-screen">
           <div className="flex flex-col w-full min-h-0 overflow-x-hidden">
             {/* Only the table is horizontally scrollable */}
             <div className="relative w-full max-w-full">
               <div className="w-full max-w-full">
                 {/* Remove overflow-x-auto here, let ScrollArea handle it */}
-                <TableAllDefenseRequests
-                  paged={paged}
+                <TableAllDefenseList
+                  paged={paged} // <-- Use the filtered, sorted, paginated array!
+                  setPaged={setPaged}
                   columns={{
                     title: columns.title,
                     presenter: columns.presenter,
                     adviser: columns.adviser,
                     submitted_at: columns.submitted_at,
                     program: columns.program,
+                    expected_amount: columns.expected_amount,
+                    amount_paid: columns.amount_paid,
+                    reference_no: columns.reference_no,
+                    coordinator: columns.coordinator,
+                    scheduled_date: columns.scheduled_date, // <-- Add this line
                     status: true,
                     type: columns.type,
-                    priority: columns.priority
+                    priority: columns.priority,
+                    actions: columns.actions
                   }}
                   selected={selected}
                   toggleSelectOne={toggleSelectOne}
@@ -679,15 +941,22 @@ function ShowAllRequestsInner({ defenseRequests: initial, onStatusChange }: Show
                   onRowReject={id => openConfirmSingle(id, 'reject')}
                   onRowRetrieve={id => openConfirmSingle(id, 'retrieve')}
                   onViewDetails={id => router.visit(`/assistant/all-defense-list/${id}/details`)}
+                  totalCount={sorted.length}
                 />
               </div>
             </div>
-            <PaginationBar page={page} totalPages={totalPages} onPageChange={setPage} />
+            <PaginationBar
+              page={page}
+              totalPages={totalPages}
+              onPageChange={setPage}
+              showingCount={paged.length}
+              totalCount={sorted.length}
+            />
           </div>
         </div>
 
         {/* Single row confirm dialog */}
-        <Dialog open={singleConfirm.open} onOpenChange={o => { if(!o) setSingleConfirm({open:false,id:null,action:null}); }}>
+        <Dialog open={singleConfirm.open} onOpenChange={o => { if (!o) setSingleConfirm({ open: false, id: null, action: null }); }}>
           <DialogContent>
             <DialogTitle>Confirm Action</DialogTitle>
             <DialogDescription>
@@ -703,8 +972,8 @@ function ShowAllRequestsInner({ defenseRequests: initial, onStatusChange }: Show
                     {singleConfirm.action === 'approve'
                       ? 'Approved'
                       : singleConfirm.action === 'reject'
-                      ? 'Rejected'
-                      : 'Pending'}
+                        ? 'Rejected'
+                        : 'Pending'}
                   </span>?
                 </p>
               )}
@@ -721,7 +990,7 @@ function ShowAllRequestsInner({ defenseRequests: initial, onStatusChange }: Show
               )}
             </div>
             <div className="flex justify-end gap-2 mt-4">
-              <Button variant="ghost" onClick={() => setSingleConfirm({open:false,id:null,action:null})}>Cancel</Button>
+              <Button variant="ghost" onClick={() => setSingleConfirm({ open: false, id: null, action: null })}>Cancel</Button>
               <Button onClick={handleSingleConfirm}>Confirm</Button>
             </div>
           </DialogContent>
@@ -741,10 +1010,10 @@ function ShowAllRequestsInner({ defenseRequests: initial, onStatusChange }: Show
                 Update {selected.length} request{selected.length !== 1 && 's'} to{' '}
                 <span className="font-semibold">
                   {confirmAction === 'approve'
-                    ? 'Approved'
+                    ? 'Verified'
                     : confirmAction === 'reject'
-                    ? 'Rejected'
-                    : 'Pending'}
+                      ? 'Rejected'
+                      : 'Pending'}
                 </span>?
               </p>
               {confirmAction === 'approve' && (
@@ -783,7 +1052,7 @@ function ShowAllRequestsInner({ defenseRequests: initial, onStatusChange }: Show
       </div>
 
       {/* Single row confirm dialog */}
-      <Dialog open={singleConfirm.open} onOpenChange={o => { if(!o) setSingleConfirm({open:false,id:null,action:null}); }}>
+      <Dialog open={singleConfirm.open} onOpenChange={o => { if (!o) setSingleConfirm({ open: false, id: null, action: null }); }}>
         <DialogContent>
           <DialogTitle>Confirm Action</DialogTitle>
           <DialogDescription>
@@ -799,8 +1068,8 @@ function ShowAllRequestsInner({ defenseRequests: initial, onStatusChange }: Show
                   {singleConfirm.action === 'approve'
                     ? 'Approved'
                     : singleConfirm.action === 'reject'
-                    ? 'Rejected'
-                    : 'Pending'}
+                      ? 'Rejected'
+                      : 'Pending'}
                 </span>?
               </p>
             )}
@@ -817,7 +1086,7 @@ function ShowAllRequestsInner({ defenseRequests: initial, onStatusChange }: Show
             )}
           </div>
           <div className="flex justify-end gap-2 mt-4">
-            <Button variant="ghost" onClick={() => setSingleConfirm({open:false,id:null,action:null})}>Cancel</Button>
+            <Button variant="ghost" onClick={() => setSingleConfirm({ open: false, id: null, action: null })}>Cancel</Button>
             <Button onClick={handleSingleConfirm}>Confirm</Button>
           </div>
         </DialogContent>
@@ -837,10 +1106,10 @@ function ShowAllRequestsInner({ defenseRequests: initial, onStatusChange }: Show
               Update {selected.length} request{selected.length !== 1 && 's'} to{' '}
               <span className="font-semibold">
                 {confirmAction === 'approve'
-                  ? 'Approved'
+                  ? 'Verified'
                   : confirmAction === 'reject'
-                  ? 'Rejected'
-                  : 'Pending'}
+                    ? 'Rejected'
+                    : 'Pending'}
               </span>?
             </p>
             {confirmAction === 'approve' && (

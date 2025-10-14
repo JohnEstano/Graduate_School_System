@@ -73,6 +73,11 @@ class DefenseRequirementController extends Controller
               ->orWhere('assigned_to_user_id', $user->id)
               ->orWhereRaw('LOWER(defense_adviser) = ?', [strtolower(trim($user->first_name . ' ' . $user->last_name))]);
         })
+        // Exclude cancelled workflow_state or status
+        ->where('workflow_state', '!=', 'cancelled')
+        ->where(function($q) {
+            $q->whereNull('status')->orWhere('status', '!=', 'Cancelled');
+        })
         ->orderByDesc('created_at')
         ->get();
 
@@ -122,6 +127,7 @@ class DefenseRequirementController extends Controller
             'manuscript_proposal' => "nullable|file|mimes:pdf,doc,docx|max:{$maxFileSize}",
             'similarity_index' => "nullable|file|mimes:{$allowedMimes}|max:{$maxFileSize}",
             'avisee_adviser_attachment' => "nullable|file|mimes:pdf,doc,docx,jpg,jpeg,png|max:{$maxFileSize}",
+            'amount' => 'required|numeric|min:0', // <-- Add this line
         ]);
 
         foreach (['rec_endorsement','proof_of_payment','manuscript_proposal','similarity_index','avisee_adviser_attachment'] as $f) {
@@ -160,6 +166,7 @@ class DefenseRequirementController extends Controller
                 'manuscript_proposal' => $data['manuscript_proposal'] ?? null,
                 'similarity_index' => $data['similarity_index'] ?? null,
                 'avisee_adviser_attachment' => $data['avisee_adviser_attachment'] ?? null,
+                'amount' => $data['amount'], // <-- Add this line
                 'submitted_by' => Auth::id(),
                 'submitted_at' => now(),
                 'status' => 'Pending',

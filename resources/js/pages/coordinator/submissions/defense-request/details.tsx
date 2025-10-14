@@ -728,6 +728,22 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
   // Tabs: "details" and "assign-schedule"
   const [tab, setTab] = useState<'details' | 'assign-schedule'>('details');
 
+  const statusMap: Record<string, string> = {
+    'submitted': 'Submitted',
+    'adviser-approved': 'Endorsed by Adviser',
+    'adviser-rejected': 'Rejected by Adviser',
+    'adviser-retrieved': 'Retrieved by Adviser',
+    'coordinator-approved': 'Approved by Coordinator',
+    'coordinator-rejected': 'Rejected by Coordinator',
+    'coordinator-review': 'Pending Coordinator Action',
+    'coordinator-retrieved': 'Retrieved by Coordinator',
+    'panels-assigned': 'Panels Assigned',
+    'scheduled': 'Scheduled',
+    'completed': 'Completed',
+    'cancelled': 'Cancelled',
+    // Add more as needed
+  };
+
   return (
     <AppLayout breadcrumbs={breadcrumbs}>
       <Toaster position="bottom-right" richColors closeButton />
@@ -827,8 +843,12 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
                               ? 'bg-green-100 text-green-600'
                               : request.coordinator_status === 'Rejected'
                               ? 'bg-red-100 text-red-600'
-                              : request.coordinator_status === 'Pending'
+                              : request.coordinator_status === 'Needs Signature'
+                              ? 'bg-blue-100 text-blue-600'
+                              : request.coordinator_status === 'Not Scheduled'
                               ? 'bg-yellow-100 text-yellow-700'
+                              : request.coordinator_status === 'No Assigned Panelists'
+                              ? 'bg-orange-100 text-orange-600'
                               : 'bg-gray-100 text-gray-600'
                           }`}
                         >

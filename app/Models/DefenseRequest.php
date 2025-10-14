@@ -29,6 +29,7 @@ class DefenseRequest extends Model
         'scheduled_end_time'         => 'string',
         'coordinator_assigned_at'    => 'datetime',
         'coordinator_manually_assigned' => 'boolean',
+        'amount' => 'decimal:2',
     ];
 
     public function user()                { return $this->belongsTo(User::class,'submitted_by'); }
@@ -437,5 +438,42 @@ class DefenseRequest extends Model
         }
         
         return trim($this->coordinatorUser->first_name . ' ' . $this->coordinatorUser->last_name);
+    }
+
+    public function getCoordinatorStatusDisplayAttribute()
+    {
+        // Final states
+        if ($this->coordinator_status === 'Approved') return 'Approved';
+        if ($this->coordinator_status === 'Rejected') return 'Rejected';
+
+        // Not in coordinator workflow yet
+        if (!in_array($this->workflow_state, [
+            'coordinator-review', 'coordinator-approved', 'panels-assigned', 'scheduled', 'completed'
+        ])) {
+            return 'Pending';
+        }
+
+        // Check panel assignments
+        $hasPanels = $this->defense_chairperson || $this->defense_panelist1 || $this->defense_panelist2 || $this->defense_panelist3 || $this->defense_panelist4;
+
+        // Check schedule
+        $hasSchedule = $this->scheduled_date && $this->scheduled_time && $this->scheduled_end_time && $this->defense_venue && $this->defense_mode;
+
+        if (!$hasPanels && !$hasSchedule) {
+            return 'Pending';
+        }
+        if (!$hasPanels && $hasSchedule) {
+            return 'No Assigned Panelists';
+        }
+        if ($hasPanels && !$hasSchedule) {
+            return 'Not Scheduled';
+        }
+        if ($hasPanels && $hasSchedule && $this->workflow_state !== 'coordinator-approved') {
+            return 'Needs Signature';
+        }
+        if ($this->workflow_state === 'coordinator-approved') {
+            return 'Approved';
+        }
+        return 'Pending';
     }
 }

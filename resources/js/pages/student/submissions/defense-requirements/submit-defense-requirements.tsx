@@ -173,6 +173,7 @@ export default function SubmitDefenseRequirements({ onFinish, open, onOpenChange
         manuscript_proposal: File | null;
         similarity_index: File | null;
         avisee_adviser_attachment: File | null;
+        amount: string; // <-- Add this line
     }>({
         first_name: user.first_name || '',
         middle_name: user.middle_name || '',
@@ -190,6 +191,7 @@ export default function SubmitDefenseRequirements({ onFinish, open, onOpenChange
         manuscript_proposal: null,
         similarity_index: null,
         avisee_adviser_attachment: null,
+        amount: '', // <-- Add this line
     });
 
     const [openDialog, setOpenDialog] = useState(false);
@@ -211,7 +213,9 @@ export default function SubmitDefenseRequirements({ onFinish, open, onOpenChange
                     'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
                     'image/jpeg',
                     'image/png',
-                    'image/jpg'
+                    'image/jpg',
+                    'image/gif',
+                    'image/webp'
                 ];
 
                 // Check file size
@@ -270,6 +274,7 @@ export default function SubmitDefenseRequirements({ onFinish, open, onOpenChange
         if (!data.similarity_index) return false;
         if (!data.proof_of_payment) return false;
         if (!data.reference_no.trim()) return false;
+        if (!data.amount.trim()) return false; // <-- Add this line
 
         if (data.defense_type === 'Proposal') {
             if (!data.avisee_adviser_attachment) return false;
@@ -571,6 +576,26 @@ export default function SubmitDefenseRequirements({ onFinish, open, onOpenChange
                                 </div>
                             </div>
                             <div>
+                                <Label className="text-xs mb-1 flex items-center gap-1">
+                                    Amount <span className="text-rose-500">*</span>
+                                </Label>
+                                <div className="flex items-center gap-2">
+                                    <span className="text-lg font-semibold text-gray-700">₱</span>
+                                    <Input
+                                        type="number"
+                                        min="0"
+                                        step="0.01"
+                                        value={data.amount}
+                                        onChange={e => setData('amount', e.target.value)}
+                                        placeholder="Enter paid amount"
+                                        className="h-8 text-sm w-40"
+                                    />
+                                </div>
+                                <p className="text-xs text-muted-foreground mt-1">
+                                    Please enter the accurate paid amount reflected on the uploaded receipt.
+                                </p>
+                            </div>
+                            <div>
                                 <Label className="text-xs mb-1">
                                     Reference No. <span className="text-rose-500">*</span>
                                 </Label>
@@ -651,6 +676,14 @@ export default function SubmitDefenseRequirements({ onFinish, open, onOpenChange
                                 </div>
                                 <div>
                                     <span className="font-medium">Reference No.:</span> {data.reference_no}
+                                </div>
+                                <div>
+                                    <span className="font-medium">Amount:</span>
+                                    {data.amount ? (
+                                        <span>₱ {parseFloat(data.amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                                    ) : (
+                                        <span className="text-muted-foreground">—</span>
+                                    )}
                                 </div>
                             </div>
                         </div>

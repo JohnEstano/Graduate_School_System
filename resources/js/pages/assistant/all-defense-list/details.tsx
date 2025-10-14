@@ -21,6 +21,8 @@ import {
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"; // Make sure this import exists
+import PaymentValidationSection from "./payment-validation";
 
 type DefenseRequestDetails = {
   id: number;
@@ -55,6 +57,7 @@ type DefenseRequestDetails = {
   workflow_history?: any[];
   reference_no?: string;
   attachments?: any;
+  amount?: number;
 };
 
 type Props = {
@@ -90,6 +93,9 @@ function getInitials(user: { first_name?: string; last_name?: string }) {
 export default function Details({ id, defenseRequest: initialDefenseRequest }: Props) {
   const [details, setDetails] = useState<DefenseRequestDetails | null>(initialDefenseRequest ?? null);
   const [loading, setLoading] = useState(!initialDefenseRequest);
+
+  // Add tab state
+  const [tab, setTab] = useState<'details' | 'payment'>('details');
 
   useEffect(() => {
     if (details) return; // Already hydrated from server
@@ -259,7 +265,7 @@ export default function Details({ id, defenseRequest: initialDefenseRequest }: P
     <AppLayout breadcrumbs={breadcrumbs}>
       <Head title={details?.thesis_title || `Defense Request #${details?.id ?? ''}`} />
       <div className="p-5 space-y-6">
-        {/* Toolbar */}
+        {/* Toolbar with Tabs */}
         <div className="flex items-center justify-between gap-3 flex-wrap mb-4">
           <div className="flex items-center gap-2">
             <Button
@@ -269,9 +275,16 @@ export default function Details({ id, defenseRequest: initialDefenseRequest }: P
             >
               <ArrowLeft className="h-4 w-4" />
             </Button>
+            {/* Tabs beside back arrow */}
+            <Tabs value={tab} onValueChange={v => setTab(v as 'details' | 'payment')}>
+              <TabsList>
+                <TabsTrigger value="details">Details</TabsTrigger>
+                <TabsTrigger value="payment">Payment Validation</TabsTrigger>
+              </TabsList>
+            </Tabs>
           </div>
           {/* Only show if not completed */}
-          {details?.status !== 'Completed' && (
+          {details?.status !== 'Completed' && tab === 'details' && (
             <Button
               size="sm"
               variant="outline"
@@ -284,193 +297,201 @@ export default function Details({ id, defenseRequest: initialDefenseRequest }: P
           )}
         </div>
 
+        {/* Tab Content */}
         <div className="grid md:grid-cols-3 gap-8">
-          {/* Main content */}
+          {/* Left: Tabbed content (summary cards) */}
           <div className="md:col-span-2 space-y-6">
-            {/* Submission summary card */}
-            <div className="rounded-xl border p-8 bg-white dark:bg-zinc-900">
-              {/* Thesis Title Header with Status */}
-              <div className="mb-1 flex flex-col md:flex-row md:items-center md:justify-between gap-2">
-                <div>
-                  <div className="text-2xl font-semibold">{details?.thesis_title}</div>
-                  <div className="text-xs text-muted-foreground font-medium mt-0.5">Thesis Title</div>
-                </div>
-                <div className="flex flex-col md:items-end gap-1">
-                  {/* Status */}
-                  {details?.status && (
-                    <span
-                      className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
-                        details.status === 'Approved'
-                          ? 'bg-green-100 text-green-600'
-                          : details.status === 'Rejected'
-                          ? 'bg-red-100 text-red-600'
-                          : details.status === 'Pending'
-                          ? 'bg-yellow-100 text-yellow-700'
-                          : details.status === 'Completed'
-                          ? 'bg-gray-800 text-white'
-                          : 'bg-gray-100 text-gray-600'
-                      }`}
-                    >
-                      Status: {details.status}
-                    </span>
-                  )}
-                </div>
-              </div>
-              {/* Info Grid */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-6 mt-6">
-                <div>
-                  <div className="text-xs text-muted-foreground mb-1">Presenter</div>
-                  <div className="flex items-center gap-3">
-                    <Avatar className="h-8 w-8">
-                      <AvatarFallback className="text-base font-bold bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-200">
-                        {getInitials(details!)}
-                      </AvatarFallback>
-                    </Avatar>
+            <Tabs value={tab} onValueChange={v => setTab(v as 'details' | 'payment')}>
+              <TabsContent value="details">
+                {/* Submission summary card */}
+                <div className="rounded-xl border p-8 bg-white dark:bg-zinc-900">
+                  {/* Thesis Title Header with Status */}
+                  <div className="mb-1 flex flex-col md:flex-row md:items-center md:justify-between gap-2">
                     <div>
-                      <div className="font-medium text-sm leading-tight">
-                        {details?.first_name} {details?.middle_name ? `${details.middle_name} ` : ''}{details?.last_name}
-                      </div>
-                      {details?.school_id && (
-                        <div className="text-xs text-muted-foreground mt-0.5">
-                          {details.school_id}
-                        </div>
+                      <div className="text-2xl font-semibold">{details?.thesis_title}</div>
+                      <div className="text-xs text-muted-foreground font-medium mt-0.5">Thesis Title</div>
+                    </div>
+                    <div className="flex flex-col md:items-end gap-1">
+                      {/* Status */}
+                      {details?.status && (
+                        <span
+                          className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
+                            details.status === 'Approved'
+                              ? 'bg-green-100 text-green-600'
+                              : details.status === 'Rejected'
+                              ? 'bg-red-100 text-red-600'
+                              : details.status === 'Pending'
+                              ? 'bg-yellow-100 text-yellow-700'
+                              : details.status === 'Completed'
+                              ? 'bg-gray-800 text-white'
+                              : 'bg-gray-100 text-gray-600'
+                          }`}
+                        >
+                          Status: {details.status}
+                        </span>
                       )}
                     </div>
                   </div>
-                </div>
-                <div>
-                  <div className="text-xs text-muted-foreground mb-1">Program</div>
-                  <div className="font-medium text-sm">{details?.program}</div>
-                </div>
-                <div>
-                  <div className="text-xs text-muted-foreground mb-1">Defense Type</div>
-                  <Badge variant="secondary" className="text-xs font-medium">
-                    {details?.defense_type ?? '—'}
-                  </Badge>
-                </div>
-                <div>
-                  <div className="text-xs text-muted-foreground mb-1">Scheduled Date</div>
-                  <div className="font-medium text-sm">{formatDate(details?.scheduled_date)}</div>
-                </div>
-                <div>
-                  <div className="text-xs text-muted-foreground mb-1">Time</div>
-                  <div className="font-medium text-sm">
-                    {details?.scheduled_time
-                      ? `${formatTime12h(details.scheduled_time)}${details.scheduled_end_time ? ' - ' + formatTime12h(details.scheduled_end_time) : ''}`
-                      : '—'}
-                  </div>
-                </div>
-                <div>
-                  <div className="text-xs text-muted-foreground mb-1">Venue</div>
-                  <div className="font-medium text-sm">{details?.defense_venue || '—'}</div>
-                </div>
-                <div>
-                  <div className="text-xs text-muted-foreground mb-1">Mode</div>
-                  <div className="font-medium text-sm">{details?.defense_mode ? (details.defense_mode === 'face-to-face' ? 'Face-to-Face' : 'Online') : '—'}</div>
-                </div>
-                <div className="md:col-span-2">
-                  <div className="text-xs text-muted-foreground mb-1">Notes</div>
-                  <div className="font-medium text-sm">{details?.scheduling_notes || '—'}</div>
-                </div>
-              </div>
-            </div>
-
-            {/* Committee (read-only summary) */}
-            <div className={sectionClass}>
-              <h2 className="text-sm font-semibold flex items-center gap-2">
-                <Users className="h-4 w-4" /> Committee
-              </h2>
-              <Separator />
-              <div className="grid md:grid-cols-2 gap-4 text-sm">
-                <div>
-                  <div className="text-[11px] text-muted-foreground uppercase tracking-wide">
-                    Adviser
-                  </div>
-                  <div className="font-medium">
-                    {details?.defense_adviser || details?.adviser || '—'}
-                  </div>
-                </div>
-                {[
-                  {
-                    label: 'Chairperson',
-                    v: details?.defense_chairperson
-                  },
-                  {
-                    label: 'Panelist 1',
-                    v: details?.defense_panelist1
-                  },
-                  {
-                    label: 'Panelist 2',
-                    v: details?.defense_panelist2
-                  },
-                  {
-                    label: 'Panelist 3',
-                    v: details?.defense_panelist3
-                  },
-                  {
-                    label: 'Panelist 4',
-                    v: details?.defense_panelist4
-                  }
-                ].map(r => (
-                  <div key={r.label}>
-                    <div className="text-[11px] text-muted-foreground uppercase tracking-wide">
-                      {r.label}
+                  {/* Info Grid */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-6 mt-6">
+                    <div>
+                      <div className="text-xs text-muted-foreground mb-1">Presenter</div>
+                      <div className="flex items-center gap-3">
+                        <Avatar className="h-8 w-8">
+                          <AvatarFallback className="text-base font-bold bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-200">
+                            {getInitials(details!)}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div>
+                          <div className="font-medium text-sm leading-tight">
+                            {details?.first_name} {details?.middle_name ? `${details.middle_name} ` : ''}{details?.last_name}
+                          </div>
+                          {details?.school_id && (
+                            <div className="text-xs text-muted-foreground mt-0.5">
+                              {details.school_id}
+                            </div>
+                          )}
+                        </div>
+                      </div>
                     </div>
-                    <div className="font-medium">{r.v || '—'}</div>
+                    <div>
+                      <div className="text-xs text-muted-foreground mb-1">Program</div>
+                      <div className="font-medium text-sm">{details?.program}</div>
+                    </div>
+                    <div>
+                      <div className="text-xs text-muted-foreground mb-1">Defense Type</div>
+                      <Badge variant="secondary" className="text-xs font-medium">
+                        {details?.defense_type ?? '—'}
+                      </Badge>
+                    </div>
+                    <div>
+                      <div className="text-xs text-muted-foreground mb-1">Scheduled Date</div>
+                      <div className="font-medium text-sm">{formatDate(details?.scheduled_date)}</div>
+                    </div>
+                    <div>
+                      <div className="text-xs text-muted-foreground mb-1">Time</div>
+                      <div className="font-medium text-sm">
+                        {details?.scheduled_time
+                          ? `${formatTime12h(details.scheduled_time)}${details.scheduled_end_time ? ' - ' + formatTime12h(details.scheduled_end_time) : ''}`
+                          : '—'}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-xs text-muted-foreground mb-1">Venue</div>
+                      <div className="font-medium text-sm">{details?.defense_venue || '—'}</div>
+                    </div>
+                    <div>
+                      <div className="text-xs text-muted-foreground mb-1">Mode</div>
+                      <div className="font-medium text-sm">{details?.defense_mode ? (details.defense_mode === 'face-to-face' ? 'Face-to-Face' : 'Online') : '—'}</div>
+                    </div>
+                    <div className="md:col-span-2">
+                      <div className="text-xs text-muted-foreground mb-1">Notes</div>
+                      <div className="font-medium text-sm">{details?.scheduling_notes || '—'}</div>
+                    </div>
                   </div>
-                ))}
-              </div>
-            </div>
+                </div>
 
-            {/* Attachments */}
-            <div className={sectionClass}>
-              <h2 className="text-sm font-semibold flex items-center gap-2">
-                <FileText className="h-4 w-4" /> Attachments
-              </h2>
-              <Separator />
-              <div className="space-y-2 text-sm">
-                {attachments.filter(a => !!a.url).length === 0 && (
-                  <p className="text-sm text-muted-foreground">No attachments.</p>
-                )}
-                {attachments
-                  .filter(a => !!a.url)
-                  .map(a => (
-                    <a
-                      key={a.label}
-                      href={a.url!}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center gap-2 px-3 py-2 rounded-md border bg-white dark:bg-zinc-900 hover:bg-muted transition"
-                    >
-                      <FileText className="h-4 w-4" />
-                      <span className="font-medium">{a.label}</span>
-                      <span className="text-xs text-muted-foreground ml-auto truncate max-w-[180px]">
-                        {a.url?.split('/').pop()}
-                      </span>
-                    </a>
-                  ))}
-                {/* Reference No. as plain text if present */}
-                {details?.reference_no && (
-                  <div className="flex items-center gap-2 px-3 py-2 rounded-md border bg-white dark:bg-zinc-900">
-                    <FileText className="h-4 w-4" />
-                    <span className="font-medium">Reference No.</span>
-                    <span className="ml-auto text-xs">{details.reference_no}</span>
+                {/* Committee (read-only summary) */}
+                <div className={sectionClass}>
+                  <h2 className="text-sm font-semibold flex items-center gap-2">
+                    <Users className="h-4 w-4" /> Committee
+                  </h2>
+                  <Separator />
+                  <div className="grid md:grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <div className="text-[11px] text-muted-foreground uppercase tracking-wide">
+                        Adviser
+                      </div>
+                      <div className="font-medium">
+                        {details?.defense_adviser || details?.adviser || '—'}
+                      </div>
+                    </div>
+                    {[
+                      {
+                        label: 'Chairperson',
+                        v: details?.defense_chairperson
+                      },
+                      {
+                        label: 'Panelist 1',
+                        v: details?.defense_panelist1
+                      },
+                      {
+                        label: 'Panelist 2',
+                        v: details?.defense_panelist2
+                      },
+                      {
+                        label: 'Panelist 3',
+                        v: details?.defense_panelist3
+                      },
+                      {
+                        label: 'Panelist 4',
+                        v: details?.defense_panelist4
+                      }
+                    ].map(r => (
+                      <div key={r.label}>
+                        <div className="text-[11px] text-muted-foreground uppercase tracking-wide">
+                          {r.label}
+                        </div>
+                        <div className="font-medium">{r.v || '—'}</div>
+                      </div>
+                    ))}
                   </div>
-                )}
-              </div>
-            </div>
+                </div>
 
-            <div className="text-[11px] text-muted-foreground mt-4">
-              Last updated by:{' '}
-              {details?.last_status_updated_by_name ||
-                details?.last_status_updated_by ||
-                '—'}{' '}
-              {details?.last_status_updated_at
-                ? `(${details.last_status_updated_at})`
-                : ''}
-            </div>
+                {/* Attachments */}
+                <div className={sectionClass}>
+                  <h2 className="text-sm font-semibold flex items-center gap-2">
+                    <FileText className="h-4 w-4" /> Attachments
+                  </h2>
+                  <Separator />
+                  <div className="space-y-2 text-sm">
+                    {attachments.filter(a => !!a.url).length === 0 && (
+                      <p className="text-sm text-muted-foreground">No attachments.</p>
+                    )}
+                    {attachments
+                      .filter(a => !!a.url)
+                      .map(a => (
+                        <a
+                          key={a.label}
+                          href={a.url!}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-2 px-3 py-2 rounded-md border bg-white dark:bg-zinc-900 hover:bg-muted transition"
+                        >
+                          <FileText className="h-4 w-4" />
+                          <span className="font-medium">{a.label}</span>
+                          <span className="text-xs text-muted-foreground ml-auto truncate max-w-[180px]">
+                            {a.url?.split('/').pop()}
+                          </span>
+                        </a>
+                      ))}
+                    {/* Reference No. as plain text if present */}
+                    {details?.reference_no && (
+                      <div className="flex items-center gap-2 px-3 py-2 rounded-md border bg-white dark:bg-zinc-900">
+                        <FileText className="h-4 w-4" />
+                        <span className="font-medium">Reference No.</span>
+                        <span className="ml-auto text-xs">{details.reference_no}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="text-[11px] text-muted-foreground mt-4">
+                  Last updated by:{' '}
+                  {details?.last_status_updated_by_name ||
+                    details?.last_status_updated_by ||
+                    '—'}{' '}
+                  {details?.last_status_updated_at
+                    ? `(${details.last_status_updated_at})`
+                    : ''}
+                </div>
+              </TabsContent>
+              <TabsContent value="payment">
+                <PaymentValidationSection details={details!} resolveFileUrl={resolveFileUrl} />
+              </TabsContent>
+            </Tabs>
           </div>
-          {/* Sidebar: Workflow Progress */}
+          {/* Sidebar: Workflow Progress (always shown) */}
           <div className="w-full md:w-[340px] flex-shrink-0">
             <div className="rounded-xl border p-5 bg-white dark:bg-zinc-900">
               <h2 className="text-xs font-semibold mb-8 flex items-center gap-2">

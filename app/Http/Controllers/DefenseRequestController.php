@@ -21,6 +21,8 @@ use App\Mail\DefenseRequestApproved;
 use App\Mail\DefenseRequestRejected;
 use App\Mail\DefenseScheduled;
 use App\Mail\DefenseRequestAssignedToCoordinator;
+use App\Helpers\ProgramLevel;
+use App\Models\PaymentRate;
 
 class DefenseRequestController extends Controller
 {
@@ -39,6 +41,11 @@ class DefenseRequestController extends Controller
         if (in_array($user->role, $coordinatorRoles)) {
             // Coordinator view: show queue of adviser-approved onward
             $query = DefenseRequest::query();
+
+            // --- AA filter ---
+            if ($user->role === 'Administrative Assistant') {
+                $query->where('coordinator_status', 'Approved');
+            }
 
             Log::info('Coordinator dashboard filter applied', [
                 'coordinator_id' => $user->id,
@@ -65,7 +72,8 @@ class DefenseRequestController extends Controller
                     'scheduled_date','scheduled_time','scheduled_end_time',
                     'defense_mode','defense_venue','panels_assigned_at',
                     'defense_adviser','adviser_reviewed_at',
-                    'defense_chairperson','defense_panelist1','defense_panelist2','defense_panelist3','defense_panelist4'
+                    'defense_chairperson','defense_panelist1','defense_panelist2','defense_panelist3','defense_panelist4',
+                    'coordinator_status' // <-- ADDED
                 ])->map(function($r){
                     // Helper to resolve panelist info
                     $panelistFields = [
@@ -115,6 +123,8 @@ class DefenseRequestController extends Controller
                             : '—',
                         // ADD THIS LINE:
                         'panelists' => $panelists,
+                        // <-- ADDED
+                        'coordinator_status' => $r->coordinator_status, // <-- ADDED
                     ];
                 });
 
@@ -137,6 +147,10 @@ class DefenseRequestController extends Controller
 
         // Student view
         $requirements = DefenseRequest::where('submitted_by', $user->id)
+            ->where('workflow_state', '!=', 'cancelled')
+            ->where(function($q) {
+                $q->whereNull('status')->orWhere('status', '!=', 'Cancelled');
+            })
             ->orderByDesc('created_at')
             ->get();
 
@@ -489,6 +503,19 @@ class DefenseRequestController extends Controller
                 }
             }
 
+            // --- NEW: Auto-create payment verification record if approved ---
+            if ($defenseRequest->coordinator_status === 'Approved') {
+                $existing = \App\Models\AaPaymentVerification::where('defense_request_id', $defenseRequest->id)->first();
+                if (!$existing) {
+                    \App\Models\AaPaymentVerification::create([
+                        'defense_request_id' => $defenseRequest->id,
+                        'assigned_to' => null, // or set to an AA user id if you want
+                        'status' => 'pending',
+                        'remarks' => null,
+                    ]);
+                }
+            }
+
             return response()->json([
                 'ok'=>true,
                 'workflow_state'=>$defenseRequest->workflow_state,
@@ -533,6 +560,13 @@ class DefenseRequestController extends Controller
             'defense_venue' => $defenseRequest->defense_venue,
             'defense_mode' => $defenseRequest->defense_mode,
             'panels_assigned_at' => $defenseRequest->panels_assigned_at,
+            'request' => $defenseRequest,
+            'coordinator_status_display' => $defenseRequest->coordinator_status_display,
+            // ADD THESE:
+            'amount' => $defenseRequest->amount,
+            'reference_no' => $defenseRequest->reference_no,
+            // If you want to send attachments as well:
+            'attachments' => $defenseRequest->attachments,
         ]);
     }
 
@@ -782,6 +816,11 @@ class DefenseRequestController extends Controller
                 $q->where('adviser_user_id', $user->id)
                   ->orWhere('assigned_to_user_id', $user->id)
                   ->orWhereRaw('LOWER(defense_adviser) = ?', [$fullName]);
+            })
+            // Exclude cancelled workflow_state or status
+            ->where('workflow_state', '!=', 'cancelled')
+            ->where(function($q) {
+                $q->whereNull('status')->orWhere('status', '!=', 'Cancelled');
             });
 
         if ($s = $request->input('search')) {
@@ -1201,6 +1240,10 @@ class DefenseRequestController extends Controller
             'coordinator-rejected'
         ]);
 
+        if ($user->role === 'Administrative Assistant') {
+            $query->where('coordinator_status', 'Approved');
+        }
+
         if ($s = $request->input('search')) {
             $query->where(function($q) use ($s){
                 $q->where('thesis_title','like',"%$s%")
@@ -1217,9 +1260,30 @@ class DefenseRequestController extends Controller
                 'id','first_name','middle_name','last_name','school_id','program',
                 'thesis_title','defense_type','status','priority','workflow_state',
                 'scheduled_date','defense_mode','defense_venue','panels_assigned_at',
-                'defense_adviser','submitted_at'
+                'defense_adviser','submitted_at',
+                'coordinator_status',
+                'amount',           // <-- must be present
+                'reference_no',     // <-- must be present
+                'coordinator_user_id', // <-- must be present
             ])
             ->map(function($r){
+                // Get program level
+                $programLevel = \App\Helpers\ProgramLevel::getLevel($r->program);
+
+                // Sum all rates for this program level and defense type
+                $expectedTotal = \App\Models\PaymentRate::where('program_level', $programLevel)
+                    ->where('defense_type', $r->defense_type)
+                    ->sum('amount');
+
+                // Get coordinator name
+                $coordinator = null;
+                if ($r->coordinator_user_id) {
+                    $coordUser = \App\Models\User::find($r->coordinator_user_id);
+                    if ($coordUser) {
+                        $coordinator = trim($coordUser->first_name . ' ' . ($coordUser->middle_name ? strtoupper($coordUser->middle_name[0]) . '. ' : '') . $coordUser->last_name);
+                    }
+                }
+
                 return [
                     'id' => $r->id,
                     'first_name' => $r->first_name,
@@ -1239,9 +1303,158 @@ class DefenseRequestController extends Controller
                     'mode_defense' => $r->defense_mode,
                     'adviser' => $r->defense_adviser ?? '—',
                     'submitted_at' => $r->submitted_at ? \Carbon\Carbon::parse($r->submitted_at)->format('Y-m-d H:i:s') : null,
+                    'coordinator_status' => $r->coordinator_status,
+                    // --- ADD THESE FIELDS ---
+                    'expected_rate' => $expectedTotal,
+                    'amount' => $r->amount,
+                    'reference_no' => $r->reference_no,
+                    'coordinator' => $coordinator,
                 ];
             });
 
         return response()->json($rows);
+    }
+
+    public function savePanels(Request $request, DefenseRequest $defenseRequest)
+    {
+        $user = Auth::user();
+        if (!$user || !in_array($user->role, ['Coordinator','Administrative Assistant','Dean'])) {
+            return response()->json(['error'=>'Unauthorized'],403);
+        }
+
+        $data = $request->validate([
+            'defense_chairperson' => 'nullable|string|max:255',
+            'defense_panelist1' => 'nullable|string|max:255',
+            'defense_panelist2' => 'nullable|string|max:255',
+            'defense_panelist3' => 'nullable|string|max:255',
+            'defense_panelist4' => 'nullable|string|max:255',
+        ]);
+
+        $originalState = $defenseRequest->workflow_state;
+
+        // Save panel assignments
+        $defenseRequest->defense_chairperson = $data['defense_chairperson'] ?? null;
+        $defenseRequest->defense_panelist1 = $data['defense_panelist1'] ?? null;
+        $defenseRequest->defense_panelist2 = $data['defense_panelist2'] ?? null;
+        $defenseRequest->defense_panelist3 = $data['defense_panelist3'] ?? null;
+        $defenseRequest->defense_panelist4 = $data['defense_panelist4'] ?? null;
+        $defenseRequest->panels_assigned_at = now();
+
+        // Always update workflow_state/history if any panel field changes
+        $defenseRequest->workflow_state = 'panels-assigned';
+
+        // Add workflow history entry
+        $hist = $defenseRequest->workflow_history ?? [];
+        $hist[] = [
+            'action' => 'Panels Assigned',
+            'timestamp' => now()->toISOString(),
+            'user_id' => $user->id,
+            'user_name' => $user->first_name . ' ' . $user->last_name,
+            'from_state' => $originalState,
+            'to_state' => 'panels-assigned'
+        ];
+        $defenseRequest->workflow_history = $hist;
+
+        $defenseRequest->last_status_updated_at = now();
+        $defenseRequest->last_status_updated_by = $user->id;
+        $defenseRequest->save();
+
+        return response()->json([
+            'ok' => true,
+            'request' => $defenseRequest,
+            'workflow_history' => $defenseRequest->workflow_history,
+            'workflow_state' => $defenseRequest->workflow_state,
+        ]);
+    }
+
+    public function showAADetails($id)
+    {
+        $user = \Auth::user();
+        if (!$user || !in_array($user->role, ['Administrative Assistant', 'Dean'])) {
+            abort(403);
+        }
+
+        $defenseRequest = \App\Models\DefenseRequest::findOrFail($id);
+
+        // Use the helper to get the program level
+        $programLevel = \App\Helpers\ProgramLevel::getLevel($defenseRequest->program);
+
+        // Fetch the expected rate for this program level and defense type
+        $expectedRate = \App\Models\PaymentRate::where('program_level', $programLevel)
+            ->where('defense_type', $defenseRequest->defense_type)
+            ->where('type', 'School Share') // or your desired type
+            ->first();
+
+        // Compose the full data structure, similar to your current route
+        $panelistFields = [
+            $defenseRequest->defense_chairperson,
+            $defenseRequest->defense_panelist1,
+            $defenseRequest->defense_panelist2,
+            $defenseRequest->defense_panelist3,
+            $defenseRequest->defense_panelist4,
+        ];
+        $panelists = collect($panelistFields)
+            ->filter()
+            ->map(function ($panelistIdOrName) {
+                if (is_numeric($panelistIdOrName)) {
+                    $p = \App\Models\Panelist::find($panelistIdOrName);
+                    if ($p)
+                        return ['id' => $p->id, 'name' => $p->name];
+                }
+                return ['id' => null, 'name' => $panelistIdOrName];
+            })->values()->all();
+
+        return \Inertia\Inertia::render('assistant/all-defense-list/details', [
+            'defenseRequest' => [
+                'id' => $defenseRequest->id,
+                'first_name' => $defenseRequest->first_name,
+                'middle_name' => $defenseRequest->middle_name,
+                'last_name' => $defenseRequest->last_name,
+                'school_id' => $defenseRequest->school_id,
+                'program' => $defenseRequest->program,
+                'thesis_title' => $defenseRequest->thesis_title,
+                'defense_type' => $defenseRequest->defense_type,
+                'status' => $defenseRequest->status,
+                'priority' => $defenseRequest->priority,
+                'workflow_state' => $defenseRequest->workflow_state,
+                'scheduled_date' => $defenseRequest->scheduled_date?->format('Y-m-d'),
+                'scheduled_time' => $defenseRequest->scheduled_time,
+                'scheduled_end_time' => $defenseRequest->scheduled_end_time,
+                'defense_mode' => $defenseRequest->defense_mode,
+                'defense_venue' => $defenseRequest->defense_venue,
+                'scheduling_notes' => $defenseRequest->scheduling_notes,
+                'adviser' => $defenseRequest->defense_adviser,
+                'submitted_at' => $defenseRequest->adviser_reviewed_at
+                    ? (is_object($defenseRequest->adviser_reviewed_at)
+                        ? $defenseRequest->adviser_reviewed_at->format('Y-m-d H:i:s')
+                        : date('Y-m-d H:i:s', strtotime($defenseRequest->adviser_reviewed_at)))
+                    : null,
+                'panelists' => $panelists,
+                'defense_adviser' => $defenseRequest->defense_adviser,
+                'defense_chairperson' => $defenseRequest->defense_chairperson,
+                'defense_panelist1' => $defenseRequest->defense_panelist1,
+                'defense_panelist2' => $defenseRequest->defense_panelist2,
+                'defense_panelist3' => $defenseRequest->defense_panelist3,
+                'defense_panelist4' => $defenseRequest->defense_panelist4,
+                'amount' => $defenseRequest->amount,
+                'reference_no' => $defenseRequest->reference_no,
+                'expected_rate' => $expectedRate ? $expectedRate->amount : null,
+                'attachments' => [
+                    'advisers_endorsement' => $defenseRequest->advisers_endorsement,
+                    'rec_endorsement' => $defenseRequest->rec_endorsement,
+                    'proof_of_payment' => $defenseRequest->proof_of_payment,
+                    'manuscript_proposal' => $defenseRequest->manuscript_proposal,
+                    'similarity_index' => $defenseRequest->similarity_index,
+                    'avisee_adviser_attachment' => $defenseRequest->avisee_adviser_attachment,
+                    'ai_detection_certificate' => $defenseRequest->ai_detection_certificate,
+                    'endorsement_form' => $defenseRequest->endorsement_form,
+                ],
+                'last_status_updated_by' => $defenseRequest->last_status_updated_by,
+                'last_status_updated_at' => $defenseRequest->last_status_updated_at,
+                'workflow_history' => $defenseRequest->workflow_history ?? [],
+                'adviser_status' => $defenseRequest->adviser_status ?? null,
+                'coordinator_status' => $defenseRequest->coordinator_status ?? null,
+            ],
+        ]);
     }
 }
