@@ -1,12 +1,14 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import axios from "axios";
 import { Table, TableHeader, TableRow, TableCell, TableBody, TableHead } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Copy, Check, Users, Search, Trash } from "lucide-react";
-import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Copy, Check, Users, Search, Trash, UserPlus, Loader2 } from "lucide-react";
+import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 
 type Adviser = {
   id: number;
@@ -15,6 +17,8 @@ type Adviser = {
   last_name: string;
   email: string;
   program: string;
+  name?: string; // Full name from backend search
+  employee_id?: string;
 };
 
 function getInitials(adviser: Adviser) {
@@ -28,15 +32,53 @@ export default function ShowAdvisers() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
-  const [email, setEmail] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState<Adviser[]>([]);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [selectedAdviser, setSelectedAdviser] = useState<Adviser | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [adviserToRemove, setAdviserToRemove] = useState<Adviser | null>(null);
+  const [registering, setRegistering] = useState(false);
+  const [showDropdown, setShowDropdown] = useState(false);
+  const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     axios.get("/api/coordinator/advisers")
       .then(res => setAdvisers(res.data))
       .finally(() => setLoading(false));
   }, []);
+
+  // Search for advisers with debounce
+  useEffect(() => {
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+    }
+
+    if (searchQuery.length < 2) {
+      setSearchResults([]);
+      setShowDropdown(false);
+      return;
+    }
+
+    setSearchLoading(true);
+    setShowDropdown(true);
+    searchTimeoutRef.current = setTimeout(() => {
+      axios.get("/api/coordinator/advisers/search", {
+        params: { query: searchQuery }
+      })
+        .then(res => {
+          setSearchResults(res.data);
+          setShowDropdown(res.data.length > 0);
+        })
+        .finally(() => setSearchLoading(false));
+    }, 300); // 300ms debounce
+
+    return () => {
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
+      }
+    };
+  }, [searchQuery]);
 
   const filteredAdvisers = advisers.filter(
     (a) =>
@@ -47,16 +89,29 @@ export default function ShowAdvisers() {
   );
 
   const handleRegister = async () => {
-    // You can implement search by email or ID for real use
-    // For demo, let's assume you have an endpoint to search adviser by email and get their ID
-    const res = await axios.post("/api/coordinator/advisers", {
-      adviser_id: email, // Replace with actual adviser_id after lookup
-    });
-    // Refresh list
-    const advisersRes = await axios.get("/api/coordinator/advisers");
-    setAdvisers(advisersRes.data);
-    setDialogOpen(false);
-    setEmail("");
+    if (!selectedAdviser) return;
+    
+    setRegistering(true);
+    try {
+      await axios.post("/api/coordinator/advisers", {
+        adviser_id: selectedAdviser.id,
+      });
+      
+      // Refresh list
+      const advisersRes = await axios.get("/api/coordinator/advisers");
+      setAdvisers(advisersRes.data);
+      
+      // Close dialog and reset form
+      setDialogOpen(false);
+      setSearchQuery("");
+      setSelectedAdviser(null);
+      setSearchResults([]);
+      setShowDropdown(false);
+    } catch (error: any) {
+      alert(error.response?.data?.error || "Failed to register adviser");
+    } finally {
+      setRegistering(false);
+    }
   };
 
   const handleRemoveAdviser = async () => {
@@ -96,27 +151,112 @@ export default function ShowAdvisers() {
               </span>
             </div>
           </div>
-          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+          <Dialog open={dialogOpen} onOpenChange={(open) => {
+            setDialogOpen(open);
+            if (!open) {
+              // Reset form when dialog closes
+              setSearchQuery("");
+              setSelectedAdviser(null);
+              setSearchResults([]);
+              setShowDropdown(false);
+            }
+          }}>
             <DialogTrigger asChild>
-              <Button className="h-8 px-4 py-1 text-sm" onClick={() => setDialogOpen(true)}>
+              <Button className="h-8 px-4 py-1 text-sm">
                 Register an Adviser
               </Button>
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
                 <DialogTitle>Register an Adviser</DialogTitle>
+                <DialogDescription>
+                  Search and select an adviser to register to your program.
+                </DialogDescription>
               </DialogHeader>
-              <div className="flex flex-col gap-3 mt-2">
-                <input
-                  type="text"
-                  placeholder="Adviser Email or ID"
-                  value={email}
-                  onChange={e => setEmail(e.target.value)}
-                  className="border px-2 py-1 rounded text-sm"
-                />
+              <div className="space-y-4 py-4">
+                <Popover open={showDropdown} onOpenChange={setShowDropdown}>
+                  <PopoverTrigger asChild>
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Search Adviser</label>
+                      <div className="relative">
+                        <input
+                          type="text"
+                          placeholder="Type name or email (min 2 characters)..."
+                          value={searchQuery}
+                          onChange={(e) => setSearchQuery(e.target.value)}
+                          onFocus={() => {
+                            if (searchQuery.length >= 2 && searchResults.length > 0) {
+                              setShowDropdown(true);
+                            }
+                          }}
+                          className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                        />
+                        {searchLoading && (
+                          <Loader2 className="absolute right-3 top-2.5 h-4 w-4 animate-spin text-muted-foreground" />
+                        )}
+                      </div>
+                    </div>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[400px] p-0" align="start">
+                    <Command>
+                      <CommandList>
+                        <CommandEmpty>
+                          {searchLoading ? "Searching..." : "No advisers found."}
+                        </CommandEmpty>
+                        <CommandGroup>
+                          {searchResults.map((adviser) => (
+                            <CommandItem
+                              key={adviser.id}
+                              value={adviser.name || adviser.email}
+                              onSelect={() => {
+                                setSelectedAdviser(adviser);
+                                setSearchQuery(adviser.name || "");
+                                setSearchResults([]);
+                                setShowDropdown(false);
+                              }}
+                              className="flex items-center gap-2 cursor-pointer"
+                            >
+                              <UserPlus className="h-4 w-4" />
+                              <div className="flex-1">
+                                <div className="font-medium">{adviser.name}</div>
+                                <div className="text-xs text-muted-foreground">
+                                  {adviser.email} • {adviser.program}
+                                </div>
+                              </div>
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
+
+                {selectedAdviser && (
+                  <div className="rounded-lg border border-border bg-muted/50 p-3 space-y-1">
+                    <div className="text-sm font-medium">Selected Adviser:</div>
+                    <div className="text-sm">{selectedAdviser.name}</div>
+                    <div className="text-xs text-muted-foreground">{selectedAdviser.email}</div>
+                    <div className="text-xs text-muted-foreground">{selectedAdviser.program}</div>
+                  </div>
+                )}
               </div>
               <DialogFooter className="mt-4">
-                <Button onClick={handleRegister}>Register</Button>
+                <Button 
+                  onClick={handleRegister} 
+                  disabled={!selectedAdviser || registering}
+                >
+                  {registering ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Registering...
+                    </>
+                  ) : (
+                    <>
+                      <UserPlus className="mr-2 h-4 w-4" />
+                      Register Adviser
+                    </>
+                  )}
+                </Button>
               </DialogFooter>
             </DialogContent>
           </Dialog>

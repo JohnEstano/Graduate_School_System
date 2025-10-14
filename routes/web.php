@@ -84,6 +84,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
 Route::get('/coordinator/defense-requests/all-defense-requests', [\App\Http\Controllers\DefenseRequestController::class, 'allForCoordinator'])->middleware('auth');
     Route::get('/api/coordinator/code', [CoordinatorAdviserController::class, 'getCoordinatorCode']);
     Route::post('/api/adviser/register-with-coordinator-code', [\App\Http\Controllers\CoordinatorAdviserController::class, 'registerWithCode']);
+    
+    // Coordinator Adviser Management Routes
+    Route::get('/api/coordinator/advisers', [CoordinatorAdviserController::class, 'index']);
+    Route::get('/api/coordinator/advisers/search', [CoordinatorAdviserController::class, 'search']);
+    Route::post('/api/coordinator/advisers', [CoordinatorAdviserController::class, 'store']);
+    Route::delete('/api/coordinator/advisers/{id}', [CoordinatorAdviserController::class, 'destroy']);
 
     Route::get('/panelists/honorarium-specs', [PanelistHonorariumSpecController::class, 'index']);
     Route::put('/panelists/honorarium-specs', [PanelistHonorariumSpecController::class, 'update'])

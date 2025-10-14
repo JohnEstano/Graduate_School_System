@@ -10,10 +10,27 @@ use Inertia\Inertia;
 class CoordinatorAdviserController extends Controller
 {
     // List all advisers for this coordinator
+    // This includes both advisers manually added AND advisers who registered using the coordinator code
     public function index(Request $request)
     {
         $coordinator = $request->user();
-        $advisers = $coordinator->coordinatedAdvisers()->get();
+        
+        // Get all advisers connected to this coordinator via the pivot table
+        $advisers = $coordinator->coordinatedAdvisers()
+            ->select('users.id', 'users.first_name', 'users.middle_name', 'users.last_name', 'users.email', 'users.program', 'users.employee_id')
+            ->get()
+            ->map(function($adviser) {
+                return [
+                    'id' => $adviser->id,
+                    'first_name' => $adviser->first_name,
+                    'middle_name' => $adviser->middle_name,
+                    'last_name' => $adviser->last_name,
+                    'email' => $adviser->email,
+                    'program' => $adviser->program ?? 'N/A',
+                    'employee_id' => $adviser->employee_id,
+                ];
+            });
+            
         return response()->json($advisers);
     }
 
@@ -24,6 +41,49 @@ class CoordinatorAdviserController extends Controller
         $adviserId = $request->input('adviser_id');
         $coordinator->coordinatedAdvisers()->syncWithoutDetaching([$adviserId]);
         return response()->json(['success' => true]);
+    }
+
+    // Search for advisers (autocomplete)
+    public function search(Request $request)
+    {
+        $query = $request->input('query', '');
+        
+        if (strlen($query) < 2) {
+            return response()->json([]);
+        }
+
+        // Get current coordinator's already assigned advisers
+        $coordinator = $request->user();
+        $assignedAdviserIds = $coordinator->coordinatedAdvisers()->pluck('users.id')->toArray();
+
+        // Search for faculty members who are NOT already assigned to this coordinator
+        $advisers = User::where('role', 'Faculty')
+            ->where(function($q) use ($query) {
+                $q->where('first_name', 'LIKE', "%{$query}%")
+                  ->orWhere('last_name', 'LIKE', "%{$query}%")
+                  ->orWhere('email', 'LIKE', "%{$query}%")
+                  ->orWhereRaw("CONCAT(first_name, ' ', last_name) LIKE ?", ["%{$query}%"])
+                  ->orWhereRaw("CONCAT(last_name, ', ', first_name) LIKE ?", ["%{$query}%"]);
+            })
+            ->whereNotIn('id', $assignedAdviserIds)
+            ->select('id', 'first_name', 'middle_name', 'last_name', 'email', 'program', 'employee_id')
+            ->limit(10)
+            ->get()
+            ->map(function($adviser) {
+                $middleInitial = $adviser->middle_name ? strtoupper($adviser->middle_name[0]) . '. ' : '';
+                return [
+                    'id' => $adviser->id,
+                    'name' => trim("{$adviser->first_name} {$middleInitial}{$adviser->last_name}"),
+                    'first_name' => $adviser->first_name,
+                    'middle_name' => $adviser->middle_name,
+                    'last_name' => $adviser->last_name,
+                    'email' => $adviser->email,
+                    'program' => $adviser->program ?? 'N/A',
+                    'employee_id' => $adviser->employee_id,
+                ];
+            });
+
+        return response()->json($advisers);
     }
 
     // Remove an adviser from this coordinator
