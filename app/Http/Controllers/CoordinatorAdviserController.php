@@ -38,9 +38,41 @@ class CoordinatorAdviserController extends Controller
     public function store(Request $request)
     {
         $coordinator = $request->user();
-        $adviserId = $request->input('adviser_id');
-        $coordinator->coordinatedAdvisers()->syncWithoutDetaching([$adviserId]);
-        return response()->json(['success' => true]);
+
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'email' => 'required|email|max:255',
+        ]);
+
+        // Split name into first, middle, last (simple logic)
+        $parts = preg_split('/\s+/', trim($validated['name']));
+        $first = $parts[0] ?? '';
+        $last = count($parts) > 1 ? array_pop($parts) : '';
+        $middle = count($parts) > 1 ? implode(' ', array_slice($parts, 1, -1)) : null;
+
+        // Find or create adviser
+        $adviser = \App\Models\User::where('email', $validated['email'])->first();
+        if (!$adviser) {
+            $adviser = \App\Models\User::create([
+                'first_name' => $first,
+                'middle_name' => $middle,
+                'last_name' => $last,
+                'email' => $validated['email'],
+                'role' => 'Adviser',
+                'password' => bcrypt(\Str::random(16)),
+            ]);
+        } else {
+            // Optionally update name if blank
+            if (!$adviser->first_name) $adviser->first_name = $first;
+            if (!$adviser->last_name) $adviser->last_name = $last;
+            if (!$adviser->middle_name) $adviser->middle_name = $middle;
+            $adviser->save();
+        }
+
+        // Attach adviser to coordinator
+        $coordinator->coordinatedAdvisers()->syncWithoutDetaching([$adviser->id]);
+
+        return response()->json(['success' => true, 'adviser' => $adviser]);
     }
 
     // Search for advisers (autocomplete)
@@ -215,5 +247,143 @@ class CoordinatorAdviserController extends Controller
             'name' => trim($coordinator->first_name . ' ' . ($coordinator->middle_name ? strtoupper($coordinator->middle_name[0]) . '. ' : '') . $coordinator->last_name),
             'email' => $coordinator->email,
         ]);
+    }
+
+    public function update(Request $request, $adviserId)
+    {
+        $coordinator = $request->user();
+
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'email' => 'required|email|max:255',
+        ]);
+
+        $adviser = \App\Models\User::findOrFail($adviserId);
+
+        // Only allow update if this adviser is under this coordinator
+        if (!$coordinator->coordinatedAdvisers()->where('users.id', $adviserId)->exists()) {
+            return response()->json(['error' => 'Not allowed'], 403);
+        }
+
+        // Split name
+        $parts = preg_split('/\s+/', trim($validated['name']));
+        $first = $parts[0] ?? '';
+        $last = count($parts) > 1 ? array_pop($parts) : '';
+        $middle = count($parts) > 1 ? implode(' ', array_slice($parts, 1, -1)) : null;
+
+        $adviser->first_name = $first;
+        $adviser->middle_name = $middle;
+        $adviser->last_name = $last;
+        $adviser->email = $validated['email'];
+        $adviser->save();
+
+        return response()->json(['success' => true, 'adviser' => $adviser]);
+    }
+}
+
+class CoordinatorAdviserStudentController extends Controller
+{
+    // List students for an adviser (only if adviser is under this coordinator)
+    public function index(Request $request, $adviserId)
+    {
+        $coordinator = $request->user();
+        $adviser = \App\Models\User::findOrFail($adviserId);
+
+        // Ensure this adviser is managed by this coordinator
+        if (!$coordinator->coordinatedAdvisers()->where('users.id', $adviserId)->exists()) {
+            return response()->json(['error' => 'Not allowed'], 403);
+        }
+
+        // Fetch students linked to this adviser
+        $students = $adviser->advisedStudents()
+            ->select('users.id', 'users.student_number', 'users.first_name', 'users.middle_name', 'users.last_name', 'users.email', 'users.program')
+            ->get();
+
+        return response()->json($students);
+    }
+
+    // Add a student to an adviser
+    public function store(Request $request, $adviserId)
+    {
+        $coordinator = $request->user();
+        $adviser = User::findOrFail($adviserId);
+
+        if (!$coordinator->coordinatedAdvisers()->where('users.id', $adviserId)->exists()) {
+            return response()->json(['error' => 'Not allowed'], 403);
+        }
+
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'email' => 'required|email|max:255',
+        ]);
+
+        // Split name into first, middle, last
+        $parts = preg_split('/\s+/', trim($validated['name']));
+        $first = $parts[0] ?? '';
+        $last = count($parts) > 1 ? array_pop($parts) : '';
+        $middle = count($parts) > 1 ? implode(' ', array_slice($parts, 1, -1)) : null;
+
+        // Find or create student
+        $student = User::where('email', $validated['email'])->first();
+        if (!$student) {
+            $student = User::create([
+                'first_name' => $first,
+                'middle_name' => $middle,
+                'last_name' => $last,
+                'email' => $validated['email'],
+                'role' => 'Student',
+                'password' => bcrypt(\Str::random(16)),
+            ]);
+        } else {
+            // Optionally update name if blank
+            if (!$student->first_name) $student->first_name = $first;
+            if (!$student->last_name) $student->last_name = $last;
+            if (!$student->middle_name) $student->middle_name = $middle;
+            $student->save();
+        }
+
+        // Attach student to adviser
+        if ($adviser->advisedStudents()->where('student_id', $student->id)->exists()) {
+            return response()->json(['error' => 'Student is already registered with this adviser.'], 409);
+        }
+
+        $adviser->advisedStudents()->attach($student->id);
+        return response()->json(['success' => true]);
+    }
+
+    // Remove a student from an adviser
+    public function destroy(Request $request, $adviserId, $studentId)
+    {
+        $coordinator = $request->user();
+        $adviser = User::findOrFail($adviserId);
+
+        if (!$coordinator->coordinatedAdvisers()->where('users.id', $adviserId)->exists()) {
+            return response()->json(['error' => 'Not allowed'], 403);
+        }
+
+        $adviser->advisedStudents()->detach($studentId);
+        return response()->json(['success' => true]);
+    }
+
+    // Search for students (autocomplete)
+    public function searchStudents(Request $request)
+    {
+        $query = $request->input('query', '');
+
+        if (strlen($query) < 2) {
+            return response()->json([]);
+        }
+
+        $students = User::where('role', 'Student')
+            ->where(function($q) use ($query) {
+                $q->where('first_name', 'like', "%$query%")
+                  ->orWhere('last_name', 'like', "%$query%")
+                  ->orWhere('email', 'like', "%$query%")
+                  ->orWhere('student_number', 'like', "%$query%");
+            })
+            ->limit(10)
+            ->get(['id', 'student_number', 'first_name', 'middle_name', 'last_name', 'email', 'program']);
+
+        return response()->json($students);
     }
 }

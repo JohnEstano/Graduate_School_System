@@ -88,12 +88,21 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/coordinator/defense-requests/all-defense-requests', [\App\Http\Controllers\DefenseRequestController::class, 'allForCoordinator'])->middleware('auth');
     Route::get('/api/coordinator/code', [CoordinatorAdviserController::class, 'getCoordinatorCode']);
     Route::post('/api/adviser/register-with-coordinator-code', [\App\Http\Controllers\CoordinatorAdviserController::class, 'registerWithCode']);
-    
+
     // Coordinator Adviser Management Routes
     Route::get('/api/coordinator/advisers', [CoordinatorAdviserController::class, 'index']);
     Route::get('/api/coordinator/advisers/search', [CoordinatorAdviserController::class, 'search']);
+    Route::put('/api/coordinator/advisers/{id}', [CoordinatorAdviserController::class, 'update']);
     Route::post('/api/coordinator/advisers', [CoordinatorAdviserController::class, 'store']);
     Route::delete('/api/coordinator/advisers/{id}', [CoordinatorAdviserController::class, 'destroy']);
+
+    // Coordinator manages adviser-student relationships
+    Route::get('/api/coordinator/advisers/{adviser}/students', [\App\Http\Controllers\CoordinatorAdviserStudentController::class, 'index']);
+    Route::post('/api/coordinator/advisers/{adviser}/students', [\App\Http\Controllers\CoordinatorAdviserStudentController::class, 'store']);
+    Route::delete('/api/coordinator/advisers/{adviser}/students/{student}', [\App\Http\Controllers\CoordinatorAdviserStudentController::class, 'destroy']);
+    Route::get('/api/coordinator/students/search', [CoordinatorAdviserController::class, 'searchStudents']);
+
+
 
     Route::get('/panelists/honorarium-specs', [PanelistHonorariumSpecController::class, 'index']);
     Route::put('/panelists/honorarium-specs', [PanelistHonorariumSpecController::class, 'update'])
@@ -107,10 +116,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('/payment-batch/{batchId}/export', [PaymentVerificationController::class, 'exportBatch'])->name('aa.payment-batch.export');
         Route::post('/payment-verifications/bulk-update', [PaymentVerificationController::class, 'bulkUpdateStatus']);
 
-        
+
     });
 
-      Route::get('/assistant/defense-batches', [\App\Http\Controllers\Assistant\DefenseBatchController::class, 'index']);
+    Route::get('/assistant/defense-batches', [\App\Http\Controllers\Assistant\DefenseBatchController::class, 'index']);
     Route::post('/assistant/defense-batches', [\App\Http\Controllers\Assistant\DefenseBatchController::class, 'store']);
     Route::post('/assistant/defense-batches/{batch}/status', [\App\Http\Controllers\Assistant\DefenseBatchController::class, 'updateStatus']);
 
@@ -118,7 +127,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     //PAYMENT RATESS ETC.
     Route::post('/dean/payment-rates', [\App\Http\Controllers\PaymentRateController::class, 'update'])
         ->name('dean.payment-rates.update');
-    
+
     Route::get('/dean/payment-rates', [\App\Http\Controllers\PaymentRateController::class, 'index'])
         ->name('dean.payment-rates.index');
     Route::get('/dean/payment-rates/data', [\App\Http\Controllers\PaymentRateController::class, 'data'])
@@ -809,7 +818,7 @@ Route::get('/assistant/all-defense-list/data', function () {
             $aaVerification = \App\Models\AaPaymentVerification::where('defense_request_id', $r->id)->first();
             $aa_verification_status = $aaVerification ? $aaVerification->status : null;
             $aa_verification_id = $aaVerification ? $aaVerification->id : null; // <-- ADD THIS
-
+    
             return [
                 'id' => $r->id,
                 'first_name' => $r->first_name,

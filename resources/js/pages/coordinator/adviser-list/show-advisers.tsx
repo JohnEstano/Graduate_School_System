@@ -3,12 +3,10 @@ import axios from "axios";
 import { Table, TableHeader, TableRow, TableCell, TableBody, TableHead } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Copy, Check, Users, Search, Trash, UserPlus, Loader2 } from "lucide-react";
+import { Copy, Check, Users, Search, Trash, UserPlus, Loader2, Edit, Plus } from "lucide-react";
 import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 
 type Adviser = {
   id: number;
@@ -17,13 +15,23 @@ type Adviser = {
   last_name: string;
   email: string;
   program: string;
-  name?: string; // Full name from backend search
+  name?: string;
   employee_id?: string;
 };
 
-function getInitials(adviser: Adviser) {
-  const first = adviser.first_name?.trim()?.[0] ?? "";
-  const last = adviser.last_name?.trim()?.[0] ?? "";
+type Student = {
+  id: number;
+  student_number: string | null;
+  first_name: string | null;
+  middle_name: string | null;
+  last_name: string | null;
+  email: string | null;
+  program: string | null;
+};
+
+function getInitials(person: { first_name: string | null; last_name: string | null }) {
+  const first = person.first_name?.trim()?.[0] ?? "";
+  const last = person.last_name?.trim()?.[0] ?? "";
   return (first + last).toUpperCase() || "U";
 }
 
@@ -32,53 +40,35 @@ export default function ShowAdvisers() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
-  const [searchQuery, setSearchQuery] = useState("");
-  const [searchResults, setSearchResults] = useState<Adviser[]>([]);
-  const [searchLoading, setSearchLoading] = useState(false);
-  const [selectedAdviser, setSelectedAdviser] = useState<Adviser | null>(null);
+  const [registering, setRegistering] = useState(false);
+  const [adviserName, setAdviserName] = useState("");
+  const [adviserEmail, setAdviserEmail] = useState("");
+  const [registerError, setRegisterError] = useState("");
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editAdviser, setEditAdviser] = useState<Adviser | null>(null);
+  const [editName, setEditName] = useState("");
+  const [editEmail, setEditEmail] = useState("");
+  const [editLoading, setEditLoading] = useState(false);
+  const [editError, setEditError] = useState("");
+  const [viewAdviser, setViewAdviser] = useState<Adviser | null>(null);
+  const [viewDialogOpen, setViewDialogOpen] = useState(false);
+  const [students, setStudents] = useState<Student[]>([]);
+  const [studentsLoading, setStudentsLoading] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [adviserToRemove, setAdviserToRemove] = useState<Adviser | null>(null);
-  const [registering, setRegistering] = useState(false);
-  const [showDropdown, setShowDropdown] = useState(false);
-  const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Add Student dialog state (NEW)
+  const [addStudentDialogOpen, setAddStudentDialogOpen] = useState(false);
+  const [studentName, setStudentName] = useState("");
+  const [studentEmail, setStudentEmail] = useState("");
+  const [addStudentError, setAddStudentError] = useState("");
+  const [addingStudent, setAddingStudent] = useState(false);
 
   useEffect(() => {
     axios.get("/api/coordinator/advisers")
       .then(res => setAdvisers(res.data))
       .finally(() => setLoading(false));
   }, []);
-
-  // Search for advisers with debounce
-  useEffect(() => {
-    if (searchTimeoutRef.current) {
-      clearTimeout(searchTimeoutRef.current);
-    }
-
-    if (searchQuery.length < 2) {
-      setSearchResults([]);
-      setShowDropdown(false);
-      return;
-    }
-
-    setSearchLoading(true);
-    setShowDropdown(true);
-    searchTimeoutRef.current = setTimeout(() => {
-      axios.get("/api/coordinator/advisers/search", {
-        params: { query: searchQuery }
-      })
-        .then(res => {
-          setSearchResults(res.data);
-          setShowDropdown(res.data.length > 0);
-        })
-        .finally(() => setSearchLoading(false));
-    }, 300); // 300ms debounce
-
-    return () => {
-      if (searchTimeoutRef.current) {
-        clearTimeout(searchTimeoutRef.current);
-      }
-    };
-  }, [searchQuery]);
 
   const filteredAdvisers = advisers.filter(
     (a) =>
@@ -89,26 +79,21 @@ export default function ShowAdvisers() {
   );
 
   const handleRegister = async () => {
-    if (!selectedAdviser) return;
-    
+    if (!adviserName.trim() || !adviserEmail.trim()) return;
     setRegistering(true);
+    setRegisterError("");
     try {
       await axios.post("/api/coordinator/advisers", {
-        adviser_id: selectedAdviser.id,
+        name: adviserName.trim(),
+        email: adviserEmail.trim(),
       });
-      
-      // Refresh list
       const advisersRes = await axios.get("/api/coordinator/advisers");
       setAdvisers(advisersRes.data);
-      
-      // Close dialog and reset form
       setDialogOpen(false);
-      setSearchQuery("");
-      setSelectedAdviser(null);
-      setSearchResults([]);
-      setShowDropdown(false);
+      setAdviserName("");
+      setAdviserEmail("");
     } catch (error: any) {
-      alert(error.response?.data?.error || "Failed to register adviser");
+      setRegisterError(error.response?.data?.error || "Failed to register adviser");
     } finally {
       setRegistering(false);
     }
@@ -120,6 +105,68 @@ export default function ShowAdvisers() {
     setAdvisers(advisers.filter(a => a.id !== adviserToRemove.id));
     setConfirmOpen(false);
     setAdviserToRemove(null);
+  };
+
+  const handleEditAdviser = async () => {
+    if (!editAdviser) return;
+    setEditLoading(true);
+    setEditError("");
+    try {
+      await axios.put(`/api/coordinator/advisers/${editAdviser.id}`, {
+        name: editName.trim(),
+        email: editEmail.trim(),
+      });
+      setAdvisers(advisers.map(a =>
+        a.id === editAdviser.id
+          ? { ...a, name: editName.trim(), email: editEmail.trim() }
+          : a
+      ));
+      setEditDialogOpen(false);
+      setEditAdviser(null);
+    } catch (error: any) {
+      setEditError(error.response?.data?.error || "Failed to update adviser");
+    } finally {
+      setEditLoading(false);
+    }
+  };
+
+  // Fetch students for selected adviser
+  const fetchStudents = async (adviserId: number) => {
+    setStudentsLoading(true);
+    try {
+      const res = await axios.get(`/api/coordinator/advisers/${adviserId}/students`);
+      setStudents(res.data);
+    } finally {
+      setStudentsLoading(false);
+    }
+  };
+
+  // When viewAdviser changes, fetch students
+  useEffect(() => {
+    if (viewAdviser) {
+      fetchStudents(viewAdviser.id);
+    }
+  }, [viewAdviser]);
+
+  // Add student handler (NEW)
+  const handleAddStudent = async () => {
+    if (!studentName.trim() || !studentEmail.trim() || !viewAdviser) return;
+    setAddingStudent(true);
+    setAddStudentError("");
+    try {
+      await axios.post(`/api/coordinator/advisers/${viewAdviser.id}/students`, {
+        name: studentName.trim(),
+        email: studentEmail.trim(),
+      });
+      fetchStudents(viewAdviser.id);
+      setAddStudentDialogOpen(false);
+      setStudentName("");
+      setStudentEmail("");
+    } catch (error: any) {
+      setAddStudentError(error.response?.data?.error || "Failed to add student.");
+    } finally {
+      setAddingStudent(false);
+    }
   };
 
   if (loading) {
@@ -154,11 +201,9 @@ export default function ShowAdvisers() {
           <Dialog open={dialogOpen} onOpenChange={(open) => {
             setDialogOpen(open);
             if (!open) {
-              // Reset form when dialog closes
-              setSearchQuery("");
-              setSelectedAdviser(null);
-              setSearchResults([]);
-              setShowDropdown(false);
+              setAdviserName("");
+              setAdviserEmail("");
+              setRegisterError("");
             }
           }}>
             <DialogTrigger asChild>
@@ -170,80 +215,38 @@ export default function ShowAdvisers() {
               <DialogHeader>
                 <DialogTitle>Register an Adviser</DialogTitle>
                 <DialogDescription>
-                  Search and select an adviser to register to your program.
+                  Enter the adviser's name and email to add them under your coordination.
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-4 py-4">
-                <Popover open={showDropdown} onOpenChange={setShowDropdown}>
-                  <PopoverTrigger asChild>
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium">Search Adviser</label>
-                      <div className="relative">
-                        <input
-                          type="text"
-                          placeholder="Type name or email (min 2 characters)..."
-                          value={searchQuery}
-                          onChange={(e) => setSearchQuery(e.target.value)}
-                          onFocus={() => {
-                            if (searchQuery.length >= 2 && searchResults.length > 0) {
-                              setShowDropdown(true);
-                            }
-                          }}
-                          className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                        />
-                        {searchLoading && (
-                          <Loader2 className="absolute right-3 top-2.5 h-4 w-4 animate-spin text-muted-foreground" />
-                        )}
-                      </div>
-                    </div>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-[400px] p-0" align="start">
-                    <Command>
-                      <CommandList>
-                        <CommandEmpty>
-                          {searchLoading ? "Searching..." : "No advisers found."}
-                        </CommandEmpty>
-                        <CommandGroup>
-                          {searchResults.map((adviser) => (
-                            <CommandItem
-                              key={adviser.id}
-                              value={adviser.name || adviser.email}
-                              onSelect={() => {
-                                setSelectedAdviser(adviser);
-                                setSearchQuery(adviser.name || "");
-                                setSearchResults([]);
-                                setShowDropdown(false);
-                              }}
-                              className="flex items-center gap-2 cursor-pointer"
-                            >
-                              <UserPlus className="h-4 w-4" />
-                              <div className="flex-1">
-                                <div className="font-medium">{adviser.name}</div>
-                                <div className="text-xs text-muted-foreground">
-                                  {adviser.email} • {adviser.program}
-                                </div>
-                              </div>
-                            </CommandItem>
-                          ))}
-                        </CommandGroup>
-                      </CommandList>
-                    </Command>
-                  </PopoverContent>
-                </Popover>
-
-                {selectedAdviser && (
-                  <div className="rounded-lg border border-border bg-muted/50 p-3 space-y-1">
-                    <div className="text-sm font-medium">Selected Adviser:</div>
-                    <div className="text-sm">{selectedAdviser.name}</div>
-                    <div className="text-xs text-muted-foreground">{selectedAdviser.email}</div>
-                    <div className="text-xs text-muted-foreground">{selectedAdviser.program}</div>
-                  </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Adviser Name</label>
+                  <Input
+                    type="text"
+                    placeholder="Full Name"
+                    value={adviserName}
+                    onChange={e => setAdviserName(e.target.value)}
+                    disabled={registering}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Adviser Email</label>
+                  <Input
+                    type="email"
+                    placeholder="Email"
+                    value={adviserEmail}
+                    onChange={e => setAdviserEmail(e.target.value)}
+                    disabled={registering}
+                  />
+                </div>
+                {registerError && (
+                  <div className="text-xs text-rose-500 mt-1">{registerError}</div>
                 )}
               </div>
               <DialogFooter className="mt-4">
                 <Button 
                   onClick={handleRegister} 
-                  disabled={!selectedAdviser || registering}
+                  disabled={!adviserName.trim() || !adviserEmail.trim() || registering}
                 >
                   {registering ? (
                     <>
@@ -270,12 +273,6 @@ export default function ShowAdvisers() {
             onChange={e => setQuery(e.target.value)}
             className="max-w-xs text-sm py-1 h-8"
           />
-          <div className="flex items-center gap-3">
-            <span className="font-semibold text-sm whitespace-nowrap">
-              Shareable Coordinator Code:
-            </span>
-            <CoordinatorCodeBox />
-          </div>
         </div>
       </div>
       {/* Table */}
@@ -311,7 +308,94 @@ export default function ShowAdvisers() {
                   </TableCell>
                   <TableCell>{a.email}</TableCell>
                   <TableCell>{a.program}</TableCell>
-                  <TableCell>
+                  <TableCell className="flex gap-2">
+                    {/* View Button */}
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      aria-label="View adviser"
+                      onClick={() => {
+                        setViewAdviser(a);
+                        setViewDialogOpen(true);
+                      }}
+                    >
+                      <Users size={18} />
+                    </Button>
+                    {/* Edit Button */}
+                    <Dialog open={editDialogOpen && editAdviser?.id === a.id} onOpenChange={open => {
+                      setEditDialogOpen(open);
+                      if (!open) {
+                        setEditAdviser(null);
+                        setEditError("");
+                      }
+                    }}>
+                      <DialogTrigger asChild>
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          aria-label="Edit adviser"
+                          onClick={() => {
+                            setEditAdviser(a);
+                            setEditName(
+                              `${a.first_name}${a.middle_name ? " " + a.middle_name : ""} ${a.last_name}`.trim()
+                            );
+                            setEditEmail(a.email);
+                            setEditDialogOpen(true);
+                          }}
+                        >
+                          <Edit size={18} />
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent>
+                        <DialogHeader>
+                          <DialogTitle>Edit Adviser</DialogTitle>
+                        </DialogHeader>
+                        <div className="space-y-4 py-4">
+                          <div className="space-y-2">
+                            <label className="text-sm font-medium">Adviser Name</label>
+                            <Input
+                              type="text"
+                              placeholder="Full Name"
+                              value={editName}
+                              onChange={e => setEditName(e.target.value)}
+                              disabled={editLoading}
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <label className="text-sm font-medium">Adviser Email</label>
+                            <Input
+                              type="email"
+                              placeholder="Email"
+                              value={editEmail}
+                              onChange={e => setEditEmail(e.target.value)}
+                              disabled={editLoading}
+                            />
+                          </div>
+                          {editError && (
+                            <div className="text-xs text-rose-500 mt-1">{editError}</div>
+                          )}
+                        </div>
+                        <DialogFooter className="mt-4">
+                          <Button
+                            onClick={handleEditAdviser}
+                            disabled={!editName.trim() || !editEmail.trim() || editLoading}
+                          >
+                            {editLoading ? (
+                              <>
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                Saving...
+                              </>
+                            ) : (
+                              <>
+                                <Edit className="mr-2 h-4 w-4" />
+                                Save Changes
+                              </>
+                            )}
+                          </Button>
+                        </DialogFooter>
+                      </DialogContent>
+                    </Dialog>
+                    {/* Remove Button */}
                     <Dialog open={confirmOpen && adviserToRemove?.id === a.id} onOpenChange={open => {
                       if (!open) {
                         setConfirmOpen(false);
@@ -365,45 +449,128 @@ export default function ShowAdvisers() {
           </TableBody>
         </Table>
       </div>
-    </div>
-  );
-}
 
-export function CoordinatorCodeBox() {
-  const [code, setCode] = useState<string>("");
-  const [copied, setCopied] = useState(false);
+      {/* Adviser-Student Relationship Dialog */}
+      <Dialog open={viewDialogOpen} onOpenChange={open => {
+        setViewDialogOpen(open);
+        if (!open) setViewAdviser(null);
+      }}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>
+              Adviser Information
+            </DialogTitle>
+            <DialogDescription>
+              {viewAdviser && (
+                <div className="flex items-center gap-4 mt-2">
+                  <Avatar className="h-12 w-12">
+                    <AvatarFallback>
+                      {getInitials(viewAdviser)}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div>
+                    <div className="font-semibold  text-sm">
+                      {viewAdviser.first_name} {viewAdviser.middle_name ? viewAdviser.middle_name[0] + "." : ""} {viewAdviser.last_name}
+                    </div>
+                    <div className="text-sm text-gray-600">{viewAdviser.email}</div>
+                    <div className="text-sm text-gray-600">Program: {viewAdviser.program}</div>
+                    {viewAdviser.employee_id && (
+                      <div className="text-sm text-gray-600">Employee ID: {viewAdviser.employee_id}</div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="mt-4">
+            <div className="font-semibold mb-2 text-xs">Students</div>
+            <div className="max-h-64 overflow-y-auto overflow-x-auto">
+              {studentsLoading ? (
+                <div className="text-xs">Loading students...</div>
+              ) : students.length === 0 ? (
+                <div className="text-gray-500 text-xs">No students linked to this adviser.</div>
+              ) : (
+                <ul className="divide-y min-w-[400px]">
+                  {students.map(s => (
+                    <li key={s.id} className="py-2 flex items-center gap-3 text-xs">
+                      <Avatar className="h-8 w-8">
+                        <AvatarFallback>
+                          {getInitials(s)}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1">
+                        <div className="font-medium text-xs">{s.first_name} {s.middle_name ? s.middle_name[0] + "." : ""} {s.last_name}</div>
+                        <div className="text-xs text-gray-500">{s.email} • {s.student_number} • {s.program}</div>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        aria-label="Remove student"
+                        className="text-rose-500 hover:bg-rose-50"
+                        onClick={() => {
+                          if (window.confirm(`Remove ${s.first_name} ${s.last_name} from this adviser?`)) {
+                            axios.delete(`/api/coordinator/advisers/${viewAdviser?.id}/students/${s.id}`)
+                              .then(() => setStudents(students.filter(stu => stu.id !== s.id)));
+                          }
+                        }}
+                      >
+                        <Trash size={16} />
+                      </Button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </div>
+          <DialogFooter className="mt-4">
+            <Button
+              variant="outline"
+              onClick={() => setAddStudentDialogOpen(true)}
+            >
+              <Plus className="mr-2 h-4 w-4" />
+              Add Student to Adviser
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
-  useEffect(() => {
-    fetch("/api/coordinator/code")
-      .then(res => res.json())
-      .then(data => setCode(data.coordinator_code));
-  }, []);
-
-  const handleCopy = () => {
-    navigator.clipboard.writeText(code);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 1500);
-  };
-
-  return (
-    <div className="flex items-center gap-2">
-      <input
-        type="text"
-        value={code}
-        readOnly
-        className="border rounded px-3 py-1 font-mono w-[120px] text-base bg-transparent"
-        style={{ minWidth: "100px" }}
-      />
-      <Button
-        variant="outline"
-        size="icon"
-        onClick={handleCopy}
-        disabled={!code}
-        className="border-gray-300 h-8 w-8"
-        aria-label="Copy coordinator code"
-      >
-        {copied ? <Check size={16} /> : <Copy size={16} />}
-      </Button>
+      {/* Add Student Dialog */}
+      <Dialog open={addStudentDialogOpen} onOpenChange={setAddStudentDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add Student to Adviser</DialogTitle>
+            <DialogDescription>
+              Enter the student's name and email to add them under this adviser.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 py-2">
+            <Input
+              placeholder="Full Name"
+              value={studentName}
+              onChange={e => setStudentName(e.target.value)}
+              className="text-xs"
+              disabled={addingStudent}
+            />
+            <Input
+              placeholder="Email"
+              value={studentEmail}
+              onChange={e => setStudentEmail(e.target.value)}
+              className="text-xs"
+              disabled={addingStudent}
+            />
+            {addStudentError && <div className="text-xs text-rose-500">{addStudentError}</div>}
+          </div>
+          <DialogFooter>
+            <Button
+              onClick={handleAddStudent}
+              disabled={!studentName.trim() || !studentEmail.trim() || addingStudent}
+            >
+              {addingStudent ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Plus className="mr-2 h-4 w-4" />}
+              Add Student
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
