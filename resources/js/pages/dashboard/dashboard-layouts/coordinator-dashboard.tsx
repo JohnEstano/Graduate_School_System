@@ -14,6 +14,7 @@ import { Users, CalendarDays, ClipboardList, BadgeDollarSign } from 'lucide-reac
 import { Skeleton } from "@/components/ui/skeleton";
 import DefenseCountLineChart from '../widgets/visual-charts/defense-count';
 import PanelAssignedRadial from '../widgets/visual-charts/panel-assigned-count';
+import ActiveUsersAreaChart from '../widgets/visual-charts/ActiveUsersAreaChart';
 
 type PageProps = {
     auth: {
@@ -217,9 +218,9 @@ export default function CoordinatorDashboard() {
                         <div className="flex flex-col pr-8 pl-7">
                             <span className="flex items-center text-xs font-semibold text-gray-700 dark:text-gray-200 mb-1 relative z-10">
                                 {isDaytime() ? (
-                                    <Sun className="mr-1 size-4 text-yellow-500" />
+                                    <Sun className="mr-1 size-4 text-rose-500" />
                                 ) : (
-                                    <Moon className="mr-1 size-4 text-blue-500" />
+                                    <Moon className="mr-1 size-4 text-rose-500" />
                                 )}
                                 {getFormattedDate()}
                             </span>
@@ -243,7 +244,7 @@ export default function CoordinatorDashboard() {
                     {/* Metrics Cards */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-3 px-7 mb-6">
                         <DefenseCountLineChart />
-
+                        <ActiveUsersAreaChart />
                         {/* Other Metric Cards */}
                         {metrics.slice(0, 2).map((metric, idx) => (
                             <Card key={idx} className="col-span-1 rounded-2xl shadow-none border flex flex-col justify-between p-0 min-h-[220px]">

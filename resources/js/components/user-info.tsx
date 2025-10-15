@@ -17,7 +17,9 @@ export function UserInfo({ user }: { user: any }) {
             </Avatar>
             <div className="flex flex-col">
                 <span className="font-semibold">{user.first_name} {user.last_name}</span>
-                <span className="text-xs text-muted-foreground">{user.school_id}</span>
+                <span className="text-xs text-muted-foreground">
+                    {user.school_id ? user.school_id : user.role}
+                </span>
             </div>
         </div>
     );
