@@ -86,15 +86,7 @@ const coordinatorNavItems: MainNavItem[] = [
 
 const assistantNavItems: MainNavItem[] = [
     { title: 'Dashboard', href: '/dashboard', icon: LayoutGrid },
-      {
-        title: 'Finance & Payments',
-        href: '/',
-        icon: BadgeDollarSign,
-        subItems: [
-            { title: 'Defense Requests', href: '/assistant/all-defense-list', icon: FileText }, 
-            { title: 'Defense Batches', href: '/assistant/all-defense-batches', icon: FileText },
-        ],
-    },
+    { title: 'Defense Requests', href: '/assistant/all-defense-list', icon: FileText }, 
    
     {
         title: 'Applications',
