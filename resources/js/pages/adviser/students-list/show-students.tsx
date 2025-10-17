@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Check, Users, Search, Trash } from "lucide-react";
+import { Check, Users, Trash } from "lucide-react";
 import {
   Dialog,
   DialogTrigger,
@@ -46,7 +46,7 @@ export default function ShowStudents() {
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
 
-  // Confirmation dialog state (remove)
+  // Confirmation dialog state
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [studentToRemove, setStudentToRemove] = useState<Student | null>(null);
 
@@ -103,7 +103,7 @@ export default function ShowStudents() {
     if (!studentToRemove) return;
     try {
       await axios.delete(`/api/adviser/students/${studentToRemove.id}`);
-      setStudents(prev => prev.filter(stu => stu.id !== studentToRemove.id));
+      setStudents((prev) => prev.filter((stu) => stu.id !== studentToRemove.id));
     } catch (err) {
       console.error("Failed to remove student", err);
     } finally {
@@ -115,11 +115,11 @@ export default function ShowStudents() {
   const lowerQuery = query.toLowerCase();
   const filteredStudents = students.filter(
     (s) =>
-      (s.student_number?.toLowerCase().includes(lowerQuery)) ||
-      (s.first_name?.toLowerCase().includes(lowerQuery)) ||
-      (s.last_name?.toLowerCase().includes(lowerQuery)) ||
-      (s.email?.toLowerCase().includes(lowerQuery)) ||
-      (s.program?.toLowerCase().includes(lowerQuery))
+      (s.student_number?.toLowerCase().includes(lowerQuery) ?? false) ||
+      (s.first_name?.toLowerCase().includes(lowerQuery) ?? false) ||
+      (s.last_name?.toLowerCase().includes(lowerQuery) ?? false) ||
+      (s.email?.toLowerCase().includes(lowerQuery) ?? false) ||
+      (s.program?.toLowerCase().includes(lowerQuery) ?? false)
   );
 
   if (loading) {
@@ -150,11 +150,11 @@ export default function ShowStudents() {
           <Avatar className="h-8 w-8">
             <AvatarFallback>{getInitials(s)}</AvatarFallback>
           </Avatar>
-          <span>{s.first_name || ''} {s.middle_name ? s.middle_name[0] + "." : ""} {s.last_name || ''}</span>
+          <span>{s.first_name || ""} {s.middle_name ? s.middle_name[0] + "." : ""} {s.last_name || ""}</span>
         </TableCell>
-        <TableCell className="dark:text-zinc-200">{s.student_number || 'N/A'}</TableCell>
-        <TableCell className="dark:text-zinc-200">{s.email || 'N/A'}</TableCell>
-        <TableCell className="dark:text-zinc-200">{s.program || 'N/A'}</TableCell>
+        <TableCell className="dark:text-zinc-200">{s.student_number || "N/A"}</TableCell>
+        <TableCell className="dark:text-zinc-200">{s.email || "N/A"}</TableCell>
+        <TableCell className="dark:text-zinc-200">{s.program || "N/A"}</TableCell>
         <TableCell>
           {isPending ? (
             <div className="flex gap-2">
@@ -196,8 +196,10 @@ export default function ShowStudents() {
   return (
     <div className="flex h-full flex-1 flex-col gap-4 overflow-auto rounded-xl pt-5 pr-7 pl-7 relative
       bg-white dark:bg-zinc-900 transition-colors">
-      {/* Header */}
+
+      {/* Header - two rows: title row, then search row */}
       <div className="w-full border border-border rounded-lg overflow-hidden mb-1 bg-white dark:bg-zinc-800 dark:border-zinc-700">
+        {/* Title row */}
         <div className="flex flex-row items-center justify-between w-full p-3 border-b bg-white dark:bg-zinc-800 dark:border-zinc-700">
           <div className="flex items-center gap-2">
             <div className="h-10 w-10 flex items-center justify-center rounded-full bg-rose-500/10 border border-rose-500">
@@ -209,15 +211,19 @@ export default function ShowStudents() {
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
-            <Input
-              type="text"
-              placeholder="Search..."
-              value={query}
-              onChange={e => setQuery(e.target.value)}
-              className="max-w-xs text-sm py-1 h-8"
-            />
-          </div>
+          {/* empty placeholder for actions (keeps layout consistent) */}
+          <div />
+        </div>
+
+        {/* Search row (separate) */}
+        <div className="flex flex-row items-center justify-between w-full p-3 border-t bg-white dark:bg-zinc-800 dark:border-zinc-700">
+          <Input
+            type="text"
+            placeholder="Search by name, email, student # or program..."
+            value={query}
+            onChange={e => setQuery(e.target.value)}
+            className="max-w-xs text-sm py-1 h-8"
+          />
         </div>
       </div>
 
