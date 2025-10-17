@@ -342,60 +342,96 @@ class DefenseRequestController extends Controller
         $user = Auth::user();
         if (!$user) abort(401);
         if (!in_array($user->role, ['Faculty', 'Adviser'])) {
-            abort(403, 'Unauthorized');
+            abort(403);
         }
 
         $data = $request->validate([
+            'comment'  => 'nullable|string|max:2000',
             'decision' => 'required|in:approve,reject',
-            'comment'  => 'nullable|string|max:2000'
         ]);
+
         $decision = $data['decision'];
         $comment = $data['comment'] ?? null;
 
         $current = $defenseRequest->workflow_state ?: 'submitted';
         if (!in_array($current, ['submitted', 'adviser-review', 'adviser-rejected'])) {
-            return back()->with('error', 'This request cannot be acted on at this stage.');
+            return back()->withErrors(['message' => 'This request cannot be decided at its current state.']);
         }
 
         if ($decision === 'approve') {
+            // Mark adviser-approved and set statuses
             $defenseRequest->workflow_state = 'adviser-approved';
             $defenseRequest->adviser_status = 'Approved';
             $defenseRequest->status = 'Pending';
 
-            // --- FINAL: Always assign a coordinator ---
-            // 1. Try linked coordinator
-            $coordinator = $user->coordinators()->first();
-            // 2. Fallback: coordinator for student's program
+            // Coordinator selection priority:
+            // 1) If the student was assigned to this adviser by a coordinator, use requested_by on the adviser_student pivot.
+            // 2) Fallback to any coordinator(s) linked to the adviser (first).
+            // 3) Fallback to a coordinator for the student's program.
+            $coordinator = null;
+
+            try {
+                if (!empty($defenseRequest->submitted_by)) {
+                    $studentId = $defenseRequest->submitted_by;
+                    // Attempt to find pivot row via the adviser's advisedStudents relation
+                    $pivotStudent = $user->advisedStudents()->where('users.id', $studentId)->first();
+                    if ($pivotStudent && !empty($pivotStudent->pivot->requested_by)) {
+                        $coordinator = User::find($pivotStudent->pivot->requested_by);
+                    }
+                }
+            } catch (\Throwable $e) {
+                // ignore and fallback
+                Log::warning('adviserDecision: pivot lookup failed: '.$e->getMessage());
+            }
+
+            // 2) fallback: any coordinator linked to this adviser user
             if (!$coordinator) {
-                $coordinator = \App\Models\User::where('role', 'Coordinator')
+                try {
+                    $coordinator = $user->coordinators()->first();
+                } catch (\Throwable $e) {
+                    // ignore
+                }
+            }
+
+            // 3) fallback: coordinator for student's program
+            if (!$coordinator && !empty($defenseRequest->program)) {
+                $coordinator = User::where('role', 'Coordinator')
                     ->where('program', $defenseRequest->program)
                     ->first();
             }
-            // 3. Fallback: any coordinator
-            if (!$coordinator) {
-                $coordinator = \App\Models\User::where('role', 'Coordinator')->first();
+
+            if ($coordinator) {
+                $defenseRequest->coordinator_user_id = $coordinator->id;
+            } else {
+                // Leave coordinator_user_id as-is (or null) and log for diagnostics
+                Log::info("adviserDecision: no coordinator determined for defense_request {$defenseRequest->id}");
             }
-            // 4. If still not found, abort with error
-            if (!$coordinator) {
-                return back()->with('error', 'No coordinator found. Please contact admin.');
-            }
-            $defenseRequest->coordinator_user_id = $coordinator->id;
+
+            // record workflow entry
+            $defenseRequest->last_status_updated_at = now();
+            $defenseRequest->last_status_updated_by = $user->id;
+            $defenseRequest->addWorkflowEntry(
+                'adviser-approved',
+                $comment,
+                $user->id,
+                $current,
+                $defenseRequest->workflow_state
+            );
         } else {
-            $defenseRequest->workflow_state = 'adviser-rejected';
+            // reject: do not advance to coordinator; record adviser rejection
             $defenseRequest->adviser_status = 'Rejected';
-            $defenseRequest->status = 'Rejected';
-            $defenseRequest->coordinator_user_id = null;
+            $defenseRequest->workflow_state = 'adviser-rejected';
+            $defenseRequest->last_status_updated_at = now();
+            $defenseRequest->last_status_updated_by = $user->id;
+            $defenseRequest->addWorkflowEntry(
+                'adviser-rejected',
+                $comment,
+                $user->id,
+                $current,
+                $defenseRequest->workflow_state
+            );
         }
 
-        $defenseRequest->last_status_updated_at = now();
-        $defenseRequest->last_status_updated_by = $user->id;
-        $defenseRequest->addWorkflowEntry(
-            $decision === 'approve' ? 'adviser-approved' : 'adviser-rejected',
-            $comment,
-            $user->id,
-            $current,
-            $defenseRequest->workflow_state
-        );
         $defenseRequest->save();
 
         return back()->with('success', 'Decision recorded.');

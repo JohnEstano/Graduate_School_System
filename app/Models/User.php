@@ -330,5 +330,30 @@ class User extends Authenticatable
                 $user->coordinator_code = strtoupper(bin2hex(random_bytes(4)));
             }
         });
+
+        // When a user is created (e.g. an adviser registers), reconcile any pre-existing Adviser rows
+        // created by coordinators using the same email. Attach coordinator pivots and mark adviser rows active.
+        static::created(function ($user) {
+            try {
+                // Only attempt reconciliation for adviser/faculty users
+                if (in_array($user->role, ['Faculty', 'Adviser'])) {
+                    $adviserRows = \App\Models\Adviser::where('email', $user->email)->get();
+                    foreach ($adviserRows as $row) {
+                        // Attach coordinator pivot for the newly created user so the adviser "sees" their coordinators
+                        if (!empty($row->coordinator_id) && method_exists($user, 'coordinators')) {
+                            $user->coordinators()->syncWithoutDetaching([$row->coordinator_id]);
+                        }
+
+                        // Link the adviser row to the created user and mark as active
+                        $row->user_id = $user->id;
+                        $row->status = 'active';
+                        $row->save();
+                    }
+                }
+            } catch (\Throwable $e) {
+                // Don't block user creation on reconciliation failures. Log for debugging.
+                Log::warning('Adviser reconciliation failed for user '.$user->id.': '.$e->getMessage());
+            }
+        });
     }
 }

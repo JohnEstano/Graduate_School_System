@@ -968,6 +968,27 @@ export default function DetailsRequirementsPage(rawProps: any) {
 
           {/* Workflow Progress Stepper sidebar */}
           <div className="w-full md:w-[340px] flex-shrink-0">
+            {/* Adviser-Coordinator Relationship Card (shadcn style, white background, no shadow) */}
+            <div className="rounded-xl border p-4 bg-white text-xs mb-3">
+              <div className="space-y-2">
+               
+                <div className="flex items-start gap-2">
+                  <span className="font-bold">Program Coordinator:</span>
+                  <div className="text-zinc-700">
+                    {coordinators.length > 0 ? (
+                      coordinators.map((c, i) => (
+                        <span key={i} className="block">
+                          {c.name}{c.email ? ` (${c.email})` : ''}
+                        </span>
+                      ))
+                    ) : (
+                      <span className="italic text-zinc-400">No coordinator registered</span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+
             <div className="rounded-xl border p-5 bg-white dark:bg-zinc-900 h-fit">
               {/* Removed 'sticky top-24' */}
               <h2 className="text-xs font-semibold mb-8 flex items-center gap-2">
@@ -1026,35 +1047,7 @@ export default function DetailsRequirementsPage(rawProps: any) {
                   <div className="text-xs text-muted-foreground">No workflow history yet.</div>
                 )}
               </div>
-
-
             </div>
-            {/* Adviser-Coordinator Relationship Bar - moved here */}
-            <div className="w-full flex items-center gap-2 bg-black sticky text-white rounded-lg px-4  text-xs font-medium shadow mt-3">
-              <span className="flex items-center gap-1">
-                Adviser <span className="font-semibold">(You)</span>
-              </span>
-              <ArrowRightLeft className="h-4 w-4 mx-2" />
-              <span className="flex items-center gap-1">
-                <Users className="h-4 w-4 mr-1" />
-                Coordinator
-                <span className="font-semibold ml-1">
-                  {coordinators.length > 0
-                    ? coordinators.map((c, i) => (
-                      <span key={i}>
-                        {c.name}
-                        {c.email && (
-                          <span className="ml-1 text-zinc-300">({c.email})</span>
-                        )}
-                        {i < coordinators.length - 1 && <span>, </span>}
-                      </span>
-                    ))
-                    : <span className="italic text-zinc-300">No coordinator registered</span>
-                  }
-                </span>
-              </span>
-            </div>
-            {/* End Adviser-Coordinator Relationship Bar */}
           </div>
         </div>
 

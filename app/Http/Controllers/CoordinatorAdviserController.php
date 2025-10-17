@@ -39,6 +39,11 @@ class CoordinatorAdviserController extends Controller
                 if ($row->isDirty()) {
                     $row->save();
                 }
+
+                // Ensure the matched User has this coordinator attached (multi-coordinator support)
+                if (method_exists($matchedUser, 'coordinators') && $row->coordinator_id) {
+                    $matchedUser->coordinators()->syncWithoutDetaching([$row->coordinator_id]);
+                }
             }
 
             // Build students list — if linked to a user use their advisedStudents relation
