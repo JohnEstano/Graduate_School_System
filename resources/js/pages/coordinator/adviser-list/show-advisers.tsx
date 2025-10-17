@@ -3,10 +3,12 @@ import axios from "axios";
 import { Table, TableHeader, TableRow, TableCell, TableBody, TableHead } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Copy, Check, Users, Search, Trash, UserPlus, Loader2, Edit, Plus } from "lucide-react";
+import { Copy, Check, Users, Search, Trash, UserPlus, Loader2, Edit, Plus, Mail, MessageCircle } from "lucide-react";
 import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
 
 type Adviser = {
   id: number;
@@ -14,9 +16,9 @@ type Adviser = {
   middle_name: string | null;
   last_name: string;
   email: string;
-  program: string;
   name?: string;
   employee_id?: string;
+  status?: "active" | "inactive";
 };
 
 type Student = {
@@ -59,10 +61,20 @@ export default function ShowAdvisers() {
 
   // Add Student dialog state (NEW)
   const [addStudentDialogOpen, setAddStudentDialogOpen] = useState(false);
-  const [studentName, setStudentName] = useState("");
   const [studentEmail, setStudentEmail] = useState("");
   const [addStudentError, setAddStudentError] = useState("");
   const [addingStudent, setAddingStudent] = useState(false);
+
+  // New: Pending students state
+  const [pendingStudents, setPendingStudents] = useState<Student[]>([]);
+  const [pendingLoading, setPendingLoading] = useState(false);
+
+  // New: Tab state
+  const [adviserTab, setAdviserTab] = useState("assigned");
+
+  // New: Pagination state
+  const [page, setPage] = useState(1);
+  const pageSize = 10;
 
   useEffect(() => {
     axios.get("/api/coordinator/advisers")
@@ -74,9 +86,19 @@ export default function ShowAdvisers() {
     (a) =>
       a.first_name.toLowerCase().includes(query.toLowerCase()) ||
       a.last_name.toLowerCase().includes(query.toLowerCase()) ||
-      a.email.toLowerCase().includes(query.toLowerCase()) ||
-      a.program.toLowerCase().includes(query.toLowerCase())
+      a.email.toLowerCase().includes(query.toLowerCase())
   );
+
+  // Pagination logic
+  const totalPages = Math.ceil(filteredAdvisers.length / pageSize);
+  const paginatedAdvisers = filteredAdvisers.slice((page - 1) * pageSize, page * pageSize);
+
+  // Reset to first page if filter changes and current page is out of range
+  useEffect(() => {
+    if ((page - 1) * pageSize >= filteredAdvisers.length) {
+      setPage(1);
+    }
+  }, [filteredAdvisers.length, page, pageSize]);
 
   const handleRegister = async () => {
     if (!adviserName.trim() || !adviserEmail.trim()) return;
@@ -141,29 +163,41 @@ export default function ShowAdvisers() {
     }
   };
 
-  // When viewAdviser changes, fetch students
+  // Fetch pending students for selected adviser
+  const fetchPendingStudents = async (adviserId: number) => {
+    setPendingLoading(true);
+    try {
+      const res = await axios.get(`/api/coordinator/advisers/${adviserId}/pending-students`);
+      setPendingStudents(res.data);
+    } finally {
+      setPendingLoading(false);
+    }
+  };
+
+  // When viewAdviser changes, fetch both assigned and pending students
   useEffect(() => {
     if (viewAdviser) {
       fetchStudents(viewAdviser.id);
+      fetchPendingStudents(viewAdviser.id);
+      setAdviserTab("assigned");
     }
   }, [viewAdviser]);
 
-  // Add student handler (NEW)
   const handleAddStudent = async () => {
-    if (!studentName.trim() || !studentEmail.trim() || !viewAdviser) return;
+    if (!studentEmail.trim() || !viewAdviser) return;
     setAddingStudent(true);
     setAddStudentError("");
     try {
       await axios.post(`/api/coordinator/advisers/${viewAdviser.id}/students`, {
-        name: studentName.trim(),
         email: studentEmail.trim(),
       });
-      fetchStudents(viewAdviser.id);
+      // refresh pending list in the open view so coordinator sees it immediately
+      await fetchPendingStudents(viewAdviser.id);
+      await fetchStudents(viewAdviser.id);
       setAddStudentDialogOpen(false);
-      setStudentName("");
       setStudentEmail("");
-    } catch (error: any) {
-      setAddStudentError(error.response?.data?.error || "Failed to add student.");
+    } catch (err: any) {
+      setAddStudentError(err.response?.data?.error || "Failed to add student.");
     } finally {
       setAddingStudent(false);
     }
@@ -276,180 +310,216 @@ export default function ShowAdvisers() {
         </div>
       </div>
       {/* Table */}
-      <div className="rounded-md overflow-x-auto w-full max-w-full border border-border bg-white">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Name</TableHead>
-              <TableHead>Email</TableHead>
-              <TableHead>Program</TableHead>
-              <TableHead>Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filteredAdvisers.length === 0 ? (
+      <div className="rounded-md w-full max-w-full border border-border bg-white overflow-x-auto">
+        <div className="w-full min-w-[700px]">
+          <Table className="table-fixed w-full">
+            <TableHeader>
               <TableRow>
-                <TableCell colSpan={4} className="py-8 text-center text-sm text-muted-foreground">
-                  No advisers found.
-                </TableCell>
+                <TableHead className="w-[220px] min-w-[180px] max-w-[260px] truncate">Name</TableHead>
+                <TableHead className="w-[220px] min-w-[180px] max-w-[260px] truncate">Email</TableHead>
+                <TableHead className="w-[110px] min-w-[90px] max-w-[120px] text-center">Status</TableHead>
+                <TableHead className="w-[120px] min-w-[100px] max-w-[140px] text-center">Actions</TableHead>
               </TableRow>
-            ) : (
-              filteredAdvisers.map(a => (
-                <TableRow key={a.id}>
-                  <TableCell className="flex items-center gap-3">
-                    <Avatar className="h-8 w-8">
-                      <AvatarFallback>
-                        {getInitials(a)}
-                      </AvatarFallback>
-                    </Avatar>
-                    <span>
-                      {a.first_name} {a.middle_name ? a.middle_name[0] + "." : ""} {a.last_name}
-                    </span>
-                  </TableCell>
-                  <TableCell>{a.email}</TableCell>
-                  <TableCell>{a.program}</TableCell>
-                  <TableCell className="flex gap-2">
-                    {/* View Button */}
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      aria-label="View adviser"
-                      onClick={() => {
-                        setViewAdviser(a);
-                        setViewDialogOpen(true);
-                      }}
-                    >
-                      <Users size={18} />
-                    </Button>
-                    {/* Edit Button */}
-                    <Dialog open={editDialogOpen && editAdviser?.id === a.id} onOpenChange={open => {
-                      setEditDialogOpen(open);
-                      if (!open) {
-                        setEditAdviser(null);
-                        setEditError("");
-                      }
-                    }}>
-                      <DialogTrigger asChild>
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          aria-label="Edit adviser"
-                          onClick={() => {
-                            setEditAdviser(a);
-                            setEditName(
-                              `${a.first_name}${a.middle_name ? " " + a.middle_name : ""} ${a.last_name}`.trim()
-                            );
-                            setEditEmail(a.email);
-                            setEditDialogOpen(true);
-                          }}
-                        >
-                          <Edit size={18} />
-                        </Button>
-                      </DialogTrigger>
-                      <DialogContent>
-                        <DialogHeader>
-                          <DialogTitle>Edit Adviser</DialogTitle>
-                        </DialogHeader>
-                        <div className="space-y-4 py-4">
-                          <div className="space-y-2">
-                            <label className="text-sm font-medium">Adviser Name</label>
-                            <Input
-                              type="text"
-                              placeholder="Full Name"
-                              value={editName}
-                              onChange={e => setEditName(e.target.value)}
-                              disabled={editLoading}
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <label className="text-sm font-medium">Adviser Email</label>
-                            <Input
-                              type="email"
-                              placeholder="Email"
-                              value={editEmail}
-                              onChange={e => setEditEmail(e.target.value)}
-                              disabled={editLoading}
-                            />
-                          </div>
-                          {editError && (
-                            <div className="text-xs text-rose-500 mt-1">{editError}</div>
-                          )}
-                        </div>
-                        <DialogFooter className="mt-4">
-                          <Button
-                            onClick={handleEditAdviser}
-                            disabled={!editName.trim() || !editEmail.trim() || editLoading}
-                          >
-                            {editLoading ? (
-                              <>
-                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                Saving...
-                              </>
-                            ) : (
-                              <>
-                                <Edit className="mr-2 h-4 w-4" />
-                                Save Changes
-                              </>
-                            )}
-                          </Button>
-                        </DialogFooter>
-                      </DialogContent>
-                    </Dialog>
-                    {/* Remove Button */}
-                    <Dialog open={confirmOpen && adviserToRemove?.id === a.id} onOpenChange={open => {
-                      if (!open) {
-                        setConfirmOpen(false);
-                        setAdviserToRemove(null);
-                      }
-                    }}>
-                      <DialogTrigger asChild>
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          aria-label="Remove adviser"
-                          onClick={() => {
-                            setAdviserToRemove(a);
-                            setConfirmOpen(true);
-                          }}
-                        >
-                          <Trash size={18} />
-                        </Button>
-                      </DialogTrigger>
-                      <DialogContent>
-                        <DialogHeader>
-                          <DialogTitle>Remove Adviser</DialogTitle>
-                        </DialogHeader>
-                        <div className="py-2">
-                          Are you sure you want to remove <b>{a.first_name} {a.last_name}</b> from your coordination?
-                        </div>
-                        <DialogFooter>
-                          <Button
-                            variant="outline"
-                            onClick={() => {
-                              setConfirmOpen(false);
-                              setAdviserToRemove(null);
-                            }}
-                            className="mr-2 bg-white text-zinc-900 border-zinc-300"
-                          >
-                            Cancel
-                          </Button>
-                          <Button
-                            onClick={handleRemoveAdviser}
-                            className="bg-rose-500 hover:bg-rose-600 text-white border-none"
-                          >
-                            Confirm
-                          </Button>
-                        </DialogFooter>
-                      </DialogContent>
-                    </Dialog>
+            </TableHeader>
+            <TableBody>
+              {paginatedAdvisers.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={4} className="py-8 text-center text-sm text-muted-foreground">
+                    No advisers found.
                   </TableCell>
                 </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
+              ) : (
+                paginatedAdvisers.map(a => (
+                  <TableRow key={a.id}>
+                    <TableCell className="flex items-center gap-3 truncate max-w-[240px]">
+                      <Avatar className="h-8 w-8">
+                        <AvatarFallback>
+                          {getInitials(a)}
+                        </AvatarFallback>
+                      </Avatar>
+                      <span className="truncate">
+                        {a.first_name} {a.middle_name ? a.middle_name[0] + "." : ""} {a.last_name}
+                      </span>
+                    </TableCell>
+                    <TableCell className="truncate max-w-[240px]">{a.email}</TableCell>
+                    {/* Status Column */}
+                    <TableCell className="text-center">
+                      {a.status === "active" ? (
+                        <Badge variant="outline" className="bg-green-100 text-green-700 border-green-200">
+                          Active
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline" className="bg-zinc-200 text-zinc-600 border-zinc-200">
+                          Inactive
+                        </Badge>
+                      )}
+                    </TableCell>
+                    <TableCell className="flex gap-2 justify-center">
+                      {/* View Button */}
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        aria-label="View adviser"
+                        onClick={() => {
+                          setViewAdviser(a);
+                          setViewDialogOpen(true);
+                        }}
+                      >
+                        <Users size={18} />
+                      </Button>
+                      {/* Edit Button */}
+                      <Dialog open={editDialogOpen && editAdviser?.id === a.id} onOpenChange={open => {
+                        setEditDialogOpen(open);
+                        if (!open) {
+                          setEditAdviser(null);
+                          setEditError("");
+                        }
+                      }}>
+                        <DialogTrigger asChild>
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            aria-label="Edit adviser"
+                            onClick={() => {
+                              setEditAdviser(a);
+                              setEditName(
+                                `${a.first_name}${a.middle_name ? " " + a.middle_name : ""} ${a.last_name}`.trim()
+                              );
+                              setEditEmail(a.email);
+                              setEditDialogOpen(true);
+                            }}
+                          >
+                            <Edit size={18} />
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent>
+                          <DialogHeader>
+                            <DialogTitle>Edit Adviser</DialogTitle>
+                          </DialogHeader>
+                          <div className="space-y-4 py-4">
+                            <div className="space-y-2">
+                              <label className="text-sm font-medium">Adviser Name</label>
+                              <Input
+                                type="text"
+                                placeholder="Full Name"
+                                value={editName}
+                                onChange={e => setEditName(e.target.value)}
+                                disabled={editLoading}
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <label className="text-sm font-medium">Adviser Email</label>
+                              <Input
+                                type="email"
+                                placeholder="Email"
+                                value={editEmail}
+                                onChange={e => setEditEmail(e.target.value)}
+                                disabled={editLoading}
+                              />
+                            </div>
+                            {editError && (
+                              <div className="text-xs text-rose-500 mt-1">{editError}</div>
+                            )}
+                          </div>
+                          <DialogFooter className="mt-4">
+                            <Button
+                              onClick={handleEditAdviser}
+                              disabled={!editName.trim() || !editEmail.trim() || editLoading}
+                            >
+                              {editLoading ? (
+                                <>
+                                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                  Saving...
+                                </>
+                              ) : (
+                                <>
+                                  <Edit className="mr-2 h-4 w-4" />
+                                  Save Changes
+                                </>
+                              )}
+                            </Button>
+                          </DialogFooter>
+                        </DialogContent>
+                      </Dialog>
+                      {/* Remove Button */}
+                      <Dialog open={confirmOpen && adviserToRemove?.id === a.id} onOpenChange={open => {
+                        if (!open) {
+                          setConfirmOpen(false);
+                          setAdviserToRemove(null);
+                        }
+                      }}>
+                        <DialogTrigger asChild>
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            aria-label="Remove adviser"
+                            onClick={() => {
+                              setAdviserToRemove(a);
+                              setConfirmOpen(true);
+                            }}
+                          >
+                            <Trash size={18} />
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent>
+                          <DialogHeader>
+                            <DialogTitle>Remove Adviser</DialogTitle>
+                          </DialogHeader>
+                          <div className="py-2">
+                            Are you sure you want to remove <b>{a.first_name} {a.last_name}</b> from your coordination?
+                          </div>
+                          <DialogFooter>
+                            <Button
+                              variant="outline"
+                              onClick={() => {
+                                setConfirmOpen(false);
+                                setAdviserToRemove(null);
+                              }}
+                              className="mr-2 bg-white text-zinc-900 border-zinc-300"
+                            >
+                              Cancel
+                            </Button>
+                            <Button
+                              onClick={handleRemoveAdviser}
+                              className="bg-rose-500 hover:bg-rose-600 text-white border-none"
+                            >
+                              Confirm
+                            </Button>
+                          </DialogFooter>
+                        </DialogContent>
+                      </Dialog>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </div>
       </div>
-
+      {/* Pagination Controls */}
+      {totalPages > 1 && (
+        <div className="flex justify-end items-center gap-2 mt-2">
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={page === 1}
+            onClick={() => setPage(page - 1)}
+          >
+            Prev
+          </Button>
+          <span className="text-xs">
+            Page {page} of {totalPages}
+          </span>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={page === totalPages}
+            onClick={() => setPage(page + 1)}
+          >
+            Next
+          </Button>
+        </div>
+      )}
       {/* Adviser-Student Relationship Dialog */}
       <Dialog open={viewDialogOpen} onOpenChange={open => {
         setViewDialogOpen(open);
@@ -469,11 +539,42 @@ export default function ShowAdvisers() {
                     </AvatarFallback>
                   </Avatar>
                   <div>
-                    <div className="font-semibold  text-sm">
+                    <div className="font-semibold text-sm">
                       {viewAdviser.first_name} {viewAdviser.middle_name ? viewAdviser.middle_name[0] + "." : ""} {viewAdviser.last_name}
                     </div>
-                    <div className="text-sm text-gray-600">{viewAdviser.email}</div>
-                    <div className="text-sm text-gray-600">Program: {viewAdviser.program}</div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm text-gray-600">{viewAdviser.email}</span>
+                      {/* Gmail Button */}
+                      <button
+                        className="px-2 py-1 rounded hover:bg-zinc-100 text-zinc-600 text-xs flex items-center gap-1 cursor-pointer transition"
+                        style={{ height: "22px" }}
+                        title="Send Gmail"
+                        onClick={() => {
+                          window.open(
+                            `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(viewAdviser.email)}`,
+                            "_blank"
+                          );
+                        }}
+                      >
+                        <Mail size={14} className="text-zinc-500" />
+                        Gmail
+                      </button>
+                      {/* Google Chat Button */}
+                      <button
+                        className="px-2 py-1 rounded hover:bg-zinc-100 text-zinc-600 text-xs flex items-center gap-1 cursor-pointer transition"
+                        style={{ height: "22px" }}
+                        title="Open Google Chat"
+                        onClick={() => {
+                          window.open(
+                            `https://mail.google.com/chat/u/0/#chat/user/${encodeURIComponent(viewAdviser.email)}`,
+                            "_blank"
+                          );
+                        }}
+                      >
+                        <MessageCircle size={14} className="text-zinc-500" />
+                        Chat
+                      </button>
+                    </div>
                     {viewAdviser.employee_id && (
                       <div className="text-sm text-gray-600">Employee ID: {viewAdviser.employee_id}</div>
                     )}
@@ -483,54 +584,112 @@ export default function ShowAdvisers() {
             </DialogDescription>
           </DialogHeader>
           <div className="mt-4">
-            <div className="font-semibold mb-2 text-xs">Students</div>
-            <div className="max-h-64 overflow-y-auto overflow-x-auto">
-              {studentsLoading ? (
-                <div className="text-xs">Loading students...</div>
-              ) : students.length === 0 ? (
-                <div className="text-gray-500 text-xs">No students linked to this adviser.</div>
-              ) : (
-                <ul className="divide-y min-w-[400px]">
-                  {students.map(s => (
-                    <li key={s.id} className="py-2 flex items-center gap-3 text-xs">
-                      <Avatar className="h-8 w-8">
-                        <AvatarFallback>
-                          {getInitials(s)}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="flex-1">
-                        <div className="font-medium text-xs">{s.first_name} {s.middle_name ? s.middle_name[0] + "." : ""} {s.last_name}</div>
-                        <div className="text-xs text-gray-500">{s.email} • {s.student_number} • {s.program}</div>
-                      </div>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        aria-label="Remove student"
-                        className="text-rose-500 hover:bg-rose-50"
-                        onClick={() => {
-                          if (window.confirm(`Remove ${s.first_name} ${s.last_name} from this adviser?`)) {
-                            axios.delete(`/api/coordinator/advisers/${viewAdviser?.id}/students/${s.id}`)
-                              .then(() => setStudents(students.filter(stu => stu.id !== s.id)));
-                          }
-                        }}
-                      >
-                        <Trash size={16} />
-                      </Button>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
+            <Tabs value={adviserTab} onValueChange={setAdviserTab}>
+              <TabsList className="mb-2">
+                <TabsTrigger value="assigned">
+                  Assigned Students
+                  <span className="ml-2 px-2 py-0.5 rounded-full bg-zinc-100 text-zinc-700 text-[11px] font-medium">
+                    {students.length}
+                  </span>
+                </TabsTrigger>
+                <TabsTrigger value="pending">
+                  Pending Confirmation
+                  <span className="ml-2 px-2 py-0.5 rounded-full bg-zinc-100 text-zinc-700 text-[11px] font-medium">
+                    {pendingStudents.length}
+                  </span>
+                </TabsTrigger>
+              </TabsList>
+              <TabsContent value="assigned">
+                <div
+                  className="overflow-y-auto overflow-x-auto min-w-[400px] rounded"
+                  style={{ height: "240px" }}
+                >
+                  {studentsLoading ? (
+                    <div className="text-xs flex items-center justify-center h-full">Loading students...</div>
+                  ) : students.length === 0 ? (
+                    <div className="text-gray-500 text-xs flex items-center justify-center h-full">
+                      No students linked to this adviser.
+                    </div>
+                  ) : (
+                    <ul className="divide-y">
+                      {students.map(s => (
+                        <li key={s.id} className="py-2 flex items-center gap-3 text-xs">
+                          <Avatar className="h-8 w-8">
+                            <AvatarFallback>
+                              {getInitials(s)}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div className="flex-1">
+                            <div className="font-medium text-xs flex items-center gap-2">
+                              {s.first_name} {s.middle_name ? s.middle_name[0] + "." : ""} {s.last_name}
+                            </div>
+                            <div className="text-xs text-gray-500">{s.email} • {s.student_number} • {s.program}</div>
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            aria-label="Remove student"
+                            className="text-rose-500 hover:bg-rose-50"
+                            onClick={() => {
+                              if (window.confirm(`Remove ${s.first_name} ${s.last_name} from this adviser?`)) {
+                                axios.delete(`/api/coordinator/advisers/${viewAdviser?.id}/students/${s.id}`)
+                                  .then(() => setStudents(students.filter(stu => stu.id !== s.id)));
+                              }
+                            }}
+                          >
+                            <Trash size={16} />
+                          </Button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              </TabsContent>
+              <TabsContent value="pending">
+                <div
+                  className="overflow-y-auto overflow-x-auto min-w-[400px] rounded"
+                  style={{ height: "240px" }}
+                >
+                  {pendingLoading ? (
+                    <div className="text-xs flex items-center justify-center h-full">Loading pending students...</div>
+                  ) : pendingStudents.length === 0 ? (
+                    <div className="text-gray-500 text-xs flex items-center justify-center h-full">
+                      No pending students for this adviser.
+                    </div>
+                  ) : (
+                    <ul className="divide-y">
+                      {pendingStudents.map(s => (
+                        <li key={s.id} className="py-2 flex items-center gap-3 text-xs">
+                          <Avatar className="h-8 w-8">
+                            <AvatarFallback>
+                              {getInitials(s)}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div className="flex-1">
+                            <div className="font-medium text-xs flex items-center gap-2">
+                              {s.first_name} {s.middle_name ? s.middle_name[0] + "." : ""} {s.last_name}
+                            </div>
+                            <div className="text-xs text-gray-500">{s.email} • {s.student_number} • {s.program}</div>
+                          </div>
+                          {/* You can add actions for pending students here if needed */}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              </TabsContent>
+            </Tabs>
+            {/* Assign Student Button: Always visible below tabs */}
+            <DialogFooter className="mt-4">
+              <Button
+                variant="outline"
+                onClick={() => setAddStudentDialogOpen(true)}
+              >
+                <Plus className="mr-2 h-4 w-4" />
+                Assign a Student
+              </Button>
+            </DialogFooter>
           </div>
-          <DialogFooter className="mt-4">
-            <Button
-              variant="outline"
-              onClick={() => setAddStudentDialogOpen(true)}
-            >
-              <Plus className="mr-2 h-4 w-4" />
-              Add Student to Adviser
-            </Button>
-          </DialogFooter>
         </DialogContent>
       </Dialog>
 
@@ -540,35 +699,28 @@ export default function ShowAdvisers() {
           <DialogHeader>
             <DialogTitle>Add Student to Adviser</DialogTitle>
             <DialogDescription>
-              Enter the student's name and email to add them under this adviser.
+              Enter the student's email to add them under this adviser.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3 py-2">
-            <Input
-              placeholder="Full Name"
-              value={studentName}
-              onChange={e => setStudentName(e.target.value)}
-              className="text-xs"
-              disabled={addingStudent}
-            />
-            <Input
-              placeholder="Email"
-              value={studentEmail}
-              onChange={e => setStudentEmail(e.target.value)}
-              className="text-xs"
-              disabled={addingStudent}
-            />
-            {addStudentError && <div className="text-xs text-rose-500">{addStudentError}</div>}
-          </div>
-          <DialogFooter>
-            <Button
-              onClick={handleAddStudent}
-              disabled={!studentName.trim() || !studentEmail.trim() || addingStudent}
-            >
-              {addingStudent ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Plus className="mr-2 h-4 w-4" />}
-              Add Student
-            </Button>
-          </DialogFooter>
+             <Input
+               placeholder="Email"
+               value={studentEmail}
+               onChange={e => setStudentEmail(e.target.value)}
+               className="text-xs"
+               disabled={addingStudent}
+             />
+             {addStudentError && <div className="text-xs text-rose-500">{addStudentError}</div>}
+           </div>
+           <DialogFooter>
+             <Button
+               onClick={handleAddStudent}
+               disabled={!studentEmail.trim() || addingStudent}
+             >
+               {addingStudent ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Plus className="mr-2 h-4 w-4" />}
+               Add Student
+             </Button>
+           </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

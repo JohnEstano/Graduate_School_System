@@ -56,7 +56,9 @@ class DefenseRequirementController extends Controller
                     'school_id' => $user->school_id,
                     'program' => $user->program,
                     'email' => $user->email,
-                    'advisers' => $user->advisers()->get(['id','first_name','middle_name','last_name','email','adviser_code']),
+                    'advisers' => $user->advisers()
+                        ->select('users.id', 'users.first_name', 'users.middle_name', 'users.last_name', 'users.email', 'users.adviser_code')
+                        ->get(),
                 ],
             ],
         ]);

@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class User extends Authenticatable
 {
@@ -264,22 +265,33 @@ class User extends Authenticatable
     }
 
     /**
-     * For Adviser: Get all students
+     * Students advised by this user (when the user is an adviser).
      */
-    public function advisedStudents()
+    public function advisedStudents(): BelongsToMany
     {
-        return $this->belongsToMany(User::class, 'adviser_student', 'adviser_id', 'student_id');
+        return $this->belongsToMany(
+            User::class,
+            'adviser_student',
+            'adviser_id',
+            'student_id'
+        )
+        ->withPivot('status', 'requested_by')
+        ->withTimestamps();
     }
 
-    // For Student: Get all advisers
-    public function advisers()
+    /**
+     * Advisers for this student (inverse).
+     */
+    public function advisers(): BelongsToMany
     {
         return $this->belongsToMany(
             User::class,
             'adviser_student',
             'student_id',
             'adviser_id'
-        )->select('users.id', 'users.first_name', 'users.middle_name', 'users.last_name', 'users.email', 'users.adviser_code');
+        )
+        ->withPivot('status', 'requested_by')
+        ->withTimestamps();
     }
 
     public function generateAdviserCode(): void

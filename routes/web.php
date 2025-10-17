@@ -96,12 +96,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('/api/coordinator/advisers', [CoordinatorAdviserController::class, 'store']);
     Route::delete('/api/coordinator/advisers/{id}', [CoordinatorAdviserController::class, 'destroy']);
 
-    // Coordinator manages adviser-student relationships
-    Route::get('/api/coordinator/advisers/{adviser}/students', [\App\Http\Controllers\CoordinatorAdviserStudentController::class, 'index']);
-    Route::post('/api/coordinator/advisers/{adviser}/students', [\App\Http\Controllers\CoordinatorAdviserStudentController::class, 'store']);
-    Route::delete('/api/coordinator/advisers/{adviser}/students/{student}', [\App\Http\Controllers\CoordinatorAdviserStudentController::class, 'destroy']);
+    // Coordinator manages adviser-student relationships (use CoordinatorAdviserController)
+    Route::get('/api/coordinator/advisers/{adviser}/students', [\App\Http\Controllers\CoordinatorAdviserController::class, 'students']);
+    Route::get('/api/coordinator/advisers/{adviser}/pending-students', [\App\Http\Controllers\CoordinatorAdviserController::class, 'pendingStudents']);
+    Route::post('/api/coordinator/advisers/{adviser}/students', [\App\Http\Controllers\CoordinatorAdviserController::class, 'storeStudent']);
+    Route::delete('/api/coordinator/advisers/{adviser}/students/{student}', [\App\Http\Controllers\CoordinatorAdviserController::class, 'destroyStudent']);
     Route::get('/api/coordinator/students/search', [CoordinatorAdviserController::class, 'searchStudents']);
-
 
 
     Route::get('/panelists/honorarium-specs', [PanelistHonorariumSpecController::class, 'index']);
@@ -556,6 +556,13 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/api/adviser/register-with-code', [AdviserStudentController::class, 'registerWithCode']);
     Route::get('/api/adviser/code', [AdviserStudentController::class, 'getAdviserCode']);
     Route::delete('/api/adviser/students/{student}', [AdviserStudentController::class, 'destroy']);
+
+
+
+    Route::get('/api/adviser/pending-students', [AdviserStudentController::class, 'pending']);
+    Route::post('/api/adviser/pending-students/{student}/accept', [AdviserStudentController::class, 'acceptPending']);
+    Route::post('/api/adviser/pending-students/{student}/reject', [AdviserStudentController::class, 'rejectPending']);
+
 
     // Student search for autocomplete
     Route::get('/api/students/search', [App\Http\Controllers\Api\StudentSearchController::class, 'search']);

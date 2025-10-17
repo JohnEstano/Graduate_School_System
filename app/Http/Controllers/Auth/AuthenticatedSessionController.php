@@ -55,6 +55,14 @@ class AuthenticatedSessionController extends Controller
 
         $request->session()->regenerate();
 
+        // Update adviser status if matching adviser exists
+        $adviser = \App\Models\Adviser::where('email', $user->email)->first();
+        if ($adviser) {
+            $adviser->status = 'active';
+            $adviser->user_id = $user->id;
+            $adviser->save();
+        }
+
         return redirect()->intended(route('dashboard'));
     }
 

@@ -187,8 +187,12 @@ class DashboardController extends Controller
                     'role' => $effective,
                     'school_id' => $user->school_id,
                     'avatar' => $user->employee_photo_url ?? null,
-                    // --- Add this line ---
-                    'advisers' => method_exists($user, 'advisers') ? $user->advisers()->get(['id','name','first_name','last_name','email','adviser_code']) : collect(),
+                    // --- Changed: qualify columns to avoid ambiguous `id` ---
+                    'advisers' => method_exists($user, 'advisers')
+                        ? $user->advisers()
+                            ->select('users.id', 'users.first_name', 'users.middle_name', 'users.last_name', 'users.email', 'users.adviser_code')
+                             ->get()
+                        : collect(),
                 ],
             ],
             'defenseRequirement' => $latestRequirement,
