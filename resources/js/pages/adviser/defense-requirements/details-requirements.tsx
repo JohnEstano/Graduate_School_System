@@ -644,20 +644,57 @@ export default function DetailsRequirementsPage(rawProps: any) {
                         </div>
                       </div>
                     </div>
+
                     <div>
                       <div className="text-xs text-muted-foreground mb-1">Program</div>
                       <div className="font-medium text-sm">{request.program}</div>
                     </div>
+
                     <div>
                       <div className="text-xs text-muted-foreground mb-1">Defense Type</div>
                       <Badge variant="secondary" className="text-xs font-medium">
                         {request.defense_type ?? '—'}
                       </Badge>
                     </div>
+
                     <div>
                       <div className="text-xs text-muted-foreground mb-1">Submitted At</div>
                       <div className="font-medium text-sm">{formatDate(request.submitted_at)}</div>
                     </div>
+
+                    {/* Program Coordinator */}
+                    <div>
+                      <div className="text-xs text-muted-foreground mb-1">Program Coordinator</div>
+                      <div className="font-medium text-sm">
+                        {coordinators.length > 0 ? (
+                          coordinators.map((c, i) => (
+                            <div key={i} className="text-sm">
+                              {c.name}{c.email ? ` (${c.email})` : ''}
+                            </div>
+                          ))
+                        ) : (
+                          <span className="italic text-zinc-400">No coordinator registered</span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Coordinator Status - top aligned so it stays part of the grid body */}
+                    <div className="">
+                      <div className="text-xs text-muted-foreground mb-1">Coordinator Status</div>
+                      <div>
+                        <span
+                          className={`text-xs font-semibold px-2 py-0.5 rounded-full inline-block ${statusBadgeColor(request.coordinator_status)}`}
+                        >
+                          {getCoordinatorStatusDisplay(request.coordinator_status)}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* separator before scheduled info */}
+                    <div className="md:col-span-2">
+                      <Separator className="my-2" />
+                    </div>
+
                     <div>
                       <div className="text-xs text-muted-foreground mb-1">Scheduled Date</div>
                       <div className="font-medium text-sm">{formatDate(request.scheduled_date)}</div>
@@ -674,27 +711,12 @@ export default function DetailsRequirementsPage(rawProps: any) {
                       <div className="text-xs text-muted-foreground mb-1">Venue</div>
                       <div className="font-medium text-sm">{request.defense_venue || '—'}</div>
                     </div>
+
                     <div>
                       <div className="text-xs text-muted-foreground mb-1">Mode</div>
                       <div className="font-medium text-sm">{request.defense_mode ? (request.defense_mode === 'face-to-face' ? 'Face-to-Face' : 'Online') : '—'}</div>
                     </div>
-                    {/* --- Coordinator Status Badge --- */}
-                    <div>
-                      <div className="text-xs text-muted-foreground mb-1">Coordinator Status</div>
-                      <span
-                        className={`text-xs font-semibold px-2 py-0.5 rounded-full mt-1 inline-block ${request.coordinator_status === 'Approved'
-                            ? 'bg-green-100 text-green-600'
-                            : request.coordinator_status === 'Rejected'
-                              ? 'bg-red-100 text-red-600'
-                              : request.coordinator_status === 'Pending'
-                                ? 'bg-yellow-100 text-yellow-700'
-                                : 'bg-gray-100 text-gray-600'
-                          }`}
-                      >
-                        {getCoordinatorStatusDisplay(request.coordinator_status)}
-                      </span>
-                    </div>
-                    {/* --- End Coordinator Status Badge --- */}
+
                     <div className="md:col-span-2">
                       <div className="text-xs text-muted-foreground mb-1">Notes</div>
                       <div className="font-medium text-sm">{request.scheduling_notes || '—'}</div>
@@ -702,22 +724,18 @@ export default function DetailsRequirementsPage(rawProps: any) {
                   </div>
                 </div>
 
-                {/* Attachments */}
+                {/* Attachments moved to sidebar */}
                 <div className={sectionClass}>
-                  <div className="flex items-center gap-2 mb-1">
-                    <h2 className="text-sm font-semibold flex items-center gap-2">
-                      <FileText className="h-4 w-4" /> Attachments
-                    </h2>
-                    {/* Subtle rose alert in the header if missing docs */}
-                    {missingDocs && (
-                      <span className="ml-3 text-xs text-rose-600 font-medium">
-                        {missingDocsAlertMsg}
-                      </span>
-                    )}
-                  </div>
+                  <h2 className="text-sm font-semibold mb-2 flex items-center gap-2">
+                    <FileText className="h-4 w-4" /> Attachments
+                  </h2>
+                  {missingDocs && (
+                    <div className="mb-2">
+                      <span className="text-xs text-rose-600 font-medium">{missingDocsAlertMsg}</span>
+                    </div>
+                  )}
                   <Separator />
-                  <div className="space-y-2 text-sm">
-                    {/* Standard attachments */}
+                  <div className="space-y-2 text-sm mt-3">
                     {attachments
                       .filter(a => a.label !== 'AI Detection Certificate' && a.label !== 'Endorsement Form')
                       .map(a =>
@@ -738,7 +756,6 @@ export default function DetailsRequirementsPage(rawProps: any) {
                         ) : null
                       )}
 
-                    {/* AI Detection Certificate (linked by adviser) */}
                     <div className="flex items-center gap-2 px-3 py-2 rounded-md border bg-white dark:bg-zinc-900">
                       <FileText className="h-4 w-4" />
                       <span className="font-medium">AI Detection Certificate</span>
@@ -756,7 +773,6 @@ export default function DetailsRequirementsPage(rawProps: any) {
                       )}
                     </div>
 
-                    {/* Endorsement Form (linked by adviser) */}
                     <div className="flex items-center gap-2 px-3 py-2 rounded-md border bg-white dark:bg-zinc-900">
                       <FileText className="h-4 w-4" />
                       <span className="font-medium">Endorsement Form</span>
@@ -774,7 +790,6 @@ export default function DetailsRequirementsPage(rawProps: any) {
                       )}
                     </div>
 
-                    {/* If no attachments at all */}
                     {!attachments.some(a => a.url) &&
                       !request.ai_detection_certificate &&
                       !request.endorsement_form && (
@@ -967,30 +982,9 @@ export default function DetailsRequirementsPage(rawProps: any) {
           </div>
 
           {/* Workflow Progress Stepper sidebar */}
-          <div className="w-full md:w-[340px] flex-shrink-0">
-            {/* Adviser-Coordinator Relationship Card (shadcn style, white background, no shadow) */}
-            <div className="rounded-xl border p-4 bg-white text-xs mb-3">
-              <div className="space-y-2">
-               
-                <div className="flex items-start gap-2">
-                  <span className="font-bold">Program Coordinator:</span>
-                  <div className="text-zinc-700">
-                    {coordinators.length > 0 ? (
-                      coordinators.map((c, i) => (
-                        <span key={i} className="block">
-                          {c.name}{c.email ? ` (${c.email})` : ''}
-                        </span>
-                      ))
-                    ) : (
-                      <span className="italic text-zinc-400">No coordinator registered</span>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
-
+          <div className="w-full md:w-[340px] flex-shrink-0 space-y-4">
+            {/* Workflow Progress card (unchanged content moved below attachments) */}
             <div className="rounded-xl border p-5 bg-white dark:bg-zinc-900 h-fit">
-              {/* Removed 'sticky top-24' */}
               <h2 className="text-xs font-semibold mb-8 flex items-center gap-2">
                 <Clock className="h-4 w-4" /> Workflow Progress
               </h2>
@@ -1001,9 +995,8 @@ export default function DetailsRequirementsPage(rawProps: any) {
                     // Map "adviser-status-updated" to the actual workflow step
                     let event = item.action;
                     if (event === "adviser-status-updated" && item.to_state) {
-                      event = item.to_state; // e.g. "adviser-rejected", "adviser-review", etc.
+                      event = item.to_state;
                     }
-                    // Consistent label for pending/review state
                     if (event === "adviser-review" || event === "pending") {
                       event = "adviser-review";
                     }
