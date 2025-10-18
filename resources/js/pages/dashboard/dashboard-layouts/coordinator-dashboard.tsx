@@ -13,8 +13,8 @@ import type { DefenseRequest } from '@/types';
 import { Users, CalendarDays, ClipboardList, BadgeDollarSign } from 'lucide-react';
 import { Skeleton } from "@/components/ui/skeleton";
 import DefenseCountLineChart from '../widgets/visual-charts/defense-count';
-import PanelAssignedRadial from '../widgets/visual-charts/panel-assigned-count';
-import ActiveUsersAreaChart from '../widgets/visual-charts/ActiveUsersAreaChart';
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area"; // Make sure ScrollBar is imported
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 
 type PageProps = {
     auth: {
@@ -79,7 +79,8 @@ function getTodaysSchedules(defenseRequests: DefenseRequest[]) {
 export default function CoordinatorDashboard() {
     const {
         auth: { user },
-    } = usePage<PageProps>().props;
+        panelists, // <-- Add this line to get panelists from Inertia props if available
+    } = usePage<PageProps & { panelists?: any[] }>().props;
 
     const [allRequests, setAllRequests] = useState<DefenseRequest[]>([]);
     const [pendingRequests, setPendingRequests] = useState<DefenseRequest[]>([]);
@@ -91,7 +92,13 @@ export default function CoordinatorDashboard() {
 
     const [assignedPanelists, setAssignedPanelists] = useState<number>(0);
 
+    // Advisers linked to this coordinator
+    const [advisersCount, setAdvisersCount] = useState<number>(0);
+
     const [selectedDay, setSelectedDay] = useState<number>(new Date().getDay());
+
+    // Example: Assigned programs count (replace with real API if available)
+    const [assignedProgramsCount, setAssignedProgramsCount] = useState<number>(0);
 
     const weekDays = [
         { label: 'Sun', value: 0 },
@@ -102,6 +109,8 @@ export default function CoordinatorDashboard() {
         { label: 'Fri', value: 5 },
         { label: 'Sat', value: 6 },
     ];
+
+    const [tab, setTab] = useState("overview");
 
     useEffect(() => {
         fetch('/defense-requests', {
@@ -160,55 +169,95 @@ export default function CoordinatorDashboard() {
                 setAssignedPanelists(data.assignedPanelists ?? 0);
             })
             .catch(() => setAssignedPanelists(0));
+
+        // Fetch advisers for this coordinator and set count
+        fetch('/api/coordinator/advisers', {
+            headers: { 'Accept': 'application/json' }
+        })
+            .then(res => res.ok ? res.json() : [])
+            .then((data) => {
+                const list = Array.isArray(data) ? data : (data.advisers ?? data);
+                setAdvisersCount(list.length ?? 0);
+            })
+            .catch(() => setAdvisersCount(0));
+
+        // Example fetch for assigned programs (replace endpoint as needed)
+        fetch('/api/coordinator/programs', {
+            headers: { 'Accept': 'application/json' }
+        })
+            .then(res => res.ok ? res.json() : [])
+            .then((data) => {
+                // Assume array of programs
+                setAssignedProgramsCount(Array.isArray(data) ? data.length : 0);
+            })
+            .catch(() => setAssignedProgramsCount(0));
     }, []);
 
     // Dynamic metrics
     const { assignedPanelists: assignedPanelistsCount } = getPanelistStats(allRequests);
     const todaysSchedules = getTodaysSchedules(allRequests);
 
+    // Panelists count: use panelists from props if available, otherwise fallback to assignedPanelistsCount
+    const panelistsCount = Array.isArray(panelists) ? panelists.length : 0;
+
+    // Organize metrics for coordinator priorities
     const metrics = [
-        {
-            title: "Panelists Assignment",
-            value: (
-                <span>
-                    <span className="text-3xl font-bold text-gray-900 dark:text-white">{assignedPanelistsCount}</span>
-                    <span className="text-base font-semibold text-gray-400 dark:text-gray-500 ml-1">/ {realPanelistsCount}</span>
-                </span>
-            ),
-            description: "Panelists assigned",
-            icon: <Users className="size-7" />,
-        },
-        {
-            title: "Today's Schedules",
-            value: todaysSchedules,
-            description: "Defenses scheduled for today",
-            icon: <CalendarDays className="size-7" />,
-        },
         {
             title: "Pending Defense Requests",
             value: pendingRequests.length,
             description: "Awaiting coordinator action",
-            icon: <ClipboardList className="size-7" />,
+            icon: <ClipboardList className="size-5 text-rose-500" />, // Will override color below
+            iconTheme: "bg-rose-100 text-rose-600 dark:bg-rose-900 dark:text-rose-300",
+        },
+        {
+            title: "Today's Defense Schedules",
+            value: todaysSchedules,
+            description: "Defenses scheduled for today",
+            icon: <CalendarDays className="size-5 text-blue-500" />,
+            iconTheme: "bg-blue-100 text-blue-600 dark:bg-blue-900 dark:text-blue-300",
         },
         {
             title: "Pending Honorariums",
-            value: 7, // leave static for now
+            value: 7, // Replace with real value if available
             description: "Honorariums not yet processed",
-            icon: <BadgeDollarSign className="size-7" />,
+            icon: <BadgeDollarSign className="size-5 text-amber-500" />,
+            iconTheme: "bg-amber-100 text-amber-600 dark:bg-amber-900 dark:text-amber-300",
+        },
+        {
+            title: "Assigned Programs",
+            value: assignedProgramsCount,
+            description: "Programs you coordinate",
+            icon: <ClipboardList className="size-5 text-violet-500" />,
+            iconTheme: "bg-violet-100 text-violet-600 dark:bg-violet-900 dark:text-violet-300",
+        },
+        {
+            title: "Advisers",
+            value: advisersCount,
+            description: "Total advisers linked to you",
+            icon: <Users className="size-5 text-green-500" />,
+            iconTheme: "bg-green-100 text-green-600 dark:bg-green-900 dark:text-green-300",
+        },
+        {
+            title: "Panelists",
+            value: (
+                <span className="text-3xl font-bold text-gray-900 dark:text-white">
+                    {panelistsCount}
+                </span>
+            ),
+            description: "Panelists assigned",
+            icon: <Users className="size-5 text-violet-500" />,
+            iconTheme: "bg-violet-100 text-violet-600 dark:bg-violet-900 dark:text-violet-300",
         },
     ];
 
+    // Use the same sizing and layout as student-dashboard for metric cards
     return (
-        <div className="flex h-full flex-1 flex-col gap-4 overflow-auto  bg-white dark:bg-background">
-            {/* Skeleton Loader */}
+        <div className="flex h-full flex-1 flex-col gap-4 overflow-auto bg-white dark:bg-background">
             {loading ? (
                 <div className="w-full min-h-[70vh] bg-zinc-100 dark:bg-zinc-900 flex flex-col gap-4 p-0 m-0">
-                    {/* Top short row */}
                     <Skeleton className="h-6 w-1/6 rounded bg-zinc-300 dark:bg-zinc-800 mt-8 mx-8" />
-                    {/* Main rows */}
                     <Skeleton className="h-12 w-3/4 rounded bg-zinc-300 dark:bg-zinc-800 mx-8" />
                     <Skeleton className="h-12 w-2/3 rounded bg-zinc-300 dark:bg-zinc-800 mx-8" />
-                    {/* Big rectangle for dashboard body */}
                     <Skeleton className="h-[500px] w-full rounded bg-zinc-300 dark:bg-zinc-800 mt-4" />
                 </div>
             ) : (
@@ -233,88 +282,76 @@ export default function CoordinatorDashboard() {
                         </div>
                         <div className="flex items-center">
                             <div className="h-12 w-px mx-4 bg-gray-300 dark:bg-gray-700 opacity-60" />
-                            {/*  
-                            <div className="mr-8"> 
+                            {/* Quick Actions Widget */}
+                            <div className="mr-8">
                                 <QuickActionsWidget userRole={user?.role} />
                             </div>
-                            */ }
                         </div>
                     </div>
 
-                    {/* Metrics Cards */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-3 px-7 mb-6">
-                        <DefenseCountLineChart />
-                        <ActiveUsersAreaChart />
-                        {/* Other Metric Cards */}
-                        {metrics.slice(0, 2).map((metric, idx) => (
-                            <Card key={idx} className="col-span-1 rounded-2xl shadow-none border flex flex-col justify-between p-0 min-h-[220px]">
-                                <div className="flex items-center justify-between px-6 pt-5">
-                                    <div className="text-sm font-medium text-muted-foreground">
-                                        {metric.title}
-                                    </div>
-                                    <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        className="text-sm font-semibold px-3 py-1"
-                                        type="button"
-                                    >
-                                        View More
-                                    </Button>
-                                </div>
-                                <div className="px-6">
-                                    <div className="text-3xl font-bold leading-tight">{metric.value}</div>
-                                    <div className="text-sm mt-1 mb-2 text-muted-foreground">{metric.description}</div>
-                                </div>
-                                <CardContent className="flex-1 flex items-end w-full p-0">
-                                    <div className="flex items-center justify-end w-full pr-6 pb-4">
-                                        {React.cloneElement(metric.icon, { className: "text-rose-500 dark:text-rose-400 size-7" })}
-                                    </div>
-                                </CardContent>
-                            </Card>
-                        ))}
-                        <Card className="col-span-1 rounded-2xl shadow-none border flex flex-col justify-between p-0 min-h-[220px]">
-                            <div className="flex items-center justify-between px-6 pt-5">
-                                <div className="text-sm font-medium text-muted-foreground">
-                                    Pending Defense Requests
-                                </div>
-                                <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    className="text-sm font-semibold px-3 py-1"
-                                    type="button"
-                                >
-                                    View More
-                                </Button>
-                            </div>
-                            <div className="px-6">
-                                <div className="text-3xl font-bold leading-tight text-gray-900 dark:text-white">
-                                    {pendingRequests.length}
-                                </div>
-                                <div className="text-sm mt-1 mb-2 text-muted-foreground">
-                                    Awaiting coordinator action
-                                </div>
-                            </div>
-                            <CardContent className="flex-1 flex items-end w-full p-0">
-                                <div className="flex items-center justify-end w-full pr-6 pb-4">
-                                    <ClipboardList className="text-rose-500 dark:text-rose-400 size-7" />
-                                </div>
-                            </CardContent>
-                        </Card>
-                    </div>
+                    {/* Tabs */}
+                    <div className="w-full max-w-screen-xl mx-auto px-7">
+                        <Tabs value={tab} onValueChange={setTab} className="w-full">
+                            <TabsList className="mb-2">
+                                <TabsTrigger value="overview">Overview</TabsTrigger>
+                                <TabsTrigger value="analytics">Analytics</TabsTrigger>
+                            </TabsList>
 
-                    {/* Widgets Body */}
-                    <div className="flex flex-col gap-6 bg-gray-100 dark:bg-muted ms-4 me-4 rounded-xl mt-2 mb-2 px-5 py-8">
-                        <div className="w-full mb-2 flex flex-col md:flex-row gap-4">
-                            <WeeklyDefenseSchedulesWidget
-                                weekDays={weekDays}
-                                selectedDay={selectedDay}
-                                setSelectedDay={setSelectedDay}
-                                approvedDefenses={allRequests}
-                                referenceDate={new Date()}
-                                loading={loading}
-                            />
-                            <PendingDefenseRequestsWidget pendingRequests={pendingRequests} loading={loading} />
-                        </div>
+                            {/* Overview Tab */}
+                            <TabsContent value="overview" className="w-full">
+                                {/* Metric Cards - Student Dashboard Style */}
+                                <div className="w-full max-w-screen-xl mx-auto grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 px-0 mb-6">
+                                    {metrics.map((metric, idx) => (
+                                        <Card
+                                            key={idx}
+                                            className="col-span-1 rounded-xl border border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-sm flex flex-col justify-between p-0 min-h-0 h-auto transition hover:shadow-md"
+                                            style={{ minWidth: 0 }}
+                                        >
+                                            <div className="flex items-center justify-between px-5 pt-4 pb-0">
+                                                <div className="text-sm font-extrabold text-gray-800 dark:text-zinc-100">
+                                                    {metric.title}
+                                                </div>
+                                                <div className={`rounded-full p-1.5 flex items-center justify-center ${metric.iconTheme}`}>
+                                                    {/* Use size-4 for icons, matching student-dashboard */}
+                                                    {React.cloneElement(metric.icon, { className: "size-4 font-extrabold " + (metric.iconTheme?.split(" ").find(c => c.startsWith("text-")) ?? "") })}
+                                                </div>
+                                            </div>
+                                            <div className="flex flex-col px-5 pb-4 pt-2">
+                                                <span className="text-2xl font-bold text-gray-900 dark:text-white leading-none">
+                                                    {metric.value}
+                                                </span>
+                                                <span className="text-xs text-gray-400 dark:text-gray-500 mt-1 truncate">
+                                                    {metric.description}
+                                                </span>
+                                            </div>
+                                        </Card>
+                                    ))}
+                                </div>
+
+                                {/* Widgets Body - full width */}
+                                <div className="flex flex-col gap-6 bg-gray-100 dark:bg-muted rounded-xl mt-2 mb-2 px-4 py-8 w-full">
+                                    <div className="w-full mb-2 flex flex-col md:flex-row gap-4">
+                                        <WeeklyDefenseSchedulesWidget
+                                            weekDays={weekDays}
+                                            selectedDay={selectedDay}
+                                            setSelectedDay={setSelectedDay}
+                                            approvedDefenses={allRequests}
+                                            referenceDate={new Date()}
+                                            loading={loading}
+                                        />
+                                        <PendingDefenseRequestsWidget pendingRequests={pendingRequests} loading={loading} />
+                                    </div>
+                                </div>
+                            </TabsContent>
+
+                            {/* Analytics Tab */}
+                            <TabsContent value="analytics" className="w-full">
+                                <div className="w-full max-w-screen-xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                                    <DefenseCountLineChart />
+                                    {/* Add more analytics widgets here later */}
+                                </div>
+                            </TabsContent>
+                        </Tabs>
                     </div>
                 </>
             )}

@@ -225,7 +225,7 @@ export default function ShowAdvisers() {
             </div>
             <div>
               <span className="text-base font-semibold text-zinc-900 dark:text-zinc-100">
-                My Advisers
+                Advisers
               </span>
               <span className="block text-xs text-muted-foreground dark:text-zinc-400">
                 This page lists all advisers under your coordination. You can add, search, and manage advisers here.

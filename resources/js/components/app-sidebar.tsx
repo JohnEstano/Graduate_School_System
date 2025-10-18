@@ -67,6 +67,7 @@ const coordinatorNavItems: MainNavItem[] = [
         subItems: [
             { title: 'Defense Requests', href: '/coordinator/defense-requests' },
             { title: 'Panel Assignment', href: '/panelists' },
+            { title: 'Adviser List', href: '/coordinator/adviser-list'},
         ],
     },
     {
@@ -81,7 +82,7 @@ const coordinatorNavItems: MainNavItem[] = [
     { title: 'Honorarium', href: '/honorarium-summary', icon: DollarSign },
     { title: 'Student Records', href: '/student-records', icon: Users },
     { title: 'Schedules', href: '/schedules', icon: CalendarFold },
-    { title: 'Adviser List', href: '/coordinator/adviser-list', icon: Users },
+   
 ];
 
 const assistantNavItems: MainNavItem[] = [

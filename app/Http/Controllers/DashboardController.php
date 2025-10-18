@@ -205,6 +205,9 @@ class DashboardController extends Controller
         if ($effective === 'Coordinator') {
             $props['coordinatorStudents'] = $this->getCoordinatorStudents($user->email);
             $props['coordinatorPrograms'] = CoordinatorProgramService::getProgramsByEmail($user->email);
+
+            // Add this to include all panelists
+            $props['panelists'] = \App\Models\Panelist::all(['id', 'name', 'email']);
         }
 
         // --- Super Admin specific data ---
