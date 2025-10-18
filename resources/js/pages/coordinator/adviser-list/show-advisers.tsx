@@ -3,12 +3,14 @@ import axios from "axios";
 import { Table, TableHeader, TableRow, TableCell, TableBody, TableHead } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Copy, Check, Users, Search, Trash, UserPlus, Loader2, Edit, Plus, Mail, MessageCircle } from "lucide-react";
+import { Copy, Check, Users, Search, Trash, UserPlus, Loader2, Edit, Plus, Mail, MessageCircle, RefreshCw, User } from "lucide-react";
 import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
+import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
+import { Info } from "lucide-react";
 
 type Adviser = {
   id: number;
@@ -203,6 +205,14 @@ export default function ShowAdvisers() {
     }
   };
 
+  // Add this function for refreshing adviser data
+  const refreshAdviserData = async () => {
+    if (viewAdviser) {
+      await fetchStudents(viewAdviser.id);
+      await fetchPendingStudents(viewAdviser.id);
+    }
+  };
+
   if (loading) {
     return (
       <div className="w-full min-h-[70vh] bg-background flex flex-col gap-4 p-0 m-0">
@@ -220,11 +230,14 @@ export default function ShowAdvisers() {
       <div className="w-full border border-border rounded-lg overflow-hidden mb-1 bg-white dark:bg-zinc-900">
         <div className="flex flex-row items-center justify-between w-full p-3 border-b bg-white dark:bg-zinc-900">
           <div className="flex items-center gap-2">
-            <div className="h-10 w-10 flex items-center justify-center rounded-full bg-blue-500/10 border border-blue-500">
-              <Users className="h-5 w-5 text-blue-400" />
+            {/* Change Users icon background and border to rose-500 */}
+            <div className="h-10 w-10 flex items-center justify-center rounded-full bg-rose-500/10 border border-rose-500">
+              {/* Change icon color to rose-500 */}
+              <Users className="h-5 w-5 text-rose-500" />
             </div>
             <div>
-              <span className="text-base font-semibold text-zinc-900 dark:text-zinc-100">
+              {/* Change header text color to rose-500 */}
+              <span className="text-base font-semibold ">
                 Advisers
               </span>
               <span className="block text-xs text-muted-foreground dark:text-zinc-400">
@@ -525,8 +538,13 @@ export default function ShowAdvisers() {
         </div>
       )}
       {/* Adviser-Student Relationship Dialog */}
-      <Dialog open={viewDialogOpen} onOpenChange={open => {
+      <Dialog open={viewDialogOpen} onOpenChange={async open => {
         setViewDialogOpen(open);
+        if (open && viewAdviser) {
+          setStudents([]); // Clear previous students
+          setPendingStudents([]); // Clear previous pending students
+          await refreshAdviserData();
+        }
         if (!open) setViewAdviser(null);
       }}>
         <DialogContent className="max-w-2xl dark:bg-zinc-800">
@@ -537,11 +555,10 @@ export default function ShowAdvisers() {
             <DialogDescription>
               {viewAdviser && (
                 <div className="flex items-center gap-4 mt-2">
-                  <Avatar className="h-12 w-12">
-                    <AvatarFallback>
-                      {getInitials(viewAdviser)}
-                    </AvatarFallback>
-                  </Avatar>
+                  {/* Change to rose-500 */}
+                  <div className="h-12 w-12 flex items-center justify-center rounded-full bg-rose-500/10 border border-rose-500">
+                    <User className="h-7 w-7 text-rose-500" />
+                  </div>
                   <div>
                     <div className="font-semibold text-sm text-zinc-900 dark:text-zinc-100">
                       {viewAdviser.first_name} {viewAdviser.middle_name ? viewAdviser.middle_name[0] + "." : ""} {viewAdviser.last_name}
@@ -589,20 +606,33 @@ export default function ShowAdvisers() {
           </DialogHeader>
           <div className="mt-4">
             <Tabs value={adviserTab} onValueChange={setAdviserTab}>
-              <TabsList className="mb-2">
-                <TabsTrigger value="assigned">
-                  Assigned Students
-                  <span className="ml-2 px-2 py-0.5 rounded-full bg-zinc-100 dark:bg-zinc-700 text-zinc-700 dark:text-zinc-100 text-[11px] font-medium">
-                    {students.length}
-                  </span>
-                </TabsTrigger>
-                <TabsTrigger value="pending">
-                  Pending Confirmation
-                  <span className="ml-2 px-2 py-0.5 rounded-full bg-zinc-100 dark:bg-zinc-700 text-zinc-700 dark:text-zinc-100 text-[11px] font-medium">
-                    {pendingStudents.length}
-                  </span>
-                </TabsTrigger>
-              </TabsList>
+              <div className="flex items-center justify-between mb-2">
+                <TabsList>
+                  <TabsTrigger value="assigned">
+                    Assigned Students
+                    <span className="ml-2 px-2 py-0.5 rounded-full bg-zinc-100 dark:bg-zinc-700 text-zinc-700 dark:text-zinc-100 text-[11px] font-medium">
+                      {students.length}
+                    </span>
+                  </TabsTrigger>
+                  <TabsTrigger value="pending">
+                    Pending Confirmation
+                    <span className="ml-2 px-2 py-0.5 rounded-full bg-zinc-100 dark:bg-zinc-700 text-zinc-700 dark:text-zinc-100 text-[11px] font-medium">
+                      {pendingStudents.length}
+                    </span>
+                  </TabsTrigger>
+                </TabsList>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="ml-2"
+                  onClick={refreshAdviserData}
+                  disabled={studentsLoading || pendingLoading}
+                  title="Refresh student lists"
+                >
+                  <RefreshCw className={`mr-1 h-4 w-4 ${studentsLoading || pendingLoading ? "animate-spin" : ""}`} />
+                  Refresh
+                </Button>
+              </div>
               <TabsContent value="assigned">
                 <div
                   className="overflow-y-auto overflow-x-auto min-w-[400px] rounded"
@@ -707,24 +737,37 @@ export default function ShowAdvisers() {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3 py-2">
-             <Input
-               placeholder="Email"
-               value={studentEmail}
-               onChange={e => setStudentEmail(e.target.value)}
-               className="text-xs dark:bg-zinc-800 dark:text-zinc-100"
-               disabled={addingStudent}
-             />
-             {addStudentError && <div className="text-xs text-rose-500">{addStudentError}</div>}
-           </div>
-           <DialogFooter>
-             <Button
-               onClick={handleAddStudent}
-               disabled={!studentEmail.trim() || addingStudent}
-             >
-               {addingStudent ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Plus className="mr-2 h-4 w-4" />}
-               Add Student
-             </Button>
-           </DialogFooter>
+            {/* Error Alert (formal, profile.tsx style) */}
+            {addStudentError && (
+              <Alert className="bg-rose-50 dark:bg-rose-950 border-rose-200 dark:border-rose-900 text-rose-900 dark:text-rose-100 flex items-start gap-3 px-4 py-3 rounded-xl">
+                <Info className="h-5 w-5 text-rose-500 dark:text-rose-400 mt-1 flex-shrink-0" />
+                <div>
+                  <AlertTitle className="font-semibold mb-1">Cannot Assign Student</AlertTitle>
+                  <AlertDescription>
+                    {addStudentError === "This student is already assigned to another adviser."
+                      ? "This student is already assigned to another adviser. Each student may only have one adviser at a time. Please verify the student's assignment before proceeding."
+                      : addStudentError}
+                  </AlertDescription>
+                </div>
+              </Alert>
+            )}
+            <Input
+              placeholder="Email"
+              value={studentEmail}
+              onChange={e => setStudentEmail(e.target.value)}
+              className="text-xs dark:bg-zinc-800 dark:text-zinc-100"
+              disabled={addingStudent}
+            />
+          </div>
+          <DialogFooter>
+            <Button
+              onClick={handleAddStudent}
+              disabled={!studentEmail.trim() || addingStudent}
+            >
+              {addingStudent ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Plus className="mr-2 h-4 w-4" />}
+              Add Student
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

@@ -124,11 +124,11 @@ export default function ShowStudents() {
 
   if (loading) {
     return (
-      <div className="w-full min-h-[70vh] bg-zinc-100 flex flex-col gap-4 p-0 m-0">
-        <Skeleton className="h-6 w-1/6 rounded bg-zinc-300 mt-8 mx-8" />
-        <Skeleton className="h-12 w-3/4 rounded bg-zinc-300 mx-8" />
-        <Skeleton className="h-12 w-2/3 rounded bg-zinc-300 mx-8" />
-        <Skeleton className="h-[400px] w-full rounded bg-zinc-300 mt-4" />
+      <div className="w-full min-h-[70vh] bg-background flex flex-col gap-4 p-0 m-0">
+        <Skeleton className="h-6 w-1/6 rounded bg-muted dark:bg-muted mt-8 mx-8" />
+        <Skeleton className="h-12 w-3/4 rounded bg-muted dark:bg-muted mx-8" />
+        <Skeleton className="h-12 w-2/3 rounded bg-muted dark:bg-muted mx-8" />
+        <Skeleton className="h-[400px] w-full rounded bg-muted dark:bg-muted mt-4" />
       </div>
     );
   }
@@ -195,19 +195,19 @@ export default function ShowStudents() {
 
   return (
     <div className="flex h-full flex-1 flex-col gap-4 overflow-auto rounded-xl pt-5 pr-7 pl-7 relative
-      bg-white dark:bg-zinc-900 transition-colors">
+      bg-background dark:bg-zinc-900 transition-colors">
 
       {/* Header - two rows: title row, then search row */}
-      <div className="w-full border border-border rounded-lg overflow-hidden mb-1 bg-white dark:bg-zinc-800 dark:border-zinc-700">
+      <div className="w-full border border-border rounded-lg overflow-hidden mb-1 bg-white dark:bg-zinc-900 dark:border-zinc-700">
         {/* Title row */}
-        <div className="flex flex-row items-center justify-between w-full p-3 border-b bg-white dark:bg-zinc-800 dark:border-zinc-700">
+        <div className="flex flex-row items-center justify-between w-full p-3 border-b bg-white dark:bg-zinc-900 dark:border-zinc-700">
           <div className="flex items-center gap-2">
             <div className="h-10 w-10 flex items-center justify-center rounded-full bg-rose-500/10 border border-rose-500">
               <Users className="h-5 w-5 text-rose-400" />
             </div>
             <div>
-              <span className="text-base font-semibold">My Students</span>
-              <span className="block text-xs text-muted-foreground">Manage your accepted and pending advisees.</span>
+              <span className="text-base font-semibold text-zinc-900 dark:text-zinc-100">My Students</span>
+              <span className="block text-xs text-muted-foreground dark:text-zinc-400">This section shows all students assigned to you.</span>
             </div>
           </div>
 
@@ -216,13 +216,13 @@ export default function ShowStudents() {
         </div>
 
         {/* Search row (separate) */}
-        <div className="flex flex-row items-center justify-between w-full p-3 border-t bg-white dark:bg-zinc-800 dark:border-zinc-700">
+        <div className="flex flex-row items-center justify-between w-full p-3 border-t bg-white dark:bg-zinc-900 dark:border-zinc-700">
           <Input
             type="text"
-            placeholder="Search by name, email, student # or program..."
+            placeholder="Search..."
             value={query}
             onChange={e => setQuery(e.target.value)}
-            className="max-w-xs text-sm py-1 h-8"
+            className="max-w-xs text-sm py-1 h-8 bg-background dark:bg-background"
           />
         </div>
       </div>
@@ -231,24 +231,24 @@ export default function ShowStudents() {
         <TabsList className="mb-3">
           <TabsTrigger value="assigned" className="flex items-center gap-2">
             Assigned
-            <span className="inline-flex items-center justify-center rounded-full bg-slate-100 dark:bg-zinc-700 px-2 py-0.5 text-xs">{students.length}</span>
+            <span className="inline-flex items-center justify-center rounded-full bg-slate-100 dark:bg-zinc-700 px-2 py-0.5 text-xs text-zinc-700 dark:text-zinc-100">{students.length}</span>
           </TabsTrigger>
           <TabsTrigger value="pending" className="flex items-center gap-2">
             Pending
-            <span className="inline-flex items-center justify-center rounded-full bg-slate-100 dark:bg-zinc-700 px-2 py-0.5 text-xs">{pendingStudents.length}</span>
+            <span className="inline-flex items-center justify-center rounded-full bg-slate-100 dark:bg-zinc-700 px-2 py-0.5 text-xs text-zinc-700 dark:text-zinc-100">{pendingStudents.length}</span>
           </TabsTrigger>
         </TabsList>
 
         <TabsContent value="pending">
-          <div className="rounded-md overflow-x-auto w-full max-w-full border border-border bg-white dark:bg-zinc-800 dark:border-zinc-700">
+          <div className="rounded-md overflow-x-auto w-full max-w-full border border-border bg-white dark:bg-zinc-900 dark:border-zinc-700">
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="dark:text-zinc-300">Name</TableHead>
-                  <TableHead className="dark:text-zinc-300">Student #</TableHead>
-                  <TableHead className="dark:text-zinc-300">Email</TableHead>
-                  <TableHead className="dark:text-zinc-300">Program</TableHead>
-                  <TableHead className="dark:text-zinc-300">Actions</TableHead>
+                  <TableHead className="dark:text-zinc-100">Name</TableHead>
+                  <TableHead className="dark:text-zinc-100">Student #</TableHead>
+                  <TableHead className="dark:text-zinc-100">Email</TableHead>
+                  <TableHead className="dark:text-zinc-100">Program</TableHead>
+                  <TableHead className="dark:text-zinc-100">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -265,15 +265,15 @@ export default function ShowStudents() {
         </TabsContent>
 
         <TabsContent value="assigned">
-          <div className="rounded-md overflow-x-auto w-full max-w-full border border-border bg-white dark:bg-zinc-800 dark:border-zinc-700">
+          <div className="rounded-md overflow-x-auto w-full max-w-full border border-border bg-white dark:bg-zinc-900 dark:border-zinc-700">
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="dark:text-zinc-300">Name</TableHead>
-                  <TableHead className="dark:text-zinc-300">Student #</TableHead>
-                  <TableHead className="dark:text-zinc-300">Email</TableHead>
-                  <TableHead className="dark:text-zinc-300">Program</TableHead>
-                  <TableHead className="dark:text-zinc-300">Actions</TableHead>
+                  <TableHead className="dark:text-zinc-100">Name</TableHead>
+                  <TableHead className="dark:text-zinc-100">Student #</TableHead>
+                  <TableHead className="dark:text-zinc-100">Email</TableHead>
+                  <TableHead className="dark:text-zinc-100">Program</TableHead>
+                  <TableHead className="dark:text-zinc-100">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>

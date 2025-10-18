@@ -205,11 +205,22 @@ class CoordinatorAdviserController extends Controller
         return response()->json(['success' => true, 'adviser' => $adviser]);
     }
 
-    // Remove adviser
+    // Remove adviser and all their student relationships
     public function destroy(Request $request, $id)
     {
         $coordinator = $request->user();
-        Adviser::where('coordinator_id', $coordinator->id)->where('id', $id)->delete();
+        $adviser = Adviser::where('coordinator_id', $coordinator->id)->findOrFail($id);
+
+        // Remove all student relationships for this adviser
+        if ($adviser->user_id) {
+            $adviserUser = User::find($adviser->user_id);
+            if ($adviserUser) {
+                $adviserUser->advisedStudents()->detach();
+            }
+        }
+
+        $adviser->delete();
+
         return response()->json(['success' => true]);
     }
 
@@ -330,6 +341,15 @@ class CoordinatorAdviserController extends Controller
             }
         } else {
             return response()->json(['error' => 'student_id or email required.'], 422);
+        }
+
+        // Check if student is already assigned to ANY adviser (pending or accepted)
+        $alreadyAssigned = $student->advisers()
+            ->wherePivotIn('status', ['accepted', 'pending'])
+            ->exists();
+
+        if ($alreadyAssigned) {
+            return response()->json(['error' => 'This student is already assigned to another adviser.'], 409);
         }
 
         $adviserUser = User::find($adviser->user_id);
