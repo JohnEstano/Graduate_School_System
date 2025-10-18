@@ -37,31 +37,87 @@ class DefenseRequirementController extends Controller
                     'status' => $r->status ?? 'Pending',
                     'workflow_state' => $r->workflow_state,
                     'created_at' => $r->created_at?->toIso8601String(),
+                    // attachments
                     'manuscript_proposal' => $r->manuscript_proposal,
                     'similarity_index' => $r->similarity_index,
                     'rec_endorsement' => $r->rec_endorsement,
                     'proof_of_payment' => $r->proof_of_payment,
+                    'avisee_adviser_attachment' => $r->avisee_adviser_attachment,
+                    // defense metadata (so list rows can show schedule/panels too)
                     'defense_type' => $r->defense_type,
-                    'avisee_adviser_attachment' => $r->avisee_adviser_attachment, // <-- ADD THIS LINE
+                    'defense_chairperson' => $r->defense_chairperson,
+                    'defense_panelist1' => $r->defense_panelist1,
+                    'defense_panelist2' => $r->defense_panelist2,
+                    'defense_panelist3' => $r->defense_panelist3,
+                    'defense_panelist4' => $r->defense_panelist4,
+                    'scheduled_date' => $r->scheduled_date?->format('Y-m-d'),
+                    'scheduled_time' => $r->scheduled_time,
+                    'scheduled_end_time' => $r->scheduled_end_time,
+                    'defense_venue' => $r->defense_venue,
+                    'defense_mode' => $r->defense_mode,
+                    'scheduling_notes' => $r->scheduling_notes,
+                    'panels_assigned_at' => $r->panels_assigned_at?->toIso8601String(),
                 ];
             }),
-            'defenseRequest' => $defenseRequest,
-            'acceptDefense' => $acceptDefense,
-            'auth' => [
-                'user' => [
-                    'id' => $user->id,
-                    'first_name' => $user->first_name,
-                    'middle_name' => $user->middle_name,
-                    'last_name' => $user->last_name,
-                    'school_id' => $user->school_id,
-                    'program' => $user->program,
-                    'email' => $user->email,
-                    'advisers' => $user->advisers()
-                        ->select('users.id', 'users.first_name', 'users.middle_name', 'users.last_name', 'users.email', 'users.adviser_code')
-                        ->get(),
-                ],
-            ],
-        ]);
+            'defenseRequest' => $defenseRequest ? [
+                'id' => $defenseRequest->id,
+                'first_name' => $defenseRequest->first_name,
+                'middle_name' => $defenseRequest->middle_name,
+                'last_name' => $defenseRequest->last_name,
+                'school_id' => $defenseRequest->school_id,
+                'program' => $defenseRequest->program,
+                'thesis_title' => $defenseRequest->thesis_title,
+                'defense_type' => $defenseRequest->defense_type,
+                'status' => $defenseRequest->status,
+                'workflow_state' => $defenseRequest->workflow_state,
+                'workflow_state_display' => $defenseRequest->workflow_state, // keep for UI
+                // panelists / committee
+                'defense_chairperson' => $defenseRequest->defense_chairperson,
+                'defense_panelist1' => $defenseRequest->defense_panelist1,
+                'defense_panelist2' => $defenseRequest->defense_panelist2,
+                'defense_panelist3' => $defenseRequest->defense_panelist3,
+                'defense_panelist4' => $defenseRequest->defense_panelist4,
+                'panels_assigned_at' => $defenseRequest->panels_assigned_at?->toIso8601String(),
+                // schedule
+                'scheduled_date' => $defenseRequest->scheduled_date?->format('Y-m-d'),
+                'scheduled_time' => $defenseRequest->scheduled_time,
+                'scheduled_end_time' => $defenseRequest->scheduled_end_time,
+                'defense_venue' => $defenseRequest->defense_venue,
+                'defense_mode' => $defenseRequest->defense_mode,
+                'scheduling_notes' => $defenseRequest->scheduling_notes,
+                // documents
+                'advisers_endorsement' => $defenseRequest->advisers_endorsement,
+                'rec_endorsement' => $defenseRequest->rec_endorsement,
+                'proof_of_payment' => $defenseRequest->proof_of_payment,
+                'reference_no' => $defenseRequest->reference_no,
+                'manuscript_proposal' => $defenseRequest->manuscript_proposal,
+                'similarity_index' => $defenseRequest->similarity_index,
+                'avisee_adviser_attachment' => $defenseRequest->avisee_adviser_attachment,
+                'ai_detection_certificate' => $defenseRequest->ai_detection_certificate,
+                'endorsement_form' => $defenseRequest->endorsement_form,
+                // comments / history
+                'adviser_comments' => $defenseRequest->adviser_comments,
+                'coordinator_comments' => $defenseRequest->coordinator_comments,
+                'last_status_updated_by' => $defenseRequest->last_status_updated_by,
+                'last_status_updated_at' => $defenseRequest->last_status_updated_at,
+                'workflow_history' => $defenseRequest->workflow_history ?? [],
+            ] : null,
+             'acceptDefense' => $acceptDefense,
+             'auth' => [
+                 'user' => [
+                     'id' => $user->id,
+                     'first_name' => $user->first_name,
+                     'middle_name' => $user->middle_name,
+                     'last_name' => $user->last_name,
+                     'school_id' => $user->school_id,
+                     'program' => $user->program,
+                     'email' => $user->email,
+                     'advisers' => $user->advisers()
+                         ->select('users.id', 'users.first_name', 'users.middle_name', 'users.last_name', 'users.email', 'users.adviser_code')
+                         ->get(),
+                 ],
+             ],
+         ]);
     }
 
     public function all(Request $request)
