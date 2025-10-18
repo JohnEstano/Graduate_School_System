@@ -108,8 +108,6 @@ const assistantNavItems: MainNavItem[] = [
 
 const facultyNavItems: MainNavItem[] = [
     { title: 'Dashboard', href: '/dashboard', icon: LayoutGrid },
-    { title: 'Defense Requirements', href: '/all-defense-requirements', icon: GraduationCap },
-    { title: 'My Students', href: '/adviser/students-list', icon: Users }, // <-- Add this line
     { title: 'Schedules', href: '/schedules', icon: CalendarFold },
 ];
 
@@ -141,50 +139,6 @@ export function AppSidebar() {
         navItems = studentNavItems;
     }
 
-    // Only show badge for coordinator's "Defense Requests" submenu
-    const [defenseRequestCount, setDefenseRequestCount] = useState<number>(0);
-
-    useEffect(() => {
-        let isMounted = true;
-
-        async function fetchCount() {
-            try {
-                const res = await fetch('/api/defense-requests/count');
-                if (res.ok) {
-                    const data = await res.json();
-                    if (isMounted) setDefenseRequestCount(data.count);
-                }
-            } catch {
-                // ignore
-            }
-        }
-
-        fetchCount();
-        const pollInterval = setInterval(fetchCount, 60000);
-        return () => {
-            isMounted = false;
-            clearInterval(pollInterval);
-        };
-    }, []);
-
-    // Only add badge for coordinator
-    if (user.role === 'Coordinator') {
-        navItems = navItems.map(item => {
-            if (item.title === 'Thesis & Dissertations') {
-                return {
-                    ...item,
-                    indicator: defenseRequestCount > 0,
-                    subItems: item.subItems?.map(sub =>
-                        sub.title === 'Defense Requests'
-                            ? { ...sub, count: defenseRequestCount }
-                            : sub
-                    ),
-                };
-            }
-            return item;
-        });
-    }
-
     // Expanded menus state
     const [expandedMenus, setExpandedMenus] = useState<string[]>(() => {
         try {
@@ -198,6 +152,26 @@ export function AppSidebar() {
     useEffect(() => {
         localStorage.setItem("sidebar.expandedMenus", JSON.stringify(expandedMenus));
     }, [expandedMenus]);
+
+    // Show "Others" section for Faculty, Coordinator, Dean only
+    const showOthers =
+        user.role === 'Faculty' ||
+        user.role === 'Coordinator' ||
+        user.role === 'Dean';
+
+    // Items for the Others section
+    const othersNavItems: MainNavItem[] = [
+        {
+            title: 'My Students',
+            href: '/adviser/students-list',
+            icon: Users,
+        },
+        {
+            title: 'Defense Requirements',
+            href: '/all-defense-requirements',
+            icon: GraduationCap,
+        },
+    ];
 
     return (
         <Sidebar collapsible="offcanvas" className="px-3 pt-5" variant="inset">
@@ -219,6 +193,16 @@ export function AppSidebar() {
                     expandedMenus={expandedMenus}
                     setExpandedMenus={setExpandedMenus}
                 />
+                {showOthers && (
+                    <div className="mb-2">
+                        <NavMain
+                            items={othersNavItems}
+                            expandedMenus={expandedMenus}
+                            setExpandedMenus={setExpandedMenus}
+                            sectionTitle="Others"
+                        />
+                    </div>
+                )}
             </SidebarContent>
 
             <SidebarFooter>

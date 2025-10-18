@@ -133,4 +133,12 @@ class AdviserStudentController extends Controller
         }
         return response()->json(['success' => true]);
     }
+
+    public function hasStudents(Request $request)
+    {
+        $user = $request->user();
+        // Count all students where this user is the adviser, regardless of role
+        $count = $user->advisedStudents()->count();
+        return response()->json(['hasStudents' => $count > 0]);
+    }
 }
