@@ -21,6 +21,7 @@ type Adviser = {
   name?: string;
   employee_id?: string;
   status?: "active" | "inactive";
+  assigned_students_count?: number; // <-- Add this line
 };
 
 type Student = {
@@ -332,6 +333,7 @@ export default function ShowAdvisers() {
               <TableRow>
                 <TableHead className="w-[220px] min-w-[180px] max-w-[260px] truncate">Name</TableHead>
                 <TableHead className="w-[220px] min-w-[180px] max-w-[260px] truncate">Email</TableHead>
+                <TableHead className="w-[90px] min-w-[70px] max-w-[100px] text-center">Students</TableHead> {/* <-- Add this line */}
                 <TableHead className="w-[110px] min-w-[90px] max-w-[120px] text-center">Status</TableHead>
                 <TableHead className="w-[120px] min-w-[100px] max-w-[140px] text-center">Actions</TableHead>
               </TableRow>
@@ -339,7 +341,7 @@ export default function ShowAdvisers() {
             <TableBody>
               {paginatedAdvisers.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={4} className="py-8 text-center text-sm text-muted-foreground dark:text-zinc-400">
+                  <TableCell colSpan={5} className="py-8 text-center text-sm text-muted-foreground dark:text-zinc-400">
                     No advisers found.
                   </TableCell>
                 </TableRow>
@@ -357,6 +359,10 @@ export default function ShowAdvisers() {
                       </span>
                     </TableCell>
                     <TableCell className="truncate max-w-[240px] text-zinc-700 dark:text-zinc-300">{a.email}</TableCell>
+                    {/* Students Count Column */}
+                    <TableCell className="text-center text-zinc-700 dark:text-zinc-300">
+                      {typeof a.assigned_students_count === "number" ? a.assigned_students_count : 0}
+                    </TableCell>
                     {/* Status Column */}
                     <TableCell className="text-center">
                       {a.status === "active" ? (

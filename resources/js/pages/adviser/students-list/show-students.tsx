@@ -31,6 +31,7 @@ type Student = {
   last_name: string | null;
   email: string | null;
   program: string | null;
+  coordinator_name?: string | null; // <-- Add this line
 };
 
 function getInitials(student: Student | any) {
@@ -137,7 +138,7 @@ export default function ShowStudents() {
     if (rows.length === 0) {
       return (
         <TableRow>
-          <TableCell colSpan={5} className="py-8 text-center text-sm text-muted-foreground dark:text-zinc-400">
+          <TableCell colSpan={isPending ? 6 : 5} className="py-8 text-center text-sm text-muted-foreground dark:text-zinc-400">
             No students found.
           </TableCell>
         </TableRow>
@@ -155,40 +156,29 @@ export default function ShowStudents() {
         <TableCell className="dark:text-zinc-200">{s.student_number || "N/A"}</TableCell>
         <TableCell className="dark:text-zinc-200">{s.email || "N/A"}</TableCell>
         <TableCell className="dark:text-zinc-200">{s.program || "N/A"}</TableCell>
-        <TableCell>
-          {isPending ? (
-            <div className="flex gap-2">
-              <Button size="sm" onClick={() => acceptPending(s)}><Check size={14} className="mr-1" />Accept</Button>
-              <Button size="sm" variant="outline" onClick={() => rejectPending(s)}>Reject</Button>
-            </div>
-          ) : (
-            <Dialog open={confirmOpen && studentToRemove?.id === s.id} onOpenChange={(open) => {
-              if (!open) {
-                setConfirmOpen(false);
-                setStudentToRemove(null);
-              }
-            }}>
-              <DialogTrigger asChild>
-                <Button variant="outline" size="icon" aria-label="Remove student" onClick={() => {
-                  setStudentToRemove(s);
-                  setConfirmOpen(true);
-                }}>
-                  <Trash size={18} />
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Remove Student</DialogTitle>
-                </DialogHeader>
-                <div className="py-2">Are you sure you want to remove <b>{s.first_name} {s.last_name}</b>?</div>
-                <DialogFooter>
-                  <Button variant="outline" onClick={() => { setConfirmOpen(false); setStudentToRemove(null); }} className="mr-2">Cancel</Button>
-                  <Button onClick={handleRemoveStudent} className="bg-rose-500 text-white">Confirm</Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
-          )}
-        </TableCell>
+        <TableCell className="dark:text-zinc-200">{s.coordinator_name || "N/A"}</TableCell>
+        {isPending && (
+          <TableCell className="flex gap-2 justify-center">
+            <Button
+              variant="outline"
+              size="icon"
+              title="Accept"
+              onClick={() => acceptPending(s)}
+              className="text-green-600 border-green-300 hover:bg-green-50 hover:text-green-700"
+            >
+              <Check className="w-4 h-4" />
+            </Button>
+            <Button
+              variant="outline"
+              size="icon"
+              title="Reject"
+              onClick={() => rejectPending(s)}
+              className="text-rose-600 border-rose-300 hover:bg-rose-50 hover:text-rose-700"
+            >
+              <Trash className="w-4 h-4" />
+            </Button>
+          </TableCell>
+        )}
       </TableRow>
     ));
   }
@@ -231,11 +221,11 @@ export default function ShowStudents() {
         <TabsList className="mb-3">
           <TabsTrigger value="assigned" className="flex items-center gap-2">
             Assigned
-            <span className="inline-flex items-center justify-center rounded-full bg-slate-100 dark:bg-zinc-700 px-2 py-0.5 text-xs text-zinc-700 dark:text-zinc-100">{students.length}</span>
+            <span className="inline-flex items-center justify-center px-2 py-0.5 text-xs text-zinc-700 dark:text-zinc-100">{students.length}</span>
           </TabsTrigger>
           <TabsTrigger value="pending" className="flex items-center gap-2">
             Pending
-            <span className="inline-flex items-center justify-center rounded-full bg-slate-100 dark:bg-zinc-700 px-2 py-0.5 text-xs text-zinc-700 dark:text-zinc-100">{pendingStudents.length}</span>
+            <span className="inline-flex items-center justify-center px-2 py-0.5 text-xs text-zinc-700 dark:text-zinc-100">{pendingStudents.length}</span>
           </TabsTrigger>
         </TabsList>
 
@@ -248,13 +238,14 @@ export default function ShowStudents() {
                   <TableHead className="dark:text-zinc-100">Student #</TableHead>
                   <TableHead className="dark:text-zinc-100">Email</TableHead>
                   <TableHead className="dark:text-zinc-100">Program</TableHead>
-                  <TableHead className="dark:text-zinc-100">Actions</TableHead>
+                  <TableHead className="dark:text-zinc-100">Program Coordinator</TableHead>
+                  <TableHead className="dark:text-zinc-100 text-center">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {pendingLoading ? (
                   <TableRow>
-                    <TableCell colSpan={5} className="py-8 text-center text-sm text-muted-foreground dark:text-zinc-400">
+                    <TableCell colSpan={6} className="py-8 text-center text-sm text-muted-foreground dark:text-zinc-400">
                       Loading pending...
                     </TableCell>
                   </TableRow>
@@ -270,10 +261,10 @@ export default function ShowStudents() {
               <TableHeader>
                 <TableRow>
                   <TableHead className="dark:text-zinc-100">Name</TableHead>
-                  <TableHead className="dark:text-zinc-100">Student #</TableHead>
+                  <TableHead className="dark:text-zinc-100">School ID</TableHead>
                   <TableHead className="dark:text-zinc-100">Email</TableHead>
                   <TableHead className="dark:text-zinc-100">Program</TableHead>
-                  <TableHead className="dark:text-zinc-100">Actions</TableHead>
+                  <TableHead className="dark:text-zinc-100">Program Coordinator</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>

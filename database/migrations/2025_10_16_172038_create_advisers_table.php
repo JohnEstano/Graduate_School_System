@@ -14,7 +14,7 @@ class CreateAdvisersTable extends Migration
             $table->string('first_name')->nullable();
             $table->string('middle_name')->nullable();
             $table->string('last_name')->nullable();
-            $table->string('email')->unique();
+            $table->string('email');
             $table->string('employee_id')->nullable();
             $table->enum('status', ['inactive', 'active'])->default('inactive');
             $table->unsignedBigInteger('user_id')->nullable();
@@ -22,6 +22,7 @@ class CreateAdvisersTable extends Migration
 
             $table->foreign('coordinator_id')->references('id')->on('users')->onDelete('cascade');
             $table->foreign('user_id')->references('id')->on('users')->onDelete('set null');
+            $table->unique(['coordinator_id', 'email']); // Unique per coordinator
         });
     }
 

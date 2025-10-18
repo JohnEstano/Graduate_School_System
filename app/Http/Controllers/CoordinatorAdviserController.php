@@ -48,20 +48,46 @@ class CoordinatorAdviserController extends Controller
 
             // Build students list — if linked to a user use their advisedStudents relation
             $students = [];
+            $assigned_students_count = 0;
             if ($row->user_id) {
                 $user = $matchedUser ?? User::find($row->user_id);
                 if ($user) {
-                    $students = $user->advisedStudents->map(function ($student) {
-                        return [
-                            'id' => $student->id,
-                            'student_number' => $student->student_number,
-                            'first_name' => $student->first_name,
-                            'middle_name' => $student->middle_name,
-                            'last_name' => $student->last_name,
-                            'email' => $student->email,
-                            'program' => $student->program,
-                        ];
-                    })->values()->all();
+                    // Only include students assigned by this coordinator
+                    $students = $user->advisedStudents
+                        ->filter(function ($student) use ($coordinator) {
+                            return $student->pivot && $student->pivot->requested_by == $coordinator->id;
+                        })
+                        ->map(function ($student) use ($coordinator) {
+                            $coordinatorName = null;
+                            if ($student->pivot && $student->pivot->requested_by) {
+                                $coordinator = User::find($student->pivot->requested_by);
+                                if ($coordinator) {
+                                    $coordinatorName = trim(
+                                        $coordinator->first_name . ' ' .
+                                        ($coordinator->middle_name ? strtoupper($coordinator->middle_name[0]) . '. ' : '') .
+                                        $coordinator->last_name
+                                    );
+                                }
+                            }
+                            return [
+                                'id' => $student->id,
+                                'student_number' => $student->student_number,
+                                'first_name' => $student->first_name,
+                                'middle_name' => $student->middle_name,
+                                'last_name' => $student->last_name,
+                                'email' => $student->email,
+                                'program' => $student->program,
+                                'coordinator_name' => $coordinatorName,
+                            ];
+                        })
+                        ->values()
+                        ->all();
+
+                    // Count only accepted students assigned by this coordinator
+                    $assigned_students_count = $user->advisedStudents()
+                        ->wherePivot('status', 'accepted')
+                        ->wherePivot('requested_by', $coordinator->id)
+                        ->count();
                 }
             }
 
@@ -74,6 +100,7 @@ class CoordinatorAdviserController extends Controller
                 'employee_id' => $row->employee_id,
                 'status' => $row->status ?? 'inactive',
                 'students' => $students,
+                'assigned_students_count' => $assigned_students_count,
             ];
         }
 
@@ -105,11 +132,7 @@ class CoordinatorAdviserController extends Controller
             return response()->json(['error' => 'Adviser already added.'], 409);
         }
 
-        // Prevent a global duplicate (advisers.email is unique in DB)
-        $globalExisting = Adviser::where('email', $validated['email'])->first();
-        if ($globalExisting) {
-            return response()->json(['error' => 'An adviser with that email already exists.'], 409);
-        }
+        // DO NOT check for global duplicate anymore!
 
         // Simple check: is there a User with that email?
         $user = User::where('email', $validated['email'])->first();
@@ -129,7 +152,7 @@ class CoordinatorAdviserController extends Controller
         } catch (QueryException $e) {
             $errorCode = $e->errorInfo[1] ?? null;
             if ($errorCode === 1062) {
-                return response()->json(['error' => 'An adviser with that email already exists.'], 409);
+                return response()->json(['error' => 'An adviser with that email already exists for this coordinator.'], 409);
             }
             return response()->json(['error' => 'Database error: ' . ($e->getMessage() ?? 'unknown')], 500);
         }
@@ -259,8 +282,20 @@ class CoordinatorAdviserController extends Controller
 
         $students = $adviserUser->advisedStudents()
             ->wherePivot('status', 'accepted')
+            ->wherePivot('requested_by', $coordinator->id) // <-- Only those assigned by this coordinator
             ->get()
-            ->map(function ($s) {
+            ->map(function ($s) use ($coordinator) {
+                $coordinatorName = null;
+                if ($s->pivot && $s->pivot->requested_by) {
+                    $coordinatorUser = User::find($s->pivot->requested_by);
+                    if ($coordinatorUser) {
+                        $coordinatorName = trim(
+                            $coordinatorUser->first_name . ' ' .
+                            ($coordinatorUser->middle_name ? strtoupper($coordinatorUser->middle_name[0]) . '. ' : '') .
+                            $coordinatorUser->last_name
+                        );
+                    }
+                }
                 return [
                     'id' => $s->id,
                     'student_number' => $s->student_number ?? null,
@@ -269,6 +304,7 @@ class CoordinatorAdviserController extends Controller
                     'last_name' => $s->last_name ?? null,
                     'email' => $s->email ?? null,
                     'program' => $s->program ?? null,
+                    'coordinator_name' => $coordinatorName,
                 ];
             })->values();
 
@@ -288,8 +324,20 @@ class CoordinatorAdviserController extends Controller
 
         $students = $adviserUser->advisedStudents()
             ->wherePivot('status', 'pending')
+            ->wherePivot('requested_by', $coordinator->id) // <-- Only those assigned by this coordinator
             ->get()
-            ->map(function ($s) {
+            ->map(function ($s) use ($coordinator) {
+                $coordinatorName = null;
+                if ($s->pivot && $s->pivot->requested_by) {
+                    $coordinatorUser = User::find($s->pivot->requested_by);
+                    if ($coordinatorUser) {
+                        $coordinatorName = trim(
+                            $coordinatorUser->first_name . ' ' .
+                            ($coordinatorUser->middle_name ? strtoupper($coordinatorUser->middle_name[0]) . '. ' : '') .
+                            $coordinatorUser->last_name
+                        );
+                    }
+                }
                 return [
                     'id' => $s->id,
                     'student_number' => $s->student_number ?? null,
@@ -298,6 +346,7 @@ class CoordinatorAdviserController extends Controller
                     'last_name' => $s->last_name ?? null,
                     'email' => $s->email ?? null,
                     'program' => $s->program ?? null,
+                    'coordinator_name' => $coordinatorName,
                     'requested_by' => $s->pivot->requested_by ?? null,
                     'requested_at' => $s->pivot->created_at ?? null,
                 ];

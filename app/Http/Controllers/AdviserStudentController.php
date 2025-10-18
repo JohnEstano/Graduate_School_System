@@ -16,6 +16,18 @@ class AdviserStudentController extends Controller
             ->wherePivot('status', 'accepted')
             ->get()
             ->map(function ($s) {
+                // Get coordinator name from pivot
+                $coordinatorName = null;
+                if ($s->pivot && $s->pivot->requested_by) {
+                    $coordinator = User::find($s->pivot->requested_by);
+                    if ($coordinator) {
+                        $coordinatorName = trim(
+                            $coordinator->first_name . ' ' .
+                            ($coordinator->middle_name ? strtoupper($coordinator->middle_name[0]) . '. ' : '') .
+                            $coordinator->last_name
+                        );
+                    }
+                }
                 return [
                     'id' => $s->id,
                     'student_number' => $s->student_number ?? null,
@@ -24,6 +36,7 @@ class AdviserStudentController extends Controller
                     'last_name' => $s->last_name ?? null,
                     'email' => $s->email ?? null,
                     'program' => $s->program ?? null,
+                    'coordinator_name' => $coordinatorName,
                 ];
             })->values();
 
@@ -38,6 +51,18 @@ class AdviserStudentController extends Controller
             ->wherePivot('status', 'pending')
             ->get()
             ->map(function ($s) {
+                // Get coordinator name from pivot
+                $coordinatorName = null;
+                if ($s->pivot && $s->pivot->requested_by) {
+                    $coordinator = User::find($s->pivot->requested_by);
+                    if ($coordinator) {
+                        $coordinatorName = trim(
+                            $coordinator->first_name . ' ' .
+                            ($coordinator->middle_name ? strtoupper($coordinator->middle_name[0]) . '. ' : '') .
+                            $coordinator->last_name
+                        );
+                    }
+                }
                 return [
                     'id' => $s->id,
                     'student_number' => $s->student_number ?? null,
@@ -46,6 +71,7 @@ class AdviserStudentController extends Controller
                     'last_name' => $s->last_name ?? null,
                     'email' => $s->email ?? null,
                     'program' => $s->program ?? null,
+                    'coordinator_name' => $coordinatorName,
                     'requested_by' => $s->pivot->requested_by ?? null,
                     'requested_at' => $s->pivot->created_at ?? null,
                 ];
