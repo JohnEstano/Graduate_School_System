@@ -284,20 +284,20 @@ export default function PanelistsPage() {
     <AppLayout breadcrumbs={breadcrumbs}>
       <Head title="Panelists" />
       <Toaster richColors position="bottom-right" />
-      <div className="flex h-full flex-1 flex-col gap-4 overflow-auto rounded-xl pt-5 pr-7 pl-7 relative">
+      <div className="flex h-full flex-1 flex-col gap-4 overflow-auto rounded-xl pt-5 pr-7 pl-7 relative bg-background">
 
         {/* Header row */}
-        <div className="w-full bg-white border border-border rounded-lg overflow-hidden">
-          <div className="flex flex-row items-center justify-between w-full p-3 border-b bg-white">
+        <div className="w-full bg-white dark:bg-zinc-900 border border-border dark:border-border rounded-lg overflow-hidden">
+          <div className="flex flex-row items-center justify-between w-full p-3 border-b bg-white dark:bg-zinc-900 dark:border-border">
             <div className="flex items-center gap-2">
-              <div className="h-10 w-10 flex items-center justify-center rounded-full bg-rose-500/10 border border-rose-500">
+              <div className="h-10 w-10 flex items-center justify-center rounded-full bg-rose-500/10 dark:bg-rose-900 border border-rose-500">
                 <Users className="h-5 w-5 text-rose-400" />
               </div>
               <div>
                 <span className="text-base font-semibold">
                 Panelists
                 </span>
-                <span className="block text-xs text-muted-foreground">
+                <span className="block text-xs text-muted-foreground dark:text-muted-foreground">
                   This section shows all defense panelists. Add, search, and manage panelists.
                 </span>
               </div>
@@ -313,15 +313,12 @@ export default function PanelistsPage() {
               </Button>
               <Button onClick={() => { setModalOpen(true); setEditing(null); }} disabled={formLoading || loading}>
                   <UserPlus className="h-4 w-4" />  {formLoading ? "Loading..." : "Add Panel"}
-                    
               </Button>
             </div>
           </div>
           {/* Search bar row with filters */}
-          <div className="flex items-center justify-between gap-2 px-4 py-3 border-b bg-white">
-            {/* Group: +circle icon, Search bar + filters */}
+          <div className="flex items-center justify-between gap-2 px-4 py-3 border-b bg-white dark:bg-zinc-900 dark:border-border">
             <div className="flex items-center gap-2">
-              
               <Input
                 type="text"
                 startIcon={Search}
@@ -341,20 +338,20 @@ export default function PanelistsPage() {
                     <PlusCircle className="h-4 w-4 mr-1" />
                     Role
                     {roleFilter.length > 0 && (
-                      <span className="ml-1 px-2 py-0.5 rounded-full text-xs bg-muted">
+                      <span className="ml-1 px-2 py-0.5 rounded-full text-xs bg-muted dark:bg-zinc-800">
                         {roleFilter.length > 1 ? `${roleFilter.length} selected` : roleFilter[0]}
                       </span>
                     )}
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-44 p-1" side="bottom" align="start">
+                <PopoverContent className="w-44 p-1 dark:bg-zinc-900 dark:text-muted-foreground" side="bottom" align="start">
                   {["Chairperson", "Panel Member"].map((role) => (
                     <div
                       key={role}
                       onClick={() =>
                         setRoleFilter((rf) => rf.includes(role) ? rf.filter(x => x !== role) : [...rf, role])
                       }
-                      className="flex items-center gap-2 p-2 rounded hover:bg-muted cursor-pointer"
+                      className="flex items-center gap-2 p-2 rounded hover:bg-muted dark:hover:bg-zinc-800 cursor-pointer"
                     >
                       <Checkbox checked={roleFilter.includes(role)} />
                       <span className="text-sm">{role}</span>
@@ -375,20 +372,20 @@ export default function PanelistsPage() {
                     <PlusCircle className="h-4 w-4 mr-1" />
                     Status
                     {statusFilter.length > 0 && (
-                      <span className="ml-1 px-2 py-0.5 rounded-full text-xs bg-muted">
+                      <span className="ml-1 px-2 py-0.5 rounded-full text-xs bg-muted dark:bg-zinc-800">
                         {statusFilter.length > 1 ? `${statusFilter.length} selected` : statusFilter[0]}
                       </span>
                     )}
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-44 p-1" side="bottom" align="start">
+                <PopoverContent className="w-44 p-1 dark:bg-zinc-900 dark:text-muted-foreground" side="bottom" align="start">
                   {["Assigned", "Not Assigned"].map((status) => (
                     <div
                       key={status}
                       onClick={() =>
                         setStatusFilter((sf) => sf.includes(status) ? sf.filter(x => x !== status) : [...sf, status])
                       }
-                      className="flex items-center gap-2 p-2 rounded hover:bg-muted cursor-pointer"
+                      className="flex items-center gap-2 p-2 rounded hover:bg-muted dark:hover:bg-zinc-800 cursor-pointer"
                     >
                       <Checkbox checked={statusFilter.includes(status)} />
                       <span className="text-sm">{status}</span>
@@ -434,7 +431,7 @@ export default function PanelistsPage() {
 
         {/* Floating Bulk Action Bar */}
         {selected.length > 0 && (
-          <div className="fixed left-1/2 z-30 -translate-x-1/2 bottom-4 md:bottom-6 flex items-center gap-1 bg-white border border-border shadow-lg rounded-lg px-4 py-1 text-xs animate-in fade-in slide-in-from-bottom-2 dark:bg-muted dark:text-muted-foreground dark:border-border">
+          <div className="fixed left-1/2 z-30 -translate-x-1/2 bottom-4 md:bottom-6 flex items-center gap-1 bg-white dark:bg-muted dark:text-muted-foreground border border-border dark:border-border shadow-lg rounded-lg px-4 py-1 text-xs animate-in fade-in slide-in-from-bottom-2">
             <span className="font-semibold min-w-[70px] text-center">{selected.length} selected</span>
             <div className="flex gap-1">
               <Button

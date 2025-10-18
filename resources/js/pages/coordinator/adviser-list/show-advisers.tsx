@@ -205,29 +205,29 @@ export default function ShowAdvisers() {
 
   if (loading) {
     return (
-      <div className="w-full min-h-[70vh] bg-zinc-100 flex flex-col gap-4 p-0 m-0">
-        <Skeleton className="h-6 w-1/6 rounded bg-zinc-300 mt-8 mx-8" />
-        <Skeleton className="h-12 w-3/4 rounded bg-zinc-300 mx-8" />
-        <Skeleton className="h-12 w-2/3 rounded bg-zinc-300 mx-8" />
-        <Skeleton className="h-[400px] w-full rounded bg-zinc-300 mt-4" />
+      <div className="w-full min-h-[70vh] bg-background flex flex-col gap-4 p-0 m-0">
+        <Skeleton className="h-6 w-1/6 rounded bg-muted dark:bg-muted mt-8 mx-8" />
+        <Skeleton className="h-12 w-3/4 rounded bg-muted dark:bg-muted mx-8" />
+        <Skeleton className="h-12 w-2/3 rounded bg-muted dark:bg-muted mx-8" />
+        <Skeleton className="h-[400px] w-full rounded bg-muted dark:bg-muted mt-4" />
       </div>
     );
   }
 
   return (
-    <div className="flex h-full flex-1 flex-col gap-4 overflow-auto rounded-xl pt-5 pr-7 pl-7 relative bg-white">
+    <div className="flex h-full flex-1 flex-col gap-4 overflow-auto rounded-xl pt-5 pr-7 pl-7 relative bg-background">
       {/* Header */}
-      <div className="w-full border border-border rounded-lg overflow-hidden mb-1 bg-white">
-        <div className="flex flex-row items-center justify-between w-full p-3 border-b bg-white">
+      <div className="w-full border border-border rounded-lg overflow-hidden mb-1 bg-white dark:bg-zinc-900">
+        <div className="flex flex-row items-center justify-between w-full p-3 border-b bg-white dark:bg-zinc-900">
           <div className="flex items-center gap-2">
             <div className="h-10 w-10 flex items-center justify-center rounded-full bg-blue-500/10 border border-blue-500">
               <Users className="h-5 w-5 text-blue-400" />
             </div>
             <div>
-              <span className="text-base font-semibold">
+              <span className="text-base font-semibold text-zinc-900 dark:text-zinc-100">
                 My Advisers
               </span>
-              <span className="block text-xs text-muted-foreground">
+              <span className="block text-xs text-muted-foreground dark:text-zinc-400">
                 This page lists all advisers under your coordination. You can add, search, and manage advisers here.
               </span>
             </div>
@@ -254,23 +254,25 @@ export default function ShowAdvisers() {
               </DialogHeader>
               <div className="space-y-4 py-4">
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">Adviser Name</label>
+                  <label className="text-sm font-medium dark:text-zinc-100">Adviser Name</label>
                   <Input
                     type="text"
                     placeholder="Full Name"
                     value={adviserName}
                     onChange={e => setAdviserName(e.target.value)}
                     disabled={registering}
+                    className="dark:bg-zinc-800 dark:text-zinc-100"
                   />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">Adviser Email</label>
+                  <label className="text-sm font-medium dark:text-zinc-100">Adviser Email</label>
                   <Input
                     type="email"
                     placeholder="Email"
                     value={adviserEmail}
                     onChange={e => setAdviserEmail(e.target.value)}
                     disabled={registering}
+                    className="dark:bg-zinc-800 dark:text-zinc-100"
                   />
                 </div>
                 {registerError && (
@@ -298,19 +300,19 @@ export default function ShowAdvisers() {
             </DialogContent>
           </Dialog>
         </div>
-        <div className="flex flex-row items-center justify-between w-full p-3 border-t bg-white">
+        <div className="flex flex-row items-center justify-between w-full p-3 border-t bg-white dark:bg-zinc-900">
           <Input
             type="text"
             startIcon={Search}
             placeholder="Search..."
             value={query}
             onChange={e => setQuery(e.target.value)}
-            className="max-w-xs text-sm py-1 h-8"
+            className="max-w-xs text-sm py-1 h-8 bg-background dark:bg-background"
           />
         </div>
       </div>
       {/* Table */}
-      <div className="rounded-md w-full max-w-full border border-border bg-white overflow-x-auto">
+      <div className="rounded-md w-full max-w-full border border-border bg-white dark:bg-zinc-900 overflow-x-auto">
         <div className="w-full min-w-[700px]">
           <Table className="table-fixed w-full">
             <TableHeader>
@@ -324,7 +326,7 @@ export default function ShowAdvisers() {
             <TableBody>
               {paginatedAdvisers.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={4} className="py-8 text-center text-sm text-muted-foreground">
+                  <TableCell colSpan={4} className="py-8 text-center text-sm text-muted-foreground dark:text-zinc-400">
                     No advisers found.
                   </TableCell>
                 </TableRow>
@@ -337,19 +339,19 @@ export default function ShowAdvisers() {
                           {getInitials(a)}
                         </AvatarFallback>
                       </Avatar>
-                      <span className="truncate">
+                      <span className="truncate text-zinc-900 dark:text-zinc-100">
                         {a.first_name} {a.middle_name ? a.middle_name[0] + "." : ""} {a.last_name}
                       </span>
                     </TableCell>
-                    <TableCell className="truncate max-w-[240px]">{a.email}</TableCell>
+                    <TableCell className="truncate max-w-[240px] text-zinc-700 dark:text-zinc-300">{a.email}</TableCell>
                     {/* Status Column */}
                     <TableCell className="text-center">
                       {a.status === "active" ? (
-                        <Badge variant="outline" className="bg-green-100 text-green-700 border-green-200">
+                        <Badge variant="outline" className="bg-green-100 text-green-700 border-green-200 dark:bg-green-900 dark:text-green-300 dark:border-green-800">
                           Active
                         </Badge>
                       ) : (
-                        <Badge variant="outline" className="bg-zinc-200 text-zinc-600 border-zinc-200">
+                        <Badge variant="outline" className="bg-zinc-200 text-zinc-600 border-zinc-200 dark:bg-zinc-700 dark:text-zinc-300 dark:border-zinc-700">
                           Inactive
                         </Badge>
                       )}
@@ -398,23 +400,25 @@ export default function ShowAdvisers() {
                           </DialogHeader>
                           <div className="space-y-4 py-4">
                             <div className="space-y-2">
-                              <label className="text-sm font-medium">Adviser Name</label>
+                              <label className="text-sm font-medium dark:text-zinc-100">Adviser Name</label>
                               <Input
                                 type="text"
                                 placeholder="Full Name"
                                 value={editName}
                                 onChange={e => setEditName(e.target.value)}
                                 disabled={editLoading}
+                                className="dark:bg-zinc-800 dark:text-zinc-100"
                               />
                             </div>
                             <div className="space-y-2">
-                              <label className="text-sm font-medium">Adviser Email</label>
+                              <label className="text-sm font-medium dark:text-zinc-100">Adviser Email</label>
                               <Input
                                 type="email"
                                 placeholder="Email"
                                 value={editEmail}
                                 onChange={e => setEditEmail(e.target.value)}
                                 disabled={editLoading}
+                                className="dark:bg-zinc-800 dark:text-zinc-100"
                               />
                             </div>
                             {editError && (
@@ -465,7 +469,7 @@ export default function ShowAdvisers() {
                           <DialogHeader>
                             <DialogTitle>Remove Adviser</DialogTitle>
                           </DialogHeader>
-                          <div className="py-2">
+                          <div className="py-2 text-zinc-900 dark:text-zinc-100">
                             Are you sure you want to remove <b>{a.first_name} {a.last_name}</b> from your coordination?
                           </div>
                           <DialogFooter>
@@ -475,7 +479,7 @@ export default function ShowAdvisers() {
                                 setConfirmOpen(false);
                                 setAdviserToRemove(null);
                               }}
-                              className="mr-2 bg-white text-zinc-900 border-zinc-300"
+                              className="mr-2 bg-white text-zinc-900 border-zinc-300 dark:bg-zinc-800 dark:text-zinc-100 dark:border-zinc-700"
                             >
                               Cancel
                             </Button>
@@ -507,7 +511,7 @@ export default function ShowAdvisers() {
           >
             Prev
           </Button>
-          <span className="text-xs">
+          <span className="text-xs text-zinc-900 dark:text-zinc-100">
             Page {page} of {totalPages}
           </span>
           <Button
@@ -525,9 +529,9 @@ export default function ShowAdvisers() {
         setViewDialogOpen(open);
         if (!open) setViewAdviser(null);
       }}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-2xl dark:bg-zinc-800">
           <DialogHeader>
-            <DialogTitle>
+            <DialogTitle className="dark:text-zinc-100">
               Adviser Information
             </DialogTitle>
             <DialogDescription>
@@ -539,14 +543,14 @@ export default function ShowAdvisers() {
                     </AvatarFallback>
                   </Avatar>
                   <div>
-                    <div className="font-semibold text-sm">
+                    <div className="font-semibold text-sm text-zinc-900 dark:text-zinc-100">
                       {viewAdviser.first_name} {viewAdviser.middle_name ? viewAdviser.middle_name[0] + "." : ""} {viewAdviser.last_name}
                     </div>
                     <div className="flex items-center gap-2">
-                      <span className="text-sm text-gray-600">{viewAdviser.email}</span>
+                      <span className="text-sm text-gray-600 dark:text-gray-300">{viewAdviser.email}</span>
                       {/* Gmail Button */}
                       <button
-                        className="px-2 py-1 rounded hover:bg-zinc-100 text-zinc-600 text-xs flex items-center gap-1 cursor-pointer transition"
+                        className="px-2 py-1 rounded hover:bg-zinc-100 dark:hover:bg-zinc-700 text-zinc-600 dark:text-zinc-300 text-xs flex items-center gap-1 cursor-pointer transition"
                         style={{ height: "22px" }}
                         title="Send Gmail"
                         onClick={() => {
@@ -556,12 +560,12 @@ export default function ShowAdvisers() {
                           );
                         }}
                       >
-                        <Mail size={14} className="text-zinc-500" />
+                        <Mail size={14} className="text-zinc-500 dark:text-zinc-300" />
                         Gmail
                       </button>
                       {/* Google Chat Button */}
                       <button
-                        className="px-2 py-1 rounded hover:bg-zinc-100 text-zinc-600 text-xs flex items-center gap-1 cursor-pointer transition"
+                        className="px-2 py-1 rounded hover:bg-zinc-100 dark:hover:bg-zinc-700 text-zinc-600 dark:text-zinc-300 text-xs flex items-center gap-1 cursor-pointer transition"
                         style={{ height: "22px" }}
                         title="Open Google Chat"
                         onClick={() => {
@@ -571,12 +575,12 @@ export default function ShowAdvisers() {
                           );
                         }}
                       >
-                        <MessageCircle size={14} className="text-zinc-500" />
+                        <MessageCircle size={14} className="text-zinc-500 dark:text-zinc-300" />
                         Chat
                       </button>
                     </div>
                     {viewAdviser.employee_id && (
-                      <div className="text-sm text-gray-600">Employee ID: {viewAdviser.employee_id}</div>
+                      <div className="text-sm text-gray-600 dark:text-gray-300">Employee ID: {viewAdviser.employee_id}</div>
                     )}
                   </div>
                 </div>
@@ -588,13 +592,13 @@ export default function ShowAdvisers() {
               <TabsList className="mb-2">
                 <TabsTrigger value="assigned">
                   Assigned Students
-                  <span className="ml-2 px-2 py-0.5 rounded-full bg-zinc-100 text-zinc-700 text-[11px] font-medium">
+                  <span className="ml-2 px-2 py-0.5 rounded-full bg-zinc-100 dark:bg-zinc-700 text-zinc-700 dark:text-zinc-100 text-[11px] font-medium">
                     {students.length}
                   </span>
                 </TabsTrigger>
                 <TabsTrigger value="pending">
                   Pending Confirmation
-                  <span className="ml-2 px-2 py-0.5 rounded-full bg-zinc-100 text-zinc-700 text-[11px] font-medium">
+                  <span className="ml-2 px-2 py-0.5 rounded-full bg-zinc-100 dark:bg-zinc-700 text-zinc-700 dark:text-zinc-100 text-[11px] font-medium">
                     {pendingStudents.length}
                   </span>
                 </TabsTrigger>
@@ -605,9 +609,9 @@ export default function ShowAdvisers() {
                   style={{ height: "240px" }}
                 >
                   {studentsLoading ? (
-                    <div className="text-xs flex items-center justify-center h-full">Loading students...</div>
+                    <div className="text-xs flex items-center justify-center h-full dark:text-zinc-300">Loading students...</div>
                   ) : students.length === 0 ? (
-                    <div className="text-gray-500 text-xs flex items-center justify-center h-full">
+                    <div className="text-gray-500 text-xs flex items-center justify-center h-full dark:text-gray-400">
                       No students linked to this adviser.
                     </div>
                   ) : (
@@ -620,16 +624,16 @@ export default function ShowAdvisers() {
                             </AvatarFallback>
                           </Avatar>
                           <div className="flex-1">
-                            <div className="font-medium text-xs flex items-center gap-2">
+                            <div className="font-medium text-xs flex items-center gap-2 text-zinc-900 dark:text-zinc-100">
                               {s.first_name} {s.middle_name ? s.middle_name[0] + "." : ""} {s.last_name}
                             </div>
-                            <div className="text-xs text-gray-500">{s.email} • {s.student_number} • {s.program}</div>
+                            <div className="text-xs text-gray-500 dark:text-gray-400">{s.email} • {s.student_number} • {s.program}</div>
                           </div>
                           <Button
                             variant="ghost"
                             size="icon"
                             aria-label="Remove student"
-                            className="text-rose-500 hover:bg-rose-50"
+                            className="text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900"
                             onClick={() => {
                               if (window.confirm(`Remove ${s.first_name} ${s.last_name} from this adviser?`)) {
                                 axios.delete(`/api/coordinator/advisers/${viewAdviser?.id}/students/${s.id}`)
@@ -651,9 +655,9 @@ export default function ShowAdvisers() {
                   style={{ height: "240px" }}
                 >
                   {pendingLoading ? (
-                    <div className="text-xs flex items-center justify-center h-full">Loading pending students...</div>
+                    <div className="text-xs flex items-center justify-center h-full dark:text-zinc-300">Loading pending students...</div>
                   ) : pendingStudents.length === 0 ? (
-                    <div className="text-gray-500 text-xs flex items-center justify-center h-full">
+                    <div className="text-gray-500 text-xs flex items-center justify-center h-full dark:text-gray-400">
                       No pending students for this adviser.
                     </div>
                   ) : (
@@ -666,10 +670,10 @@ export default function ShowAdvisers() {
                             </AvatarFallback>
                           </Avatar>
                           <div className="flex-1">
-                            <div className="font-medium text-xs flex items-center gap-2">
+                            <div className="font-medium text-xs flex items-center gap-2 text-zinc-900 dark:text-zinc-100">
                               {s.first_name} {s.middle_name ? s.middle_name[0] + "." : ""} {s.last_name}
                             </div>
-                            <div className="text-xs text-gray-500">{s.email} • {s.student_number} • {s.program}</div>
+                            <div className="text-xs text-gray-500 dark:text-gray-400">{s.email} • {s.student_number} • {s.program}</div>
                           </div>
                           {/* You can add actions for pending students here if needed */}
                         </li>
@@ -697,8 +701,8 @@ export default function ShowAdvisers() {
       <Dialog open={addStudentDialogOpen} onOpenChange={setAddStudentDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Add Student to Adviser</DialogTitle>
-            <DialogDescription>
+            <DialogTitle className="dark:text-zinc-100">Add Student to Adviser</DialogTitle>
+            <DialogDescription className="dark:text-zinc-300">
               Enter the student's email to add them under this adviser.
             </DialogDescription>
           </DialogHeader>
@@ -707,7 +711,7 @@ export default function ShowAdvisers() {
                placeholder="Email"
                value={studentEmail}
                onChange={e => setStudentEmail(e.target.value)}
-               className="text-xs"
+               className="text-xs dark:bg-zinc-800 dark:text-zinc-100"
                disabled={addingStudent}
              />
              {addStudentError && <div className="text-xs text-rose-500">{addStudentError}</div>}

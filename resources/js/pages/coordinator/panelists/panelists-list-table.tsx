@@ -22,7 +22,6 @@ import {
   HoverCardContent,
   HoverCardTrigger,
 } from "@/components/ui/hover-card";
-import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import type { PanelistWithAssignments, PanelistHonorariumSpec } from "@/types";
 
 type Props = {
@@ -79,8 +78,8 @@ export default function PanelistsListTable({
 
   return (
     <>
-      <div className="rounded-md overflow-x-auto border border-border bg-white w-full max-w-full">
-        <Table>
+      <div className="rounded-md overflow-x-auto border border-border bg-background w-full max-w-full">
+        <Table className="w-full text-sm table-auto">
           <TableHeader>
             <TableRow>
               <TableHead className="w-12">
@@ -92,13 +91,13 @@ export default function PanelistsListTable({
                   disabled={loading}
                 />
               </TableHead>
-              <TableHead>Name</TableHead>
-              <TableHead>Email</TableHead>
-              <TableHead>Role</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Type</TableHead>
-              <TableHead>Receivables</TableHead>
-              <TableHead className="text-center">Actions</TableHead>
+              <TableHead className="px-3 min-w-[120px]">Name</TableHead>
+              <TableHead className="px-2 min-w-[120px]">Email</TableHead>
+              <TableHead className="px-2 min-w-[100px]">Role</TableHead>
+              <TableHead className="px-2 min-w-[100px] text-center">Status</TableHead>
+              <TableHead className="px-2 min-w-[100px]">Type</TableHead>
+              <TableHead className="px-2 min-w-[100px]">Receivables</TableHead>
+              <TableHead className="text-center px-2">Actions</TableHead>
             </TableRow>
           </TableHeader>
 
@@ -114,7 +113,7 @@ export default function PanelistsListTable({
               </TableRow>
             ) : (
               panelists.map((panelist) => (
-                <TableRow className="hover:bg-muted/40 transition" key={panelist.id}>
+                <TableRow className="hover:bg-muted/40 cursor-pointer transition" key={panelist.id}>
                   <TableCell>
                     <Checkbox
                       checked={selected.includes(panelist.id)}
@@ -124,9 +123,13 @@ export default function PanelistsListTable({
                       disabled={loading}
                     />
                   </TableCell>
-                  <TableCell>{panelist.name}</TableCell>
-                  <TableCell>{panelist.email}</TableCell>
-                  <TableCell>
+                  <TableCell className="px-3 py-2 font-medium truncate leading-tight align-middle">
+                    {panelist.name}
+                  </TableCell>
+                  <TableCell className="px-2 py-2 text-xs text-muted-foreground whitespace-nowrap align-middle">
+                    {panelist.email}
+                  </TableCell>
+                  <TableCell className="px-2 py-2 text-xs text-muted-foreground whitespace-nowrap align-middle">
                     {panelist.assignments && panelist.assignments.length > 0 ? (
                       <ul>
                         {panelist.assignments.map((a) => (
@@ -138,33 +141,33 @@ export default function PanelistsListTable({
                     )}
                   </TableCell>
                   {/* Status */}
-                  <TableCell>
+                  <TableCell className="px-2 py-2 text-xs whitespace-nowrap text-center align-middle">
                     <HoverCard>
                       <HoverCardTrigger asChild>
                         <span
                           className={
                             panelist.assignments && panelist.assignments.length > 0
-                              ? "inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 text-xs font-medium cursor-pointer"
-                              : "inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-gray-100 text-gray-500 text-xs font-medium cursor-pointer"
+                              ? "inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300 text-xs font-medium cursor-pointer"
+                              : "inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-gray-100 dark:bg-zinc-800 text-gray-500 dark:text-zinc-400 text-xs font-medium cursor-pointer"
                           }
                         >
                           {panelist.assignments && panelist.assignments.length > 0
                             ? (
                               <>
-                                <span className="w-1.5 h-1.5 rounded-full bg-blue-500 inline-block" />
+                                <span className="w-1.5 h-1.5 rounded-full bg-blue-500 dark:bg-blue-400 inline-block" />
                                 Assigned
                               </>
                             )
                             : (
                               <>
-                                <span className="w-1.5 h-1.5 rounded-full bg-gray-400 inline-block" />
+                                <span className="w-1.5 h-1.5 rounded-full bg-gray-400 dark:bg-zinc-500 inline-block" />
                                 Not Assigned
                               </>
                             )
                           }
                         </span>
                       </HoverCardTrigger>
-                      <HoverCardContent className="w-64 p-3">
+                      <HoverCardContent className="w-64 p-3 bg-background text-muted-foreground">
                         <div>
                           <div className="flex items-center gap-2">
                             <Avatar name={panelist.name} />
@@ -182,8 +185,8 @@ export default function PanelistsListTable({
                                     key={a.id}
                                     className="flex items-center gap-2 text-xs italic truncate max-w-[180px]"
                                   >
-                                    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-blue-100 text-blue-700 font-medium">
-                                      <span className="w-1.5 h-1.5 rounded-full bg-blue-500 inline-block" />
+                                    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300 font-medium">
+                                      <span className="w-1.5 h-1.5 rounded-full bg-blue-500 dark:bg-blue-400 inline-block" />
                                       Active
                                     </span>
                                     <span className="text-muted-foreground">{a.thesis_title}</span>
@@ -199,8 +202,8 @@ export default function PanelistsListTable({
                       </HoverCardContent>
                     </HoverCard>
                   </TableCell>
-                  {/* Type column (no thesis title) */}
-                  <TableCell>
+                  {/* Type column */}
+                  <TableCell className="px-2 py-2 text-xs text-muted-foreground whitespace-nowrap align-middle">
                     {panelist.assignments && panelist.assignments.length > 0 ? (
                       <ul>
                         {panelist.assignments.map((a) => (
@@ -211,12 +214,11 @@ export default function PanelistsListTable({
                       <span className="text-muted-foreground">-</span>
                     )}
                   </TableCell>
-                  {/* Receivables column: just the amount, no thesis title */}
-                  <TableCell>
+                  {/* Receivables column */}
+                  <TableCell className="px-2 py-2 text-xs text-muted-foreground whitespace-nowrap align-middle">
                     {panelist.assignments && panelist.assignments.length > 0 ? (
                       <ul>
                         {panelist.assignments.map((a) => {
-                          // Use the receivable from backend if present
                           let amount = a.receivable;
                           if (
                             (amount === undefined || amount === null || amount === "") &&
@@ -242,7 +244,7 @@ export default function PanelistsListTable({
                       <span className="text-muted-foreground">-</span>
                     )}
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="px-2 py-2 text-center">
                     <div className="flex justify-center gap-1">
                       <Button
                         variant="outline"
@@ -275,7 +277,7 @@ export default function PanelistsListTable({
 
       {/* Shadcn Dialog for Delete Confirmation */}
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <DialogContent>
+        <DialogContent className="bg-background text-muted-foreground">
           <DialogHeader>
             <DialogTitle>Confirm Delete</DialogTitle>
           </DialogHeader>
@@ -293,7 +295,7 @@ export default function PanelistsListTable({
             <Button
               onClick={confirmDelete}
               disabled={loading}
-              className=" text-white"
+              className="text-white"
             >
               Delete
             </Button>
@@ -313,22 +315,8 @@ function Avatar({ name }: { name: string }) {
     .slice(0, 2);
 
   return (
-    <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 font-semibold text-sm">
+    <div className="w-8 h-8 rounded-full bg-gray-100 dark:bg-zinc-800 flex items-center justify-center text-gray-500 dark:text-zinc-400 font-semibold text-sm">
       {initials}
     </div>
-  );
-}
-
-function StatusBadge({ status }: { status: "Assigned" | "Not Assigned" }) {
-  return (
-    <span
-      className={
-        status === "Assigned"
-          ? "px-2 py-0.5 rounded-full text-xs font-medium bg-rose-100 text-rose-700"
-          : "px-2 py-0.5 rounded-full text-xs font-medium bg-rose-50 text-rose-400 border border-rose-100"
-      }
-    >
-      {status}
-    </span>
   );
 }
