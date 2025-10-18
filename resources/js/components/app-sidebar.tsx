@@ -81,6 +81,7 @@ const coordinatorNavItems: MainNavItem[] = [
     },
     { title: 'Honorarium', href: '/honorarium-summary', icon: DollarSign },
     { title: 'Student Records', href: '/student-records', icon: Users },
+     { title: 'Payment Rates', href: '/dean/payment-rates', icon: DollarSign },
     { title: 'Schedules', href: '/schedules', icon: CalendarFold },
    
 ];
@@ -100,7 +101,9 @@ const assistantNavItems: MainNavItem[] = [
     },
     { title: 'Honorarium', href: '/honorarium-summary', icon: DollarSign },
     { title: 'Student Records', href: '/student-records', icon: Users },
+     { title: 'Payment Rates', href: '/dean/payment-rates', icon: DollarSign },
     { title: 'Schedules', href: '/schedules', icon: CalendarFold },
+    
 ];
 
 const facultyNavItems: MainNavItem[] = [
@@ -112,8 +115,6 @@ const facultyNavItems: MainNavItem[] = [
 
 const deanNavItems: MainNavItem[] = [
     { title: 'Dashboard', href: '/dashboard', icon: LayoutGrid },
-    { title: 'Programs', href: '/dean/programs', icon: LibraryBig },
-    { title: 'Users', href: '/dean/users', icon: Users },
     { title: 'Defense Requests', href: '/dean/defense-requests', icon: FileText },
     { title: 'Schedules', href: '/schedules', icon: CalendarFold },
     { title: 'Payment Rates', href: '/dean/payment-rates', icon: DollarSign },

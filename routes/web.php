@@ -557,7 +557,11 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/api/adviser/code', [AdviserStudentController::class, 'getAdviserCode']);
     Route::delete('/api/adviser/students/{student}', [AdviserStudentController::class, 'destroy']);
 
+    Route::get('/api/advisers', [\App\Http\Controllers\CoordinatorAdviserController::class, 'all'])->name('api.advisers');
 
+
+
+    Route::get('/api/panelists', [\App\Http\Controllers\PanelistController::class, 'index'])->name('api.panelists');
 
     Route::get('/api/adviser/pending-students', [AdviserStudentController::class, 'pending']);
     Route::post('/api/adviser/pending-students/{student}/accept', [AdviserStudentController::class, 'acceptPending']);

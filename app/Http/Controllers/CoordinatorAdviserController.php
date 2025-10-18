@@ -371,4 +371,10 @@ class CoordinatorAdviserController extends Controller
 
         return response()->json(['success' => true]);
     }
+
+    // Return all advisers in the database
+    public function all()
+    {
+        return response()->json(\App\Models\Adviser::all());
+    }
 }
