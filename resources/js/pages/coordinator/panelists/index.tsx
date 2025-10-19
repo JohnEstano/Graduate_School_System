@@ -303,14 +303,7 @@ export default function PanelistsPage() {
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <Button
-                variant="ghost"
-                onClick={() => setRatesDialogOpen(true)}
-                className="h-9 flex items-center gap-2"
-              >
-                <Settings2 className="h-4 w-4" />
-                Edit Honorarium Rates
-              </Button>
+           
               <Button onClick={() => { setModalOpen(true); setEditing(null); }} disabled={formLoading || loading}>
                   <UserPlus className="h-4 w-4" />  {formLoading ? "Loading..." : "Add Panel"}
               </Button>

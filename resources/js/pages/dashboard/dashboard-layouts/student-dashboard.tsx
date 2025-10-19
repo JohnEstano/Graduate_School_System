@@ -323,7 +323,7 @@ export default function StudentDashboard() {
                                 <div className="flex-1">
                                     <span className="font-semibold mb-1 block">You have not registered an adviser yet.</span>
                                     <span className="text-sm">
-                                        Please register with your adviser using their code or contact your adviser for assistance.
+                                        Contact your coordinator for assistance.
                                         <Link
                                             href="/settings/profile"
                                             className="ml-2 underline text-rose-600 dark:text-rose-300 font-medium hover:text-rose-700 dark:hover:text-rose-200"
