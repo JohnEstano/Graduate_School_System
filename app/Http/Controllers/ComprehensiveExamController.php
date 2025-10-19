@@ -65,12 +65,7 @@ class ComprehensiveExamController extends Controller
         return Inertia::render('student/submissions/comprehensive-exam/Index', [
             // 👇 pass the built response instead of null
             'application' => $response,
-            'elig' => [
-                'examOpen'               => true,
-                'gradesComplete'         => true,
-                'documentsComplete'      => true,
-                'noOutstandingBalance'   => true,
-            ],
+            // Remove hardcoded eligibility - let frontend call API dynamically
         ]);
     }
 

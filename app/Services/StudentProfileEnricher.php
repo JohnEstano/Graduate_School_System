@@ -63,7 +63,8 @@ class StudentProfileEnricher
                 if ($nameParts) {
                     foreach (['first_name','middle_name','last_name'] as $key) {
                         if (($nameParts[$key] ?? null) && $user->$key !== $nameParts[$key]) {
-                            $changes[$key] = $nameParts[$key];
+                            // Apply proper case formatting to staff names from legacy system
+                            $changes[$key] = $this->formatProperCase($nameParts[$key]);
                         }
                     }
                 }
@@ -106,7 +107,8 @@ class StudentProfileEnricher
                     foreach (['first_name','middle_name','last_name'] as $k) {
                         // Only overwrite if empty or different & we trust source
                         if (($studentName[$k] ?? null) && (!$user->$k || $user->$k !== $studentName[$k])) {
-                            $changes[$k] = $studentName[$k];
+                            // Apply proper case formatting to names from legacy system
+                            $changes[$k] = $this->formatProperCase($studentName[$k]);
                         }
                     }
                 }
@@ -141,5 +143,14 @@ class StudentProfileEnricher
                 Log::debug('Enrichment: enrollment stats failed: '.$e->getMessage());
             }
         }
+    }
+
+    /**
+     * Format name to proper case (First letter capital, rest lowercase)
+     */
+    private function formatProperCase(string $name): string
+    {
+        // Convert to title case while preserving original spacing
+        return mb_convert_case(strtolower($name), MB_CASE_TITLE, 'UTF-8');
     }
 }

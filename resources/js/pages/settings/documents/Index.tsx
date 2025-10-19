@@ -4,12 +4,19 @@ import AppLayout from '@/layouts/app-layout';
 import SettingsLayout from '@/layouts/settings/layout';
 import HeadingSmall from '@/components/heading-small';
 import { Button } from '@/components/ui/button';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 type BreadcrumbItem = { title:string; href:string };
 type Template = { id:number; name:string; code:string; version:number; };
 
 const breadcrumbs: BreadcrumbItem[] = [
   { title: 'Document Templates', href: '/settings/documents' },
+];
+
+const templateOptions = [
+  { label: 'Endorsement Form (Proposal)', value: 'Endorsement Form (Proposal)' },
+  { label: 'Endorsement Form (Prefinal)', value: 'Endorsement Form (Prefinal)' },
+  { label: 'Endorsement (Final)', value: 'Endorsement (Final)' },
 ];
 
 export default function DocumentTemplatesIndex() {
@@ -59,8 +66,21 @@ export default function DocumentTemplatesIndex() {
           <div className="space-y-6">
             <HeadingSmall title="Upload template" description="Add a new PDF template to map fields & signatures." />
             <form onSubmit={submit} className="mt-2 grid gap-3 max-w-sm">
-              <input className="border rounded px-2 py-1" placeholder="Name"
-                value={form.name} onChange={e=>setForm(f=>({...f,name:e.target.value}))}/>
+              <Select
+                value={form.name}
+                onValueChange={value => setForm(f => ({ ...f, name: value }))}
+              >
+                <SelectTrigger className="border rounded px-2 py-1">
+                  <SelectValue placeholder="Select template name" />
+                </SelectTrigger>
+                <SelectContent>
+                  {templateOptions.map(opt => (
+                    <SelectItem key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               <input type="file" accept="application/pdf"
                 onChange={e=>setFile(e.target.files?.[0]||null)} />
               <Button disabled={!file||!form.name||busy} type="submit">

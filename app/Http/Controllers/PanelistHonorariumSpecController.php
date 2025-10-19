@@ -30,6 +30,11 @@ class PanelistHonorariumSpecController extends Controller
                 ['amount' => $spec['amount']]
             );
         }
-        return redirect()->back()->with('success', 'Honorarium rates updated.');
+        // Return updated specs as JSON
+        return response()->json([
+            'success' => true,
+            'honorariumSpecs' => PanelistHonorariumSpec::all(),
+            'message' => 'Honorarium rates updated.'
+        ]);
     }
 }

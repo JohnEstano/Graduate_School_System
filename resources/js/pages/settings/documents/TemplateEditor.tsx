@@ -105,7 +105,13 @@ export default function TemplateEditorPage({ templateId, template }: Props) {
         'Content-Type': 'application/json',
         'X-CSRF-TOKEN': (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content || ''
       },
-      body: JSON.stringify({ fields })
+      body: JSON.stringify({
+        fields,
+        fields_meta: {
+          canvas_width: pdfPages[0]?.width,
+          canvas_height: pdfPages[0]?.height,
+        }
+      })
     });
     setSaving(false);
   }

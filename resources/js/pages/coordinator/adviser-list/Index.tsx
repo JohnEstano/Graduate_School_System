@@ -13,7 +13,10 @@ export default function CoordinatorAdviserListPage() {
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Adviser List" />
-            <ShowAdvisers />
+            <div className='pb-5'>
+                <ShowAdvisers />
+            </div>
+
         </AppLayout>
     );
 }

@@ -9,9 +9,10 @@ interface NavMainProps {
     items: MainNavItem[];
     expandedMenus: string[];
     setExpandedMenus: (menus: string[]) => void;
+    sectionTitle?: string; // <-- add this
 }
 
-export function NavMain({ items = [], expandedMenus, setExpandedMenus }: NavMainProps) {
+export function NavMain({ items = [], expandedMenus, setExpandedMenus, sectionTitle }: NavMainProps) {
     const page = usePage();
 
     const toggle = (title: string) => {
@@ -23,7 +24,7 @@ export function NavMain({ items = [], expandedMenus, setExpandedMenus }: NavMain
 
     return (
         <SidebarGroup className="px-2 py-0">
-            <SidebarGroupLabel>Graduate School</SidebarGroupLabel>
+            <SidebarGroupLabel>{sectionTitle || "Graduate School"}</SidebarGroupLabel>
             <SidebarMenu>
                 {items.map((item) => {
                     const isActive = item.href === page.url;

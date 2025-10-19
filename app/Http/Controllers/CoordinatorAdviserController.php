@@ -2,10 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Adviser;
 use App\Models\User;
 use Illuminate\Http\Request;
-use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Inertia\Inertia;
+use Illuminate\Database\QueryException;
 
 class CoordinatorAdviserController extends Controller
 {
@@ -13,7 +14,96 @@ class CoordinatorAdviserController extends Controller
     public function index(Request $request)
     {
         $coordinator = $request->user();
-        $advisers = $coordinator->coordinatedAdvisers()->get();
+
+        // Load all adviser rows for this coordinator
+        $adviserRows = Adviser::where('coordinator_id', $coordinator->id)->get();
+
+        // Preload any matching users by email to avoid N+1
+        $emails = $adviserRows->pluck('email')->filter()->unique()->values()->all();
+        $usersByEmail = User::whereIn('email', $emails)->get()->keyBy('email');
+
+        $advisers = [];
+
+        foreach ($adviserRows as $row) {
+            $matchedUser = $usersByEmail->get($row->email);
+
+            // If a matching user exists but adviser row wasn't linked / active, reconcile now
+            if ($matchedUser) {
+                $row->first_name = $matchedUser->first_name;
+                $row->middle_name = $matchedUser->middle_name ?? $row->middle_name;
+                $row->last_name = $matchedUser->last_name;
+                $row->employee_id = $matchedUser->employee_id ?? $row->employee_id;
+                $row->status = 'active';
+                $row->user_id = $matchedUser->id;
+                // Save only if something changed
+                if ($row->isDirty()) {
+                    $row->save();
+                }
+
+                // Ensure the matched User has this coordinator attached (multi-coordinator support)
+                if (method_exists($matchedUser, 'coordinators') && $row->coordinator_id) {
+                    $matchedUser->coordinators()->syncWithoutDetaching([$row->coordinator_id]);
+                }
+            }
+
+            // Build students list — if linked to a user use their advisedStudents relation
+            $students = [];
+            $assigned_students_count = 0;
+            if ($row->user_id) {
+                $user = $matchedUser ?? User::find($row->user_id);
+                if ($user) {
+                    // Only include students assigned by this coordinator
+                    $students = $user->advisedStudents
+                        ->filter(function ($student) use ($coordinator) {
+                            return $student->pivot && $student->pivot->requested_by == $coordinator->id;
+                        })
+                        ->map(function ($student) use ($coordinator) {
+                            $coordinatorName = null;
+                            if ($student->pivot && $student->pivot->requested_by) {
+                                $coordinator = User::find($student->pivot->requested_by);
+                                if ($coordinator) {
+                                    $coordinatorName = trim(
+                                        $coordinator->first_name . ' ' .
+                                        ($coordinator->middle_name ? strtoupper($coordinator->middle_name[0]) . '. ' : '') .
+                                        $coordinator->last_name
+                                    );
+                                }
+                            }
+                            return [
+                                'id' => $student->id,
+                                'student_number' => $student->student_number,
+                                'first_name' => $student->first_name,
+                                'middle_name' => $student->middle_name,
+                                'last_name' => $student->last_name,
+                                'email' => $student->email,
+                                'program' => $student->program,
+                                'coordinator_name' => $coordinatorName,
+                            ];
+                        })
+                        ->values()
+                        ->all();
+
+                    // Count only accepted students assigned by this coordinator
+                    $assigned_students_count = $user->advisedStudents()
+                        ->wherePivot('status', 'accepted')
+                        ->wherePivot('requested_by', $coordinator->id)
+                        ->count();
+                }
+            }
+
+            $advisers[] = [
+                'id' => $row->id,
+                'first_name' => $row->first_name,
+                'middle_name' => $row->middle_name,
+                'last_name' => $row->last_name,
+                'email' => $row->email,
+                'employee_id' => $row->employee_id,
+                'status' => $row->status ?? 'inactive',
+                'students' => $students,
+                'assigned_students_count' => $assigned_students_count,
+            ];
+        }
+
         return response()->json($advisers);
     }
 
@@ -21,125 +111,339 @@ class CoordinatorAdviserController extends Controller
     public function store(Request $request)
     {
         $coordinator = $request->user();
-        $adviserId = $request->input('adviser_id');
-        $coordinator->coordinatedAdvisers()->syncWithoutDetaching([$adviserId]);
-        return response()->json(['success' => true]);
-    }
 
-    // Remove an adviser from this coordinator
-    public function destroy(Request $request, $adviserId)
-    {
-        $coordinator = $request->user();
-        $coordinator->coordinatedAdvisers()->detach($adviserId);
-        return response()->json(['success' => true]);
-    }
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'email' => 'required|email|max:255',
+        ]);
 
-    public function getCoordinatorCode(Request $request)
-    {
-        $coordinator = $request->user();
-        if (!$coordinator->coordinator_code) {
-            $coordinator->generateCoordinatorCode();
+        // Normalize and split name safely
+        $parts = preg_split('/\s+/', trim($validated['name']));
+        $first = count($parts) ? array_shift($parts) : '';
+        $last = count($parts) ? array_pop($parts) : '';
+        $middle = count($parts) ? implode(' ', $parts) : null;
+
+        // Prevent same coordinator from adding same email twice
+        $existingForCoordinator = Adviser::where('coordinator_id', $coordinator->id)
+            ->where('email', $validated['email'])
+            ->first();
+
+        if ($existingForCoordinator) {
+            return response()->json(['error' => 'Adviser already added.'], 409);
         }
-        return response()->json(['coordinator_code' => $coordinator->coordinator_code]);
-    }
 
-    public function resetCoordinatorCode(Request $request)
-    {
-        $coordinator = $request->user();
-        $coordinator->generateCoordinatorCode();
-        return response()->json(['coordinator_code' => $coordinator->coordinator_code]);
-    }
+        // DO NOT check for global duplicate anymore!
 
-    // Register adviser with code
-    public function registerWithCode(Request $request)
-    {
-        $adviser = $request->user();
-        $code = $request->input('coordinator_code');
-        $coordinator = User::where('coordinator_code', $code)->first();
-        if (!$coordinator) {
-            return response()->json(['error' => 'Invalid code'], 404);
-        }
-        if ($adviser->coordinators()->where('coordinator_id', $coordinator->id)->exists()) {
-            return response()->json(['error' => 'You are already registered with this coordinator.'], 409);
-        }
+        // Simple check: is there a User with that email?
+        $user = User::where('email', $validated['email'])->first();
+
+        $status = $user ? 'active' : 'inactive';
+
         try {
-            $adviser->coordinators()->attach($coordinator->id);
-        } catch (\Exception $e) {
-            return response()->json(['error' => $e->getMessage() ?? "Registration failed."], 500);
+            $adviser = Adviser::create([
+                'coordinator_id' => $coordinator->id,
+                'first_name' => $first,
+                'middle_name' => $middle,
+                'last_name' => $last,
+                'email' => $validated['email'],
+                'status' => $status,
+                'user_id' => $user ? $user->id : null,
+            ]);
+        } catch (QueryException $e) {
+            $errorCode = $e->errorInfo[1] ?? null;
+            if ($errorCode === 1062) {
+                return response()->json(['error' => 'An adviser with that email already exists for this coordinator.'], 409);
+            }
+            return response()->json(['error' => 'Database error: ' . ($e->getMessage() ?? 'unknown')], 500);
         }
 
-        // Build full name
-        $fullName = $coordinator->name
-            ?? trim(
-                $coordinator->first_name . ' ' .
-                ($coordinator->middle_name ? strtoupper($coordinator->middle_name[0]) . '. ' : '') .
-                $coordinator->last_name
-            );
+        // If matching User exists, overwrite adviser fields with authoritative user values
+        if ($user) {
+            $adviser->first_name = $user->first_name;
+            $adviser->middle_name = $user->middle_name ?? $adviser->middle_name;
+            $adviser->last_name = $user->last_name;
+            $adviser->employee_id = $user->employee_id ?? $adviser->employee_id ?? null;
+            $adviser->status = 'active';
+            $adviser->user_id = $user->id;
+            $adviser->save();
 
-        return response()->json([
-            'success' => true,
-            'coordinator' => [
-                'name' => $fullName,
-                'email' => $coordinator->email,
+            // if you maintain a pivot or coordinators() on User, keep relationship in sync
+            if (method_exists($user, 'coordinators')) {
+                $user->coordinators()->syncWithoutDetaching([$coordinator->id]);
+            }
+        }
+
+        $payload = [
+            'id' => $adviser->id,
+            'first_name' => $adviser->first_name,
+            'middle_name' => $adviser->middle_name,
+            'last_name' => $adviser->last_name,
+            'email' => $adviser->email,
+            'employee_id' => $adviser->employee_id ?? null,
+            'status' => $adviser->status,
+            'students' => [],
+        ];
+
+        return response()->json(['success' => true, 'adviser' => $payload]);
+    }
+
+    // Update adviser info
+    public function update(Request $request, $id)
+    {
+        $coordinator = $request->user();
+
+        $adviser = Adviser::where('coordinator_id', $coordinator->id)->findOrFail($id);
+
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'email' => 'required|email|max:255',
+        ]);
+
+        $parts = preg_split('/\s+/', trim($validated['name']));
+        $first = $parts[0] ?? '';
+        $last = count($parts) > 1 ? array_pop($parts) : '';
+        $middle = count($parts) > 1 ? implode(' ', array_slice($parts, 1, -1)) : null;
+
+        $adviser->first_name = $first;
+        $adviser->middle_name = $middle;
+        $adviser->last_name = $last;
+        $adviser->email = $validated['email'];
+
+        // Simple check: is there a User with that email?
+        $user = User::where('email', $validated['email'])->first();
+
+        $adviser->status = $user ? 'active' : 'inactive';
+        $adviser->user_id = $user ? $user->id : null;
+
+        if ($user) {
+            $adviser->first_name = $user->first_name;
+            $adviser->middle_name = $user->middle_name ?? $adviser->middle_name;
+            $adviser->last_name = $user->last_name;
+            $adviser->employee_id = $user->employee_id ?? $adviser->employee_id ?? null;
+            $adviser->status = 'active';
+        }
+
+        $adviser->save();
+
+        return response()->json(['success' => true, 'adviser' => $adviser]);
+    }
+
+    // Remove adviser and all their student relationships
+    public function destroy(Request $request, $id)
+    {
+        $coordinator = $request->user();
+        $adviser = Adviser::where('coordinator_id', $coordinator->id)->findOrFail($id);
+
+        // Remove all student relationships for this adviser
+        if ($adviser->user_id) {
+            $adviserUser = User::find($adviser->user_id);
+            if ($adviserUser) {
+                $adviserUser->advisedStudents()->detach();
+            }
+        }
+
+        $adviser->delete();
+
+        return response()->json(['success' => true]);
+    }
+
+    // Search advisers (autocomplete)
+    public function search(Request $request)
+    {
+        $query = $request->input('query', '');
+        $coordinator = $request->user();
+
+        if (strlen($query) < 2) {
+            return response()->json([]);
+        }
+
+        $advisers = Adviser::where('coordinator_id', $coordinator->id)
+            ->where(function ($q) use ($query) {
+                $q->where('first_name', 'LIKE', "%{$query}%")
+                  ->orWhere('last_name', 'LIKE', "%{$query}%")
+                  ->orWhere('email', 'LIKE', "%{$query}%");
+            })
+            ->limit(10)
+            ->get();
+
+        return response()->json($advisers);
+    }
+
+    // Return students assigned (accepted) to an adviser
+    public function students(Request $request, $adviserId)
+    {
+        $coordinator = $request->user();
+        $adviser = Adviser::where('coordinator_id', $coordinator->id)->findOrFail($adviserId);
+
+        if (!$adviser->user_id) return response()->json([]);
+
+        $adviserUser = User::find($adviser->user_id);
+        if (!$adviserUser) return response()->json([]);
+
+        $students = $adviserUser->advisedStudents()
+            ->wherePivot('status', 'accepted')
+            ->wherePivot('requested_by', $coordinator->id) // <-- Only those assigned by this coordinator
+            ->get()
+            ->map(function ($s) use ($coordinator) {
+                $coordinatorName = null;
+                if ($s->pivot && $s->pivot->requested_by) {
+                    $coordinatorUser = User::find($s->pivot->requested_by);
+                    if ($coordinatorUser) {
+                        $coordinatorName = trim(
+                            $coordinatorUser->first_name . ' ' .
+                            ($coordinatorUser->middle_name ? strtoupper($coordinatorUser->middle_name[0]) . '. ' : '') .
+                            $coordinatorUser->last_name
+                        );
+                    }
+                }
+                return [
+                    'id' => $s->id,
+                    'student_number' => $s->student_number ?? null,
+                    'first_name' => $s->first_name ?? null,
+                    'middle_name' => $s->middle_name ?? null,
+                    'last_name' => $s->last_name ?? null,
+                    'email' => $s->email ?? null,
+                    'program' => $s->program ?? null,
+                    'coordinator_name' => $coordinatorName,
+                ];
+            })->values();
+
+        return response()->json($students);
+    }
+
+    // Return pending students for this adviser (coordinator view)
+    public function pendingStudents(Request $request, $adviserId)
+    {
+        $coordinator = $request->user();
+        $adviser = Adviser::where('coordinator_id', $coordinator->id)->findOrFail($adviserId);
+
+        if (!$adviser->user_id) return response()->json([]);
+
+        $adviserUser = User::find($adviser->user_id);
+        if (!$adviserUser) return response()->json([]);
+
+        $students = $adviserUser->advisedStudents()
+            ->wherePivot('status', 'pending')
+            ->wherePivot('requested_by', $coordinator->id) // <-- Only those assigned by this coordinator
+            ->get()
+            ->map(function ($s) use ($coordinator) {
+                $coordinatorName = null;
+                if ($s->pivot && $s->pivot->requested_by) {
+                    $coordinatorUser = User::find($s->pivot->requested_by);
+                    if ($coordinatorUser) {
+                        $coordinatorName = trim(
+                            $coordinatorUser->first_name . ' ' .
+                            ($coordinatorUser->middle_name ? strtoupper($coordinatorUser->middle_name[0]) . '. ' : '') .
+                            $coordinatorUser->last_name
+                        );
+                    }
+                }
+                return [
+                    'id' => $s->id,
+                    'student_number' => $s->student_number ?? null,
+                    'first_name' => $s->first_name ?? null,
+                    'middle_name' => $s->middle_name ?? null,
+                    'last_name' => $s->last_name ?? null,
+                    'email' => $s->email ?? null,
+                    'program' => $s->program ?? null,
+                    'coordinator_name' => $coordinatorName,
+                    'requested_by' => $s->pivot->requested_by ?? null,
+                    'requested_at' => $s->pivot->created_at ?? null,
+                ];
+            })->values();
+
+        return response()->json($students);
+    }
+
+    // Assign an existing student (create pivot with status = 'pending')
+    public function storeStudent(Request $request, $adviserId)
+    {
+        $coordinator = $request->user();
+        $adviser = Adviser::where('coordinator_id', $coordinator->id)->findOrFail($adviserId);
+
+        // enforce active adviser (linked user)
+        if (!$adviser->user_id && $adviser->email) {
+            $matchedUser = User::where('email', $adviser->email)->first();
+            if ($matchedUser) {
+                $adviser->user_id = $matchedUser->id;
+                $adviser->status = 'active';
+                $adviser->save();
+            }
+        }
+
+        if (!$adviser->user_id) {
+            return response()->json(['error' => 'Adviser must be active (linked to a User) before assigning students.'], 400);
+        }
+
+        $validated = $request->validate([
+            'student_id' => 'nullable|integer|exists:users,id',
+            'email' => 'nullable|email',
+        ]);
+
+        $student = null;
+        if (!empty($validated['student_id'])) {
+            $student = User::find($validated['student_id']);
+        } elseif (!empty($validated['email'])) {
+            $student = User::where('email', $validated['email'])->first();
+            if (!$student) {
+                return response()->json(['error' => 'Student not found.'], 404);
+            }
+        } else {
+            return response()->json(['error' => 'student_id or email required.'], 422);
+        }
+
+        // Check if student is already assigned to ANY adviser (pending or accepted)
+        $alreadyAssigned = $student->advisers()
+            ->wherePivotIn('status', ['accepted', 'pending'])
+            ->exists();
+
+        if ($alreadyAssigned) {
+            return response()->json(['error' => 'This student is already assigned to another adviser.'], 409);
+        }
+
+        $adviserUser = User::find($adviser->user_id);
+
+        // create pending pivot (syncWithoutDetaching to avoid wiping)
+        $adviserUser->advisedStudents()->syncWithoutDetaching([
+            $student->id => [
+                'status' => 'pending',
+                'requested_by' => $coordinator->id,
             ]
         ]);
+
+        // return pending list after adding
+        return $this->pendingStudents($request, $adviserId);
     }
 
-    public function edit(Request $request)
+    // Detach a student from adviser
+    public function destroyStudent(Request $request, $adviserId, $studentId)
     {
-        $user = $request->user();
+        $coordinator = $request->user();
+        $adviser = Adviser::where('coordinator_id', $coordinator->id)->findOrFail($adviserId);
 
-        // If student, include adviser info
-        $advisers = [];
-        if ($user->role === 'Student') {
-            $advisers = $user->advisers()
-                ->select('first_name', 'middle_name', 'last_name', 'email')
-                ->get()
-                ->map(function ($a) {
-                    return [
-                        'name' => trim($a->first_name . ' ' . ($a->middle_name ? strtoupper($a->middle_name[0]) . '. ' : '') . $a->last_name),
-                        'email' => $a->email,
-                    ];
-                });
+        if (!$adviser->user_id) {
+            return response()->json(['error' => 'Adviser is not active.'], 400);
         }
 
-        // If adviser/faculty, include coordinator info
-        $coordinators = [];
-        if (in_array($user->role, ['Adviser', 'Faculty'])) {
-            $coordinators = $user->coordinators()
-                ->select('first_name', 'middle_name', 'last_name', 'email')
-                ->get()
-                ->map(function ($c) {
-                    return [
-                        'name' => trim($c->first_name . ' ' . ($c->middle_name ? strtoupper($c->middle_name[0]) . '. ' : '') . $c->last_name),
-                        'email' => $c->email,
-                    ];
-                });
+        $adviserUser = User::find($adviser->user_id);
+        if (!$adviserUser) {
+            return response()->json(['error' => 'Adviser user not found.'], 404);
         }
 
-        // For Adviser/Faculty, ensure adviser_code is generated and returned
-        $adviserCode = null;
-        if (in_array($user->role, ['Adviser', 'Faculty'])) {
-            if (!$user->adviser_code) {
-                $user->generateAdviserCode();
-                $user->refresh();
-            }
-            $adviserCode = $user->adviser_code;
+        // Ensure student exists
+        $student = User::find($studentId);
+        if (!$student) {
+            return response()->json(['error' => 'Student not found.'], 404);
         }
 
-        return Inertia::render('settings/profile', [
-            'mustVerifyEmail' => $user instanceof MustVerifyEmail,
-            'status' => $request->session()->get('status'),
-            'auth' => [
-                'user' => array_merge(
-                    $user->toArray(),
-                    [
-                        'advisers' => $advisers,
-                        'adviser_code' => $adviserCode,
-                        'coordinators' => $coordinators,
-                    ]
-                ),
-            ],
-        ]);
+        $adviserUser->advisedStudents()->detach($student->id);
+
+        return response()->json(['success' => true]);
+    }
+
+    // Return all advisers in the database
+    public function all()
+    {
+        return response()->json(\App\Models\Adviser::all());
     }
 }

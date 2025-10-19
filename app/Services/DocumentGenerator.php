@@ -33,24 +33,33 @@ class DocumentGenerator {
     $pageCount = $pdf->setSourceFile($src);
     $fields = $tpl->fields ?? [];
 
+    // Set font to Arial everywhere (no DejaVu)
+    $pdf->SetFont('Arial','',12);
+
     for($p = 1; $p <= $pageCount; $p++) {
-        $pid = $pdf->importPage($p);
-        $size = $pdf->getTemplateSize($pid);
+        $tplId = $pdf->importPage($p);
+        $pdf->AddPage();
+        $pdf->useTemplate($tplId);
 
-        // Handle orientation properly
-        $orientation = isset($size['orientation']) ? $size['orientation'] : 'P';
-        $pdf->AddPage($orientation, [$size['width'], $size['height']]);
-        $pdf->useTemplate($pid);
+        // Get page size in mm
+        $pageWidth = $pdf->GetPageWidth();
+        $pageHeight = $pdf->GetPageHeight();
 
-        foreach($fields as $f) {
-            if(($f['page'] ?? 1) !== $p) continue;
+        // Get page size in px (from your template fields)
+        $canvasWidth = $tpl->fields_meta['canvas_width'] ?? 595; // default A4 px
+        $canvasHeight = $tpl->fields_meta['canvas_height'] ?? 842; // default A4 px
 
-            $type = $f['type'] ?? 'text';
-            $x = $f['x'] ?? 0;
-            $y = $f['y'] ?? 0;
-            $w = $f['width'] ?? 0;
+        foreach ($fields as $f) {
+            if ($f['page'] != $p) continue;
 
-            if($type === 'signature') {
+            // Convert px to mm
+            $x = ($f['x'] / $canvasWidth) * $pageWidth;
+            $y = ($f['y'] / $canvasHeight) * $pageHeight;
+            $w = ($f['width'] / $canvasWidth) * $pageWidth;
+            $h = ($f['height'] / $canvasHeight) * $pageHeight;
+
+            // Now use $x, $y, $w, $h in FPDF
+            if($f['type'] === 'signature') {
                 $img = $this->sigPath($f['key'], $req);
                 if($img && file_exists($img)) {
                     $pdf->Image($img, $x, $y, $w, 0, 'PNG');
@@ -61,14 +70,10 @@ class DocumentGenerator {
             $val = $this->value($f['key'], $payload);
             if(!$val) continue;
 
-            $pdf->SetFont('Helvetica', '', $f['font_size'] ?? 11);
             $pdf->SetXY($x, $y);
-
-            if($type === 'multiline') {
-                $pdf->MultiCell($w, 5, $val);
-            } else {
-                $pdf->Cell($w, 5, $val, 0, 0);
-            }
+            // Set font to Arial everywhere (no DejaVu)
+            $pdf->SetFont('Arial', '', $f['font_size'] ?? 12);
+            $pdf->Cell($w, $h, $val, 0, 0, 'C'); // 'C' for center
         }
     }
 
@@ -106,7 +111,7 @@ class DocumentGenerator {
     $generated = GeneratedDocument::create([
         'defense_request_id' => $req->id,
         'document_template_id' => $tpl->id,
-        'template_version_used' => $tpl->version, // <-- ADD THIS LINE
+        'template_version_used' => $tpl->version,
         'output_path' => $out,
         'payload' => json_encode($payload),
         'status' => 'generated',

@@ -22,7 +22,13 @@ import {
   Clock4,
   CircleArrowLeft,
   Signature,
-  Filter
+  Filter,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
+  GraduationCap,
+  Link as LinkIcon,
 } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import TableDefenseRequests from './table-defense-requests';
@@ -62,13 +68,21 @@ interface ShowAllRequestsProps {
 
 function PaginationBar({ page, totalPages, onPageChange }: { page: number; totalPages: number; onPageChange: (p: number) => void }) {
   return (
-    <div className="flex justify-between items-center gap-2 px-4 py-2">
-      <span className="text-xs">Page {page} of {totalPages}</span>
-      <div className="flex gap-1">
-        <Button size="sm" variant="outline" disabled={page === 1} onClick={() => onPageChange(1)}>&laquo;</Button>
-        <Button size="sm" variant="outline" disabled={page === 1} onClick={() => onPageChange(page - 1)}>&lsaquo;</Button>
-        <Button size="sm" variant="outline" disabled={page === totalPages} onClick={() => onPageChange(page + 1)}>&rsaquo;</Button>
-        <Button size="sm" variant="outline" disabled={page === totalPages} onClick={() => onPageChange(totalPages)}>&raquo;</Button>
+    <div className="flex justify-between items-center gap-2 px-4 py-4 bg-background sticky bottom-0 z-10">
+      <span className="text-sm font-medium">Page {page} of {totalPages}</span>
+      <div className="flex gap-2">
+        <Button size="lg" variant="outline" disabled={page === 1} onClick={() => onPageChange(1)}>
+          <ChevronsLeft className="w-5 h-5" />
+        </Button>
+        <Button size="lg" variant="outline" disabled={page === 1} onClick={() => onPageChange(page - 1)}>
+          <ChevronLeft className="w-5 h-5" />
+        </Button>
+        <Button size="lg" variant="outline" disabled={page === totalPages} onClick={() => onPageChange(page + 1)}>
+          <ChevronRight className="w-5 h-5" />
+        </Button>
+        <Button size="lg" variant="outline" disabled={page === totalPages} onClick={() => onPageChange(totalPages)}>
+          <ChevronsRight className="w-5 h-5" />
+        </Button>
       </div>
     </div>
   );
@@ -100,7 +114,7 @@ function ShowAllRequestsInner({ defenseRequests: initial, onStatusChange }: Show
   }, [initial]);
 
   const [search, setSearch] = useState('');
-  const [priorityFilter, setPriorityFilter] = useState<string[]>([]);
+  const [statusFilter, setStatusFilter] = useState<string[]>([]);
   const [typeFilter, setTypeFilter] = useState<string[]>([]);
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
   const [sortDir, setSortDir] = useState<'asc' | 'desc' | null>(null);
@@ -157,25 +171,30 @@ function ShowAllRequestsInner({ defenseRequests: initial, onStatusChange }: Show
   // NOTE: We no longer drop items by workflow_state on the frontend;
   // we rely on the backend "status" normalization.
   const fetchDefenseRequests = useCallback(async () => {
+    // Show loading toast and keep its id
+    const toastId = toast.loading('Fetching table data...');
     setIsLoading(true);
     try {
       const response = await fetch('/coordinator/defense-requests/all-defense-requests');
       if (response.ok) {
         const data: DefenseRequestSummary[] = await response.json();
         setDefenseRequests(normalizeRequests(data));
+        toast.success('Table data loaded!', { id: toastId });
       } else {
-        toast.error('Failed to fetch defense requests');
+        toast.error('Failed to fetch defense requests', { id: toastId });
       }
     } catch {
-      toast.error('Error fetching defense requests');
+      toast.error('Error fetching defense requests', { id: toastId });
     } finally {
       setIsLoading(false);
+      // If not already closed, dismiss after a short delay
+      setTimeout(() => toast.dismiss(toastId), 1000);
     }
   }, []);
 
   useEffect(() => {
-    if (!initial) fetchDefenseRequests();
-  }, [fetchDefenseRequests, initial]);
+    fetchDefenseRequests();
+  }, [fetchDefenseRequests]);
 
   // Filtered and sorted requests (all in one)
   const filtered = useMemo(() => {
@@ -186,19 +205,19 @@ function ShowAllRequestsInner({ defenseRequests: initial, onStatusChange }: Show
         (`${r.first_name} ${r.last_name} ${r.thesis_title}`).toLowerCase().includes(q)
       );
     }
-    if (priorityFilter.length) result = result.filter(r => r.priority && priorityFilter.includes(r.priority));
+    if (statusFilter.length) result = result.filter(r => statusFilter.includes(r.status));
     if (typeFilter.length) result = result.filter(r => typeFilter.includes(r.defense_type));
     if (dateRange?.from && dateRange?.to) {
       const start = startOfDay(dateRange.from);
       const end = endOfDay(dateRange.to);
       result = result.filter(r => {
-        if (!r.date_of_defense) return false;
+        if (!r.date_of_defense) return true;
         const d = startOfDay(new Date(r.date_of_defense));
         return isWithinInterval(d, { start, end });
       });
     }
     return result;
-  }, [search, priorityFilter, typeFilter, defenseRequests, dateRange]);
+  }, [search, statusFilter, typeFilter, defenseRequests, dateRange]);
 
   const sorted = useMemo(() => {
     if (!sortDir) return filtered;
@@ -426,6 +445,8 @@ function ShowAllRequestsInner({ defenseRequests: initial, onStatusChange }: Show
     }
   }
 
+  console.log("Initial defenseRequests prop:", initial);
+
   return (
     <>
       <Head title="Defense Requests" />
@@ -436,8 +457,8 @@ function ShowAllRequestsInner({ defenseRequests: initial, onStatusChange }: Show
         <div className="w-full bg-white dark:bg-zinc-900 border border-border rounded-lg overflow-hidden mb-2">
           <div className="flex flex-row dark:bg-zinc-900 items-center justify-between w-full p-3 border-b bg-white">
             <div className="flex dark:bg-zinc-900 items-center gap-2">
-              <div className="h-10 w-10 flex items-center justify-center rounded-full bg-blue-500/10 border border-blue-500">
-                <Signature className="h-5 w-5 text-blue-400" />
+              <div className="h-10 w-10 flex items-center justify-center rounded-full bg-rose-100 dark:bg-rose-900 border border-rose-500">
+                <GraduationCap className="h-5 w-5 text-rose-400" />
               </div>
               <div>
                 <span className="text-base font-semibold">
@@ -465,7 +486,7 @@ function ShowAllRequestsInner({ defenseRequests: initial, onStatusChange }: Show
                 className="max-w-xs text-sm h-8"
                 disabled={isLoading}
               />
-              {/* Priority filter */}
+              {/* Status filter */}
               <Popover>
                 <PopoverTrigger asChild>
                   <Button
@@ -473,28 +494,28 @@ function ShowAllRequestsInner({ defenseRequests: initial, onStatusChange }: Show
                     className="h-8 px-3 rounded-md border-dashed text-xs flex items-center gap-1"
                   >
                     <CirclePlus className="h-4 w-4 mr-1" />
-                    Priority
-                    {priorityFilter.length > 0 && (
+                    Status
+                    {statusFilter.length > 0 && (
                       <span className="ml-1 px-2 py-0.5 rounded-full text-xs bg-muted">
-                        {priorityFilter.length > 1 ? `${priorityFilter.length} selected` : priorityFilter[0]}
+                        {statusFilter.length > 1 ? `${statusFilter.length} selected` : statusFilter[0]}
                       </span>
                     )}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-44 p-1" side="bottom" align="start">
-                  {['Low', 'Medium', 'High'].map(p => (
+                  {['Pending', 'Approved', 'Rejected'].map(s => (
                     <div
-                      key={p}
+                      key={s}
                       onClick={() =>
-                        setPriorityFilter(fp => (fp.includes(p) ? fp.filter(x => x !== p) : [...fp, p]))
+                        setStatusFilter(fs => (fs.includes(s) ? fs.filter(x => x !== s) : [...fs, s]))
                       }
                       className="flex items-center gap-2 p-2 rounded hover:bg-muted cursor-pointer"
                     >
-                      <Checkbox checked={priorityFilter.includes(p)} />
-                      <span className="text-sm">{p}</span>
+                      <Checkbox checked={statusFilter.includes(s)} />
+                      <span className="text-sm">{s}</span>
                     </div>
                   ))}
-                  <Button size="sm" variant="ghost" className="w-full mt-2" onClick={() => setPriorityFilter([])}>
+                  <Button size="sm" variant="ghost" className="w-full mt-2" onClick={() => setStatusFilter([])}>
                     Clear
                   </Button>
                 </PopoverContent>
@@ -557,13 +578,13 @@ function ShowAllRequestsInner({ defenseRequests: initial, onStatusChange }: Show
                 </PopoverContent>
               </Popover>
               {/* Reset button */}
-              {(priorityFilter.length > 0 || typeFilter.length > 0 || dateRange?.from || search.trim()) && (
+              {(statusFilter.length > 0 || typeFilter.length > 0 || dateRange?.from || search.trim()) && (
                 <Button
                   variant="ghost"
                   size="sm"
                   className="h-8 px-3 flex items-center gap-1"
                   onClick={() => {
-                    setPriorityFilter([]);
+                    setStatusFilter([]);
                     setTypeFilter([]);
                     setDateRange(undefined);
                     setSearch('');
@@ -615,16 +636,17 @@ function ShowAllRequestsInner({ defenseRequests: initial, onStatusChange }: Show
                 <CircleArrowLeft size={13} className="text-blue-500" />
                 <span className="hidden sm:inline">{isLoading ? "Updating..." : "Retrieve"}</span>
               </Button>
+              {/* Link button replaces Delete */}
               <Button
                 variant="ghost"
                 size="icon"
                 className="px-2 py-1 h-7 w-auto text-xs flex items-center gap-1"
-                onClick={() => setConfirmBulkDelete(true)}
-                aria-label="Delete"
+                onClick={() => {/* your link logic here */}}
+                aria-label="Link"
                 disabled={isLoading}
               >
-                <Trash2 size={13} />
-                <span className="hidden sm:inline">{isLoading ? "Deleting..." : "Delete"}</span>
+                <Settings2 size={13} className="text-blue-500" />
+                <span className="hidden sm:inline">Link</span>
               </Button>
               <Button
                 variant="ghost"
@@ -655,14 +677,13 @@ function ShowAllRequestsInner({ defenseRequests: initial, onStatusChange }: Show
           <TableDefenseRequests
             paged={paged}
             columns={{
-              title: columns.title,
-              presenter: columns.presenter,
-              adviser: columns.adviser,
-              submitted_at: columns.submitted_at,
-              program: columns.program,
+              title: true,
+              presenter: true,
+              adviser: true,
+              program: true,
+              panelists: true,   
+              scheduled: true,  
               status: true,
-              type: columns.type,
-              priority: columns.priority
             }}
             selected={selected}
             toggleSelectOne={toggleSelectOne}
@@ -671,10 +692,14 @@ function ShowAllRequestsInner({ defenseRequests: initial, onStatusChange }: Show
             toggleSort={toggleSort}
             sortDir={sortDir}
             onPriorityChange={onPriorityChange}
-            onRowApprove={id => openConfirmSingle(id, 'approve')}
-            onRowReject={id => openConfirmSingle(id, 'reject')}
-            onRowRetrieve={id => openConfirmSingle(id, 'retrieve')}
-            onViewDetails={id => router.visit(`/coordinator/defense-requests/${id}/details`)}
+            tabType={undefined}
+            onViewDetails={(id: number) => router.visit(`/coordinator/defense-requests/${id}/details`)}
+            onRowApprove={(id: number) => openConfirmSingle(id, 'approve')}
+            onRowReject={(id: number) => openConfirmSingle(id, 'reject')}
+            onRowRetrieve={(id: number) => openConfirmSingle(id, 'retrieve')}
+            highlightMissingDateMode={false}
+            hideActions={false}
+            hideSelect={false}
           />
         </div>
         <PaginationBar page={page} totalPages={totalPages} onPageChange={setPage} />

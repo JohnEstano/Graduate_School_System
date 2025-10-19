@@ -5,6 +5,8 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\PanelistController;
 use App\Http\Controllers\DefenseRequestController;
 use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\Api\StudentSearchController;
+use App\Http\Controllers\Api\ComprehensiveExamEligibilityController;
 use App\Http\Controllers\DocumentTemplateController;
 
 // Authenticated API routes
@@ -33,6 +35,8 @@ Route::middleware('auth:sanctum')->group(function () {
     // Route::post('notifications/read/{notification}', [NotificationController::class, 'markAsRead']);
     // Route::post('notifications/read-all', [NotificationController::class, 'markAllAsRead']);
 
+    // Student search API
+    Route::get('students/search', [StudentSearchController::class, 'search']);
     // Document Templates API
     Route::get('/document-templates', [DocumentTemplateController::class,'index']);
     Route::get('/document-templates/{template}', [DocumentTemplateController::class,'show']);

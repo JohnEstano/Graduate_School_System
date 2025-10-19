@@ -25,7 +25,8 @@ interface LoginProps {
     googleSuggestedIdentifier?: string;
 }
 
-export default function Login({ status, canResetPassword, googleJustVerified, googleSuccessMessage, googleVerifiedEmail, googleSuggestedIdentifier }: LoginProps) {
+export default function Login(props: LoginProps) {
+    const { status, canResetPassword, googleJustVerified, googleSuccessMessage, googleVerifiedEmail, googleSuggestedIdentifier } = props;
     const { data, setData, post, processing, errors, reset } = useForm<Required<LoginForm>>({
         identifier: '',
         password: '',
@@ -34,6 +35,15 @@ export default function Login({ status, canResetPassword, googleJustVerified, go
     const [showBlockNotice, setShowBlockNotice] = useState(false);
     const [googleVerified, setGoogleVerified] = useState<boolean>(!!googleJustVerified);
     const [checking, setChecking] = useState(false);
+
+    // Separate form state for fallback login
+    const [fallbackData, setFallbackData] = useState({
+        identifier: '',
+        password: '',
+        remember: false,
+    });
+    const [fallbackProcessing, setFallbackProcessing] = useState(false);
+    const [fallbackError, setFallbackError] = useState<string | null>(null);
 
     // On mount after Google verification, prefill identifier if suggested.
     useEffect(() => {
@@ -83,6 +93,31 @@ export default function Login({ status, canResetPassword, googleJustVerified, go
                 reset('password');
             },
         });
+    };
+
+    // Fallback login handler
+    const handleFallbackLogin: FormEventHandler = (e) => {
+        e.preventDefault();
+        setFallbackProcessing(true);
+        setFallbackError(null);
+        fetch('/login-registered', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content || '',
+            },
+            body: JSON.stringify(fallbackData),
+        })
+            .then(async res => {
+                if (res.redirected) {
+                    window.location.href = res.url;
+                } else if (!res.ok) {
+                    const data = await res.json();
+                    setFallbackError(data.errors?.identifier || data.message || 'Login failed.');
+                }
+            })
+            .catch(() => setFallbackError('Network error.'))
+            .finally(() => setFallbackProcessing(false));
     };
 
     return (
@@ -143,14 +178,13 @@ export default function Login({ status, canResetPassword, googleJustVerified, go
                         <p className="text-[10px] text-slate-500 -mt-1">First time? Use Google (@uic.edu.ph) sign-in before student number login.</p>
                         <Input
                             id="identifier"
+                            name="identifier"
                             type="text"
                             required
-                            autoFocus
-                            tabIndex={1}
                             autoComplete="username"
                             value={data.identifier}
-                            onChange={(e) => setData('identifier', e.target.value)}
-                            placeholder="Username"
+                            onChange={e => setData('identifier', e.target.value)}
+                            placeholder="Email or Student Number"
                             className={!googleVerified && /@/.test(data.identifier) ? 'opacity-60' : ''}
                             disabled={!googleJustVerified && /@/.test(data.identifier)}
                         />
@@ -207,19 +241,69 @@ export default function Login({ status, canResetPassword, googleJustVerified, go
                 </div>
             </form>
 
-            <div className="mt-8 space-y-4">
-                <div className="relative flex items-center justify-center">
-                    <span className="h-px w-full bg-gradient-to-r from-transparent via-slate-300 to-transparent dark:via-neutral-700" />
-                    <span className="absolute bg-white px-3 text-[10px] font-medium uppercase tracking-wider text-slate-500 dark:bg-neutral-900 dark:text-neutral-400">or</span>
-                </div>
+            {/* --- Google Login Section --- */}
+            <div className="mb-8">
+                <h2 className="text-base font-semibold mb-2">Login with Google (@uic.edu.ph)</h2>
                 <a
                     href={route('google.redirect')}
                     className="flex w-full items-center justify-center gap-2 rounded-md border border-blue-500 bg-white py-2 text-xs font-medium text-blue-700 shadow-sm transition hover:bg-blue-50 dark:border-blue-400 dark:bg-neutral-800 dark:text-neutral-100 dark:hover:bg-neutral-700"
                 >
                     <svg className="h-4 w-4" viewBox="0 0 24 24"><path fill="#EA4335" d="M12 11v3h8.5c-.3 2-2.3 6-8.5 6-5.2 0-9.5-4.3-9.5-9.5S6.8 1 12 1c3 0 5 1.3 6.2 2.5L20.5 1C18.3-.9 15.4-1 12-1 5.4-1 0 4.4 0 11s5.4 12 12 12c6.9 0 11.5-4.8 11.5-11.5 0-.8-.1-1.4-.2-2.1H12Z" /><path fill="#34A853" d="M1.7 6.7 4.9 9c1-2.4 3.3-4 6.1-4 1.8 0 3.4.6 4.6 1.7l3.4-3.4C16.9 1.1 14.6 0 11 0 6.4 0 2.5 2.6 1 6.2l.7.5Z" /><path fill="#FBBC05" d="M12 24c3.2 0 6.2-1.1 8.4-3.1l-3.9-3.2c-1.1.8-2.5 1.3-4.5 1.3-3.5 0-6.4-2.4-7.4-5.6l-3.8 2.9C2.3 21.4 6.8 24 12 24Z" /><path fill="#4285F4" d="M23.8 10.4H12v4.4h6.8c-.5 1.6-1.5 2.8-3 3.6l3.9 3.1c-2.3 2.1-5.3 3.3-8.7 3.3-5.2 0-9.7-2.6-11.4-7l3.8-2.9c.8 2.4 3.3 4.3 6.6 4.3 1.9 0 3.5-.6 4.5-1.3.8-.5 1.4-1.2 1.8-2.1.4-.9.6-1.8.6-2.7 0-.9-.2-1.7-.4-2.4Z" /></svg>
-                    <span>{googleVerified ? 'Re-verify with Google' : 'Sign in with Google (Required first)'}</span>
+                    <span>Sign in with Google</span>
                 </a>
-                <p className="text-center text-[11px] text-slate-500 dark:text-neutral-500">Only @uic.edu.ph accounts are accepted.</p>
+                <p className="text-center text-[11px] text-slate-500 dark:text-neutral-500 mt-2">Only @uic.edu.ph accounts are accepted.</p>
+            </div>
+
+            {/* --- Divider --- */}
+            <div className="relative flex items-center justify-center my-6">
+                <span className="h-px w-full bg-gradient-to-r from-transparent via-slate-300 to-transparent dark:via-neutral-700" />
+                <span className="absolute bg-white px-3 text-[10px] font-medium uppercase tracking-wider text-slate-500 dark:bg-neutral-900 dark:text-neutral-400">or</span>
+            </div>
+
+            {/* --- Registered Account Login Section --- */}
+            <div>
+                <h2 className="text-base font-semibold mb-2">Login with Registered Account</h2>
+                <form className="flex flex-col gap-4" onSubmit={handleFallbackLogin}>
+                    <div>
+                        <Label htmlFor="fallback-identifier">Email or Student Number</Label>
+                        <Input
+                            id="fallback-identifier"
+                            type="text"
+                            required
+                            autoComplete="username"
+                            value={fallbackData.identifier}
+                            onChange={e => setFallbackData({ ...fallbackData, identifier: e.target.value })}
+                            placeholder="Username"
+                        />
+                    </div>
+                    <div>
+                        <Label htmlFor="fallback-password">Password</Label>
+                        <Input
+                            id="fallback-password"
+                            type="password"
+                            required
+                            autoComplete="current-password"
+                            value={fallbackData.password}
+                            onChange={e => setFallbackData({ ...fallbackData, password: e.target.value })}
+                            placeholder="Password"
+                        />
+                    </div>
+                    <div className="flex items-center space-x-3">
+                        <Checkbox
+                            id="fallback-remember"
+                            name="fallback-remember"
+                            checked={fallbackData.remember}
+                            onClick={() => setFallbackData({ ...fallbackData, remember: !fallbackData.remember })}
+                        />
+                        <Label htmlFor="fallback-remember">Remember me</Label>
+                    </div>
+                    {fallbackError && (
+                        <div className="text-xs text-red-600">{fallbackError}</div>
+                    )}
+                    <Button type="submit" className="mt-2 w-full" disabled={fallbackProcessing}>
+                        {fallbackProcessing ? <LoaderCircle className="h-4 w-4 animate-spin" /> : 'Log in'}
+                    </Button>
+                </form>
             </div>
 
             {status && <div className="mb-4 text-center text-sm font-medium text-green-600">{status}</div>}

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { usePage } from '@inertiajs/react';
-import { Sun, Moon, Users, CalendarDays, ClipboardList, BadgeDollarSign } from 'lucide-react';
+import { Sun, Moon, Users, CalendarDays, ClipboardList } from 'lucide-react';
 import RemindersWidget from '../widgets/reminders-widget';
 import UpcomingSchedulesWidget from '../widgets/upcomming-schedules-widget';
 import WeeklyDefenseSchedulesWidget from '../widgets/weekly-defense-schedule-widget';
@@ -77,35 +77,28 @@ export default function FacultyDashboard() {
             .finally(() => setLoading(false));
     }, []);
 
-    // Dummy metrics for now
-    const totalPanelists = 5;
-    const assignedPanelists = 3;
-
-    type Metric = {
-        title: string;
-        value: React.ReactNode;
-        description: string;
-        icon: React.ReactElement;
-    };
-
-    const metrics: Metric[] = [
+    // Metric cards styled like coordinator dashboard
+    const metrics = [
         {
             title: "Pending Defense Submissions",
             value: immediateRequests.length,
             description: "Submitted requirements needing your review",
-            icon: <ClipboardList className="text-rose-500 size-7" />,
+            icon: <ClipboardList className="size-5 text-rose-500" />,
+            iconTheme: "bg-rose-100 text-rose-600 dark:bg-rose-900 dark:text-rose-300",
         },
         {
             title: "Today's Schedules",
             value: todayEvents.length,
             description: "Events scheduled for today",
-            icon: <CalendarDays className="text-rose-500 size-7" />,
+            icon: <CalendarDays className="size-5 text-blue-500" />,
+            iconTheme: "bg-blue-100 text-blue-600 dark:bg-blue-900 dark:text-blue-300",
         },
         {
             title: "Students",
-            value: studentsCount as number, // <-- use actual count
+            value: studentsCount as number,
             description: "Total students linked to you",
-            icon: <Users className="text-rose-500 size-7" />,
+            icon: <Users className="size-5 text-green-500" />,
+            iconTheme: "bg-green-100 text-green-600 dark:bg-green-900 dark:text-green-300",
         },
     ];
 
@@ -129,9 +122,9 @@ export default function FacultyDashboard() {
                         <div className="flex flex-col pr-8 pl-7">
                             <span className="flex items-center text-xs font-semibold text-gray-700 dark:text-gray-200 mb-1 relative z-10">
                                 {isDaytime() ? (
-                                    <Sun className="mr-1 size-4 text-yellow-500" />
+                                    <Sun className="mr-1 size-4 text-rose-500" />
                                 ) : (
-                                    <Moon className="mr-1 size-4 text-blue-500" />
+                                    <Moon className="mr-1 size-4 text-rose-500" />
                                 )}
                                 {getFormattedDate()}
                             </span>
@@ -150,24 +143,29 @@ export default function FacultyDashboard() {
                         </div>
                     </div>
 
-                    {/* Metrics Cards */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 px-7">
+                    {/* Metric Cards - Coordinator Dashboard Style */}
+                    <div className="w-full max-w-screen-xl mx-auto grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 px-7 mb-6">
                         {metrics.map((metric, idx) => (
                             <Card
                                 key={idx}
-                                className="border border-1 bg-white dark:bg-muted rounded-xl shadow-none flex flex-row items-center min-h-[70px] py-4 px-5 w-full"
+                                className="col-span-1 rounded-xl border border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-sm flex flex-col justify-between p-0 min-h-0 h-auto transition hover:shadow-md"
+                                style={{ minWidth: 0 }}
                             >
-                                <div className="flex flex-col justify-center flex-1">
-                                    <CardHeader className="pb-1 px-0">
-                                        <CardTitle className="text-xs font-semibold text-gray-600 dark:text-gray-300">{metric.title}</CardTitle>
-                                    </CardHeader>
-                                    <CardContent className="px-0 py-0">
-                                        <span className="text-2xl font-bold text-gray-900 dark:text-white leading-tight">{metric.value}</span>
-                                        <div className="text-[11px] text-gray-400 mt-0.5">{metric.description}</div>
-                                    </CardContent>
+                                <div className="flex items-center justify-between px-5 pt-4 pb-0">
+                                    <div className="text-sm font-extrabold text-gray-800 dark:text-zinc-100">
+                                        {metric.title}
+                                    </div>
+                                    <div className={`rounded-full p-1.5 flex items-center justify-center ${metric.iconTheme}`}>
+                                        {React.cloneElement(metric.icon, { className: "size-4 font-extrabold " + (metric.iconTheme?.split(" ").find(c => c.startsWith("text-")) ?? "") })}
+                                    </div>
                                 </div>
-                                <div className="flex items-center justify-center ml-3 w-[40px] h-[40px]">
-                                    {metric.icon}
+                                <div className="flex flex-col px-5 pb-4 pt-2">
+                                    <span className="text-2xl font-bold text-gray-900 dark:text-white leading-none">
+                                        {metric.value}
+                                    </span>
+                                    <span className="text-xs text-gray-400 dark:text-gray-500 mt-1 truncate">
+                                        {metric.description}
+                                    </span>
                                 </div>
                             </Card>
                         ))}
@@ -190,7 +188,7 @@ export default function FacultyDashboard() {
                             />
                         </div>
                         <div className="grid gap-4 md:grid-cols-2">
-                          
+                            {/* Add more widgets here if needed */}
                         </div>
                     </div>
                 </>

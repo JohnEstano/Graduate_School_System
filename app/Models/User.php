@@ -6,6 +6,8 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class User extends Authenticatable
 {
@@ -27,10 +29,18 @@ class User extends Authenticatable
         'role', // legacy single role for backward compatibility
         'program',
         'school_id',
-    'employee_id',
-    'employee_department_code',
-    'employee_photo_url',
-    'employee_profile_fetched_at',
+        'legacy_account_id', // Critical: primary key in legacy system
+        'student_number_legacy', // Legacy student number from clearance API
+        'degree_code', // Degree code from legacy system
+        'degree_program_id', // Legacy degree program ID
+        'year_level', // Year level from legacy system
+        'balance', // Current balance from clearance API
+        'clearance_statuscode', // Clearance statuscode (3300=has balance, etc.)
+        'legacy_data_synced_at', // Last sync timestamp
+        'employee_id',
+        'employee_department_code',
+        'employee_photo_url',
+        'employee_profile_fetched_at',
         'google_verified_at',
         'extra_role_title',
     ];
@@ -61,10 +71,67 @@ class User extends Authenticatable
     {
         return [
             'email_verified_at' => 'datetime',
-            'google_verified_at' => 'datetime',
-            'employee_profile_fetched_at' => 'datetime',
             'password' => 'hashed',
         ];
+    }
+
+    /**
+     * Scope to find user by full name with flexible matching.
+     * Handles names with or without middle names and normalizes whitespace.
+     * 
+     * @param \Illuminate\Database\Eloquent\Builder $query
+     * @param string $fullName The full name to search for
+     * @param string|null $role Optional role to filter by (e.g., 'Faculty')
+     * @return \Illuminate\Database\Eloquent\Builder
+     */
+    public function scopeFindByFullName($query, $fullName, $role = null)
+    {
+        // Normalize the input: trim and collapse multiple spaces
+        $normalizedName = preg_replace('/\s+/', ' ', trim(strtolower($fullName)));
+        
+        Log::info('User::scopeFindByFullName called', [
+            'original_name' => $fullName,
+            'normalized_name' => $normalizedName,
+            'role' => $role
+        ]);
+        
+        if ($role) {
+            $query->where('role', $role);
+        }
+        
+        return $query->where(function($q) use ($normalizedName) {
+            // Match 1: Full name with middle name (FirstName MiddleName LastName)
+            $q->whereRaw(
+                'LOWER(TRIM(REGEXP_REPLACE(CONCAT(first_name, " ", COALESCE(middle_name, ""), " ", last_name), "[[:space:]]+", " "))) = ?',
+                [$normalizedName]
+            )
+            // Match 2: Name without middle name (FirstName LastName)
+            ->orWhereRaw(
+                'LOWER(TRIM(CONCAT(first_name, " ", last_name))) = ?',
+                [$normalizedName]
+            )
+            // Match 3: Just first and last name concatenated with middle initial
+            ->orWhereRaw(
+                'LOWER(TRIM(CONCAT(first_name, " ", LEFT(COALESCE(middle_name, ""), 1), " ", last_name))) = ?',
+                [$normalizedName]
+            );
+        });
+    }
+    
+    /**
+     * Get the user's full name including middle name if present.
+     * 
+     * @return string
+     */
+    public function getFullNameAttribute()
+    {
+        $parts = array_filter([
+            $this->first_name,
+            $this->middle_name,
+            $this->last_name
+        ]);
+        
+        return implode(' ', $parts);
     }
 
     public function markGoogleVerified(): void
@@ -118,9 +185,56 @@ class User extends Authenticatable
     /**
      * Get user's full name for display
      */
-    public function getDisplayNameAttribute(): string
+    public function getDisplayNameAttribute()
     {
-        return $this->name;
+        $firstName = $this->formatProperCase($this->first_name);
+        $lastName = $this->formatProperCase($this->last_name);
+        $middleInitial = $this->middle_name ? strtoupper(substr($this->middle_name, 0, 1)) . '. ' : '';
+        
+        return trim("{$firstName} {$middleInitial}{$lastName}");
+    }
+
+    /**
+     * Generate UIC email format: firstletter_lastname_studentid@uic.edu.ph
+     */
+    public function generateUicEmail(): string
+    {
+        if (!$this->first_name || !$this->last_name || !$this->school_id) {
+            return $this->email; // Return current email if data is incomplete
+        }
+        
+        $firstLetter = strtolower(substr($this->first_name, 0, 1));
+        $lastName = strtolower(str_replace(' ', '', $this->last_name)); // Remove spaces
+        $studentId = $this->school_id;
+        
+        return "{$firstLetter}{$lastName}_{$studentId}@uic.edu.ph";
+    }
+
+    /**
+     * Format name to proper case (First letter capital, rest lowercase)
+     */
+    private function formatProperCase(string $name): string
+    {
+        // Convert to title case while preserving original spacing
+        return mb_convert_case(strtolower($name), MB_CASE_TITLE, 'UTF-8');
+    }
+
+    /**
+     * Update user's email to UIC format if they are a student
+     */
+    public function updateToUicEmail(): bool
+    {
+        if ($this->role !== 'Student') {
+            return false;
+        }
+        
+        $newEmail = $this->generateUicEmail();
+        if ($newEmail !== $this->email) {
+            $this->update(['email' => $newEmail]);
+            return true;
+        }
+        
+        return false;
     }
 
     public function role()
@@ -151,22 +265,33 @@ class User extends Authenticatable
     }
 
     /**
-     * For Adviser: Get all students
+     * Students advised by this user (when the user is an adviser).
      */
-    public function advisedStudents()
+    public function advisedStudents(): BelongsToMany
     {
-        return $this->belongsToMany(User::class, 'adviser_student', 'adviser_id', 'student_id');
+        return $this->belongsToMany(
+            User::class,
+            'adviser_student',
+            'adviser_id',
+            'student_id'
+        )
+        ->withPivot('status', 'requested_by')
+        ->withTimestamps();
     }
 
-    // For Student: Get all advisers
-    public function advisers()
+    /**
+     * Advisers for this student (inverse).
+     */
+    public function advisers(): BelongsToMany
     {
         return $this->belongsToMany(
             User::class,
             'adviser_student',
             'student_id',
             'adviser_id'
-        )->select('users.id', 'users.first_name', 'users.middle_name', 'users.last_name', 'users.email', 'users.adviser_code');
+        )
+        ->withPivot('status', 'requested_by')
+        ->withTimestamps();
     }
 
     public function generateAdviserCode(): void
@@ -195,5 +320,40 @@ class User extends Authenticatable
     public function coordinators()
     {
         return $this->belongsToMany(User::class, 'adviser_coordinator', 'adviser_id', 'coordinator_id');
+    }
+
+    protected static function booted()
+    {
+        static::creating(function ($user) {
+            if ($user->isCoordinator() && !$user->coordinator_code) {
+                // Just set the code, do NOT call save()
+                $user->coordinator_code = strtoupper(bin2hex(random_bytes(4)));
+            }
+        });
+
+        // When a user is created (e.g. an adviser registers), reconcile any pre-existing Adviser rows
+        // created by coordinators using the same email. Attach coordinator pivots and mark adviser rows active.
+        static::created(function ($user) {
+            try {
+                // Only attempt reconciliation for adviser/faculty users
+                if (in_array($user->role, ['Faculty', 'Adviser'])) {
+                    $adviserRows = \App\Models\Adviser::where('email', $user->email)->get();
+                    foreach ($adviserRows as $row) {
+                        // Attach coordinator pivot for the newly created user so the adviser "sees" their coordinators
+                        if (!empty($row->coordinator_id) && method_exists($user, 'coordinators')) {
+                            $user->coordinators()->syncWithoutDetaching([$row->coordinator_id]);
+                        }
+
+                        // Link the adviser row to the created user and mark as active
+                        $row->user_id = $user->id;
+                        $row->status = 'active';
+                        $row->save();
+                    }
+                }
+            } catch (\Throwable $e) {
+                // Don't block user creation on reconciliation failures. Log for debugging.
+                Log::warning('Adviser reconciliation failed for user '.$user->id.': '.$e->getMessage());
+            }
+        });
     }
 }

@@ -52,6 +52,12 @@ import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import {
+  Tabs,
+  TabsList,
+  TabsTrigger,
+  TabsContent,
+} from '@/components/ui/tabs';
 
 type PanelMemberOption = {
   id: string;
@@ -89,10 +95,17 @@ export type DefenseRequestFull = {
   rec_endorsement?: string;
   proof_of_payment?: string;
   reference_no?: string;
-  last_status_updated_by?: string;          // could be an id
-  last_status_updated_by_name?: string;     // added: friendly name if backend provides
+  endorsement_form?: string | null;
+  manuscript_proposal?: string | null;
+  similarity_index?: string | null;
+  avisee_adviser_attachment?: string | null;
+  ai_detection_certificate?: string | null;
+  last_status_updated_by?: string;
+  last_status_updated_by_name?: string;
   last_status_updated_at?: string;
   workflow_history?: any[];
+  adviser_status?: string;
+  coordinator_status?: string;
 };
 
 interface PageProps {
@@ -350,24 +363,49 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
     userRole
   );
 
-  function csrf() {
-    return (
-      (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)
-        ?.content || ''
-    );
+  // Helper to always get a fresh CSRF token
+  async function getFreshCsrfToken(): Promise<string> {
+    try {
+      await fetch('/sanctum/csrf-cookie', { credentials: 'same-origin' });
+      const token = (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content || '';
+      return token;
+    } catch {
+      return '';
+    }
+  }
+
+  // Robust fetch with CSRF retry and refresh
+  async function fetchWithCsrfRetry(url: string, options: RequestInit, retry = true) {
+    if (!options.headers) options.headers = {};
+    (options.headers as Record<string, string>)['X-CSRF-TOKEN'] = await getFreshCsrfToken();
+    let res: Response;
+    try {
+      res = await fetch(url, options);
+    } catch (err) {
+      throw new Error('network');
+    }
+    if (res.status === 419 && retry) {
+      // CSRF error, try to refresh token and retry once
+      (options.headers as Record<string, string>)['X-CSRF-TOKEN'] = await getFreshCsrfToken();
+      try {
+        res = await fetch(url, options);
+      } catch (err) {
+        throw new Error('network');
+      }
+    }
+    return res;
   }
 
   async function savePanels() {
     const toastId = toast.loading('Saving panel assignments...');
     setSavingPanels(true);
     try {
-      const res = await fetch(
+      const res = await fetchWithCsrfRetry(
         `/coordinator/defense-requests/${request.id}/panels`,
         {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'X-CSRF-TOKEN': csrf(),
             'Accept': 'application/json'
           },
           body: JSON.stringify(panels)
@@ -410,6 +448,7 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
   }
 
   async function saveSchedule() {
+    // Validate times
     if (
       !schedule.scheduled_date ||
       !schedule.scheduled_time ||
@@ -420,22 +459,46 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
       toast.error('Please fill in all required scheduling fields.');
       return;
     }
+    // Time logic: start < end
+    if (schedule.scheduled_time && schedule.scheduled_end_time) {
+      const [sh, sm] = schedule.scheduled_time.split(':').map(Number);
+      const [eh, em] = schedule.scheduled_end_time.split(':').map(Number);
+      const start = sh * 60 + sm;
+      const end = eh * 60 + em;
+      if (end <= start) {
+        toast.error('End time must be after start time.');
+        return;
+      }
+    }
     const toastId = toast.loading('Saving schedule...');
     setSavingSchedule(true);
     try {
-      const res = await fetch(
+      const res = await fetchWithCsrfRetry(
         `/coordinator/defense-requests/${request.id}/schedule-json`,
         {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'X-CSRF-TOKEN': csrf()
+            'Accept': 'application/json'
           },
           body: JSON.stringify(schedule)
         }
       );
-      const data = await res.json();
-      if (res.ok) {
+
+      const contentType = res.headers.get('content-type') || '';
+      let data: any = {};
+      try {
+        if (contentType.includes('application/json')) {
+          data = await res.json();
+        } else {
+          const txt = await res.text();
+          data = { error: txt };
+        }
+      } catch {
+        data = { error: 'Invalid response' };
+      }
+
+      if (res.ok && data.request) {
         setRequest(r => ({ ...r, ...data.request }));
         toast.success('Schedule saved', {
           id: toastId,
@@ -446,52 +509,66 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
           }`
         });
       } else {
-        toast.error(data.error || 'Failed to save schedule', { id: toastId });
+        toast.error(data.error || `Failed (${res.status})`, { id: toastId });
       }
-    } catch {
-      toast.error('Network error saving schedule', { id: toastId });
+    } catch (err: any) {
+      if (err instanceof Error && err.message === 'network') {
+        toast.error('Network error saving schedule', { id: toastId });
+      } else {
+        toast.error('Unknown error saving schedule', { id: toastId });
+      }
     } finally {
       setSavingSchedule(false);
     }
   }
 
-  // --- Approve/Reject/Retrieve logic ---
+  // --- Approve/Reject/Retrieve logic (robust, uses fetchWithCsrfRetry) ---
   async function handleStatusChange(action: 'approve' | 'reject' | 'retrieve') {
     if (!request.id) return;
     setIsLoading(true);
-    let newStatus: DefenseRequestFull['status'] = 'Pending';
+
+    let newStatus: 'Pending' | 'Approved' | 'Rejected' = 'Pending';
     if (action === 'approve') newStatus = 'Approved';
     else if (action === 'reject') newStatus = 'Rejected';
     else if (action === 'retrieve') newStatus = 'Pending';
 
     try {
-      const res = await fetch(`/defense-requests/${request.id}/status`, {
+      const res = await fetchWithCsrfRetry(`/defense-requests/${request.id}/status`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
-          'X-CSRF-TOKEN': csrf(),
           Accept: 'application/json'
         },
         body: JSON.stringify({ status: newStatus }),
       });
-      const data = await res.json();
+      let data: any = {};
+      try {
+        data = await res.json();
+      } catch {
+        data = { error: 'Invalid response from server.' };
+      }
       if (res.ok) {
-        // Use the updated request from the backend if available
         if (data.request) {
           setRequest(data.request);
         } else {
           setRequest(r => ({
             ...r,
-            status: newStatus,
+            coordinator_status: newStatus,
+            workflow_state: data.workflow_state || r.workflow_state,
             workflow_history: data.workflow_history || r.workflow_history,
+            status: data.status || r.status,
           }));
         }
-        toast.success(`Request set to ${newStatus}`);
+        toast.success(`Coordinator status set to ${newStatus}`);
       } else {
-        toast.error(data?.error || 'Failed to update status');
+        toast.error(data?.error || `Failed to update status (${res.status})`);
       }
-    } catch {
-      toast.error('Network error updating status');
+    } catch (err: any) {
+      if (err instanceof Error && err.message === 'network') {
+        toast.error('Network error updating status. Please check your connection and try again.');
+      } else {
+        toast.error('Unknown error updating status.');
+      }
     } finally {
       setIsLoading(false);
       setConfirm({ open: false, action: null });
@@ -514,25 +591,24 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
     return 'bg-amber-100 text-amber-600';
   }
 
-  const attachments = [
-    { label: "Adviser’s Endorsement", url: request.advisers_endorsement },
-    { label: 'REC Endorsement', url: request.rec_endorsement },
-    { label: 'Proof of Payment', url: request.proof_of_payment },
-    { label: 'Reference No.', url: request.reference_no }
-  ];
+  // Helper to resolve file URLs (add /storage/ if not already absolute)
+  function resolveFileUrl(url?: string | null) {
+    if (!url) return null;
+    if (/^https?:\/\//i.test(url) || url.startsWith('/storage/')) return url;
+    return `/storage/${url.replace(/^\/?storage\//, '')}`;
+  }
 
-  function parseISODate(d: string) {
-    const parts = d.split('-').map(Number);
-    if (parts.length === 3) {
-      return new Date(parts[0], parts[1] - 1, parts[2]);
-    }
-    return new Date(NaN);
-  }
-  function formatISODate(d: Date) {
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(
-      d.getDate()
-    ).padStart(2, '0')}`;
-  }
+  // Attachments (show all, including manuscript, similarity, avisee, etc.)
+  const attachments = [
+    { label: "Adviser’s Endorsement", url: resolveFileUrl(request.advisers_endorsement) },
+    { label: 'REC Endorsement', url: resolveFileUrl(request.rec_endorsement) },
+    { label: 'Proof of Payment', url: resolveFileUrl(request.proof_of_payment) },
+    { label: 'Manuscript', url: resolveFileUrl(request.manuscript_proposal) },
+    { label: 'Similarity Index', url: resolveFileUrl(request.similarity_index) },
+    { label: 'Avisee-Adviser File', url: resolveFileUrl(request.avisee_adviser_attachment) },
+    { label: 'AI Detection Certificate', url: resolveFileUrl(request.ai_detection_certificate) },
+    { label: 'Endorsement Form', url: resolveFileUrl(request.endorsement_form) },
+  ];
 
   // Helper for workflow history rendering robustness
   function resolveHistoryFields(item: any) {
@@ -597,7 +673,7 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
     },
     {
       key: 'adviser-approved',
-      label: 'Approved by Adviser',
+      label: 'Endorsed by Adviser', // CHANGED from "Approved by Adviser"
       icon: <UserCheck className="h-5 w-5" />,
     },
     {
@@ -649,44 +725,92 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
     return format(date, 'hh:mm a');
   }
 
+  // Tabs: "details" and "assign-schedule"
+  const [tab, setTab] = useState<'details' | 'assign-schedule'>('details');
+
+  const statusMap: Record<string, string> = {
+    'submitted': 'Submitted',
+    'adviser-approved': 'Endorsed by Adviser',
+    'adviser-rejected': 'Rejected by Adviser',
+    'adviser-retrieved': 'Retrieved by Adviser',
+    'coordinator-approved': 'Approved by Coordinator',
+    'coordinator-rejected': 'Rejected by Coordinator',
+    'coordinator-review': 'Pending Coordinator Action',
+    'coordinator-retrieved': 'Retrieved by Coordinator',
+    'panels-assigned': 'Panels Assigned',
+    'scheduled': 'Scheduled',
+    'completed': 'Completed',
+    'cancelled': 'Cancelled',
+    // Add more as needed
+  };
+
   return (
     <AppLayout breadcrumbs={breadcrumbs}>
       <Toaster position="bottom-right" richColors closeButton />
       <div className="p-5 space-y-6">
         <Head title={request.thesis_title || `Defense Request #${request.id}`} />
         <div className="flex items-center justify-between gap-3 flex-wrap">
-          <Button
-            variant="outline"
-            onClick={() => router.visit('/defense-request')}
-            className="h-8 px-2"
-          >
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              onClick={() => router.visit('/defense-request')}
+              className="h-8 px-2"
+            >
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+            <Tabs value={tab} onValueChange={v => setTab(v as 'details' | 'assign-schedule')}>
+              <TabsList className="h-8">
+                <TabsTrigger value="details" className="flex items-center gap-1 text-sm px-3">
+                  <FileText className="h-4 w-4" /> Details
+                </TabsTrigger>
+                <TabsTrigger value="assign-schedule" className="flex items-center gap-1 text-sm font-medium px-3">
+                  <Calendar className="h-4 w-4" />
+                  Assign &amp; Schedule
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
+          </div>
           {canEdit && (
             <div className="flex gap-2">
+              {/* Approve button: only enabled if not already approved or completed */}
               <Button
                 size="sm"
                 variant="outline"
                 onClick={() => setConfirm({ open: true, action: 'approve' })}
-                disabled={isLoading || request.status === 'Approved'}
+                disabled={
+                  isLoading ||
+                  request.coordinator_status === 'Approved' ||
+                  request.workflow_state === 'completed'
+                }
               >
                 <CheckCircle className="h-4 w-4 mr-1 text-green-600" />
                 Approve
               </Button>
+              {/* Reject button: only enabled if not already rejected, not approved, and not completed */}
               <Button
                 size="sm"
                 variant="outline"
                 onClick={() => setConfirm({ open: true, action: 'reject' })}
-                disabled={isLoading || request.status === 'Rejected'}
+                disabled={
+                  isLoading ||
+                  request.coordinator_status === 'Rejected' ||
+                  request.coordinator_status === 'Approved' ||
+                  request.workflow_state === 'completed'
+                }
               >
                 <XCircle className="h-4 w-4 mr-1 text-red-600" />
                 Reject
               </Button>
+              {/* Retrieve button: enabled if currently rejected OR approved and not completed */}
               <Button
                 size="sm"
                 variant="outline"
                 onClick={() => setConfirm({ open: true, action: 'retrieve' })}
-                disabled={isLoading || request.status === 'Pending'}
+                disabled={
+                  isLoading ||
+                  !['Rejected', 'Approved'].includes(request.coordinator_status || '') ||
+                  request.workflow_state === 'completed'
+                }
               >
                 <CircleArrowLeft className="h-4 w-4 mr-1 text-blue-600" />
                 Retrieve
@@ -695,296 +819,351 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
           )}
         </div>
 
-        {/* Submission section and Workflow Progress side by side */}
+        {/* Main content and Workflow Progress */}
         <div className="flex flex-col md:flex-row gap-5 mb-2">
-          {/* Main column: all cards stacked, fixed width */}
+          {/* Main column */}
           <div className="w-full md:max-w-3xl mx-auto flex flex-col gap-5">
-            {/* Submission summary card */}
-            <div className="rounded-xl border p-8 bg-white dark:bg-zinc-900">
-              {/* Thesis Title Header with Status */}
-              <div className="mb-1 flex flex-col md:flex-row md:items-center md:justify-between gap-2">
-                <div>
-                  <div className="text-2xl font-semibold">{request.thesis_title}</div>
-                  <div className="text-xs text-muted-foreground font-medium mt-0.5">Thesis Title</div>
-                </div>
-                {request.status && (
-                  <span
-                    className={`text-xs font-semibold px-2 py-0.5 rounded-full mt-2 md:mt-0 ${statusBadgeColor(
-                      request.status
-                    )}`}
-                  >
-                    {request.status}
-                  </span>
-                )}
-              </div>
-              {/* Info Grid */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-6 mt-6">
-                <div>
-                  <div className="text-xs text-muted-foreground mb-1">Presenter</div>
-                  <div className="flex items-center gap-3">
-                    <Avatar className="h-8 w-8">
-                      <AvatarFallback className="text-base font-bold bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-200">
-                        {getInitials(request)}
-                      </AvatarFallback>
-                    </Avatar>
+            <Tabs value={tab} onValueChange={v => setTab(v as 'details' | 'assign-schedule')} className="w-full">
+              {/* DETAILS TAB */}
+              <TabsContent value="details" className="space-y-5">
+                {/* Submission summary card */}
+                <div className="rounded-xl border p-8 bg-white dark:bg-zinc-900">
+                  {/* Thesis Title Header with Status */}
+                  <div className="mb-1 flex flex-col md:flex-row md:items-center md:justify-between gap-2">
                     <div>
-                      <div className="font-medium text-sm leading-tight">
-                        {request.first_name} {request.middle_name ? `${request.middle_name} ` : ''}{request.last_name}
+                      <div className="text-2xl font-semibold">{request.thesis_title}</div>
+                      <div className="text-xs text-muted-foreground font-medium mt-0.5">Thesis Title</div>
+                    </div>
+                    <div className="flex flex-col md:items-end gap-1">
+                      {/* Coordinator Status */}
+                      {request.coordinator_status && (
+                        <span
+                          className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
+                            request.coordinator_status === 'Approved'
+                              ? 'bg-green-100 text-green-600'
+                              : request.coordinator_status === 'Rejected'
+                              ? 'bg-red-100 text-red-600'
+                              : request.coordinator_status === 'Needs Signature'
+                              ? 'bg-blue-100 text-blue-600'
+                              : request.coordinator_status === 'Not Scheduled'
+                              ? 'bg-yellow-100 text-yellow-700'
+                              : request.coordinator_status === 'No Assigned Panelists'
+                              ? 'bg-orange-100 text-orange-600'
+                              : 'bg-gray-100 text-gray-600'
+                          }`}
+                        >
+                          Coordinator Status: {request.coordinator_status}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  {/* Info Grid */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-6 mt-6">
+                    <div>
+                      <div className="text-xs text-muted-foreground mb-1">Presenter</div>
+                      <div className="flex items-center gap-3">
+                        <Avatar className="h-8 w-8">
+                          <AvatarFallback className="text-base font-bold bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-200">
+                            {getInitials(request)}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div>
+                          <div className="font-medium text-sm leading-tight">
+                            {request.first_name} {request.middle_name ? `${request.middle_name} ` : ''}{request.last_name}
+                          </div>
+                          <div className="text-xs text-muted-foreground mt-0.5">
+                            {request.school_id}
+                          </div>
+                        </div>
                       </div>
-                      <div className="text-xs text-muted-foreground mt-0.5">
-                        {request.school_id}
+                    </div>
+                    <div>
+                      <div className="text-xs text-muted-foreground mb-1">Program</div>
+                      <div className="font-medium text-sm">{request.program}</div>
+                    </div>
+                    <div>
+                      <div className="text-xs text-muted-foreground mb-1">Defense Type</div>
+                      <Badge variant="secondary" className="text-xs font-medium">
+                        {request.defense_type ?? '—'}
+                      </Badge>
+                    </div>
+                    <div>
+                      <div className="text-xs text-muted-foreground mb-1">Scheduled Date</div>
+                      <div className="font-medium text-sm">{formatDate(request.scheduled_date)}</div>
+                    </div>
+                    <div>
+                      <div className="text-xs text-muted-foreground mb-1">Time</div>
+                      <div className="font-medium text-sm">
+                        {request.scheduled_time
+                          ? `${formatTime12h(request.scheduled_time)}${request.scheduled_end_time ? ' - ' + formatTime12h(request.scheduled_end_time) : ''}`
+                          : '—'}
                       </div>
+                    </div>
+                    <div>
+                      <div className="text-xs text-muted-foreground mb-1">Venue</div>
+                      <div className="font-medium text-sm">{request.defense_venue || '—'}</div>
+                    </div>
+                    <div>
+                      <div className="text-xs text-muted-foreground mb-1">Mode</div>
+                      <div className="font-medium text-sm">{request.defense_mode ? (request.defense_mode === 'face-to-face' ? 'Face-to-Face' : 'Online') : '—'}</div>
+                    </div>
+                    <div className="md:col-span-2">
+                      <div className="text-xs text-muted-foreground mb-1">Notes</div>
+                      <div className="font-medium text-sm">{request.scheduling_notes || '—'}</div>
                     </div>
                   </div>
                 </div>
-                <div>
-                  <div className="text-xs text-muted-foreground mb-1">Program</div>
-                  <div className="font-medium text-sm">{request.program}</div>
-                </div>
-                <div>
-                  <div className="text-xs text-muted-foreground mb-1">Defense Type</div>
-                  <Badge variant="secondary" className="text-xs font-medium">
-                    {request.defense_type ?? '—'}
-                  </Badge>
-                </div>
-                <div>
-                  <div className="text-xs text-muted-foreground mb-1">Scheduled Date</div>
-                  <div className="font-medium text-sm">{formatDate(request.scheduled_date)}</div>
-                </div>
-                <div>
-                  <div className="text-xs text-muted-foreground mb-1">Time</div>
-                  <div className="font-medium text-sm">
-                    {request.scheduled_time
-                      ? `${formatTime12h(request.scheduled_time)}${request.scheduled_end_time ? ' - ' + formatTime12h(request.scheduled_end_time) : ''}`
-                      : '—'}
-                  </div>
-                </div>
-                <div>
-                  <div className="text-xs text-muted-foreground mb-1">Venue</div>
-                  <div className="font-medium text-sm">{request.defense_venue || '—'}</div>
-                </div>
-                <div>
-                  <div className="text-xs text-muted-foreground mb-1">Mode</div>
-                  <div className="font-medium text-sm">{request.defense_mode ? (request.defense_mode === 'face-to-face' ? 'Face-to-Face' : 'Online') : '—'}</div>
-                </div>
-                <div className="md:col-span-2">
-                  <div className="text-xs text-muted-foreground mb-1">Notes</div>
-                  <div className="font-medium text-sm">{request.scheduling_notes || '—'}</div>
-                </div>
-              </div>
-            </div>
 
-            {/* Committee (read-only summary) */}
-            <div className={sectionClass}>
-              <h2 className="text-sm font-semibold flex items-center gap-2">
-                <Users className="h-4 w-4" /> Committee
-              </h2>
-              <Separator />
-              <div className="grid md:grid-cols-2 gap-4 text-sm">
-                <div>
-                  <div className="text-[11px] text-muted-foreground uppercase tracking-wide">
-                    Adviser
-                  </div>
-                  <div className="font-medium">
-                    {request.defense_adviser || '—'}
-                  </div>
-                </div>
-                {[
-                  {
-                    label: 'Chairperson',
-                    v: panels.defense_chairperson || request.defense_chairperson
-                  },
-                  {
-                    label: 'Panelist 1',
-                    v: panels.defense_panelist1 || request.defense_panelist1
-                  },
-                  {
-                    label: 'Panelist 2',
-                    v: panels.defense_panelist2 || request.defense_panelist2
-                  },
-                  {
-                    label: 'Panelist 3',
-                    v: panels.defense_panelist3 || request.defense_panelist3
-                  },
-                  {
-                    label: 'Panelist 4',
-                    v: panels.defense_panelist4 || request.defense_panelist4
-                  }
-                ].map(r => (
-                  <div key={r.label}>
-                    <div className="text-[11px] text-muted-foreground uppercase tracking-wide">
-                      {r.label}
+                {/* Committee (read-only summary) */}
+                <div className={sectionClass}>
+                  <h2 className="text-sm font-semibold flex items-center gap-2">
+                    <Users className="h-4 w-4" /> Committee
+                  </h2>
+                  <Separator />
+                  <div className="grid md:grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <div className="text-[11px] text-muted-foreground uppercase tracking-wide">
+                        Adviser
+                      </div>
+                      <div className="font-medium">
+                        {request.defense_adviser || '—'}
+                      </div>
                     </div>
-                    <div className="font-medium">{r.v || '—'}</div>
+                    {[
+                      {
+                        label: 'Chairperson',
+                        v: panels.defense_chairperson || request.defense_chairperson
+                      },
+                      {
+                        label: 'Panelist 1',
+                        v: panels.defense_panelist1 || request.defense_panelist1
+                      },
+                      {
+                        label: 'Panelist 2',
+                        v: panels.defense_panelist2 || request.defense_panelist2
+                      },
+                      {
+                        label: 'Panelist 3',
+                        v: panels.defense_panelist3 || request.defense_panelist3
+                      },
+                      {
+                        label: 'Panelist 4',
+                        v: panels.defense_panelist4 || request.defense_panelist4
+                      }
+                    ].map(r => (
+                      <div key={r.label}>
+                        <div className="text-[11px] text-muted-foreground uppercase tracking-wide">
+                          {r.label}
+                        </div>
+                        <div className="font-medium">{r.v || '—'}</div>
+                      </div>
+                    ))}
                   </div>
-                ))}
-              </div>
-            </div>
+                </div>
 
-            {/* Attachments */}
-            <div className={sectionClass}>
-              <h2 className="text-sm font-semibold flex items-center gap-2">
-                <FileText className="h-4 w-4" /> Attachments
-              </h2>
-              <Separator />
-              <div className="space-y-2 text-sm">
-                {attachments.map(a =>
-                  a.url ? (
-                    <a
-                      key={a.label}
-                      href={a.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center gap-2 px-3 py-2 rounded-md border hover:bg-muted transition"
+                {/* Attachments */}
+                <div className={sectionClass}>
+                  <h2 className="text-sm font-semibold flex items-center gap-2">
+                    <FileText className="h-4 w-4" /> Attachments
+                  </h2>
+                  <Separator />
+                  <div className="space-y-2 text-sm">
+                    {attachments.filter(a => !!a.url).length === 0 && (
+                      <p className="text-sm text-muted-foreground">No attachments.</p>
+                    )}
+                    {attachments
+                      .filter(a => !!a.url)
+                      .map(a => (
+                        <a
+                          key={a.label}
+                          href={a.url!}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-2 px-3 py-2 rounded-md border bg-white dark:bg-zinc-900 hover:bg-muted transition"
+                        >
+                          <FileText className="h-4 w-4" />
+                          <span className="font-medium">{a.label}</span>
+                          <span className="text-xs text-muted-foreground ml-auto truncate max-w-[180px]">
+                            {a.url?.split('/').pop()}
+                          </span>
+                        </a>
+                      ))}
+                    {/* Reference No. as plain text if present */}
+                    {request.reference_no && (
+                      <div className="flex items-center gap-2 px-3 py-2 rounded-md border bg-white dark:bg-zinc-900">
+                        <FileText className="h-4 w-4" />
+                        <span className="font-medium">Reference No.</span>
+                        <span className="ml-auto text-xs">{request.reference_no}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </TabsContent>
+
+              {/* ASSIGN & SCHEDULE TAB */}
+              <TabsContent value="assign-schedule" className="space-y-5">
+                {/* Panel Assignment */}
+                <div className={sectionClass}>
+                  <h2 className="text-sm font-semibold flex items-center gap-2">
+                    <Users className="h-4 w-4" /> Panel Assignment
+                  </h2>
+                  <Separator />
+                  <div className="grid md:grid-cols-2 gap-4">
+                    {[
+                      { label: 'Chairperson', key: 'defense_chairperson' },
+                      { label: 'Panelist 1', key: 'defense_panelist1' },
+                      { label: 'Panelist 2', key: 'defense_panelist2' },
+                      { label: 'Panelist 3', key: 'defense_panelist3' },
+                      { label: 'Panelist 4', key: 'defense_panelist4' }
+                    ].map(({ label, key }) => (
+                      <PanelMemberCombobox
+                        key={key}
+                        label={label}
+                        value={panels[key as keyof typeof panels]}
+                        onChange={v => setPanels(p => ({ ...p, [key]: v }))}
+                        options={panelMembers}
+                        disabled={!canEdit || loadingMembers}
+                        taken={taken}
+                      />
+                    ))}
+                  </div>
+                  <div className="flex justify-end mt-4">
+                    <Button
+                      onClick={savePanels}
+                      disabled={!canEdit || savingPanels}
+                      className="gap-2 dark:bg-rose-500 text-white hover:cursor-pointer"
                     >
-                      <FileText className="h-4 w-4" />
-                      <span className="font-medium">{a.label}</span>
-                      <span className="text-xs text-muted-foreground ml-auto truncate max-w-[180px]">
-                        {a.url.split('/').pop()}
-                      </span>
-                    </a>
-                  ) : null
-                )}
-                {!attachments.some(a => a.url) && (
-                  <p className="text-sm text-muted-foreground">
-                    No attachments.
-                  </p>
-                )}
-              </div>
-            </div>
-
-            {/* Panel Assignment */}
-            <div className={sectionClass}>
-              <h2 className="text-sm font-semibold flex items-center gap-2">
-                <Users className="h-4 w-4" /> Panel Assignment
-              </h2>
-              <Separator />
-              <div className="grid md:grid-cols-2 gap-4">
-                {[
-                  { label: 'Chairperson', key: 'defense_chairperson' },
-                  { label: 'Panelist 1', key: 'defense_panelist1' },
-                  { label: 'Panelist 2', key: 'defense_panelist2' },
-                  { label: 'Panelist 3', key: 'defense_panelist3' },
-                  { label: 'Panelist 4', key: 'defense_panelist4' }
-                ].map(({ label, key }) => (
-                  <PanelMemberCombobox
-                    key={key}
-                    label={label}
-                    value={panels[key as keyof typeof panels]}
-                    onChange={v => setPanels(p => ({ ...p, [key]: v }))}
-                    options={panelMembers}
-                    disabled={!canEdit || loadingMembers}
-                    taken={taken}
-                  />
-                ))}
-              </div>
-              <div className="flex justify-end mt-4">
-                <Button
-                  onClick={savePanels}
-                  disabled={!canEdit || savingPanels}
-                  className="gap-2 dark:bg-rose-500 text-white hover:cursor-pointer"
-                >
-                  {savingPanels && <Loader2 className="animate-spin h-4 w-4" />}
-                  <Save className="h-4 w-4" />
-                  Save Panel Assignment
-                </Button>
-              </div>
-              {panelLoadError && (
-                <div className="text-xs text-red-500 mt-2">{panelLoadError}</div>
-              )}
-            </div>
-
-            {/* Scheduling */}
-            <div className={sectionClass}>
-              <h2 className="text-sm font-semibold flex items-center gap-2">
-                <Calendar className="h-4 w-4" /> Scheduling
-              </h2>
-              <Separator />
-              <div className="grid md:grid-cols-2 gap-4">
-                <div>
-                  <div className="text-xs text-muted-foreground mb-1">Date</div>
-                  <Input
-                    type="date"
-                    value={schedule.scheduled_date}
-                    onChange={e =>
-                      setSchedule(s => ({ ...s, scheduled_date: e.target.value }))
-                    }
-                    disabled={!canEdit}
-                  />
+                      {savingPanels && <Loader2 className="animate-spin h-4 w-4" />}
+                      <Save className="h-4 w-4" />
+                      Save Panel Assignment
+                    </Button>
+                  </div>
+                  {panelLoadError && (
+                    <div className="text-xs text-red-500 mt-2">{panelLoadError}</div>
+                  )}
                 </div>
-                <div>
-                  <div className="text-xs text-muted-foreground mb-1">Start Time</div>
-                  <Input
-                    type="time"
-                    value={schedule.scheduled_time}
-                    onChange={e =>
-                      setSchedule(s => ({ ...s, scheduled_time: e.target.value }))
-                    }
-                    disabled={!canEdit}
-                  />
+                {/* Scheduling */}
+                <div className={sectionClass}>
+                  <h2 className="text-sm font-semibold flex items-center gap-2">
+                    <Calendar className="h-4 w-4" /> Scheduling
+                  </h2>
+                  <Separator />
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <div>
+                      <div className="text-xs text-muted-foreground mb-1">Date</div>
+                      {/* --- SHADCN Date Picker --- */}
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant="outline"
+                            className={cn(
+                              "w-full justify-start text-left font-normal",
+                              !schedule.scheduled_date && "text-muted-foreground"
+                            )}
+                            disabled={!canEdit}
+                          >
+                            <Calendar className="mr-2 h-4 w-4" />
+                            {schedule.scheduled_date
+                              ? formatDate(schedule.scheduled_date)
+                              : "Pick a date"}  
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <CalendarCmp
+                            mode="single"
+                            selected={
+                              schedule.scheduled_date
+                                ? new Date(schedule.scheduled_date)
+                                : undefined
+                            }
+                            onSelect={date => {
+                              setSchedule(s => ({
+                                ...s,
+                                scheduled_date: date
+                                  ? format(date, "yyyy-MM-dd")
+                                  : ""
+                              }));
+                            }}
+                            initialFocus
+                          />
+                        </PopoverContent>
+                      </Popover>
+                    </div>
+                    <div>
+                      <div className="text-xs text-muted-foreground mb-1">Start Time</div>
+                      <Input
+                        type="time"
+                        value={schedule.scheduled_time}
+                        onChange={e =>
+                          setSchedule(s => ({ ...s, scheduled_time: e.target.value }))
+                        }
+                        disabled={!canEdit}
+                      />
+                    </div>
+                    <div>
+                      <div className="text-xs text-muted-foreground mb-1">End Time</div>
+                      <Input
+                        type="time"
+                        value={schedule.scheduled_end_time}
+                        onChange={e =>
+                          setSchedule(s => ({ ...s, scheduled_end_time: e.target.value }))
+                        }
+                        disabled={!canEdit}
+                      />
+                    </div>
+                    <div>
+                      <div className="text-xs text-muted-foreground mb-1">Mode</div>
+                      <Select
+                        value={schedule.defense_mode}
+                        onValueChange={v =>
+                          setSchedule(s => ({ ...s, defense_mode: v }))
+                        }
+                        disabled={!canEdit}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select mode" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="face-to-face">Face-to-Face</SelectItem>
+                          <SelectItem value="online">Online</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="md:col-span-2">
+                      <div className="text-xs text-muted-foreground mb-1">Venue</div>
+                      <Input
+                        value={schedule.defense_venue}
+                        onChange={e =>
+                          setSchedule(s => ({ ...s, defense_venue: e.target.value }))
+                        }
+                        disabled={!canEdit}
+                      />
+                    </div>
+                    <div className="md:col-span-2">
+                      <div className="text-xs text-muted-foreground mb-1">Notes</div>
+                      <Input
+                        value={schedule.scheduling_notes}
+                        onChange={e =>
+                          setSchedule(s => ({ ...s, scheduling_notes: e.target.value }))
+                        }
+                        disabled={!canEdit}
+                      />
+                    </div>
+                  </div>
+                  <div className="flex justify-end mt-4">
+                    <Button
+                      onClick={saveSchedule}
+                      disabled={!canEdit || savingSchedule}
+                      className="gap-2 dark:bg-rose-500 dark:text-white hover:cursor-pointer"
+                    >
+                      {savingSchedule && <Loader2 className="animate-spin h-4 w-4" />}
+                      <Save className="h-4 w-4" />
+                      Save Schedule
+                    </Button>
+                  </div>
                 </div>
-                <div>
-                  <div className="text-xs text-muted-foreground mb-1">End Time</div>
-                  <Input
-                    type="time"
-                    value={schedule.scheduled_end_time}
-                    onChange={e =>
-                      setSchedule(s => ({ ...s, scheduled_end_time: e.target.value }))
-                    }
-                    disabled={!canEdit}
-                  />
-                </div>
-                <div>
-                  <div className="text-xs text-muted-foreground mb-1">Mode</div>
-                  <Select
-                    value={schedule.defense_mode}
-                    onValueChange={v =>
-                      setSchedule(s => ({ ...s, defense_mode: v }))
-                    }
-                    disabled={!canEdit}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select mode" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="face-to-face">Face-to-Face</SelectItem>
-                      <SelectItem value="online">Online</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="md:col-span-2">
-                  <div className="text-xs text-muted-foreground mb-1">Venue</div>
-                  <Input
-                    value={schedule.defense_venue}
-                    onChange={e =>
-                      setSchedule(s => ({ ...s, defense_venue: e.target.value }))
-                    }
-                    disabled={!canEdit}
-                  />
-                </div>
-                <div className="md:col-span-2">
-                  <div className="text-xs text-muted-foreground mb-1">Notes</div>
-                  <Input
-                    value={schedule.scheduling_notes}
-                    onChange={e =>
-                      setSchedule(s => ({ ...s, scheduling_notes: e.target.value }))
-                    }
-                    disabled={!canEdit}
-                  />
-                </div>
-              </div>
-              <div className="flex justify-end mt-4">
-                <Button
-                  onClick={saveSchedule}
-                  disabled={!canEdit || savingSchedule}
-                  className="gap-2 dark:bg-rose-500 dark:text-white hover:cursor-pointer"
-                >
-                  {savingSchedule && <Loader2 className="animate-spin h-4 w-4" />}
-                  <Save className="h-4 w-4" />
-                  Save Schedule
-                </Button>
-              </div>
-            </div>
+              </TabsContent>
+            </Tabs>
           </div>
 
           {/* Workflow Progress Stepper sidebar */}
@@ -1000,15 +1179,13 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
                     const { event, created, userName } = resolveHistoryFields(item);
                     const stepKey = getStepForEvent(event);
                     const step = workflowSteps.find(s => s.key === stepKey) || {
-                      label: event.charAt(0).toUpperCase() + event.slice(1), // Capitalize fallback
-                      icon: <Clock className="h-5 w-5 text-gray-500" />, // Use consistent gray
+                      label: event.charAt(0).toUpperCase() + event.slice(1),
+                      icon: <Clock className="h-5 w-5 text-gray-500" />,
                     };
                     const isLast = Array.isArray(request.workflow_history) && idx === request.workflow_history.length - 1;
-                    // Icon color and box
-                    const iconBoxColor = 'bg-gray-100 text-gray-500'; // or use 'bg-secondary text-secondary-foreground'
+                    const iconBoxColor = 'bg-gray-100 text-gray-500';
                     return (
                       <div key={idx} className="flex items-start gap-3 relative">
-                        {/* Step Icon in a square box and Dotted Line */}
                         <div className="flex flex-col items-center">
                           <div className={`w-9 h-9 rounded-md flex items-center justify-center ${iconBoxColor}`}>
                             {step.icon}
@@ -1017,7 +1194,6 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
                             <div className="h-8 border-l-2 border-dotted border-gray-300 dark:border-zinc-700 mx-auto"></div>
                           )}
                         </div>
-                        {/* Step Content */}
                         <div className="pb-4">
                           <div className="font-semibold text-xs">{step.label}</div>
                           <div className="text-[11px] text-muted-foreground">

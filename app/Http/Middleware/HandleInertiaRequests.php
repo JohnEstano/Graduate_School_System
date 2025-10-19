@@ -29,6 +29,20 @@ class HandleInertiaRequests extends Middleware
     }
 
     /**
+     * Determines if the request should be handled by Inertia.
+     * Exclude API routes from Inertia to prevent JSON response errors.
+     */
+    public function shouldHandle(Request $request): bool
+    {
+        // Exclude routes starting with /api/ from Inertia handling
+        if ($request->is('api/*')) {
+            return false;
+        }
+
+        return parent::shouldHandle($request);
+    }
+
+    /**
      * Define the props that are shared by default.
      *
      * @see https://inertiajs.com/shared-data
@@ -41,7 +55,7 @@ class HandleInertiaRequests extends Middleware
 
         $sharedUser = $u ? [
             'id'         => $u->id,
-            'name'       => $u->name,
+            'name'       => $u->display_name ?? ($u->first_name . ' ' . $u->last_name),
             'first_name' => $u->first_name ?? '',
             'last_name'  => $u->last_name ?? '',
             'email'      => $u->email,
@@ -53,6 +67,7 @@ class HandleInertiaRequests extends Middleware
         return array_merge(parent::share($request), [
             'auth' => ['user' => $sharedUser],
             'user' => $sharedUser, // legacy
+            'first_login' => $request->session()->pull('first_login', false), // Get and remove the flag
         ]);
     }
 }
