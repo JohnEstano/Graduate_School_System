@@ -15,6 +15,7 @@ type PageProps = {
             name: string;
             role: string;
         };
+        is_adviser?: boolean; // <-- Add this
     };
 };
 
@@ -122,7 +123,7 @@ const footerNavItems: NavItem[] = [];
 
 export function AppSidebar() {
     const {
-        auth: { user },
+        auth: { user, is_adviser }, 
     } = usePage<PageProps>().props;
 
     let navItems: MainNavItem[];
@@ -153,11 +154,12 @@ export function AppSidebar() {
         localStorage.setItem("sidebar.expandedMenus", JSON.stringify(expandedMenus));
     }, [expandedMenus]);
 
-    // Show "Others" section for Faculty, Coordinator, Dean only
+    // Show "Others" section for Faculty, Coordinator, Dean, or actual Adviser
     const showOthers =
         user.role === 'Faculty' ||
         user.role === 'Coordinator' ||
-        user.role === 'Dean';
+        user.role === 'Dean' ||
+        is_adviser; // <-- Only show if user is an actual adviser
 
     // Items for the Others section
     const othersNavItems: MainNavItem[] = [
