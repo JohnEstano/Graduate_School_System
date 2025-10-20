@@ -345,26 +345,45 @@ export default function DefenseRequestIndex() {
                                                         <ChevronDown
                                                             className={`transition-transform duration-200 h-4 w-4 text-muted-foreground dark:text-zinc-400 mr-3 ${isOpen ? 'rotate-180' : ''}`}
                                                         />
-                                                        <div className="flex flex-col flex-1 gap-0.5">
-                                                            <div className="flex items-center gap-2">
-                                                                {req.defense_type && (
-                                                                    <Badge variant="outline" className="text-xs font-semibold px-2 py-0.5 capitalize">
-                                                                        {req.defense_type}
-                                                                    </Badge>
-                                                                )}
-                                                                <span className="font-semibold text-xs text-black dark:text-white leading-tight">
-                                                                    {req.thesis_title}
-                                                                </span>
-                                                            </div>
-                                                            <div className="flex items-center gap-2">
-                                                                {isCancelled ? <X className="h-4 w-4 text-red-600" /> : isRejected ? <X className="h-4 w-4 text-red-600" /> : isCompleted ? <CheckCircle className="h-4 w-4 text-green-600" /> : <Eye className="h-4 w-4 text-blue-600" />}
-                                                                <span className={`font-medium text-xs ${isCancelled || isRejected ? 'text-red-600' : isCompleted ? 'text-green-600' : 'text-blue-600'}`}>
-                                                                    {isCancelled ? 'Cancelled' : isRejected ? (wf === 'adviser-rejected' ? 'Rejected by Adviser' : 'Rejected by Coordinator') : isCompleted ? 'Defense Completed' : (wf === 'scheduled' ? 'Defense Scheduled' : 'Under Review')}
-                                                                </span>
-                                                                <span className="text-xs text-muted-foreground dark:text-zinc-400">
-                                                                    {timeSubmitted}
-                                                                </span>
-                                                            </div>
+                                                        <div className="flex flex-1 items-center gap-2 min-w-0">
+                                                            {/* Defense type badge before thesis title */}
+                                                            {req.defense_type && (
+                                                                <Badge variant="outline" className="text-[11px] font-semibold px-2 py-0.5 capitalize">
+                                                                    {req.defense_type}
+                                                                </Badge>
+                                                            )}
+                                                            <span className="font-semibold text-xs text-black dark:text-white truncate">
+                                                                {req.thesis_title}
+                                                            </span>
+                                                            {/* Status badge beside title */}
+                                                            {(() => {
+                                                                const statusInfo =
+                                                                    isCancelled
+                                                                        ? { icon: <X className="h-3.5 w-3.5" />, label: 'Cancelled', tone: 'text-red-700 dark:text-red-400 bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800' }
+                                                                        : isRejected
+                                                                            ? { icon: <X className="h-3.5 w-3.5" />, label: wf === 'adviser-rejected' ? 'Rejected by Adviser' : 'Rejected by Coordinator', tone: 'text-red-700 dark:text-red-400 bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800' }
+                                                                            : isCompleted
+                                                                                ? { icon: <CheckCircle className="h-3.5 w-3.5" />, label: 'Defense Completed', tone: 'text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800' }
+                                                                                : wf === 'scheduled'
+                                                                                    ? { icon: <Calendar className="h-3.5 w-3.5" />, label: 'Defense Scheduled', tone: 'text-rose-700 dark:text-rose-300 bg-rose-50 dark:bg-rose-900/20 border-rose-200 dark:border-rose-800' }
+                                                                                    : wf === 'panels-assigned'
+                                                                                        ? { icon: <Users className="h-3.5 w-3.5" />, label: 'Panels Assigned', tone: 'text-rose-700 dark:text-rose-300 bg-rose-50 dark:bg-rose-900/20 border-rose-200 dark:border-rose-800' }
+                                                                                        : wf === 'coordinator-approved'
+                                                                                            ? { icon: <CheckCircle className="h-3.5 w-3.5" />, label: 'Coordinator Approved', tone: 'text-zinc-700 dark:text-zinc-200 bg-zinc-50 dark:bg-zinc-800/50 border-zinc-200 dark:border-zinc-700' }
+                                                                                            : wf === 'adviser-approved'
+                                                                                                ? { icon: <CheckCircle className="h-3.5 w-3.5" />, label: 'Adviser Approved', tone: 'text-zinc-700 dark:text-zinc-200 bg-zinc-50 dark:bg-zinc-800/50 border-zinc-200 dark:border-zinc-700' }
+                                                                                                : wf === 'coordinator-review'
+                                                                                                    ? { icon: <Hourglass className="h-3.5 w-3.5" />, label: 'Coordinator Review', tone: 'text-zinc-600 dark:text-zinc-400 bg-zinc-50 dark:bg-zinc-800/50 border-zinc-200 dark:border-zinc-700' }
+                                                                                                    : wf === 'adviser-review'
+                                                                                                        ? { icon: <Hourglass className="h-3.5 w-3.5" />, label: 'Adviser Review', tone: 'text-zinc-600 dark:text-zinc-400 bg-zinc-50 dark:bg-zinc-800/50 border-zinc-200 dark:border-zinc-700' }
+                                                                                                        : { icon: <Hourglass className="h-3.5 w-3.5" />, label: 'Submitted', tone: 'text-zinc-600 dark:text-zinc-400 bg-zinc-50 dark:bg-zinc-800/50 border-zinc-200 dark:border-zinc-700' };
+                                                                return (
+                                                                    <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[11px] font-medium ml-2 ${statusInfo.tone}`}>
+                                                                        {statusInfo.icon}
+                                                                        {statusInfo.label}
+                                                                    </span>
+                                                                );
+                                                            })()}
                                                         </div>
                                                         <div className="flex items-center w-64 justify-end">
                                                             {showStepper ? (
@@ -389,7 +408,6 @@ export default function DefenseRequestIndex() {
                                                                     })}
                                                                 </div>
                                                             ) : (
-                                                                // Remove the big X and big Check for cancelled and approved/completed
                                                                 <div className="flex items-center justify-center" />
                                                             )}
                                                         </div>
@@ -397,256 +415,303 @@ export default function DefenseRequestIndex() {
                                                 </CollapsibleTrigger>
                                                 <CollapsibleContent>
                                                     <div className="px-4 py-3">
-                                                        {/* Header summary + attachments */}
-                                                        <div className="mb-3 p-3 rounded border bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 flex flex-col gap-2 rounded-md relative">
-                                                            <div className="flex flex-row gap-6 flex-wrap">
-                                                                <div>
-                                                                    <span className="font-semibold text-xs text-zinc-500 dark:text-zinc-400">Thesis Title:</span>
-                                                                    <div className="text-sm font-medium text-zinc-800 dark:text-white">{req.thesis_title}</div>
-                                                                </div>
-                                                                <div>
-                                                                    <span className="font-semibold text-xs text-zinc-500 dark:text-zinc-400">Student Name:</span>
-                                                                    <div className="text-sm text-zinc-800 dark:text-white">{req.first_name} {req.last_name}</div>
-                                                                </div>
-                                                                <div>
-                                                                    <span className="font-semibold text-xs text-zinc-500 dark:text-zinc-400">Adviser:</span>
-                                                                    <div className="text-sm text-zinc-800 dark:text-white">{req.adviser || '—'}</div>
-                                                                </div>
-                                                            </div>
-                                                            {/* Attachments */}
-                                                            <div className="flex flex-row gap-2 mt-2 flex-wrap">
-                                                                {req.manuscript_proposal && (
-                                                                    <a
-                                                                        href={resolveFileUrl(req.manuscript_proposal) || undefined}
-                                                                        target="_blank"
-                                                                        rel="noopener noreferrer"
-                                                                        className="flex items-center gap-2 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-lg px-2 py-1 min-w-[120px] max-w-[180px] hover:bg-zinc-50 dark:hover:bg-zinc-800 transition truncate"
-                                                                        style={{ textDecoration: 'none' }}
-                                                                    >
-                                                                        <div className="h-7 w-7 flex items-center justify-center rounded-lg border border-rose-500 dark:border-rose-700 bg-rose-500 dark:bg-rose-600">
-                                                                            <Paperclip className="w-4 h-4 text-white" />
-                                                                        </div>
-                                                                        <div className="flex flex-col min-w-0">
-                                                                            <span className="font-medium text-xs leading-tight truncate max-w-[100px] dark:text-white">Manuscript</span>
-                                                                            <span className="text-[10px] text-muted-foreground dark:text-zinc-400 truncate max-w-[100px]">
-                                                                                {req.manuscript_proposal.split('/').pop()}
-                                                                            </span>
-                                                                        </div>
-                                                                    </a>
-                                                                )}
-                                                                {req.similarity_index && (
-                                                                    <a
-                                                                        href={resolveFileUrl(req.similarity_index) || undefined}
-                                                                        target="_blank"
-                                                                        rel="noopener noreferrer"
-                                                                        className="flex items-center gap-2 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-lg px-2 py-1 min-w-[120px] max-w-[180px] hover:bg-zinc-50 dark:hover:bg-zinc-800 transition truncate"
-                                                                        style={{ textDecoration: 'none' }}
-                                                                    >
-                                                                        <div className="h-7 w-7 flex items-center justify-center rounded-lg border border-rose-500 dark:border-rose-700 bg-rose-500 dark:bg-rose-600">
-                                                                            <Paperclip className="w-4 h-4 text-white" />
-                                                                        </div>
-                                                                        <div className="flex flex-col min-w-0">
-                                                                            <span className="font-medium text-xs leading-tight truncate max-w-[100px] dark:text-white">Similarity</span>
-                                                                            <span className="text-[10px] text-muted-foreground dark:text-zinc-400 truncate max-w-[100px]">
-                                                                                {req.similarity_index.split('/').pop()}
-                                                                            </span>
-                                                                        </div>
-                                                                    </a>
-                                                                )}
-                                                                {req.rec_endorsement && (
-                                                                    <a
-                                                                        href={resolveFileUrl(req.rec_endorsement) || undefined}
-                                                                        target="_blank"
-                                                                        rel="noopener noreferrer"
-                                                                        className="flex items-center gap-2 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-lg px-2 py-1 min-w-[120px] max-w-[180px] hover:bg-zinc-50 dark:hover:bg-zinc-800 transition truncate"
-                                                                        style={{ textDecoration: 'none' }}
-                                                                    >
-                                                                        <div className="h-7 w-7 flex items-center justify-center rounded-lg border border-rose-500 dark:border-rose-700 bg-rose-500 dark:bg-rose-600">
-                                                                            <Paperclip className="w-4 h-4 text-white" />
-                                                                        </div>
-                                                                        <div className="flex flex-col min-w-0">
-                                                                            <span className="font-medium text-xs leading-tight truncate max-w-[100px] dark:text-white">Endorsement</span>
-                                                                            <span className="text-[10px] text-muted-foreground dark:text-zinc-400 truncate max-w-[100px]">
-                                                                                {req.rec_endorsement.split('/').pop()}
-                                                                            </span>
-                                                                        </div>
-                                                                    </a>
-                                                                )}
-                                                                {req.proof_of_payment && (
-                                                                    <a
-                                                                        href={resolveFileUrl(req.proof_of_payment) || undefined}
-                                                                        target="_blank"
-                                                                        rel="noopener noreferrer"
-                                                                        className="flex items-center gap-2 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-lg px-2 py-1 min-w-[120px] max-w-[180px] hover:bg-zinc-50 dark:hover:bg-zinc-800 transition truncate"
-                                                                        style={{ textDecoration: 'none' }}
-                                                                    >
-                                                                        <div className="h-7 w-7 flex items-center justify-center rounded-lg border border-rose-500 dark:border-rose-700 bg-rose-500 dark:bg-rose-600">
-                                                                            <Paperclip className="w-4 h-4 text-white" />
-                                                                        </div>
-                                                                        <div className="flex flex-col min-w-0">
-                                                                            <span className="font-medium text-xs leading-tight truncate max-w-[100px] dark:text-white">Payment</span>
-                                                                            <span className="text-[10px] text-muted-foreground dark:text-zinc-400 truncate max-w-[100px]">
-                                                                                {req.proof_of_payment.split('/').pop()}
-                                                                            </span>
-                                                                        </div>
-                                                                    </a>
-                                                                )}
-                                                                {req.avisee_adviser_attachment && (
-                                                                    <a
-                                                                        href={resolveFileUrl(req.avisee_adviser_attachment) || undefined}
-                                                                        target="_blank"
-                                                                        rel="noopener noreferrer"
-                                                                        className="flex items-center gap-2 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-lg px-2 py-1 min-w-[120px] max-w-[180px] hover:bg-zinc-50 dark:hover:bg-zinc-800 transition truncate"
-                                                                        style={{ textDecoration: 'none' }}
-                                                                    >
-                                                                        <div className="h-7 w-7 flex items-center justify-center rounded-lg border border-rose-500 dark:border-rose-700 bg-rose-500 dark:bg-rose-600">
-                                                                            <Paperclip className="w-4 h-4 text-white" />
-                                                                        </div>
-                                                                        <div className="flex flex-col min-w-0">
-                                                                            <span className="font-medium text-xs leading-tight truncate max-w-[100px] dark:text-white">Avisee-Adviser</span>
-                                                                            <span className="text-[10px] text-muted-foreground dark:text-zinc-400 truncate max-w-[100px]">
-                                                                                {req.avisee_adviser_attachment.split('/').pop()}
-                                                                            </span>
-                                                                        </div>
-                                                                    </a>
-                                                                )}
-                                                            </div>
-
-                                                            {/* Defense Information (always visible; uses merged data) */}
-                                                            <div className="mt-2 w-full border border-zinc-200 dark:border-zinc-700 rounded-md p-3 bg-zinc-50 dark:bg-zinc-800/40">
-                                                                <div className="flex items-center mb-2">
-                                                                    <Info className="w-4 h-4 text-rose-500 mr-2" />
-                                                                    <span className="text-xs font-semibold text-zinc-700 dark:text-zinc-200">
-                                                                        Defense Information
+                                                        <div className="rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-4 sm:p-5">
+                                                            {/* Header: only submitted time and menu */}
+                                                            <div className="flex items-start justify-between gap-3">
+                                                                <div className="min-w-0" />
+                                                                <div className="flex items-center gap-2 shrink-0">
+                                                                    <span className="text-[10px] text-muted-foreground dark:text-zinc-400 whitespace-nowrap">
+                                                                        Submitted {timeSubmitted}
                                                                     </span>
+                                                                    <DropdownMenu>
+                                                                        <DropdownMenuTrigger asChild>
+                                                                            <Button
+                                                                                variant="outline"
+                                                                                size="icon"
+                                                                                className="h-7 w-7 p-0"
+                                                                                disabled={!!isCancelled}
+                                                                            >
+                                                                                <MoreVertical className="h-4 w-4" />
+                                                                            </Button>
+                                                                        </DropdownMenuTrigger>
+                                                                        <DropdownMenuContent align="end">
+                                                                            <DropdownMenuItem
+                                                                                disabled={!canUnsubmit(req, defenseRequest)}
+                                                                                onSelect={(e) => {
+                                                                                    e.preventDefault();
+                                                                                    if (!canUnsubmit(req, defenseRequest)) return;
+                                                                                    setUnsubmitTargetId(req.id);
+                                                                                    setUnsubmitReason('');
+                                                                                    setUnsubmitOtherReason('');
+                                                                                    setUnsubmitDialogOpen(true);
+                                                                                }}
+                                                                            >
+                                                                                Unsubmit
+                                                                            </DropdownMenuItem>
+                                                                        </DropdownMenuContent>
+                                                                    </DropdownMenu>
+                                                                </div>
+                                                            </div>
+
+                                                            {/* Removed separator here */}
+
+                                                            {/* Compact two-column info list (no duplicated status, more spacing) */}
+                                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-5 text-xs">
+                                                                {/* Thesis Title */}
+                                                                <div className="min-w-0">
+                                                                    <div className="text-[11px] text-muted-foreground flex items-center gap-1.5">
+                                                                        <InfoIcon className="h-3.5 w-3.5" />
+                                                                        Thesis Title
+                                                                    </div>
+                                                                    <div className="font-medium text-zinc-900 dark:text-zinc-100 break-words">
+                                                                        {req.thesis_title || '—'}
+                                                                    </div>
+                                                                </div>
+                                                                {/* Defense Type */}
+                                                                <div className="min-w-0">
+                                                                    <div className="text-[11px] text-muted-foreground flex items-center gap-1.5">
+                                                                        <GraduationCap className="h-3.5 w-3.5" />
+                                                                        Defense Type
+                                                                    </div>
+                                                                    <div className="font-medium text-zinc-900 dark:text-zinc-100">
+                                                                        {req.defense_type || '—'}
+                                                                    </div>
                                                                 </div>
 
-                                                                {/* Committee */}
-                                                                {[merged.defense_chairperson, merged.defense_panelist1, merged.defense_panelist2, merged.defense_panelist3, merged.defense_panelist4].some(Boolean) && (
-                                                                    <div className="mb-3">
-                                                                        <span className="font-semibold text-xs">Committee:</span>
-                                                                        <ul className="pl-4 list-disc text-xs mt-1 space-y-1">
-                                                                            {merged.defense_chairperson && <li>{merged.defense_chairperson} <span className="text-zinc-500">(Chairperson)</span></li>}
-                                                                            {merged.defense_panelist1 && <li>{merged.defense_panelist1} <span className="text-zinc-500">(Panelist 1)</span></li>}
-                                                                            {merged.defense_panelist2 && <li>{merged.defense_panelist2} <span className="text-zinc-500">(Panelist 2)</span></li>}
-                                                                            {merged.defense_panelist3 && <li>{merged.defense_panelist3} <span className="text-zinc-500">(Panelist 3)</span></li>}
-                                                                            {merged.defense_panelist4 && <li>{merged.defense_panelist4} <span className="text-zinc-500">(Panelist 4)</span></li>}
-                                                                        </ul>
+                                                                {/* Student */}
+                                                                <div className="min-w-0">
+                                                                    <div className="text-[11px] text-muted-foreground flex items-center gap-1.5">
+                                                                        <Users className="h-3.5 w-3.5" />
+                                                                        Student
                                                                     </div>
-                                                                )}
+                                                                    <div className="font-medium text-zinc-900 dark:text-zinc-100 truncate">
+                                                                        {req.first_name} {req.last_name}
+                                                                    </div>
+                                                                </div>
+                                                                {/* Adviser */}
+                                                                <div className="min-w-0">
+                                                                    <div className="text-[11px] text-muted-foreground flex items-center gap-1.5">
+                                                                        <Users className="h-3.5 w-3.5" />
+                                                                        Adviser
+                                                                    </div>
+                                                                    <div className="font-medium text-zinc-900 dark:text-zinc-100 truncate">
+                                                                        {req.adviser || '—'}
+                                                                    </div>
+                                                                </div>
+                                                                {/* Program */}
+                                                                <div className="min-w-0">
+                                                                    <div className="text-[11px] text-muted-foreground flex items-center gap-1.5">
+                                                                        <GraduationCap className="h-3.5 w-3.5" />
+                                                                        Program
+                                                                    </div>
+                                                                    <div className="font-medium text-zinc-900 dark:text-zinc-100 break-words">
+                                                                        {req.program || '—'}
+                                                                    </div>
+                                                                </div>
+                                                                {/* Reference No. */}
+                                                                <div className="min-w-0">
+                                                                    <div className="text-[11px] text-muted-foreground flex items-center gap-1.5">
+                                                                        <Paperclip className="h-3.5 w-3.5" />
+                                                                        Reference No.
+                                                                    </div>
+                                                                    <div className="font-medium text-zinc-900 dark:text-zinc-100 truncate">
+                                                                        {req.reference_no || '—'}
+                                                                    </div>
+                                                                </div>
 
-                                                                {/* Schedule */}
-                                                                {(merged.scheduled_date || merged.scheduled_time || merged.scheduled_end_time || merged.defense_venue || merged.defense_mode || merged.scheduling_notes) ? (
-                                                                    <div className="mb-1">
-                                                                        <div className="font-semibold text-xs mb-2">Schedule</div>
-                                                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
-                                                                            <div>
-                                                                                <div className="text-[11px] text-muted-foreground flex items-center gap-1"><Calendar className="h-3.5 w-3.5" /> Date</div>
-                                                                                <div className="font-medium">{formatDatePretty(merged.scheduled_date)}</div>
-                                                                            </div>
-                                                                            <div>
-                                                                                <div className="text-[11px] text-muted-foreground flex items-center gap-1"><ClockIcon className="h-3.5 w-3.5" /> Time</div>
-                                                                                <div className="font-medium">{formatTimeRange(merged.scheduled_time, merged.scheduled_end_time)}</div>
-                                                                            </div>
-                                                                            <div>
-                                                                                <div className="text-[11px] text-muted-foreground flex items-center gap-1"><MapPin className="h-3.5 w-3.5" /> Venue</div>
-                                                                                <div className="font-medium">{merged.defense_venue || '—'}</div>
-                                                                            </div>
-                                                                            <div>
-                                                                                <div className="text-[11px] text-muted-foreground">Mode</div>
-                                                                                <div className="font-medium capitalize">{merged.defense_mode || '—'}</div>
-                                                                            </div>
-                                                                            <div className="sm:col-span-2">
-                                                                                <div className="text-[11px] text-muted-foreground">Notes</div>
-                                                                                <div className="font-medium">{merged.scheduling_notes || '—'}</div>
-                                                                            </div>
-                                                                        </div>
+                                                                {/* Date */}
+                                                                <div className="min-w-0">
+                                                                    <div className="text-[11px] text-muted-foreground flex items-center gap-1.5">
+                                                                        <Calendar className="h-3.5 w-3.5" />
+                                                                        Date
                                                                     </div>
-                                                                ) : (
-                                                                    <div className="text-[12px] text-muted-foreground">
-                                                                        {wf === 'submitted' || wf === 'adviser-review'
-                                                                            ? 'Awaiting adviser review. No coordinator actions yet.'
-                                                                            : wf === 'adviser-approved' || wf === 'coordinator-review'
-                                                                                ? 'Adviser approved. Awaiting coordinator review / panel assignment.'
-                                                                                : wf === 'coordinator-approved'
-                                                                                    ? 'Coordinator approved. Panel assignment pending.'
-                                                                                    : wf === 'panels-assigned'
-                                                                                        ? 'Panel assigned. Scheduling in progress.'
-                                                                                        : isRejected
-                                                                                            ? 'Request was rejected.'
-                                                                                            : isCancelled
-                                                                                                ? 'Request was cancelled.'
-                                                                                                : 'No schedule available yet.'}
+                                                                    <div className="font-medium">
+                                                                        {formatDatePretty(merged.scheduled_date)}
                                                                     </div>
-                                                                )}
+                                                                </div>
+                                                                {/* Time */}
+                                                                <div className="min-w-0">
+                                                                    <div className="text-[11px] text-muted-foreground flex items-center gap-1.5">
+                                                                        <ClockIcon className="h-3.5 w-3.5" />
+                                                                        Time
+                                                                    </div>
+                                                                    <div className="font-medium">
+                                                                        {formatTimeRange(merged.scheduled_time, merged.scheduled_end_time)}
+                                                                    </div>
+                                                                </div>
+                                                                {/* Venue */}
+                                                                <div className="min-w-0">
+                                                                    <div className="text-[11px] text-muted-foreground flex items-center gap-1.5">
+                                                                        <MapPin className="h-3.5 w-3.5" />
+                                                                        Venue
+                                                                    </div>
+                                                                    <div className="font-medium">
+                                                                        {merged.defense_venue || '—'}
+                                                                    </div>
+                                                                </div>
+                                                                {/* Mode */}
+                                                                <div className="min-w-0">
+                                                                    <div className="text-[11px] text-muted-foreground">
+                                                                        Mode
+                                                                    </div>
+                                                                    <div className="font-medium capitalize">
+                                                                        {merged.defense_mode || '—'}
+                                                                    </div>
+                                                                </div>
 
-                                                                {/* Completed message */}
-                                                                {wf === 'completed' && (
-                                                                    <div className="mt-2 p-3 rounded-md border border-green-200 bg-green-50 dark:bg-green-900/30 flex flex-col gap-2">
-                                                                        <div className="font-bold text-green-700 text-xs mb-1">
-                                                                            Congratulations, your defense has been successfully completed!
+                                                                {/* Notes (span 2) */}
+                                                                <div className="sm:col-span-2 min-w-0">
+                                                                    <div className="text-[11px] text-muted-foreground">
+                                                                        Notes
+                                                                    </div>
+                                                                    <div className="font-medium break-words">
+                                                                        {merged.scheduling_notes || '—'}
+                                                                    </div>
+                                                                </div>
+
+                                                                {/* Committee (chips, span 2) */}
+                                                                <div className="sm:col-span-2 min-w-0">
+                                                                    <div className="text-[11px] text-muted-foreground flex items-center gap-1.5">
+                                                                        <Users className="h-3.5 w-3.5" />
+                                                                        Committee
+                                                                    </div>
+                                                                    {[merged.defense_chairperson, merged.defense_panelist1, merged.defense_panelist2, merged.defense_panelist3, merged.defense_panelist4].some(Boolean) ? (
+                                                                        <div className="mt-1.5 flex flex-wrap gap-1.5">
+                                                                            {merged.defense_chairperson && (
+                                                                                <span className="inline-flex items-center gap-1.5 rounded-full bg-zinc-100 dark:bg-zinc-800 px-2.5 py-1 text-[11px]">
+                                                                                    <Users className="h-3.5 w-3.5 text-zinc-500" />
+                                                                                    <span className="font-medium">{merged.defense_chairperson}</span>
+                                                                                    <span className="text-zinc-500">(Chairperson)</span>
+                                                                                </span>
+                                                                            )}
+                                                                            {merged.defense_panelist1 && (
+                                                                                <span className="inline-flex items-center gap-1.5 rounded-full bg-zinc-100 dark:bg-zinc-800 px-2.5 py-1 text-[11px]">
+                                                                                    <Users className="h-3.5 w-3.5 text-zinc-500" />
+                                                                                    <span className="font-medium">{merged.defense_panelist1}</span>
+                                                                                    <span className="text-zinc-500">(Panelist 1)</span>
+                                                                                </span>
+                                                                            )}
+                                                                            {merged.defense_panelist2 && (
+                                                                                <span className="inline-flex items-center gap-1.5 rounded-full bg-zinc-100 dark:bg-zinc-800 px-2.5 py-1 text-[11px]">
+                                                                                    <Users className="h-3.5 w-3.5 text-zinc-500" />
+                                                                                    <span className="font-medium">{merged.defense_panelist2}</span>
+                                                                                    <span className="text-zinc-500">(Panelist 2)</span>
+                                                                                </span>
+                                                                            )}
+                                                                            {merged.defense_panelist3 && (
+                                                                                <span className="inline-flex items-center gap-1.5 rounded-full bg-zinc-100 dark:bg-zinc-800 px-2.5 py-1 text-[11px]">
+                                                                                    <Users className="h-3.5 w-3.5 text-zinc-500" />
+                                                                                    <span className="font-medium">{merged.defense_panelist3}</span>
+                                                                                    <span className="text-zinc-500">(Panelist 3)</span>
+                                                                                </span>
+                                                                            )}
+                                                                            {merged.defense_panelist4 && (
+                                                                                <span className="inline-flex items-center gap-1.5 rounded-full bg-zinc-100 dark:bg-zinc-800 px-2.5 py-1 text-[11px]">
+                                                                                    <Users className="h-3.5 w-3.5 text-zinc-500" />
+                                                                                    <span className="font-medium">{merged.defense_panelist4}</span>
+                                                                                    <span className="text-zinc-500">(Panelist 4)</span>
+                                                                                </span>
+                                                                            )}
                                                                         </div>
-                                                                        <div className="text-xs text-zinc-700 dark:text-zinc-200 mb-1">
-                                                                            <b>Request for Oral Defense Certificate</b><br />
-                                                                            Please fill out this form:<br />
+                                                                    ) : (
+                                                                        <div className="text-[12px] text-muted-foreground">No committee assigned yet.</div>
+                                                                    )}
+                                                                </div>
+
+                                                                {/* Attachments (span 2) */}
+                                                                <div className="sm:col-span-2 min-w-0">
+                                                                    <div className="text-[11px] text-muted-foreground flex items-center gap-1.5">
+                                                                        <Paperclip className="h-3.5 w-3.5" />
+                                                                        Attachments
+                                                                    </div>
+                                                                    <div className="mt-1.5 flex flex-wrap gap-1.5">
+                                                                        {req.manuscript_proposal && (
                                                                             <a
-                                                                                href="https://docs.google.com/forms/d/e/1FAIpQLScIFYf8Z6L8q_N2qVEdS4koTJ7jv4HOFnhit-4LKXmOH--Ukg/viewform?usp=send_form"
+                                                                                href={resolveFileUrl(req.manuscript_proposal) || undefined}
                                                                                 target="_blank"
                                                                                 rel="noopener noreferrer"
-                                                                                className="text-blue-700 underline break-all"
+                                                                                className="inline-flex items-center gap-1.5 rounded-full bg-zinc-100 dark:bg-zinc-800 text-[11px] px-2.5 py-1"
+                                                                                style={{ textDecoration: 'none' }}
                                                                             >
-                                                                                https://docs.google.com/forms/d/e/1FAIpQLScIFYf8Z6L8q_N2qVEdS4koTJ7jv4HOFnhit-4LKXmOH--Ukg/viewform?usp=send_form
+                                                                                <Paperclip className="w-3.5 h-3.5" />
+                                                                                <span className="truncate max-w-[160px]">Manuscript • {req.manuscript_proposal.split('/').pop()}</span>
                                                                             </a>
-                                                                        </div>
+                                                                        )}
+                                                                        {req.similarity_index && (
+                                                                            <a
+                                                                                href={resolveFileUrl(req.similarity_index) || undefined}
+                                                                                target="_blank"
+                                                                                rel="noopener noreferrer"
+                                                                                className="inline-flex items-center gap-1.5 rounded-full bg-zinc-100 dark:bg-zinc-800 text-[11px] px-2.5 py-1"
+                                                                                style={{ textDecoration: 'none' }}
+                                                                            >
+                                                                                <Paperclip className="w-3.5 h-3.5" />
+                                                                                <span className="truncate max-w-[160px]">Similarity • {req.similarity_index.split('/').pop()}</span>
+                                                                            </a>
+                                                                        )}
+                                                                        {req.rec_endorsement && (
+                                                                            <a
+                                                                                href={resolveFileUrl(req.rec_endorsement) || undefined}
+                                                                                target="_blank"
+                                                                                rel="noopener noreferrer"
+                                                                                className="inline-flex items-center gap-1.5 rounded-full bg-zinc-100 dark:bg-zinc-800 text-[11px] px-2.5 py-1"
+                                                                                style={{ textDecoration: 'none' }}
+                                                                            >
+                                                                                <Paperclip className="w-3.5 h-3.5" />
+                                                                                <span className="truncate max-w-[160px]">Endorsement • {req.rec_endorsement.split('/').pop()}</span>
+                                                                            </a>
+                                                                        )}
+                                                                        {req.proof_of_payment && (
+                                                                            <a
+                                                                                href={resolveFileUrl(req.proof_of_payment) || undefined}
+                                                                                target="_blank"
+                                                                                rel="noopener noreferrer"
+                                                                                className="inline-flex items-center gap-1.5 rounded-full bg-zinc-100 dark:bg-zinc-800 text-[11px] px-2.5 py-1"
+                                                                                style={{ textDecoration: 'none' }}
+                                                                            >
+                                                                                <Paperclip className="w-3.5 h-3.5" />
+                                                                                <span className="truncate max-w-[160px]">Payment • {req.proof_of_payment.split('/').pop()}</span>
+                                                                            </a>
+                                                                        )}
+                                                                        {req.avisee_adviser_attachment && (
+                                                                            <a
+                                                                                href={resolveFileUrl(req.avisee_adviser_attachment) || undefined}
+                                                                                target="_blank"
+                                                                                rel="noopener noreferrer"
+                                                                                className="inline-flex items-center gap-1.5 rounded-full bg-zinc-100 dark:bg-zinc-800 text-[11px] px-2.5 py-1"
+                                                                                style={{ textDecoration: 'none' }}
+                                                                            >
+                                                                                <Paperclip className="w-3.5 h-3.5" />
+                                                                                <span className="truncate max-w-[160px]">Avisee–Adviser • {req.avisee_adviser_attachment.split('/').pop()}</span>
+                                                                            </a>
+                                                                        )}
+                                                                        {!req.manuscript_proposal && !req.similarity_index && !req.rec_endorsement && !req.proof_of_payment && !req.avisee_adviser_attachment && (
+                                                                            <div className="text-[12px] text-muted-foreground">No attachments uploaded.</div>
+                                                                        )}
                                                                     </div>
-                                                                )}
+                                                                </div>
                                                             </div>
 
-                                                            {/* Submitted at + actions */}
-                                                            <div className="absolute right-3 top-2 flex items-center gap-2">
-                                                                <span className="text-[10px] text-muted-foreground dark:text-zinc-400 whitespace-nowrap">
-                                                                    Submitted {timeSubmitted}
-                                                                </span>
-                                                                <DropdownMenu>
-                                                                    <DropdownMenuTrigger asChild>
-                                                                        <Button
-                                                                            variant="outline"
-                                                                            size="icon"
-                                                                            className="h-6 w-6 p-0"
-                                                                            disabled={!!isCancelled}
+                                                            {/* Completed callout */}
+                                                            {wf === 'completed' && (
+                                                                <div className="mt-4 p-3 rounded-md border border-green-200 bg-green-50 dark:bg-green-900/30">
+                                                                    <div className="font-bold text-green-700 text-xs mb-1">
+                                                                        Congratulations, your defense has been successfully completed!
+                                                                    </div>
+                                                                    <div className="text-xs text-zinc-700 dark:text-zinc-200">
+                                                                        <b>Request for Oral Defense Certificate</b><br />
+                                                                        Please fill out this form:<br />
+                                                                        <a
+                                                                            href="https://docs.google.com/forms/d/e/1FAIpQLScIFYf8Z6L8q_N2qVEdS4koTJ7jv4HOFnhit-4LKXmOH--Ukg/viewform?usp=send_form"
+                                                                            target="_blank"
+                                                                            rel="noopener noreferrer"
+                                                                            className="text-blue-700 underline break-all"
                                                                         >
-                                                                            <MoreVertical className="h-4 w-4" />
-                                                                        </Button>
-                                                                    </DropdownMenuTrigger>
-                                                                    <DropdownMenuContent align="end">
-                                                                        <DropdownMenuItem
-                                                                            disabled={!canUnsubmit(req, defenseRequest)}
-                                                                            onSelect={(e) => {
-                                                                                e.preventDefault();
-                                                                                if (!canUnsubmit(req, defenseRequest)) return;
-                                                                                setUnsubmitTargetId(req.id);
-                                                                                setUnsubmitReason('');
-                                                                                setUnsubmitOtherReason('');
-                                                                                setUnsubmitDialogOpen(true);
-                                                                            }}
-                                                                        >
-                                                                            Unsubmit
-                                                                        </DropdownMenuItem>
-                                                                        <DropdownMenuItem
-                                                                            onSelect={e => {
-                                                                                e.preventDefault();
-                                                                                setDocGenRequest(mapToTemplateData({ ...req, ...(defenseRequest && defenseRequest.thesis_title === req.thesis_title ? defenseRequest : {}) }));
-                                                                                setDocGenOpen(true);
-                                                                            }}
-                                                                        >
-                                                                            Generate Document
-                                                                        </DropdownMenuItem>
-                                                                        <DropdownMenuItem>
-                                                                            Download
-                                                                        </DropdownMenuItem>
-                                                                    </DropdownMenuContent>
-                                                                </DropdownMenu>
-                                                            </div>
+                                                                            https://docs.google.com/forms/d/e/1FAIpQLScIFYf8Z6L8q_N2qVEdS4koTJ7jv4HOFnhit-4LKXmOH--Ukg/viewform?usp=send_form
+                                                                        </a>
+                                                                    </div>
+                                                                </div>
+                                                            )}
                                                         </div>
                                                     </div>
                                                 </CollapsibleContent>

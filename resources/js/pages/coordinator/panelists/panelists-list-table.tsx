@@ -85,10 +85,22 @@ export default function PanelistsListTable({
   const [assignments, setAssignments] = useState<NonNullable<PanelistWithAssignments["assignments"]>>([]);
   const [assignmentsLoading, setAssignmentsLoading] = useState(false);
 
+  // Add tab state
+  const [panelistTab, setPanelistTab] = useState<"assignments" | "pending">("assignments");
+
+  // Add pending assignments state
+  const [pendingAssignments, setPendingAssignments] = useState<any[]>([]);
+
   const openView = (p: PanelistWithAssignments) => {
     setViewPanelist(p);
     setAssignments(p.assignments ?? []);
+    setPanelistTab("assignments");
     setViewOpen(true);
+
+    // Fetch pending assignments (replace with your API endpoint)
+    axios.get(`/api/coordinator/panelists/${p.id}/pending`)
+      .then(res => setPendingAssignments(res.data))
+      .catch(() => setPendingAssignments([]));
   };
 
   const refreshAssignments = async () => {
@@ -117,8 +129,8 @@ export default function PanelistsListTable({
 
   return (
     <>
-      <div className="rounded-md overflow-x-auto border border-border bg-background w-full max-w-full">
-        <Table className="w-full text-sm table-auto">
+      <div className="rounded-md overflow-x-auto border border-border bg-background w-full max-w-full" style={{ minWidth: "700px" }}>
+        <Table className="w-full text-sm table-fixed">
           <TableHeader>
             <TableRow>
               <TableHead className="w-12">
@@ -131,11 +143,9 @@ export default function PanelistsListTable({
                 />
               </TableHead>
               <TableHead className="px-3 min-w-[120px]">Name</TableHead>
+              {/* Email column before Assigned Defenses */}
               <TableHead className="px-2 min-w-[120px]">Email</TableHead>
-              <TableHead className="px-2 min-w-[100px]">Role</TableHead>
-              <TableHead className="px-2 min-w-[100px] text-center">Status</TableHead>
-              <TableHead className="px-2 min-w-[100px]">Type</TableHead>
-              <TableHead className="px-2 min-w-[100px]">Receivables</TableHead>
+              <TableHead className="px-2 min-w-[80px] text-center">Assigned Defenses</TableHead>
               <TableHead className="text-center px-2">Actions</TableHead>
             </TableRow>
           </TableHeader>
@@ -144,7 +154,7 @@ export default function PanelistsListTable({
             {panelists.length === 0 ? (
               <TableRow>
                 <TableCell
-                  colSpan={8}
+                  colSpan={5}
                   className="py-8 text-center text-sm text-muted-foreground"
                 >
                   No panelists found.
@@ -165,157 +175,42 @@ export default function PanelistsListTable({
                   <TableCell className="px-3 py-2 font-medium truncate leading-tight align-middle">
                     {panelist.name}
                   </TableCell>
+                  {/* Email column */}
                   <TableCell className="px-2 py-2 text-xs text-muted-foreground whitespace-nowrap align-middle">
                     {panelist.email}
                   </TableCell>
-                  <TableCell className="px-2 py-2 text-xs text-muted-foreground whitespace-nowrap align-middle">
-                    {panelist.assignments && panelist.assignments.length > 0 ? (
-                      <ul>
-                        {panelist.assignments.map((a) => (
-                          <li key={a.id}>{a.role ?? panelist.role ?? "-"}</li>
-                        ))}
-                      </ul>
-                    ) : (
-                      <span className="text-muted-foreground">-</span>
-                    )}
-                  </TableCell>
-                  {/* Status */}
-                  <TableCell className="px-2 py-2 text-xs whitespace-nowrap text-center align-middle">
-                    <HoverCard>
-                      <HoverCardTrigger asChild>
-                        <span
-                          className={
-                            panelist.assignments && panelist.assignments.length > 0
-                              ? "inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300 text-xs font-medium cursor-pointer"
-                              : "inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-gray-100 dark:bg-zinc-800 text-gray-500 dark:text-zinc-400 text-xs font-medium cursor-pointer"
-                          }
-                        >
-                          {panelist.assignments && panelist.assignments.length > 0
-                            ? (
-                              <>
-                                <span className="w-1.5 h-1.5 rounded-full bg-blue-500 dark:bg-blue-400 inline-block" />
-                                Assigned
-                              </>
-                            )
-                            : (
-                              <>
-                                <span className="w-1.5 h-1.5 rounded-full bg-gray-400 dark:bg-zinc-500 inline-block" />
-                                Not Assigned
-                              </>
-                            )
-                          }
-                        </span>
-                      </HoverCardTrigger>
-                      <HoverCardContent className="w-64 p-3 bg-background text-muted-foreground">
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <Avatar name={panelist.name} />
-                            <div className="font-semibold text-sm">{panelist.name}</div>
-                          </div>
-                          <div className="my-2">
-                            <div className="h-px bg-muted" />
-                          </div>
-                          {panelist.assignments && panelist.assignments.length > 0 ? (
-                            <ul className="space-y-0.5">
-                              {panelist.assignments
-                                .filter((a) => a.thesis_title)
-                                .map((a) => (
-                                  <li
-                                    key={a.id}
-                                    className="flex items-center gap-2 text-xs italic truncate max-w-[180px]"
-                                  >
-                                    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300 font-medium">
-                                      <span className="w-1.5 h-1.5 rounded-full bg-blue-500 dark:bg-blue-400 inline-block" />
-                                      Active
-                                    </span>
-                                    <span className="text-muted-foreground">{a.thesis_title}</span>
-                                  </li>
-                                ))}
-                            </ul>
-                          ) : (
-                            <div className="text-xs text-muted-foreground mt-1">
-                              No active defenses.
-                            </div>
-                          )}
-                        </div>
-                      </HoverCardContent>
-                    </HoverCard>
-                  </TableCell>
-                  {/* Type column */}
-                  <TableCell className="px-2 py-2 text-xs text-muted-foreground whitespace-nowrap align-middle">
-                    {panelist.assignments && panelist.assignments.length > 0 ? (
-                      <ul>
-                        {panelist.assignments.map((a) => (
-                          <li key={a.id}>{a.defense_type}</li>
-                        ))}
-                      </ul>
-                    ) : (
-                      <span className="text-muted-foreground">-</span>
-                    )}
-                  </TableCell>
-                  {/* Receivables column */}
-                  <TableCell className="px-2 py-2 text-xs text-muted-foreground whitespace-nowrap align-middle">
-                    {panelist.assignments && panelist.assignments.length > 0 ? (
-                      <ul>
-                        {panelist.assignments.map((a) => {
-                          let amount = a.receivable;
-                          if (
-                            (amount === undefined || amount === null || amount === "") &&
-                            honorariumSpecs.length > 0
-                          ) {
-                            const spec = honorariumSpecs.find(
-                              (s) =>
-                                s.defense_type === a.defense_type &&
-                                s.role === (a.role ?? panelist.role)
-                            );
-                            amount = spec?.amount;
-                          }
-                          return (
-                            <li key={a.id}>
-                              {amount !== undefined && amount !== null && amount !== ""
-                                ? `₱${amount}`
-                                : "-"}
-                            </li>
-                          );
-                        })}
-                      </ul>
-                    ) : (
-                      <span className="text-muted-foreground">-</span>
-                    )}
+                  {/* Assigned Defenses column */}
+                  <TableCell className="px-2 py-2 text-center align-middle">
+                    {panelist.assignments ? panelist.assignments.length : 0}
                   </TableCell>
                   <TableCell className="px-2 py-2 text-center">
-                    <div className="flex justify-center gap-1">
-                      {/* View Button */}
+                    <div className="flex justify-center gap-2">
                       <Button
                         variant="outline"
                         size="icon"
-                        className="h-7 w-7 p-1 cursor-pointer"
+                        aria-label="View panelist"
                         onClick={() => openView(panelist)}
                         disabled={loading}
-                        aria-label="View defenses"
-                        title="View defenses"
                       >
-                        <Users size={14} />
+                        <Users size={18} />
                       </Button>
                       <Button
                         variant="outline"
                         size="icon"
-                        className="h-7 w-7 p-1 cursor-pointer"
+                        aria-label="Edit panelist"
                         onClick={() => onEdit(panelist)}
                         disabled={loading}
-                        aria-label="Edit"
                       >
-                        <Pencil size={14} />
+                        <Pencil size={18} />
                       </Button>
                       <Button
                         variant="outline"
                         size="icon"
-                        className="h-7 w-7 p-1 cursor-pointer"
+                        aria-label="Delete panelist"
                         onClick={() => openDeleteDialog(panelist.id)}
                         disabled={loading}
-                        aria-label="Delete"
                       >
-                        <Trash2 size={14} />
+                        <Trash2 size={18} />
                       </Button>
                     </div>
                   </TableCell>
@@ -328,7 +223,10 @@ export default function PanelistsListTable({
 
       {/* View Dialog: detailed defenses list (copied design from show-advisers) */}
       <Dialog open={viewOpen} onOpenChange={(open) => setViewOpen(open)}>
-        <DialogContent className="max-w-2xl dark:bg-zinc-800">
+        <DialogContent
+          className="max-w-2xl dark:bg-zinc-800"
+          style={{ minWidth: "520px", maxWidth: "640px" }} // Match advisers dialog width
+        >
           <DialogHeader>
             <DialogTitle className="dark:text-zinc-100">
               Panelist Information
@@ -381,18 +279,22 @@ export default function PanelistsListTable({
           </DialogHeader>
 
           <div className="mt-4">
-            <div className="flex items-center justify-between mb-2">
-              <Tabs value="assignments" onValueChange={() => {}}>
+            <Tabs value={panelistTab} onValueChange={(value: string) => setPanelistTab(value as "assignments" | "pending")}>
+              <div className="flex items-center justify-between mb-2">
                 <TabsList>
                   <TabsTrigger value="assignments">
-                    Defenses
+                    Assigned
                     <span className="ml-2 px-2 py-0.5 rounded-full bg-zinc-100 dark:bg-zinc-700 text-zinc-700 dark:text-zinc-100 text-[11px] font-medium">
                       {assignments?.length ?? 0}
                     </span>
                   </TabsTrigger>
+                  <TabsTrigger value="pending">
+                    Pending
+                    <span className="ml-2 px-2 py-0.5 rounded-full bg-zinc-100 dark:bg-zinc-700 text-zinc-700 dark:text-zinc-100 text-[11px] font-medium">
+                      {pendingAssignments?.length ?? 0}
+                    </span>
+                  </TabsTrigger>
                 </TabsList>
-              </Tabs>
-              <div className="flex items-center gap-2">
                 <Button
                   variant="outline"
                   size="sm"
@@ -405,58 +307,81 @@ export default function PanelistsListTable({
                   Refresh
                 </Button>
               </div>
-            </div>
-
-            <div
-              className="overflow-y-auto overflow-x-auto min-w-[400px] rounded"
-              style={{ maxHeight: "320px" }}
-            >
-              {assignmentsLoading ? (
-                <div className="text-xs flex items-center justify-center h-full dark:text-zinc-300">
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Loading defenses...
+              <TabsContent value="assignments">
+                <div
+                  className="overflow-y-auto overflow-x-auto min-w-[400px] rounded bg-white dark:bg-zinc-900 px-2 py-2"
+                  style={{ height: "240px" }} // Match advisers dialog height
+                >
+                  {assignmentsLoading ? (
+                    <div className="text-xs flex items-center justify-center h-full dark:text-zinc-300">
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Loading defenses...
+                    </div>
+                  ) : assignments.length === 0 ? (
+                    <div className="text-gray-500 text-xs flex items-center justify-center h-full dark:text-gray-400">
+                      No defenses assigned to this panelist.
+                    </div>
+                  ) : (
+                    <ul className="divide-y">
+                      {assignments.map((a) => {
+                        let amount = a.receivable;
+                        if (
+                          (amount === undefined || amount === null || amount === "") &&
+                          honorariumSpecs.length > 0
+                        ) {
+                          const spec = honorariumSpecs.find(
+                            (s) =>
+                              s.defense_type === a.defense_type &&
+                              s.role === (a.role ?? viewPanelist?.role)
+                          );
+                          amount = spec?.amount;
+                        }
+                        return (
+                          <li key={a.id} className="py-3 px-2 flex items-start gap-3 text-sm">
+                            <div className="flex-1">
+                              <div className="font-medium text-sm">{a.thesis_title ?? "Untitled Thesis"}</div>
+                              <div className="text-xs text-gray-600 dark:text-gray-300 mt-1">
+                                Role: <b className="mx-1">{a.role ?? viewPanelist?.role ?? "-"}</b>
+                                • Type: <b className="mx-1">{a.defense_type}</b>
+                                • Receivable: <b className="mx-1">{amount ? `₱${amount}` : "-"}</b>
+                              </div>
+                              {a.thesis_title && (
+                                <div className="text-xs text-muted-foreground mt-2 italic">{a.thesis_title}</div>
+                              )}
+                            </div>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  )}
                 </div>
-              ) : assignments.length === 0 ? (
-                <div className="text-gray-500 text-xs flex items-center justify-center h-full dark:text-gray-400">
-                  No defenses assigned to this panelist.
-                </div>
-              ) : (
-                <ul className="divide-y">
-                  {assignments.map((a) => {
-                    let amount = a.receivable;
-                    if (
-                      (amount === undefined || amount === null || amount === "") &&
-                      honorariumSpecs.length > 0
-                    ) {
-                      const spec = honorariumSpecs.find(
-                        (s) =>
-                          s.defense_type === a.defense_type &&
-                          s.role === (a.role ?? viewPanelist?.role)
-                      );
-                      amount = spec?.amount;
-                    }
-                    return (
-                      <li key={a.id} className="py-3 px-2 flex items-start gap-3 text-sm">
-                        <div className="flex-1">
-                          <div className="font-medium text-sm">{a.thesis_title ?? "Untitled Thesis"}</div>
-                          <div className="text-xs text-gray-600 dark:text-gray-300 mt-1">
-                            Role: <b className="mx-1">{a.role ?? viewPanelist?.role ?? "-"}</b>
-                            • Type: <b className="mx-1">{a.defense_type}</b>
-                            • Receivable: <b className="mx-1">{amount ? `₱${amount}` : "-"}</b>
+              </TabsContent>
+              <TabsContent value="pending">
+                <div
+                  className="overflow-y-auto overflow-x-auto min-w-[400px] rounded bg-white dark:bg-zinc-900 px-2 py-2"
+                  style={{ height: "240px" }} // Match advisers dialog height
+                >
+                  {pendingAssignments.length === 0 ? (
+                    <div className="text-gray-500 text-xs flex items-center justify-center h-full dark:text-gray-400">
+                      No pending defenses for this panelist.
+                    </div>
+                  ) : (
+                    <ul className="divide-y">
+                      {pendingAssignments.map((a) => (
+                        <li key={a.id} className="py-3 px-2 flex items-start gap-3 text-sm">
+                          <div className="flex-1">
+                            <div className="font-medium text-sm">{a.thesis_title ?? "Untitled Thesis"}</div>
+                            <div className="text-xs text-gray-600 dark:text-gray-300 mt-1">
+                              Role: <b className="mx-1">{a.role ?? "-"}</b>
+                              • Type: <b className="mx-1">{a.defense_type}</b>
+                            </div>
                           </div>
-                          {a.thesis_title && (
-                            <div className="text-xs text-muted-foreground mt-2 italic">{a.thesis_title}</div>
-                          )}
-                        </div>
-                        <div className="flex flex-col items-end gap-2">
-                          {/* potential actions per defense can be added here */}
-                          <span className="text-xs text-muted-foreground">{/* created/updated info */}</span>
-                        </div>
-                      </li>
-                    );
-                  })}
-                </ul>
-              )}
-            </div>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              </TabsContent>
+            </Tabs>
           </div>
 
           <DialogFooter>
