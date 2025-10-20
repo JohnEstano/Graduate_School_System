@@ -247,7 +247,7 @@ export function getCommitteeMembersWithReceivables(
   programLevel: string | null | undefined,
   defenseType: string | null | undefined,
   paymentRates: PaymentRate[]
-): Array<CommitteeMember & { receivable: number | null; status: string }> {
+) {
   return members.map(member => ({
     ...member,
     receivable: getMemberReceivable(member, programLevel, defenseType, paymentRates),
