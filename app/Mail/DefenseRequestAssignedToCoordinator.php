@@ -26,7 +26,7 @@ class DefenseRequestAssignedToCoordinator extends Mailable implements ShouldQueu
     public function __construct(DefenseRequest $defenseRequest)
     {
         $this->defenseRequest = $defenseRequest;
-        $this->coordinator = $defenseRequest->coordinatorUser;
+        $this->coordinator = $defenseRequest->coordinator;
         $this->student = User::find($defenseRequest->submitted_by);
         $this->adviser = $defenseRequest->adviserUser;
     }
