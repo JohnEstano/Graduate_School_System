@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Log;
 
 class AdviserStudentController extends Controller
 {
@@ -90,6 +92,30 @@ class AdviserStudentController extends Controller
         }
 
         $adviser->advisedStudents()->updateExistingPivot($studentId, ['status' => 'accepted']);
+        
+        // Send welcome email to student
+        try {
+            $student = User::find($studentId);
+            if ($student && $student->email) {
+                Mail::to($student->email)
+                    ->send(new \App\Mail\StudentAcceptedByAdviser($student, $adviser));
+                
+                Log::info('Student Acceptance: Welcome email sent to student', [
+                    'student_id' => $student->id,
+                    'student_email' => $student->email,
+                    'adviser_id' => $adviser->id,
+                    'adviser_name' => trim(($adviser->first_name ?? '') . ' ' . ($adviser->last_name ?? ''))
+                ]);
+            }
+        } catch (\Exception $e) {
+            Log::error('Student Acceptance: Failed to send welcome email to student', [
+                'student_id' => $studentId,
+                'adviser_id' => $adviser->id,
+                'error' => $e->getMessage()
+            ]);
+            // Don't fail the acceptance if email fails
+        }
+        
         return response()->json(['success' => true]);
     }
 
