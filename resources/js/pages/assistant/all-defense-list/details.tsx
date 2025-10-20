@@ -23,6 +23,13 @@ import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"; // Make sure this import exists
 import PaymentValidationSection from "./payment-validation";
+import { Table, TableHeader, TableBody, TableRow, TableCell, TableHead } from '@/components/ui/table';
+import {
+  getCommitteeMembersWithReceivables,
+  formatPhp,
+  type PaymentRate,
+  type CommitteeMember,
+} from '@/utils/payment-rates';
 
 type DefenseRequestDetails = {
   id: number;
@@ -63,6 +70,7 @@ type DefenseRequestDetails = {
 type Props = {
   id?: number;
   defenseRequest?: DefenseRequestDetails;
+  paymentRates?: PaymentRate[];
   onClose?: () => void;
 };
 
@@ -90,7 +98,7 @@ function getInitials(user: { first_name?: string; last_name?: string }) {
   return (first + last).toUpperCase() || 'U';
 }
 
-export default function Details({ id, defenseRequest: initialDefenseRequest }: Props) {
+export default function Details({ id, defenseRequest: initialDefenseRequest, paymentRates = [] }: Props) {
   const [details, setDetails] = useState<DefenseRequestDetails | null>(initialDefenseRequest ?? null);
   const [loading, setLoading] = useState(!initialDefenseRequest);
 
@@ -391,51 +399,100 @@ export default function Details({ id, defenseRequest: initialDefenseRequest }: P
                   </div>
                 </div>
 
-                {/* Committee (read-only summary) */}
+                {/* Committee (organized table with receivables) */}
                 <div className={sectionClass}>
                   <h2 className="text-sm font-semibold flex items-center gap-2">
-                    <Users className="h-4 w-4" /> Committee
+                    <Users className="h-4 w-4" /> Committee Members
                   </h2>
                   <Separator />
-                  <div className="grid md:grid-cols-2 gap-4 text-sm">
-                    <div>
-                      <div className="text-[11px] text-muted-foreground uppercase tracking-wide">
-                        Adviser
+                  
+                  {(() => {
+                    // Build committee members array
+                    const committeeMembers: CommitteeMember[] = [
+                      {
+                        id: 1,
+                        name: details?.defense_adviser || '—',
+                        role: 'Adviser',
+                        assigned_name: details?.defense_adviser,
+                      },
+                      {
+                        id: 2,
+                        name: details?.defense_chairperson || '—',
+                        role: 'Panel Chair',
+                        assigned_name: details?.defense_chairperson,
+                      },
+                      {
+                        id: 3,
+                        name: details?.defense_panelist1 || '—',
+                        role: 'Panel Member 1',
+                        assigned_name: details?.defense_panelist1,
+                      },
+                      {
+                        id: 4,
+                        name: details?.defense_panelist2 || '—',
+                        role: 'Panel Member 2',
+                        assigned_name: details?.defense_panelist2,
+                      },
+                      {
+                        id: 5,
+                        name: details?.defense_panelist3 || '—',
+                        role: 'Panel Member 3',
+                        assigned_name: details?.defense_panelist3,
+                      },
+                      {
+                        id: 6,
+                        name: details?.defense_panelist4 || '—',
+                        role: 'Panel Member 4',
+                        assigned_name: details?.defense_panelist4,
+                      },
+                    ];
+                    
+                    // Get members with calculated receivables
+                    const membersWithReceivables = getCommitteeMembersWithReceivables(
+                      committeeMembers,
+                      details?.program,
+                      details?.defense_type,
+                      paymentRates
+                    );
+                    
+                    return (
+                      <div className="overflow-x-auto">
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead className="text-xs">Role</TableHead>
+                              <TableHead className="text-xs">Name</TableHead>
+                              <TableHead className="text-xs">Status</TableHead>
+                              <TableHead className="text-xs text-right">Receivable</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {membersWithReceivables.map((member) => (
+                              <TableRow key={member.id}>
+                                <TableCell className="text-xs font-medium">
+                                  {member.role}
+                                </TableCell>
+                                <TableCell className="text-xs">
+                                  {member.name}
+                                </TableCell>
+                                <TableCell className="text-xs">
+                                  <Badge 
+                                    variant={member.status === 'Assigned' ? 'default' : 'secondary'}
+                                    className="text-[10px] px-2 py-0.5"
+                                  >
+                                    {member.status}
+                                  </Badge>
+                                </TableCell>
+                                <TableCell className="text-xs text-right font-medium">
+                                  {formatPhp(member.receivable)}
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
                       </div>
-                      <div className="font-medium">
-                        {details?.defense_adviser || details?.adviser || '—'}
-                      </div>
-                    </div>
-                    {[
-                      {
-                        label: 'Chairperson',
-                        v: details?.defense_chairperson
-                      },
-                      {
-                        label: 'Panelist 1',
-                        v: details?.defense_panelist1
-                      },
-                      {
-                        label: 'Panelist 2',
-                        v: details?.defense_panelist2
-                      },
-                      {
-                        label: 'Panelist 3',
-                        v: details?.defense_panelist3
-                      },
-                      {
-                        label: 'Panelist 4',
-                        v: details?.defense_panelist4
-                      }
-                    ].map(r => (
-                      <div key={r.label}>
-                        <div className="text-[11px] text-muted-foreground uppercase tracking-wide">
-                          {r.label}
-                        </div>
-                        <div className="font-medium">{r.v || '—'}</div>
-                      </div>
-                    ))}
-                  </div>
+                    );
+                  })()}
                 </div>
 
                 {/* Attachments */}

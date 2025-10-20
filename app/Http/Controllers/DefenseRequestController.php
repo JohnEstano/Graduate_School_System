@@ -1491,6 +1491,7 @@ class DefenseRequestController extends Controller
                 'adviser_status' => $defenseRequest->adviser_status ?? null,
                 'coordinator_status' => $defenseRequest->coordinator_status ?? null,
             ],
+            'paymentRates' => \App\Models\PaymentRate::all(),
         ]);
     }
 }
