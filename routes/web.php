@@ -94,6 +94,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/api/coordinator/advisers/search', [CoordinatorAdviserController::class, 'search']);
     Route::put('/api/coordinator/advisers/{id}', [CoordinatorAdviserController::class, 'update']);
     Route::post('/api/coordinator/advisers', [CoordinatorAdviserController::class, 'store']);
+    Route::post('/api/coordinator/advisers/{id}/send-invitation', [CoordinatorAdviserController::class, 'sendInvitation']);
     Route::delete('/api/coordinator/advisers/{id}', [CoordinatorAdviserController::class, 'destroy']);
 
     // Coordinator manages adviser-student relationships (use CoordinatorAdviserController)
@@ -848,3 +849,10 @@ Route::get('/assistant/all-defense-list/data', function () {
     return response()->json($rows->values());
 });
 
+// Test route to preview adviser invitation email
+Route::get('/test-adviser-invitation', function () {
+    return new App\Mail\AdviserInvitation(
+        'Dr. Juan Dela Cruz',
+        'Dr. Maria Santos (Coordinator)'
+    );
+})->middleware('auth');
