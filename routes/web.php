@@ -108,6 +108,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::put('/panelists/honorarium-specs', [PanelistHonorariumSpecController::class, 'update'])
         ->name('panelists.honorarium-specs.update');
 
+    
+
     //PAYMENTVERIFIATION AA
     Route::prefix('aa')->group(function () {
         Route::get('/payment-verifications', [PaymentVerificationController::class, 'index'])->name('aa.payment-verifications');
@@ -127,12 +129,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
     //PAYMENT RATESS ETC.
     Route::post('/dean/payment-rates', [\App\Http\Controllers\PaymentRateController::class, 'update'])
         ->name('dean.payment-rates.update');
-
     Route::get('/dean/payment-rates', [\App\Http\Controllers\PaymentRateController::class, 'index'])
         ->name('dean.payment-rates.index');
     Route::get('/dean/payment-rates/data', [\App\Http\Controllers\PaymentRateController::class, 'data'])
-        ->name('dean.payment-rates.data')
-        ->middleware(['auth', 'verified']);
+        ->name('dean.payment-rates.data');
 
 
     // Settings: Document Templates (Dean / Coordinator only)
@@ -419,6 +419,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
                 'workflow_history' => $defenseRequest->workflow_history ?? [],
                 'adviser_status' => $defenseRequest->adviser_status ?? null,
                 'coordinator_status' => $defenseRequest->coordinator_status ?? null,
+
+                // ADD: exact level for rate matching
+                'program_level' => \App\Helpers\ProgramLevel::getLevel($defenseRequest->program),
             ];
             return Inertia::render('coordinator/submissions/defense-request/details', [
                 'defenseRequest' => $mapped,
@@ -671,7 +674,12 @@ Route::get('/assistant/all-defense-list/{id}/details', function ($id) {
         ->where('defense_type', $defenseRequest->defense_type)
         ->sum('amount');
 
-    // Compose the full data structure, similar to coordinator view
+    // Define vars to avoid "unassigned variable" errors
+    $coordinator = null;
+    $aa_verification_status = null;
+    $aa_verification_id = null;
+
+    // Compose panelists list (same as before)
     $panelistFields = [
         $defenseRequest->defense_chairperson,
         $defenseRequest->defense_panelist1,
@@ -700,46 +708,24 @@ Route::get('/assistant/all-defense-list/{id}/details', function ($id) {
             'program' => $defenseRequest->program,
             'thesis_title' => $defenseRequest->thesis_title,
             'defense_type' => $defenseRequest->defense_type,
-            'status' => $defenseRequest->status,
             'priority' => $defenseRequest->priority,
             'workflow_state' => $defenseRequest->workflow_state,
+            'status' => $defenseRequest->status,
             'scheduled_date' => $defenseRequest->scheduled_date?->format('Y-m-d'),
-            'scheduled_time' => $defenseRequest->scheduled_time,
-            'scheduled_end_time' => $defenseRequest->scheduled_end_time,
+            'date_of_defense' => $defenseRequest->scheduled_date
+                ? $defenseRequest->scheduled_date->format('Y-m-d')
+                : ($defenseRequest->created_at ? $defenseRequest->created_at->format('Y-m-d') : null),
             'defense_mode' => $defenseRequest->defense_mode,
-            'defense_venue' => $defenseRequest->defense_venue,
-            'scheduling_notes' => $defenseRequest->scheduling_notes,
-            'adviser' => $defenseRequest->defense_adviser,
-            'submitted_at' => $defenseRequest->adviser_reviewed_at
-                ? (is_object($defenseRequest->adviser_reviewed_at)
-                    ? $defenseRequest->adviser_reviewed_at->format('Y-m-d H:i:s')
-                    : date('Y-m-d H:i:s', strtotime($defenseRequest->adviser_reviewed_at)))
-                : null,
-            'panelists' => $panelists,
-            'defense_adviser' => $defenseRequest->defense_adviser,
-            'defense_chairperson' => $defenseRequest->defense_chairperson,
-            'defense_panelist1' => $defenseRequest->defense_panelist1,
-            'defense_panelist2' => $defenseRequest->defense_panelist2,
-            'defense_panelist3' => $defenseRequest->defense_panelist3,
-            'defense_panelist4' => $defenseRequest->defense_panelist4,
-            'amount' => $defenseRequest->amount,
-            'reference_no' => $defenseRequest->reference_no,
-            'expected_rate' => $expectedTotal, // <-- This is now the total!
-            'attachments' => [
-                'advisers_endorsement' => $defenseRequest->advisers_endorsement,
-                'rec_endorsement' => $defenseRequest->rec_endorsement,
-                'proof_of_payment' => $defenseRequest->proof_of_payment,
-                'manuscript_proposal' => $defenseRequest->manuscript_proposal,
-                'similarity_index' => $defenseRequest->similarity_index,
-                'avisee_adviser_attachment' => $defenseRequest->avisee_adviser_attachment,
-                'ai_detection_certificate' => $defenseRequest->ai_detection_certificate,
-                'endorsement_form' => $defenseRequest->endorsement_form,
-            ],
-            'last_status_updated_by' => $defenseRequest->last_status_updated_by,
-            'last_status_updated_at' => $defenseRequest->last_status_updated_at,
-            'workflow_history' => $defenseRequest->workflow_history ?? [],
-            'adviser_status' => $defenseRequest->adviser_status ?? null,
-            'coordinator_status' => $defenseRequest->coordinator_status ?? null,
+            'mode_defense' => $defenseRequest->defense_mode,
+            'adviser' => $defenseRequest->defense_adviser ?? '—',
+            'submitted_at' => $defenseRequest->submitted_at ? \Carbon\Carbon::parse($defenseRequest->submitted_at)->format('Y-m-d H:i:s') : null,
+            'coordinator_status' => $defenseRequest->coordinator_status,
+            'expected_rate' => $expectedTotal,
+            'amount' => $defenseRequest->amount ?? null,
+            'reference_no' => $defenseRequest->reference_no ?? null,
+            'coordinator' => $coordinator,
+            'aa_verification_status' => $aa_verification_status,
+            'aa_verification_id' => $aa_verification_id,
         ],
     ]);
 });

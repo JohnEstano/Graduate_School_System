@@ -33,3 +33,12 @@ export const PROGRAM_ABBREVIATIONS: Record<string, string> = {
 export function getProgramAbbreviation(program: string): string {
   return PROGRAM_ABBREVIATIONS[program] || program;
 }
+
+export function classifyProgramLevel(program?: string | null): "Masteral" | "Doctorate" {
+  if (!program) return "Masteral";
+  const p = program.toLowerCase().trim();
+  const doc = ["phd", "ph.d", "doctor", "doctoral", "doctorate", "edd", "ed.d", "dm", "d.m", "dba", "d.b.a"];
+  if (doc.some(k => p.includes(k))) return "Doctorate";
+  if (/^(d[.\-\s]|doctor)/.test(p)) return "Doctorate";
+  return "Masteral";
+}

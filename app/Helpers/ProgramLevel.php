@@ -5,37 +5,30 @@ namespace App\Helpers;
 class ProgramLevel
 {
     /**
-     * Get the program level ("Masteral" or "Doctorate") based on the program name.
+     * Get the program level ("Masteral" or "Doctorate") based on the program name or code.
      */
-    public static function getLevel(string $program): string
+    public static function getLevel(?string $program): string
     {
-        // List of doctorate programs
-        $doctorate = [
-            'Doctor in Business Management',
-            'Doctor of Philosophy in Education major in Applied Linguistics',
-            'Doctor of Philosophy in Education major in Educational Leadership',
-            'Doctor of Philosophy in Education major in Filipino',
-            'Doctor of Philosophy in Education major in Mathematics',
-            'Doctor of Philosophy in Education major in Counseling',
-            'Doctor of Philosophy in Education major in Information Technology Integration',
-            'Doctor of Philosophy in Education major in Physical Education',
-            'DOCTOR OF PHILOSOPHY IN PHARMACY',
+        if (!$program) return 'Masteral';
+
+        $p = strtolower(trim(preg_replace('/\s+/', ' ', $program)));
+
+        // Doctorate keywords and abbreviations
+        $doctorateKeywords = [
+            'phd', 'ph.d', 'doctor', 'doctoral', 'doctorate',
+            'edd', 'ed.d',
+            'dm', 'd.m', 'dba', 'd.b.a',
         ];
 
-        // Normalize for case-insensitive and whitespace-insensitive comparison
-        $normalized = strtolower(trim(preg_replace('/\s+/', ' ', $program)));
-
-        foreach ($doctorate as $doc) {
-            $docNorm = strtolower(trim(preg_replace('/\s+/', ' ', $doc)));
-            if ($normalized === $docNorm) {
+        foreach ($doctorateKeywords as $kw) {
+            if (str_contains($p, $kw)) {
                 return 'Doctorate';
             }
         }
 
-        // Default: try to guess by keywords
-        if (stripos($program, 'doctor') !== false || stripos($program, 'philosophy') !== false) {
-            return 'Doctorate';
-        }
+        // Fallback by leading letter D- vs M-
+        if (preg_match('/^(d[.\-\s]|doctor)/', $p)) return 'Doctorate';
+
         return 'Masteral';
     }
 }

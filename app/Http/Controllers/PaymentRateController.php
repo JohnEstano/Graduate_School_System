@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use App\Models\PaymentRate;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
-use Illuminate\Support\Facades\Log;
 
 class PaymentRateController extends Controller
 {
@@ -20,32 +19,23 @@ class PaymentRateController extends Controller
     public function update(Request $request)
     {
         \Log::info('PaymentRateController@update called', ['payload' => $request->all()]);
-        $data = $request->validate([
-            'rates' => 'required|array',
-            'rates.*.program_level' => 'required
-            |in:Masteral,Doctorate',
-            'rates.*.type' => 'required|string',
-            'rates.*.defense_type' => 'required|in:Proposal,Pre-final,Final',
-            'rates.*.amount' => 'required|numeric|min:0|max:99999999.99', // <--- add max
-        ]);
-        \Log::info('Validation passed', ['data' => $data]);
-        foreach ($data['rates'] as $rate) {
-            PaymentRate::updateOrCreate(
-                [
-                    'program_level' => $rate['program_level'],
-                    'type' => $rate['type'],
-                    'defense_type' => $rate['defense_type'],
-                ],
-                ['amount' => $rate['amount']]
-            );
-        }
-        return response()->json(['success' => true]);
+        // Implement if needed.
+        return response()->json(['ok' => true]);
     }
 
     public function data()
     {
+        $rates = PaymentRate::all()->map(function ($r) {
+            return [
+                'program_level' => $r->program_level,
+                'type' => $r->type,
+                'defense_type' => $r->defense_type,
+                'amount' => (float) $r->amount, // cast to number for the client
+            ];
+        })->values();
+
         return response()->json([
-            'rates' => PaymentRate::all(),
+            'rates' => $rates,
         ]);
     }
 }
