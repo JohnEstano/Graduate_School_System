@@ -6,155 +6,184 @@
     <title>Defense Request Requires Revision</title>
     <style>
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-            line-height: 1.6;
-            color: #333;
             margin: 0;
             padding: 0;
-            background-color: #f4f4f4;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background-color: #f5f5f5;
+            line-height: 1.6;
         }
-        .container {
+        .email-container {
             max-width: 600px;
-            margin: 20px auto;
-            background: white;
-            border-radius: 8px;
-            overflow: hidden;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            margin: 0 auto;
+            background-color: #ffffff;
         }
         .header {
-            background: linear-gradient(135deg, #f59e0b 0%, #fbbf24 100%);
-            color: white;
-            padding: 30px 20px;
+            background: linear-gradient(135deg, #991B1B 0%, #7F1D1D 100%);
+            padding: 40px 30px;
             text-align: center;
         }
+        .logo {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 20px;
+        }
         .header h1 {
+            color: #ffffff;
             margin: 0;
-            font-size: 24px;
+            font-size: 28px;
             font-weight: 600;
         }
         .header p {
-            margin: 5px 0 0 0;
-            opacity: 0.9;
-            font-size: 14px;
+            color: #FEE2E2;
+            margin: 10px 0 0 0;
+            font-size: 16px;
         }
         .content {
-            padding: 30px;
+            padding: 40px 30px;
         }
         .greeting {
             font-size: 18px;
-            font-weight: 600;
-            color: #f59e0b;
-            margin-bottom: 15px;
+            color: #374151;
+            margin-bottom: 20px;
         }
         .message {
+            color: #6B7280;
+            font-size: 15px;
+            line-height: 1.7;
             margin-bottom: 25px;
         }
         .warning-badge {
-            background: #fef3c7;
-            border: 2px solid #f59e0b;
-            color: #92400e;
-            padding: 15px 20px;
-            border-radius: 8px;
+            background: linear-gradient(135deg, #f59e0b 0%, #fbbf24 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 12px;
             text-align: center;
-            font-size: 18px;
+            font-size: 20px;
             font-weight: 600;
-            margin: 20px 0;
+            margin: 25px 0;
+            box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);
         }
         .info-box {
-            background: #fffbeb;
-            border-left: 4px solid #fbbf24;
+            background: #FEF2F2;
+            border-left: 4px solid #991B1B;
             padding: 20px;
-            margin: 20px 0;
-            border-radius: 4px;
+            margin: 25px 0;
+            border-radius: 8px;
         }
         .info-box .label {
             font-weight: 600;
-            color: #f59e0b;
+            color: #991B1B;
             font-size: 12px;
             text-transform: uppercase;
             letter-spacing: 0.5px;
-            margin-bottom: 5px;
+            margin-bottom: 8px;
         }
         .info-box .value {
-            color: #1e293b;
+            color: #1F2937;
             font-size: 16px;
-            margin-bottom: 15px;
+            margin-bottom: 12px;
+            font-weight: 500;
         }
         .info-box .value:last-child {
             margin-bottom: 0;
         }
         .comment-box {
-            background: #fef2f2;
-            border-left: 3px solid #ef4444;
-            padding: 15px;
-            margin: 20px 0;
-            border-radius: 4px;
+            background: #FFFBEB;
+            border-left: 3px solid #F59E0B;
+            padding: 15px 20px;
+            margin: 25px 0;
+            border-radius: 8px;
         }
         .comment-box .label {
             font-size: 12px;
-            color: #991b1b;
+            color: #92400E;
             font-weight: 600;
             text-transform: uppercase;
             margin-bottom: 8px;
         }
         .comment-box .text {
-            color: #7f1d1d;
+            color: #78350F;
             font-weight: 500;
         }
-        .button {
+        .action-button {
             display: inline-block;
-            background: #f59e0b;
+            padding: 16px 32px;
+            background: linear-gradient(135deg, #991B1B 0%, #7F1D1D 100%);
             color: white;
-            padding: 14px 28px;
             text-decoration: none;
-            border-radius: 6px;
+            border-radius: 8px;
             font-weight: 600;
-            margin: 20px 0;
-            transition: background 0.3s ease;
+            margin: 25px 0;
+            text-align: center;
+            box-shadow: 0 4px 12px rgba(153, 27, 27, 0.3);
+            transition: transform 0.2s;
         }
-        .button:hover {
-            background: #d97706;
+        .action-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(153, 27, 27, 0.4);
         }
         .footer {
-            background: #f8fafc;
-            padding: 20px;
+            background: #F9FAFB;
+            padding: 30px;
             text-align: center;
-            color: #64748b;
-            font-size: 13px;
-            border-top: 1px solid #e2e8f0;
+            border-top: 1px solid #E5E7EB;
         }
         .footer p {
+            color: #6B7280;
+            font-size: 13px;
             margin: 5px 0;
         }
+        .footer .uic-brand {
+            color: #991B1B;
+            font-weight: 600;
+            font-size: 14px;
+            margin-top: 10px;
+        }
         .next-steps {
-            background: #f0f9ff;
-            border: 1px solid #38bdf8;
-            padding: 15px;
-            border-radius: 6px;
-            margin: 20px 0;
+            background: #F0F9FF;
+            border: 2px solid #3B82F6;
+            border-radius: 12px;
+            padding: 25px;
+            margin: 25px 0;
         }
         .next-steps h3 {
-            color: #075985;
-            font-size: 14px;
-            margin: 0 0 10px 0;
+            color: #1E40AF;
+            margin: 0 0 15px 0;
+            font-size: 18px;
+            font-weight: 600;
         }
         .next-steps ul {
             margin: 0;
             padding-left: 20px;
-            color: #0c4a6e;
+            color: #374151;
+        }
+        .next-steps li {
+            margin-bottom: 10px;
+            line-height: 1.6;
+        }
+        .next-steps li:last-child {
+            margin-bottom: 0;
+        }
+        .divider {
+            height: 1px;
+            background: linear-gradient(to right, transparent, #E5E7EB, transparent);
+            margin: 25px 0;
         }
     </style>
 </head>
 <body>
-    <div class="container">
+    <div class="email-container">
+        <!-- Header -->
         <div class="header">
+            <img src="{{ asset('grad_logo.png') }}" alt="UIC Graduate School Logo" class="logo">
             <h1>📝 Defense Request Requires Revision</h1>
             <p>Graduate School System</p>
         </div>
         
+        <!-- Content -->
         <div class="content">
             <div class="greeting">
-                Dear {{ $student->first_name }} {{ $student->last_name }},
+                Dear <strong>{{ $student->first_name }} {{ $student->last_name }}</strong>,
             </div>
             
             <div class="warning-badge">
@@ -165,6 +194,8 @@
                 <p>Your {{ $defenseRequest->defense_type }} Defense request has been reviewed by your <strong>{{ $rejectedBy }}</strong> and requires some revisions before it can be approved.</p>
                 <p><strong>Don't worry!</strong> This is a normal part of the process. Please review the feedback below and make the necessary adjustments.</p>
             </div>
+            
+            <div class="divider"></div>
             
             <div class="info-box">
                 <div class="label">Defense Type</div>
@@ -198,24 +229,29 @@
                 </ul>
             </div>
             
+            <div class="divider"></div>
+            
+            <!-- Action Button -->
             <div style="text-align: center;">
-                <a href="{{ url('/defense-request/' . $defenseRequest->id) }}" class="button">
+                <a href="{{ url('/defense-request/' . $defenseRequest->id) }}" class="action-button">
                     📋 View Request & Resubmit
                 </a>
             </div>
             
-            <div class="message" style="margin-top: 30px;">
-                <p style="color: #64748b; font-size: 14px;">
+            <div class="message" style="margin-top: 30px; text-align: center;">
+                <p style="font-size: 14px;">
                     <em>If you have questions about the feedback, please reach out to your {{ $rejectedBy }} for clarification. They are here to help you succeed!</em>
                 </p>
             </div>
         </div>
         
+        <!-- Footer -->
         <div class="footer">
-            <p><strong>Graduate School System</strong></p>
-            <p>University of the Immaculate Conception</p>
-            <p style="margin-top: 15px;">
-                <em>This is an automated notification. Please do not reply to this email.</em>
+            <p class="uic-brand">University of the Immaculate Conception</p>
+            <p>Graduate School System</p>
+            <p style="margin-top: 15px; font-size: 12px;">
+                This is an automated notification from the UIC Graduate School System.<br>
+                Please do not reply to this email.
             </p>
         </div>
     </div>

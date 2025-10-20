@@ -6,142 +6,167 @@
     <title>Defense Request Assigned for Review</title>
     <style>
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-            line-height: 1.6;
-            color: #333;
             margin: 0;
             padding: 0;
-            background-color: #f4f4f4;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background-color: #f5f5f5;
+            line-height: 1.6;
         }
-        .container {
+        .email-container {
             max-width: 600px;
-            margin: 20px auto;
-            background: white;
-            border-radius: 8px;
-            overflow: hidden;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            margin: 0 auto;
+            background-color: #ffffff;
         }
         .header {
-            background: linear-gradient(135deg, #3b82f6 0%, #60a5fa 100%);
-            color: white;
-            padding: 30px 20px;
+            background: linear-gradient(135deg, #991B1B 0%, #7F1D1D 100%);
+            padding: 40px 30px;
             text-align: center;
         }
+        .logo {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 20px;
+        }
         .header h1 {
+            color: #ffffff;
             margin: 0;
-            font-size: 24px;
+            font-size: 28px;
             font-weight: 600;
         }
         .header p {
-            margin: 5px 0 0 0;
-            opacity: 0.9;
-            font-size: 14px;
+            color: #FEE2E2;
+            margin: 10px 0 0 0;
+            font-size: 16px;
         }
         .content {
-            padding: 30px;
+            padding: 40px 30px;
         }
         .greeting {
             font-size: 18px;
-            font-weight: 600;
-            color: #3b82f6;
-            margin-bottom: 15px;
+            color: #374151;
+            margin-bottom: 20px;
         }
         .message {
-            margin-bottom: 25px;
-            color: #475569;
+            color: #6B7280;
+            font-size: 15px;
             line-height: 1.7;
+            margin-bottom: 25px;
         }
         .assignment-badge {
-            background: #dbeafe;
-            border: 2px solid #3b82f6;
-            color: #1e40af;
-            padding: 15px 20px;
-            border-radius: 8px;
+            background: linear-gradient(135deg, #3b82f6 0%, #60a5fa 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 12px;
             text-align: center;
-            font-size: 18px;
+            font-size: 20px;
             font-weight: 600;
-            margin: 20px 0;
+            margin: 25px 0;
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
         }
         .info-box {
-            background: #f0f9ff;
-            border-left: 4px solid #60a5fa;
+            background: #FEF2F2;
+            border-left: 4px solid #991B1B;
             padding: 20px;
-            margin: 20px 0;
-            border-radius: 4px;
+            margin: 25px 0;
+            border-radius: 8px;
         }
         .info-box .label {
             font-weight: 600;
-            color: #3b82f6;
+            color: #991B1B;
             font-size: 12px;
             text-transform: uppercase;
             letter-spacing: 0.5px;
-            margin-bottom: 5px;
+            margin-bottom: 8px;
         }
         .info-box .value {
-            color: #1e293b;
+            color: #1F2937;
             font-size: 16px;
-            margin-bottom: 15px;
+            margin-bottom: 12px;
+            font-weight: 500;
         }
         .info-box .value:last-child {
             margin-bottom: 0;
         }
-        .button {
+        .action-button {
             display: inline-block;
-            padding: 14px 32px;
-            background: linear-gradient(135deg, #3b82f6 0%, #60a5fa 100%);
+            padding: 16px 32px;
+            background: linear-gradient(135deg, #991B1B 0%, #7F1D1D 100%);
             color: white;
             text-decoration: none;
             border-radius: 8px;
             font-weight: 600;
-            margin: 20px 0;
+            margin: 25px 0;
             text-align: center;
-            box-shadow: 0 4px 6px rgba(59, 130, 246, 0.2);
+            box-shadow: 0 4px 12px rgba(153, 27, 27, 0.3);
+            transition: transform 0.2s;
         }
-        .button:hover {
-            background: linear-gradient(135deg, #2563eb 0%, #3b82f6 100%);
+        .action-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(153, 27, 27, 0.4);
         }
         .next-steps {
-            background: #f8fafc;
-            padding: 20px;
-            border-radius: 8px;
-            margin: 20px 0;
+            background: #F0F9FF;
+            border: 2px solid #3B82F6;
+            border-radius: 12px;
+            padding: 25px;
+            margin: 25px 0;
         }
         .next-steps h3 {
-            color: #1e293b;
-            font-size: 16px;
+            color: #1E40AF;
             margin: 0 0 15px 0;
+            font-size: 18px;
+            font-weight: 600;
         }
         .next-steps ul {
             margin: 0;
             padding-left: 20px;
-            color: #475569;
+            color: #374151;
         }
         .next-steps li {
-            margin-bottom: 8px;
+            margin-bottom: 10px;
+            line-height: 1.6;
+        }
+        .next-steps li:last-child {
+            margin-bottom: 0;
         }
         .footer {
-            background: #f8fafc;
-            padding: 20px;
+            background: #F9FAFB;
+            padding: 30px;
             text-align: center;
-            color: #64748b;
-            font-size: 14px;
-            border-top: 1px solid #e2e8f0;
+            border-top: 1px solid #E5E7EB;
         }
-        .footer a {
-            color: #3b82f6;
-            text-decoration: none;
+        .footer p {
+            color: #6B7280;
+            font-size: 13px;
+            margin: 5px 0;
+        }
+        .footer .uic-brand {
+            color: #991B1B;
+            font-weight: 600;
+            font-size: 14px;
+            margin-top: 10px;
+        }
+        .divider {
+            height: 1px;
+            background: linear-gradient(to right, transparent, #E5E7EB, transparent);
+            margin: 25px 0;
         }
     </style>
 </head>
 <body>
-    <div class="container">
+    <div class="email-container">
+        <!-- Header -->
         <div class="header">
+            <img src="{{ asset('grad_logo.png') }}" alt="UIC Graduate School Logo" class="logo">
             <h1>New Defense Request Assigned</h1>
             <p>Action Required - Coordinator Review</p>
         </div>
 
+        <!-- Content -->
         <div class="content">
-            <div class="greeting">Hello, {{ $coordinatorName }}!</div>
+            <div class="greeting">
+                Hello, <strong>{{ $coordinatorName }}</strong>!
+            </div>
 
             <div class="message">
                 A new thesis defense request has been assigned to you for review. The request has been approved by the adviser and is now awaiting your evaluation.
@@ -150,6 +175,8 @@
             <div class="assignment-badge">
                 ✓ Assigned for Coordinator Review
             </div>
+            
+            <div class="divider"></div>
 
             <div class="info-box">
                 <div class="label">Student Information</div>
@@ -184,23 +211,27 @@
                 </ul>
             </div>
 
+            <div class="divider"></div>
+            
+            <!-- Action Button -->
             <div style="text-align: center;">
-                <a href="{{ url('/dashboard') }}" class="button">Review Defense Request</a>
+                <a href="{{ url('/dashboard') }}" class="action-button">Review Defense Request</a>
             </div>
 
-            <div class="message" style="margin-top: 30px; font-size: 14px; color: #64748b;">
-                This request was automatically assigned to you based on the student's program ({{ $defenseRequest->program }}). If you believe this was assigned in error, please contact the system administrator.
+            <div class="message" style="margin-top: 30px; text-align: center;">
+                <p style="font-size: 14px;">
+                    <em>This request was automatically assigned to you based on the student's program ({{ $defenseRequest->program }}). If you believe this was assigned in error, please contact the system administrator.</em>
+                </p>
             </div>
         </div>
 
+        <!-- Footer -->
         <div class="footer">
-            <p>
-                <strong>Graduate School Management System</strong><br>
-                University of the Immaculate Conception<br>
-                <a href="{{ url('/') }}">{{ url('/') }}</a>
-            </p>
-            <p style="margin-top: 15px; font-size: 12px; color: #94a3b8;">
-                This is an automated notification. Please do not reply to this email.
+            <p class="uic-brand">University of the Immaculate Conception</p>
+            <p>Graduate School System</p>
+            <p style="margin-top: 15px; font-size: 12px;">
+                This is an automated notification from the UIC Graduate School System.<br>
+                Please do not reply to this email.
             </p>
         </div>
     </div>
