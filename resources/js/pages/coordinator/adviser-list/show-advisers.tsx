@@ -11,6 +11,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { Info } from "lucide-react";
+import { toast, Toaster } from 'sonner';
 
 type Adviser = {
   id: number;
@@ -62,6 +63,11 @@ export default function ShowAdvisers() {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [adviserToRemove, setAdviserToRemove] = useState<Adviser | null>(null);
 
+  // Confirmation dialog for sending invitation email
+  const [invitationConfirmOpen, setInvitationConfirmOpen] = useState(false);
+  const [pendingInvitation, setPendingInvitation] = useState<{ name: string; email: string; adviserId: number } | null>(null);
+  const [sendingInvitation, setSendingInvitation] = useState(false);
+
   // Add Student dialog state (NEW)
   const [addStudentDialogOpen, setAddStudentDialogOpen] = useState(false);
   const [studentEmail, setStudentEmail] = useState("");
@@ -108,19 +114,63 @@ export default function ShowAdvisers() {
     setRegistering(true);
     setRegisterError("");
     try {
-      await axios.post("/api/coordinator/advisers", {
+      const response = await axios.post("/api/coordinator/advisers", {
         name: adviserName.trim(),
         email: adviserEmail.trim(),
       });
+      
       const advisersRes = await axios.get("/api/coordinator/advisers");
       setAdvisers(advisersRes.data);
       setDialogOpen(false);
       setAdviserName("");
       setAdviserEmail("");
+
+      // Check if adviser is inactive and needs invitation
+      const newAdviser = response.data?.adviser;
+      if (newAdviser?.status === 'inactive') {
+        // Show confirmation dialog before sending email
+        setPendingInvitation({
+          name: `${newAdviser.first_name} ${newAdviser.last_name}`,
+          email: newAdviser.email,
+          adviserId: newAdviser.id
+        });
+        setInvitationConfirmOpen(true);
+        toast.success('Adviser registered successfully!');
+      } else {
+        toast.success('Adviser registered successfully!');
+      }
     } catch (error: any) {
       setRegisterError(error.response?.data?.error || "Failed to register adviser");
     } finally {
       setRegistering(false);
+    }
+  };
+
+  const handleSendInvitation = async () => {
+    if (!pendingInvitation) return;
+    
+    setSendingInvitation(true);
+    try {
+      await axios.post(`/api/coordinator/advisers/${pendingInvitation.adviserId}/send-invitation`);
+      toast.success(
+        `Invitation email sent successfully to ${pendingInvitation.email}`,
+        {
+          description: 'The adviser will receive instructions to activate their account.',
+          duration: 5000,
+        }
+      );
+    } catch (error: any) {
+      toast.error(
+        'Failed to send invitation email',
+        {
+          description: error.response?.data?.message || 'Please try again later.',
+          duration: 5000,
+        }
+      );
+    } finally {
+      setSendingInvitation(false);
+      setInvitationConfirmOpen(false);
+      setPendingInvitation(null);
     }
   };
 
@@ -776,6 +826,63 @@ export default function ShowAdvisers() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Invitation Confirmation Dialog */}
+      <Dialog open={invitationConfirmOpen} onOpenChange={setInvitationConfirmOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Mail className="h-5 w-5 text-rose-500" />
+              Send Invitation Email?
+            </DialogTitle>
+            <DialogDescription className="pt-2 space-y-2">
+              <p>An invitation email will be sent to:</p>
+              <div className="bg-zinc-100 dark:bg-zinc-800 p-3 rounded-md space-y-1">
+                <p className="font-semibold text-zinc-900 dark:text-zinc-100">
+                  {pendingInvitation?.name}
+                </p>
+                <p className="text-sm text-zinc-600 dark:text-zinc-400">
+                  {pendingInvitation?.email}
+                </p>
+              </div>
+              <p className="text-sm">
+                The adviser will receive instructions to log in using their UIC credentials and activate their account.
+              </p>
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setInvitationConfirmOpen(false);
+                setPendingInvitation(null);
+              }}
+              disabled={sendingInvitation}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleSendInvitation}
+              disabled={sendingInvitation}
+              className="bg-rose-600 hover:bg-rose-700"
+            >
+              {sendingInvitation ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Sending...
+                </>
+              ) : (
+                <>
+                  <Mail className="mr-2 h-4 w-4" />
+                  Send Invitation
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Toaster richColors position="bottom-right" />
     </div>
   );
 }

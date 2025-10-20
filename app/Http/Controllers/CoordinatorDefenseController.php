@@ -191,14 +191,27 @@ class CoordinatorDefenseController extends Controller
 
     public function scheduleDefense(Request $request, DefenseRequest $defenseRequest)
     {
+        // Check if this is an update (defense already has a schedule) or new schedule
+        $isUpdate = !empty($defenseRequest->scheduled_date);
+        
+        // For new schedules, require future date. For updates, allow any date including past.
+        $dateRule = $isUpdate ? 'required|date' : 'required|date|after_or_equal:today';
+        
         $validated = $request->validate([
-            'scheduled_date' => 'required|date|after:today',
+            'scheduled_date' => $dateRule,
             'scheduled_time' => 'required|date_format:H:i',
-            'scheduled_end_time' => 'required|date_format:H:i|after:scheduled_time',
+            'scheduled_end_time' => 'required|date_format:H:i',
             'defense_mode' => 'required|in:face-to-face,online',
             'defense_venue' => 'required|string|max:255',
             'scheduling_notes' => 'nullable|string|max:1000',
         ]);
+        
+        // Validate that end time is after start time manually
+        if ($validated['scheduled_end_time'] <= $validated['scheduled_time']) {
+            return back()->withErrors([
+                'scheduled_end_time' => 'End time must be after start time.'
+            ])->withInput();
+        }
 
         try {
             $conflictService = new DefenseConflictService();
@@ -497,6 +510,7 @@ class CoordinatorDefenseController extends Controller
 
     /**
      * Coordinator approves a defense request (new)
+     * Validates required fields and sends emails to all parties
      */
     public function approve(Request $request, DefenseRequest $defenseRequest)
     {
@@ -507,10 +521,153 @@ class CoordinatorDefenseController extends Controller
             return back()->withErrors(['error'=>'Cannot approve in current state.']);
         }
 
-        $comment = $request->input('comment');
-        $defenseRequest->approveByCoordinator($comment, Auth::id());
+        // Validate required fields before approval
+        $missingFields = [];
+        
+        // Check schedule fields
+        if (empty($defenseRequest->scheduled_date)) {
+            $missingFields[] = 'Defense Date';
+        }
+        if (empty($defenseRequest->scheduled_time)) {
+            $missingFields[] = 'Defense Start Time';
+        }
+        if (empty($defenseRequest->scheduled_end_time)) {
+            $missingFields[] = 'Defense End Time';
+        }
+        if (empty($defenseRequest->defense_mode)) {
+            $missingFields[] = 'Defense Mode (Face-to-face/Online)';
+        }
+        if (empty($defenseRequest->defense_venue)) {
+            $missingFields[] = 'Defense Venue';
+        }
+        
+        // Check if panels are assigned
+        $panels = $defenseRequest->panelists()->get();
+        if ($panels->isEmpty()) {
+            $missingFields[] = 'Panel Members (at least one panel member must be assigned)';
+        }
 
-        return back()->with('success','Defense request approved by coordinator.');
+        // If there are missing fields, return error
+        if (!empty($missingFields)) {
+            $errorMessage = 'Cannot approve defense request. The following required fields are missing:';
+            return back()->withErrors([
+                'error' => $errorMessage,
+                'missing_fields' => $missingFields
+            ]);
+        }
+
+        try {
+            DB::beginTransaction();
+
+            // Approve the defense request
+            $comment = $request->input('comment');
+            $defenseRequest->approveByCoordinator($comment, Auth::id());
+            
+            // Send emails to all parties
+            $this->sendDefenseNotificationEmails($defenseRequest);
+
+            DB::commit();
+
+            return back()->with('success', 'Defense request approved successfully! Notification emails have been sent to all parties.');
+            
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Failed to approve defense request and send emails', [
+                'error' => $e->getMessage(),
+                'defense_request_id' => $defenseRequest->id
+            ]);
+            
+            return back()->withErrors([
+                'error' => 'Failed to approve defense request: ' . $e->getMessage()
+            ]);
+        }
+    }
+
+    /**
+     * Send notification emails to all parties involved in the defense
+     */
+    private function sendDefenseNotificationEmails(DefenseRequest $defenseRequest)
+    {
+        $emailsSent = [];
+        $emailsFailed = [];
+
+        // 1. Send email to student
+        $student = $defenseRequest->user;
+        try {
+            if ($student && $student->email) {
+                Mail::to($student->email)->send(new \App\Mail\DefenseScheduledStudent($defenseRequest));
+                $emailsSent[] = "Student: {$student->email}";
+                Log::info('Defense notification sent to student', [
+                    'defense_request_id' => $defenseRequest->id,
+                    'student_email' => $student->email
+                ]);
+            }
+        } catch (\Exception $e) {
+            $studentEmail = $student ? $student->email : 'N/A';
+            $emailsFailed[] = "Student: {$studentEmail}";
+            Log::error('Failed to send defense notification to student', [
+                'defense_request_id' => $defenseRequest->id,
+                'error' => $e->getMessage()
+            ]);
+        }
+
+        // 2. Send email to adviser
+        $adviser = $defenseRequest->adviserUser;
+        try {
+            if ($adviser && $adviser->email) {
+                Mail::to($adviser->email)->send(new \App\Mail\DefenseScheduledAdviser($defenseRequest));
+                $emailsSent[] = "Adviser: {$adviser->email}";
+                Log::info('Defense notification sent to adviser', [
+                    'defense_request_id' => $defenseRequest->id,
+                    'adviser_email' => $adviser->email
+                ]);
+            }
+        } catch (\Exception $e) {
+            $adviserEmail = $adviser ? $adviser->email : 'N/A';
+            $emailsFailed[] = "Adviser: {$adviserEmail}";
+            Log::error('Failed to send defense notification to adviser', [
+                'defense_request_id' => $defenseRequest->id,
+                'error' => $e->getMessage()
+            ]);
+        }
+
+        // 3. Send emails to panel members
+        $panels = $defenseRequest->panelists()->get();
+        foreach ($panels as $panel) {
+            try {
+                if ($panel->email) {
+                    $role = isset($panel->pivot->role) ? $panel->pivot->role : 'Panel Member';
+                    Mail::to($panel->email)->send(new \App\Mail\DefensePanelInvitation(
+                        $defenseRequest, 
+                        $panel, 
+                        $role
+                    ));
+                    $emailsSent[] = "Panel ({$role}): {$panel->email}";
+                    Log::info('Defense panel invitation sent', [
+                        'defense_request_id' => $defenseRequest->id,
+                        'panel_email' => $panel->email,
+                        'role' => $role
+                    ]);
+                }
+            } catch (\Exception $e) {
+                $panelEmail = isset($panel->email) ? $panel->email : 'N/A';
+                $emailsFailed[] = "Panel: {$panelEmail}";
+                Log::error('Failed to send defense panel invitation', [
+                    'defense_request_id' => $defenseRequest->id,
+                    'panel_email' => $panelEmail,
+                    'error' => $e->getMessage()
+                ]);
+            }
+        }
+
+        // Log summary
+        Log::info('Defense notification emails summary', [
+            'defense_request_id' => $defenseRequest->id,
+            'emails_sent_count' => count($emailsSent),
+            'emails_failed_count' => count($emailsFailed),
+            'emails_sent' => $emailsSent,
+            'emails_failed' => $emailsFailed
+        ]);
     }
 
     /**
@@ -693,21 +850,36 @@ class CoordinatorDefenseController extends Controller
     {
         $this->authorizeRole();
 
+        // Check if this is an update (defense already has a schedule) or new schedule
+        $isUpdate = !empty($defenseRequest->scheduled_date);
+        
+        // For new schedules, require future date. For updates, allow any date.
+        $dateRule = $isUpdate ? 'required|date' : 'required|date|after_or_equal:today';
+
         $data = $request->validate([
-            'scheduled_date'      => 'required|date',
+            'scheduled_date'      => $dateRule,
             'scheduled_time'      => 'required|date_format:H:i',
-            'scheduled_end_time'  => 'required|date_format:H:i|after:scheduled_time',
+            'scheduled_end_time'  => 'required|date_format:H:i',
             'defense_mode'        => 'required|in:face-to-face,online',
             'defense_venue'       => 'required|string|max:255',
             'scheduling_notes'    => 'nullable|string|max:1000'
         ]);
+        
+        // Validate that end time is after start time manually
+        if ($data['scheduled_end_time'] <= $data['scheduled_time']) {
+            return response()->json([
+                'error' => 'End time must be after start time.',
+                'errors' => ['scheduled_end_time' => ['End time must be after start time.']]
+            ], 422);
+        }
 
         try {
             DB::beginTransaction();
 
             $origState = $defenseRequest->workflow_state;
+            // Allow scheduling from coordinator-review, coordinator-approved, panels-assigned, or scheduled
             if (!in_array($origState, [
-                'panels-assigned','scheduled','coordinator-approved'
+                'coordinator-review', 'coordinator-approved', 'panels-assigned', 'scheduled'
             ])) {
                 return response()->json([
                     'error'=>"Cannot schedule from state '{$origState}'"
@@ -855,7 +1027,7 @@ class CoordinatorDefenseController extends Controller
             ]);
         } catch (\Throwable $e) {
             DB::rollBack();
-            \Log::error('updateStatus error', [
+            Log::error('updateStatus error', [
                 'id' => $defenseRequest->id,
                 'error' => $e->getMessage()
             ]);
