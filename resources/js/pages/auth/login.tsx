@@ -1,6 +1,6 @@
 import { Head, useForm } from '@inertiajs/react';
 import { LoaderCircle } from 'lucide-react';
-import { FormEventHandler } from 'react';
+import { FormEventHandler, useEffect, useState } from 'react';
 
 import InputError from '@/components/input-error';
 import TextLink from '@/components/text-link';
@@ -11,7 +11,7 @@ import { Label } from '@/components/ui/label';
 import AuthLayout from '@/layouts/auth-layout';
 
 type LoginForm = {
-    email: string;
+    identifier: string; // email or student number
     password: string;
     remember: boolean;
 };
@@ -21,9 +21,10 @@ interface LoginProps {
     canResetPassword: boolean;
 }
 
-export default function Login({ status, canResetPassword }: LoginProps) {
+export default function Login(props: LoginProps) {
+    const { status, canResetPassword } = props;
     const { data, setData, post, processing, errors, reset } = useForm<Required<LoginForm>>({
-        email: '',
+        identifier: '',
         password: '',
         remember: false,
     });
@@ -31,11 +32,11 @@ export default function Login({ status, canResetPassword }: LoginProps) {
     const submit: FormEventHandler = (e) => {
         e.preventDefault();
         post(route('login'), {
-            onFinish: () => {
+            onSuccess: () => {
                 reset('password');
-                if (Object.keys(errors).length === 0) {
-                    window.location.reload(); 
-                }
+            },
+            onError: () => {
+                reset('password');
             },
         });
     };
@@ -44,22 +45,23 @@ export default function Login({ status, canResetPassword }: LoginProps) {
         <AuthLayout title="Graduate School System" description="Login to your UIC account">
             <Head title="Log in" />
 
+            {status && <div className="mb-4 text-center text-sm font-medium text-green-600">{status}</div>}
+
             <form className="flex flex-col gap-6" onSubmit={submit}>
                 <div className="grid gap-6">
                     <div className="grid gap-2">
-                        <Label htmlFor="email">Email address</Label>
+                        <Label htmlFor="identifier">Email or Student Number</Label>
                         <Input
-                            id="email"
-                            type="email"
+                            id="identifier"
+                            name="identifier"
+                            type="text"
                             required
-                            autoFocus
-                            tabIndex={1}
-                            autoComplete="email"
-                            value={data.email}
-                            onChange={(e) => setData('email', e.target.value)}
-                            placeholder="email@uic.edu.ph"
+                            autoComplete="username"
+                            value={data.identifier}
+                            onChange={e => setData('identifier', e.target.value)}
+                            placeholder="Email or Student Number"
                         />
-                        <InputError message={errors.email} />
+                        <InputError message={errors.identifier} />
                     </div>
 
                     <div className="grid gap-2">
@@ -101,8 +103,6 @@ export default function Login({ status, canResetPassword }: LoginProps) {
                     </Button>
                 </div>
             </form>
-
-            {status && <div className="mb-4 text-center text-sm font-medium text-green-600">{status}</div>}
         </AuthLayout>
     );
 }

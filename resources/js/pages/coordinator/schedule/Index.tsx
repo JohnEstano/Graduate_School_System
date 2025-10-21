@@ -1,131 +1,1755 @@
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
 import { Head } from '@inertiajs/react';
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
-    startOfMonth,
-    endOfMonth,
-    startOfWeek,
-    endOfWeek,
-    addDays,
-    format,
-    isSameMonth,
-    parseISO,
-    isToday,
+  startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays,
+  format, isSameMonth, isSameDay, isToday, parseISO
 } from "date-fns";
-import { Card, CardContent } from "@/components/ui/card";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
+import { cn } from "@/lib/utils";
+import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Skeleton } from "@/components/ui/skeleton";
+// Icons
+import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, X, GraduationCap, Trash2, Printer, CalendarDays, CalendarRange, Calendar, Eye, Edit } from "lucide-react";
+import { createPortal } from 'react-dom';
+import { useDroppable, useDraggable, DndContext, closestCenter, type DragStartEvent, type DragEndEvent, type DragOverEvent, DragOverlay } from "@dnd-kit/core";
+
+const pad2 = (n: number) => n.toString().padStart(2, '0');
+
+function truncate(s: string, n = 28) {
+  return s.length > n ? s.slice(0, n) + '…' : s;
+}
 
 const breadcrumbs: BreadcrumbItem[] = [
-    { title: 'Dashboard', href: '/dashboard' },
-    { title: 'Schedules', href: '/schedules' },
+  { title: 'Dashboard', href: '/dashboard' },
+  { title: 'Schedules', href: '/schedule' },
 ];
 
 type DefenseEvent = {
-    id: number;
-    thesis_title: string;
-    date_of_defense: string;
+  id: number;
+  thesis_title: string;
+  date_of_defense: string;
+  start_time?: string;
+  end_time?: string;
+  defense_type?: string;
+  defense_mode?: string;
+  defense_venue?: string;
+  program?: string;
+  student_name?: string;
 };
 
-export default function Index() {
-    const [events, setEvents] = useState<DefenseEvent[]>([]);
-    const [month, setMonth] = useState(new Date());
+type CalendarEntry = {
+  id: string;
+  title: string;
+  date: string;
+  start?: string;
+  end?: string;
+  raw: DefenseEvent;
+  defense?: boolean;
+  color?: string;
+  description?: string;
+  __layout?: { top: number; height: number; leftPct: number; widthPct: number };
+};
 
-    useEffect(() => {
-        fetch('/api/defense-requests/calendar')
-            .then(res => res.json())
-            .then(setEvents);
-    }, []);
+const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+const CURRENT_YEAR = new Date().getFullYear();
+const YEARS = Array.from({ length: 9 }, (_, i) => CURRENT_YEAR - 4 + i);
 
-    const eventsByDate: Record<string, DefenseEvent[]> = {};
-    events.forEach(ev => {
-        const date = format(parseISO(ev.date_of_defense), "yyyy-MM-dd");
-        if (!eventsByDate[date]) eventsByDate[date] = [];
-        eventsByDate[date].push(ev);
-    });
+const DAY_START_HOUR = 0;
+const DAY_END_HOUR = 24;
+const MINUTE_STEP = 30;
+const MINUTES_IN_DAY_RANGE = (DAY_END_HOUR - DAY_START_HOUR) * 60;
+const SLOT_HEIGHT = 44;
 
-    
-    function getCalendarMatrix(month: Date) {
-        const start = startOfWeek(startOfMonth(month), { weekStartsOn: 0 });
-        const end = endOfWeek(endOfMonth(month), { weekStartsOn: 0 });
-        const matrix = [];
-        let day = start;
-        while (day <= end) {
-            const week = [];
-            for (let i = 0; i < 7; i++) {
-                week.push(day);
-                day = addDays(day, 1);
-            }
-            matrix.push(week);
-        }
-        return matrix;
+const EVENT_BASE =
+  "bg-zinc-100 dark:bg-zinc-900/90 hover:bg-zinc-200 dark:hover:bg-zinc-800 text-zinc-900 dark:text-zinc-100 ring-1 ring-zinc-300 dark:ring-zinc-700/40 shadow-sm";
+const EVENT_BASE_SOLID =
+  "bg-zinc-200 dark:bg-zinc-900 hover:bg-zinc-300 dark:hover:bg-zinc-800 text-zinc-900 dark:text-zinc-100 ring-1 ring-zinc-400 dark:ring-zinc-700/40 shadow-sm ";
+
+function buildTimeSlots() {
+  const slots: { label: string; minutes: number; isHour: boolean }[] = [];
+  for (let h = DAY_START_HOUR; h < DAY_END_HOUR; h++) {
+    for (let m = 0; m < 60; m += MINUTE_STEP) {
+      const minutes = (h - DAY_START_HOUR) * 60 + m;
+      const label = format(new Date(2020, 1, 1, h, m, 0), 'h:mm a');
+      slots.push({ label, minutes, isHour: m === 0 });
     }
-
-    const weeks = getCalendarMatrix(month);
-
-    return (
-        <AppLayout breadcrumbs={breadcrumbs}>
-            <Head title="Schedules" />
-            <div className="w-full h-[calc(100vh-5rem)] p-4">
-                <Card className="w-full h-full">
-                    <CardContent className="p-4 h-full flex flex-col">
-                        <div className="flex items-center justify-between mb-4">
-                            <div />
-                            <div className="flex gap-2">
-                                <button
-                                    className="rounded px-2 py-1 text-muted-foreground hover:bg-accent"
-                                    onClick={() => setMonth(addDays(startOfMonth(month), -1))}
-                                    aria-label="Previous month"
-                                >{"<"}</button>
-                                <span className="font-medium">{format(month, "MMMM yyyy")}</span>
-                                <button
-                                    className="rounded px-2 py-1 text-muted-foreground hover:bg-accent"
-                                    onClick={() => setMonth(addDays(endOfMonth(month), 1))}
-                                    aria-label="Next month"
-                                >{">"}</button>
-                            </div>
-                        </div>
-                        <div className="flex-1 overflow-auto grid grid-cols-7 gap-2">
-                            {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map(d => (
-                                <div key={d} className="text-xs font-medium text-center text-muted-foreground pb-2">{d}</div>
-                            ))}
-                            {weeks.flat().map((day, idx) => {
-                                const dateStr = format(day, "yyyy-MM-dd");
-                                const isCurrentMonth = isSameMonth(day, month);
-                                const isTodayDate = isToday(day);
-                                const dayEvents = eventsByDate[dateStr] || [];
-                                return (
-                                    <div
-                                        key={idx}
-                                        className={`min-h-[90px] h-24 flex flex-col items-center border rounded-lg p-1 transition-colors
-                                            ${isCurrentMonth ? "bg-background" : "bg-muted/50"}
-                                            ${isTodayDate ? "border-2 border-primary" : ""}
-                                        `}
-                                    >
-                                        <span className={`text-xs font-medium ${isCurrentMonth ? "text-foreground" : "text-muted-foreground"}`}>
-                                            {format(day, "d")}
-                                        </span>
-                                        <div className="flex flex-col gap-1 mt-1 w-full">
-                                            {dayEvents.map(ev => (
-                                                <span key={ev.id} className="flex items-center gap-1 w-full">
-                                                    <span className="w-2 h-2 rounded-full bg-primary inline-block shrink-0" />
-                                                    <span
-                                                        className="truncate text-xs text-muted-foreground max-w-[60px]"
-                                                        title={ev.thesis_title}
-                                                    >
-                                                        {ev.thesis_title.length > 9
-                                                            ? ev.thesis_title.slice(0, 9) + '…'
-                                                            : ev.thesis_title}
-                                                    </span>
-                                                </span>
-                                            ))}
-                                        </div>
-                                    </div>
-                                );
-                            })}
-                        </div>
-                    </CardContent>
-                </Card>
-            </div>
-        </AppLayout>
-    );
+  }
+  return slots;
 }
+const TIME_SLOTS = buildTimeSlots();
+
+function timeToOffsetMinutes(t?: string) {
+  if (!t) return 0;
+  const [hh, mm] = t.split(':').map(v => parseInt(v, 10));
+  return (hh - DAY_START_HOUR) * 60 + mm;
+}
+
+function formatTime(t?: string) {
+  if (!t) return '';
+  const [hh, mm] = t.split(':');
+  const d = new Date(2020, 0, 1, Number(hh || 0), Number(mm || 0), 0);
+  return format(d, 'h:mm a');
+}
+
+function computeOverlaps(dayEvents: CalendarEntry[]): CalendarEntry[] {
+  if (!dayEvents.length) return dayEvents;
+  const sorted = [...dayEvents].sort((a, b) =>
+    (a.start || '').localeCompare(b.start || '') ||
+    (a.end || '').localeCompare(b.end || '')
+  );
+  type Active = { ev: CalendarEntry; start: number; end: number; col: number };
+  let active: Active[] = [];
+  let maxCol = 0;
+  const flush = () => {
+    if (!active.length) return;
+    const cols = maxCol + 1;
+    active.forEach(a => {
+      const widthPct = 100 / cols;
+      a.ev.__layout = {
+        leftPct: a.col * widthPct,
+        widthPct: widthPct - 1.5,
+        top: 0,
+        height: 0
+      };
+    });
+    active = [];
+    maxCol = 0;
+  };
+  for (const ev of sorted) {
+    const start = timeToOffsetMinutes(ev.start);
+    const endRaw = ev.end ? timeToOffsetMinutes(ev.end) : (start + 30);
+    const end = Math.max(start + 5, endRaw);
+    active = active.filter(a => a.end > start);
+    const used = new Set(active.map(a => a.col));
+    let col = 0;
+    while (used.has(col)) col++;
+    active.push({ ev, start, end, col });
+    maxCol = Math.max(maxCol, col);
+  }
+  flush();
+  return sorted;
+}
+
+function getTextColor(bg?: string) {
+  if (!bg) return '#064e3b';
+  const c = bg.replace('#', '');
+  if (c.length !== 6) return '#064e3b';
+  const r = parseInt(c.slice(0, 2), 16) / 255;
+  const g = parseInt(c.slice(2, 4), 16) / 255;
+  const b = parseInt(c.slice(4, 6), 16) / 255;
+  const lum = 0.2126 * Math.pow(r, 2.2) + 0.7152 * Math.pow(g, 2.2) + 0.0722 * Math.pow(b, 2.2);
+  return lum > 0.55 ? '#1f2937' : '#ffffff';
+}
+function hexToRgb(hex: string) {
+  const m = hex.replace('#', '').match(/^([0-9a-fA-F]{6})$/);
+  if (!m) return { r: 37, g: 99, b: 235 };
+  const h = m[1];
+  return {
+    r: parseInt(h.slice(0, 2), 16),
+    g: parseInt(h.slice(2, 4), 16),
+    b: parseInt(h.slice(4, 6), 16)
+  };
+}
+function getTheme(ev: CalendarEntry) {
+  const base = (ev.defense ? '#059669' : (ev.color || '#2563eb')).toLowerCase();
+  function shade(hex: string, amt: number) {
+    const c = hex.replace('#', '');
+    const num = parseInt(c, 16);
+    let r = (num >> 16) + amt;
+    let g = (num >> 8 & 0x00FF) + amt;
+    let b = (num & 0x0000FF) + amt;
+    r = Math.max(0, Math.min(255, r));
+    g = Math.max(0, Math.min(255, g));
+    b = Math.max(0, Math.min(255, b));
+    return '#' + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
+  }
+  const border = shade(base, -30);
+  const { r, g, b } = hexToRgb(base);
+  const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+  const text = luminance > 0.55 ? '#1f2937' : '#ffffff';
+  const subText = luminance > 0.55 ? '#111827' : 'rgba(255,255,255,0.85)';
+  return { base, border, text, subText };
+}
+
+const GLASS_HEADER = "backdrop-blur supports-[backdrop-filter]:bg-white/85 bg-white/70 dark:bg-zinc-900/75 shadow-sm";
+const TOOLBAR_STICKY_TOP = 0;
+const TOOLBAR_HEIGHT = 52;
+const VIEW_HEADER_OFFSET = TOOLBAR_STICKY_TOP + TOOLBAR_HEIGHT;
+
+function getCsrf() {
+  const meta = document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement | null;
+  return meta?.content || '';
+}
+
+// --- DRAG & DROP LOGIC ---
+type DragData = {
+  event: CalendarEntry;
+  fromDate: string;
+};
+
+const DraggableEventCard = ({
+  event,
+  editMode,
+  onClick,
+}: {
+  event: CalendarEntry;
+  editMode: boolean;
+  onClick?: (e: React.MouseEvent) => void;
+}) => {
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
+    id: event.id,
+    data: { event, fromDate: event.date },
+    disabled: !editMode || event.defense,
+  });
+  return (
+    <div
+      ref={setNodeRef}
+      {...attributes}
+      {...listeners}
+      className={cn(
+        "px-1 py-0.5 rounded text-[10px] font-medium truncate flex items-center gap-1 cursor-grab active:cursor-grabbing",
+        event.defense ? EVENT_BASE_SOLID : EVENT_BASE,
+        isDragging && "opacity-50" // Visual feedback during drag
+      )}
+      style={
+        !event.defense
+          ? { backgroundColor: event.color || '#6ee7b7', color: getTextColor(event.color) }
+          : undefined
+      }
+      title={event.title}
+      onClick={onClick}
+    >
+      {event.defense && <GraduationCap className="h-3 w-3" />}
+      {truncate(event.title, 26)}
+    </div>
+  );
+};
+
+const DroppableCell = ({
+  dateKey,
+  children,
+  editMode,
+  isDragOver,
+  activeDrag,
+}: {
+  dateKey: string;
+  children: React.ReactNode;
+  editMode: boolean;
+  isDragOver?: boolean;
+  activeDrag?: DragData | null;
+}) => {
+  const { setNodeRef, isOver } = useDroppable({
+    id: dateKey,
+    disabled: !editMode,
+  });
+
+  return (
+    <div
+      ref={setNodeRef}
+      className={cn(
+        "relative p-1 border-r border-b last:[&:nth-last-child(-n+7)]:border-b-0 cursor-pointer overflow-hidden focus:outline-none focus-visible:outline-none",
+        "bg-white dark:bg-zinc-900",
+        "border-zinc-200 dark:border-zinc-800",
+        isOver && "bg-blue-50 dark:bg-blue-900/20 ring-2 ring-blue-400 ring-inset" // Visual feedback for drop target
+      )}
+      style={{ minHeight: 120 }}
+    >
+      {children}
+      {/* Render ghost card if dragging over this cell */}
+      {isDragOver && activeDrag && (
+        <div className="absolute left-1 right-1 top-7 z-30 pointer-events-none" style={{ opacity: 0.6 }}>
+          <DraggableEventCard
+            event={activeDrag.event}
+            editMode={false}
+          />
+        </div>
+      )}
+    </div>
+  );
+};
+
+const DroppableDayColumn = ({
+  dateKey,
+  children,
+  editMode,
+  isDragOver,
+  activeDrag,
+}: {
+  dateKey: string;
+  children: React.ReactNode;
+  editMode: boolean;
+  isDragOver?: boolean;
+  activeDrag?: DragData | null;
+}) => {
+  const { setNodeRef, isOver } = useDroppable({
+    id: dateKey,
+    disabled: !editMode,
+  });
+
+  return (
+    <div
+      ref={setNodeRef}
+      className={cn(
+        "relative h-full",
+        isOver && "bg-blue-50 dark:bg-blue-900/20 ring-2 ring-blue-400 ring-inset" // Visual feedback for drop target
+      )}
+    >
+      {children}
+      {/* Render ghost card if dragging over this column */}
+      {isDragOver && activeDrag && (
+        <div className="absolute left-2 right-2 top-2 z-50 pointer-events-none" style={{ opacity: 0.6 }}>
+          <div
+            className={cn(
+              "px-2 py-1 rounded text-[11px] font-medium truncate flex items-center gap-1 shadow-lg",
+              EVENT_BASE
+            )}
+            style={{
+              backgroundColor: activeDrag.event.color || '#6ee7b7',
+              color: getTextColor(activeDrag.event.color),
+              border: '2px dashed #888',
+            }}
+          >
+            {activeDrag.event.defense && <GraduationCap className="h-3 w-3" />}
+            {truncate(activeDrag.event.title, 26)}
+            <span className="ml-1 text-[9px] text-muted-foreground">(Preview)</span>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+const DraggableWeekEvent = ({
+  event,
+  editMode,
+  onClick,
+}: {
+  event: CalendarEntry;
+  editMode: boolean;
+  onClick?: (e: React.MouseEvent) => void;
+}) => {
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
+    id: event.id,
+    data: { event, fromDate: event.date },
+    disabled: !editMode || event.defense,
+  });
+
+  const l = event.__layout;
+  const startMin = Math.max(0, timeToOffsetMinutes(event.start));
+  const endMin = Math.min(
+    MINUTES_IN_DAY_RANGE,
+    event.end ? timeToOffsetMinutes(event.end) : startMin + 60
+  );
+  const topPct = (startMin / MINUTES_IN_DAY_RANGE) * 100;
+  const duration = Math.max(5, (endMin - startMin));
+  const heightPct = (duration / MINUTES_IN_DAY_RANGE) * 100;
+
+  return (
+    <div
+      ref={setNodeRef}
+      {...attributes}
+      {...listeners}
+      className={cn(
+        "absolute rounded-md text-[11px] flex flex-col overflow-hidden cursor-grab active:cursor-grabbing",
+        event.defense ? EVENT_BASE : EVENT_BASE,
+        "hover:ring-2 ring-primary/40",
+        "bg-white dark:bg-zinc-800",
+        "border border-zinc-200 dark:border-zinc-700",
+        isDragging && "opacity-50 z-50" // Visual feedback during drag
+      )}
+      style={{
+        top: `calc(${topPct}% )`,
+        height: `calc(${heightPct}% )`,
+        left: `calc(${(l?.leftPct ?? 0)}% )`,
+        width: `calc(${(l?.widthPct ?? 100)}% )`,
+        backgroundColor: event.defense ? undefined : (event.color || '#34d399'),
+        color: event.defense ? undefined : getTextColor(event.color)
+      }}
+      title={event.title}
+      onClick={onClick}
+    >
+      <div className="px-1 pt-1 flex items-start gap-1">
+        {event.defense && <GraduationCap className="h-3.5 w-3.5 shrink-0 text-emerald-900/80" />}
+        <span className="font-semibold leading-tight truncate">
+          {truncate(event.title, 56)}
+        </span>
+      </div>
+      <div className="px-1 pb-1 font-medium">
+        {event.start && formatTime(event.start)}
+        {event.end && ' – ' + formatTime(event.end)}
+      </div>
+      {event.raw.student_name && event.defense && (
+        <div className="px-1 pb-1 truncate text-emerald-950/90 text-[10px]">
+          {truncate(event.raw.student_name, 40)}
+        </div>
+      )}
+    </div>
+  );
+};
+
+const DraggableDayEvent = ({
+  event,
+  editMode,
+  onClick,
+}: {
+  event: CalendarEntry;
+  editMode: boolean;
+  onClick?: (e: React.MouseEvent) => void;
+}) => {
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
+    id: event.id,
+    data: { event, fromDate: event.date },
+    disabled: !editMode || event.defense,
+  });
+
+  const l = event.__layout;
+  const startMin = Math.max(0, timeToOffsetMinutes(event.start));
+  const endMin = Math.min(
+    MINUTES_IN_DAY_RANGE,
+    event.end ? timeToOffsetMinutes(event.end) : startMin + 60
+  );
+  const topPct = (startMin / MINUTES_IN_DAY_RANGE) * 100;
+  const duration = Math.max(5, (endMin - startMin));
+  const heightPct = (duration / MINUTES_IN_DAY_RANGE) * 100;
+
+  return (
+    <div
+      ref={setNodeRef}
+      {...attributes}
+      {...listeners}
+      className={cn(
+        "absolute rounded-md p-2 text-[11px] flex flex-col overflow-hidden cursor-grab active:cursor-grabbing",
+        event.defense ? EVENT_BASE_SOLID : EVENT_BASE,
+        "hover:ring-2 ring-primary/40",
+        "bg-white dark:bg-zinc-800",
+        "border border-zinc-200 dark:border-zinc-700",
+        isDragging && "opacity-50 z-50" // Visual feedback during drag
+      )}
+      style={{
+        top: `calc(${topPct}% )`,
+        height: `calc(${heightPct}% )`,
+        left: `calc(${(l?.leftPct ?? 0)}% )`,
+        width: `calc(${(l?.widthPct ?? 100)}% )`,
+        backgroundColor: event.defense ? undefined : (event.color || '#34d399'),
+        color: event.defense ? undefined : getTextColor(event.color)
+      }}
+      title={event.title}
+      onClick={onClick}
+    >
+      <div className="flex items-start gap-1">
+        {event.defense && <GraduationCap className="h-4 w-4 shrink-0" />}
+        <div className="font-semibold leading-tight truncate text-[12px]">
+          {truncate(event.title, 80)}
+        </div>
+      </div>
+      <div className="text-[11px] font-medium mt-0.5">
+        {event.start && formatTime(event.start)}
+        {event.end && ' – ' + formatTime(event.end)}
+        {event.raw.student_name && event.defense && ' • ' + event.raw.student_name}
+      </div>
+      {event.defense && event.raw.student_name && (
+        <div className="text-[10px] truncate">
+          {event.raw.student_name} {event.raw.program && <span className="opacity-70">({event.raw.program})</span>}
+        </div>
+      )}
+      {event.defense && event.raw.defense_type && (
+        <div className="text-[10px] mt-0.5 uppercase tracking-wide">
+          {event.raw.defense_type}
+        </div>
+      )}
+    </div>
+  );
+};
+
+// --- MAIN COMPONENT ---
+export default function SchedulePage({ canManage, userRole }: { canManage: boolean; userRole: string }) {
+  const [rawEvents, setRawEvents] = useState<DefenseEvent[]>([]);
+  const [events, setEvents] = useState<CalendarEntry[]>([]);
+  const [extraEvents, setExtraEvents] = useState<CalendarEntry[]>([]);
+  const [monthCursor, setMonthCursor] = useState(new Date());
+  const [selectedDate, setSelectedDate] = useState<Date | null>(new Date());
+  const [view, setView] = useState<'month' | 'week' | 'day'>('week');
+  const [loading, setLoading] = useState(false);
+  const [showAdd, setShowAdd] = useState(false);
+  const [adding, setAdding] = useState(false);
+  const [addTitle, setAddTitle] = useState("");
+  const [addDate, setAddDate] = useState(format(new Date(), 'yyyy-MM-dd'));
+  const [addStart, setAddStart] = useState("08:00");
+  const [addEnd, setAddEnd] = useState("09:00");
+  const [addAllDay, setAddAllDay] = useState(false);
+  const [addDesc, setAddDesc] = useState("");
+  const [addError, setAddError] = useState<string | null>(null);
+  const [addColor, setAddColor] = useState<string>("#10b981");
+  const colorChoices = ["#10b981", "#0ea5e9", "#6366f1", "#f59e0b", "#ef4444", "#d946ef", "#14b8a6", "#6d28d9"];
+  const [search] = useState(""); // reserved for future filtering UI
+
+  const [now, setNow] = useState(new Date());
+  useEffect(() => {
+    const id = setInterval(() => setNow(new Date()), 60000);
+    return () => clearInterval(id);
+  }, []);
+
+  const weekGridRef = useRef<HTMLDivElement | null>(null);
+  const dayGridRef = useRef<HTMLDivElement | null>(null);
+  const [weekCursor, setWeekCursor] = useState<{ v: boolean; y: number }>({ v: false, y: 0 });
+  const [dayCursor, setDayCursor] = useState<{ v: boolean; y: number }>({ v: false, y: 0 });
+
+  const handleWeekMove = (e: React.MouseEvent) => {
+    if (!weekGridRef.current) return;
+    const rect = weekGridRef.current.getBoundingClientRect();
+    const y = Math.min(Math.max(0, e.clientY - rect.top), rect.height);
+    setWeekCursor({ v: true, y });
+  };
+  const handleWeekLeave = () => setWeekCursor({ v: false, y: 0 });
+  const handleDayMove = (e: React.MouseEvent) => {
+    if (!dayGridRef.current) return;
+    const rect = dayGridRef.current.getBoundingClientRect();
+    const y = Math.min(Math.max(0, e.clientY - rect.top), rect.height);
+    setDayCursor({ v: true, y });
+  };
+  const handleDayLeave = () => setDayCursor({ v: false, y: 0 });
+
+  // Defense requests
+  useEffect(() => {
+    setLoading(true);
+    fetch('/defense-requests/calendar')
+      .then(r => r.json())
+      .then((data: DefenseEvent[]) => setRawEvents(data || []))
+      .finally(() => setLoading(false));
+  }, []);
+
+  // Non-defense events for month range
+  useEffect(() => {
+    const rangeStart = startOfMonth(monthCursor);
+    const rangeEnd = endOfMonth(monthCursor);
+    const qs = `?from=${encodeURIComponent(rangeStart.toISOString())}&to=${encodeURIComponent(rangeEnd.toISOString())}`;
+    fetch('/api/calendar/events' + qs)
+      .then(r => r.json())
+      .then((items: any[]) => {
+        const toDate = (s: string) => new Date(s.replace(' ', 'T'));
+        const mapped: CalendarEntry[] = items
+          .filter(it => it.origin === 'event')
+          .map(it => {
+            const sDate = toDate(it.start);
+            const eDate = it.end ? toDate(it.end) : null;
+            return {
+              id: it.id,
+              title: it.title || 'Event',
+              date: format(sDate, 'yyyy-MM-dd'),
+              start: format(sDate, 'HH:mm'),
+              end: eDate ? format(eDate, 'HH:mm') : undefined,
+              raw: {
+                id: Number((it.id || '').replace('ev-', '')) || 0,
+                thesis_title: it.title,
+                date_of_defense: format(sDate, 'yyyy-MM-dd'),
+                start_time: format(sDate, 'HH:mm'),
+                end_time: eDate ? format(eDate, 'HH:mm') : undefined,
+                defense_type: undefined,
+                defense_mode: undefined,
+                defense_venue: undefined,
+                program: undefined,
+                student_name: undefined,
+              },
+              color: it.color || '#2563eb',
+              defense: false,
+              description: (it.description ?? it.desc ?? it.details ?? it.detail ?? it.note ?? it.notes ?? "") as string
+            } as CalendarEntry;
+          });
+        setExtraEvents(mapped);
+      })
+      .catch(() => {/* ignore */ });
+  }, [monthCursor]);
+
+  // Merge events
+  useEffect(() => {
+    const defenseEntries = rawEvents.map(d => ({
+      id: 'def-' + d.id,
+      title: d.thesis_title || 'Thesis Defense',
+      date: d.date_of_defense,
+      start: d.start_time ? d.start_time.slice(0, 5) : undefined,
+      end: d.end_time ? d.end_time.slice(0, 5) : undefined,
+      raw: d,
+      defense: true
+    })) as CalendarEntry[];
+    setEvents([...defenseEntries, ...extraEvents]);
+  }, [rawEvents, extraEvents]);
+
+  const filtered = useMemo(() => {
+    if (!search.trim()) return events;
+    const q = search.toLowerCase();
+    return events.filter(e =>
+      e.title.toLowerCase().includes(q) ||
+      (e.raw.student_name || '').toLowerCase().includes(q) ||
+      (e.raw.program || '').toLowerCase().includes(q) ||
+      (e.raw.defense_type || '').toLowerCase().includes(q)
+    );
+  }, [events, search]);
+
+  const monthWeeks = useMemo(() => {
+    const s = startOfWeek(startOfMonth(monthCursor), { weekStartsOn: 0 });
+    const e = endOfWeek(endOfMonth(monthCursor), { weekStartsOn: 0 });
+    const rows: Date[][] = [];
+    let d = s;
+    while (d <= e) {
+      const row: Date[] = [];
+      for (let i = 0; i < 7; i++) { row.push(d); d = addDays(d, 1); }
+      rows.push(row);
+    }
+    return rows;
+  }, [monthCursor]);
+
+  const eventsByDate = useMemo(() => {
+    const map: Record<string, CalendarEntry[]> = {};
+    filtered.forEach(ev => {
+      (map[ev.date] ||= []).push(ev);
+    });
+    Object.values(map).forEach(list =>
+      list.sort((a, b) => (a.start || '23:59:59').localeCompare(b.start || '23:59:59'))
+    );
+    return map;
+  }, [filtered]);
+
+  const selectedDateStr = selectedDate ? format(selectedDate, 'yyyy-MM-dd') : '';
+  const dayEvents = useMemo(
+    () => (selectedDateStr ? (eventsByDate[selectedDateStr] || []) : []),
+    [eventsByDate, selectedDateStr]
+  );
+
+  const weekDays = useMemo(() => {
+    const base = selectedDate || new Date();
+    const s = startOfWeek(base, { weekStartsOn: 0 });
+    return Array.from({ length: 7 }, (_, i) => addDays(s, i));
+  }, [selectedDate]);
+
+  const weekMap = useMemo(() => {
+    const map: Record<string, CalendarEntry[]> = {};
+    weekDays.forEach(d => {
+      const k = format(d, 'yyyy-MM-dd');
+      map[k] = (eventsByDate[k] || []).map(e => ({ ...e }));
+      computeOverlaps(map[k]);
+    });
+    return map;
+  }, [weekDays, eventsByDate]);
+
+  const goPrev = () => {
+    if (view === 'month') setMonthCursor(addDays(startOfMonth(monthCursor), -1));
+    else if (view === 'week') setSelectedDate(d => addDays(d || new Date(), -7));
+    else setSelectedDate(d => addDays(d || new Date(), -1));
+  };
+  const goNext = () => {
+    if (view === 'month') setMonthCursor(addDays(endOfMonth(monthCursor), 1));
+    else if (view === 'week') setSelectedDate(d => addDays(d || new Date(), 7));
+    else setSelectedDate(d => addDays(d || new Date(), 1));
+  };
+  const goToday = () => {
+    const t = new Date();
+    setMonthCursor(t);
+    setSelectedDate(t);
+  };
+
+  useEffect(() => {
+    if (view === 'month' && selectedDate && !isSameMonth(selectedDate, monthCursor)) {
+      setSelectedDate(monthCursor);
+    }
+  }, [view, monthCursor, selectedDate]);
+
+  function truncate(s: string, n = 28) {
+    return s.length > n ? s.slice(0, n) + '…' : s;
+  }
+
+  const [editMode, setEditMode] = useState(false);
+  const [activeDrag, setActiveDrag] = useState<DragData | null>(null);
+  const [draggedOverDate, setDraggedOverDate] = useState<string | null>(null);
+
+  // --- NEW: Drag state reset function ---
+  const resetDragState = () => {
+    setActiveDrag(null);
+    setDraggedOverDate(null);
+  };
+
+  // --- NEW: Effect to monitor drag state and ensure cleanup ---
+  useEffect(() => {
+    // If dialog closes and we have pending drag states, reset them
+    if (!showAdd && activeDrag) {
+      resetDragState();
+    }
+  }, [showAdd, activeDrag]);
+
+  // --- Update DND handlers ---
+  function handleDragStart(event: DragStartEvent) {
+    if (event.active.data.current) {
+      setActiveDrag(event.active.data.current as DragData);
+    }
+  }
+
+  function handleDragEnd(event: DragEndEvent) {
+    const { active, over } = event;
+
+    // Always reset drag states first
+    resetDragState();
+
+    if (!active || !over) return;
+
+    const dragData = active.data.current as DragData;
+    if (!dragData || dragData.event.defense) return;
+
+    if (dragData.fromDate !== over.id) {
+      setEditEvent({
+        ...dragData.event,
+        date: over.id as string,
+      });
+      setShowAdd(true);
+    }
+  }
+
+  function handleDragOver(event: DragOverEvent) {
+    if (event.over?.id) {
+      setDraggedOverDate(event.over.id as string);
+    } else {
+      setDraggedOverDate(null);
+    }
+  }
+
+  const GRID_LINE_LIGHT = "border-zinc-200";
+  const GRID_LINE_DARK = "dark:border-zinc-700";
+  const GRID_LINE = `${GRID_LINE_LIGHT} ${GRID_LINE_DARK}`;
+
+  const renderMonth = () => {
+    const weeks = monthWeeks;
+    return (
+      <DndContext
+        collisionDetection={closestCenter}
+        onDragStart={handleDragStart}
+        onDragEnd={handleDragEnd}
+        onDragOver={handleDragOver}
+      >
+        <div className="w-full border border-t-0 bg-white dark:bg-zinc-900 flex flex-col rounded-b-md rounded-t-none">
+          <div
+            className={cn(
+              "grid border-b sticky z-40",
+              GLASS_HEADER,
+              "bg-transparent"
+            )}
+            style={{ gridTemplateColumns: "repeat(7, 1fr)", top: VIEW_HEADER_OFFSET }}
+          >
+            {['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'].map(d => (
+              <div key={d} className={cn(
+                "h-12 border-r last:border-r-0 flex items-center justify-center text-[10px] font-semibold uppercase tracking-wide",
+                GRID_LINE
+              )}>
+                {d}
+              </div>
+            ))}
+          </div>
+          <div className="grid grid-cols-7">
+            {weeks.map(week =>
+              week.map(day => {
+                const key = format(day, 'yyyy-MM-dd');
+                const list = eventsByDate[key] || [];
+                const outMonth = !isSameMonth(day, monthCursor);
+                const today = isToday(day);
+                const selected = selectedDate && isSameDay(day, selectedDate);
+                return (
+                  <DroppableCell
+                    key={key}
+                    dateKey={key}
+                    editMode={editMode}
+                    isDragOver={draggedOverDate === key}
+                    activeDrag={activeDrag}
+                  >
+                    <div className="flex items-start justify-between mb-0.5">
+                      <span
+                        className={cn(
+                          "w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-semibold select-none",
+                          today && "bg-rose-500 text-white shadow dark:bg-rose-500",
+                          !today && selected && "bg-rose-500/80 text-white dark:bg-rose-500/80",
+                          !today && !selected && "text-muted-foreground"
+                        )}
+                      >
+                        {format(day, 'd')}
+                      </span>
+                      {list.length > 3 && (
+                        <span className="text-[10px] text-muted-foreground mt-0.5">
+                          +{list.length - 3}
+                        </span>
+                      )}
+                    </div>
+                    <div className="space-y-0.5">
+                      {list.slice(0, 3).map(ev => (
+                        <DraggableEventCard
+                          key={ev.id}
+                          event={ev}
+                          editMode={editMode}
+                          onClick={e => {
+                            e.stopPropagation();
+                            if (!editMode) {
+                              setSelectedDate(day);
+                              setView('day');
+                            }
+                          }}
+                        />
+                      ))}
+                    </div>
+                  </DroppableCell>
+                );
+              })
+            )}
+          </div>
+          <DragOverlay>
+            {activeDrag ? (
+              <DraggableEventCard
+                event={activeDrag.event}
+                editMode={false}
+              />
+            ) : null}
+          </DragOverlay>
+        </div>
+      </DndContext>
+    );
+  };
+
+  const renderWeek = () => {
+    const TIME_COL_WIDTH = 90;
+    const totalHeight = TIME_SLOTS.length * SLOT_HEIGHT;
+    let weekCursorTime: string | null = null;
+    if (weekCursor.v) {
+      const minutesOffset = Math.min(
+        MINUTES_IN_DAY_RANGE,
+        Math.max(0, (weekCursor.y / totalHeight) * MINUTES_IN_DAY_RANGE)
+      );
+      const absMinutes = Math.round(minutesOffset);
+      const hour24 = DAY_START_HOUR + Math.floor(absMinutes / 60);
+      const minute = absMinutes % 60;
+      const hour12 = ((hour24 + 11) % 12) + 1;
+      const ampm = hour24 >= 12 ? 'PM' : 'AM';
+      weekCursorTime = `${hour12}:${pad2(minute)} ${ampm}`;
+    }
+    return (
+      <DndContext
+        collisionDetection={closestCenter}
+        onDragStart={handleDragStart}
+        onDragEnd={handleDragEnd}
+        onDragOver={handleDragOver}
+      >
+        <div className="w-full border border-t-0 bg-white dark:bg-zinc-900 flex flex-col overflow-visible rounded-b-md rounded-t-none">
+          <div
+            className={cn("grid border-b sticky z-40", GLASS_HEADER)}
+            style={{ gridTemplateColumns: `${TIME_COL_WIDTH}px repeat(7, 1fr)`, top: VIEW_HEADER_OFFSET }}
+          >
+            <div className={cn(
+              "h-12 border-r flex items-center justify-center text-[10px] font-semibold uppercase tracking-wide text-muted-foreground",
+              GRID_LINE
+            )}>
+              TIME
+            </div>
+            {weekDays.map(d => {
+              const isSelected = selectedDate && isSameDay(d, selectedDate);
+              const today = isToday(d);
+              return (
+                <div
+                  key={d.toISOString()}
+                  className={cn(
+                    "h-12 border-r flex flex-col items-center justify-center gap-0.5 text-xs font-medium",
+                    isSelected && !today && "bg-primary/5 dark:bg-rose-900/10",
+                    today && "text-primary font-semibold",
+                    GRID_LINE
+                  )}
+                >
+                  <span className="uppercase tracking-wide text-[10px]">{format(d, 'EEE')}</span>
+                  <span
+                    className={cn(
+                      "w-7 h-7 rounded-full flex items-center justify-center text-[12px] font-semibold",
+                      today && "bg-rose-500 text-white shadow dark:bg-rose-500",
+                      !today && isSelected && "bg-rose-500/80 text-white dark:bg-rose-500/80"
+                    )}
+                  >
+                    {format(d, 'd')}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+          <div
+            ref={weekGridRef}
+            className="relative"
+            style={{ minHeight: totalHeight }}
+            onMouseMove={handleWeekMove}
+            onMouseLeave={handleWeekLeave}
+          >
+            <div className={cn("absolute left-0 top-0 bottom-0 border-r bg-white dark:bg-zinc-900 z-20", GRID_LINE)} style={{ width: TIME_COL_WIDTH }}>
+              {TIME_SLOTS.map(slot => (
+                <div key={slot.minutes} className="relative flex items-center justify-end pr-3" style={{ height: SLOT_HEIGHT }}>
+                  <span className={cn("select-none text-[10px]", slot.isHour ? "font-semibold text-muted-foreground" : "text-muted-foreground/50")}>
+                    {slot.label.replace(':00', '')}
+                  </span>
+                </div>
+              ))}
+            </div>
+            <div className="absolute top-0 bottom-0 right-0 grid" style={{ left: TIME_COL_WIDTH, gridTemplateColumns: "repeat(7, 1fr)" }}>
+              {weekDays.map(d => {
+                const dateKey = format(d, 'yyyy-MM-dd');
+                const list = weekMap[dateKey] || [];
+                return (
+                  <DroppableDayColumn
+                    key={'week-col-' + dateKey}
+                    dateKey={dateKey}
+                    editMode={editMode}
+                    isDragOver={draggedOverDate === dateKey}
+                    activeDrag={activeDrag}
+                  >
+                    <div
+                      className={cn(
+                        "relative border-r h-full",
+                        isToday(d) && "bg-primary/5 dark:bg-emerald-900/10",
+                        GRID_LINE,
+                        "bg-white dark:bg-zinc-900"
+                      )}
+                    >
+                      {Array.from({ length: DAY_END_HOUR - DAY_START_HOUR }, (_, i) =>
+                        i % 2 === 1 ? (
+                          <div key={'stripe-' + i} className="absolute inset-x-0 bg-muted/15 dark:bg-zinc-800/30" style={{ top: i * 2 * SLOT_HEIGHT, height: SLOT_HEIGHT * 2 }} />
+                        ) : null
+                      )}
+                      {TIME_SLOTS.map((slot, i) => (
+                        <div
+                          key={slot.minutes}
+                          className={cn("absolute left-0 right-0", slot.isHour ? `${GRID_LINE} border-b-2` : `${GRID_LINE} border-b`)}
+                          style={{ top: i * SLOT_HEIGHT }}
+                        />
+                      ))}
+                      {list.map(ev => (
+                        <DraggableWeekEvent
+                          key={ev.id}
+                          event={ev}
+                          editMode={editMode}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (!editMode) {
+                              if (canManage && !ev.defense) {
+                                setEditEvent(ev);
+                              } else {
+                                setSelectedDate(parseISO(ev.date));
+                                setDetailEvent(ev);
+                                setView('day');
+                              }
+                            }
+                          }}
+                        />
+                      ))}
+                    </div>
+                  </DroppableDayColumn>
+                );
+              })}
+              {weekCursor.v && (
+                <>
+                  <div className="pointer-events-none absolute left-0 right-0 h-px bg-black/60 z-40" style={{ top: weekCursor.y }} />
+                  {weekCursorTime && (
+                    <div
+                      className="pointer-events-none absolute z-50 -translate-y-1/2 px-1.5 py-0.5 bg-black text-white rounded text-[10px] font-medium shadow"
+                      style={{ top: weekCursor.y, left: 4 }}
+                    >
+                      {weekCursorTime}
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          </div>
+          <DragOverlay>
+            {activeDrag ? (
+              <div
+                className={cn(
+                  "absolute rounded-md text-[11px] flex flex-col overflow-hidden shadow-lg",
+                  EVENT_BASE
+                )}
+                style={{
+                  backgroundColor: activeDrag.event.defense ? undefined : (activeDrag.event.color || '#34d399'),
+                  color: activeDrag.event.defense ? undefined : getTextColor(activeDrag.event.color),
+                  padding: '4px 8px',
+                  minWidth: '120px',
+                  maxWidth: '200px',
+                }}
+              >
+                <div className="font-semibold leading-tight truncate">
+                  {truncate(activeDrag.event.title, 40)}
+                </div>
+                <div className="font-medium text-[10px]">
+                  {activeDrag.event.start && formatTime(activeDrag.event.start)}
+                  {activeDrag.event.end && ' – ' + formatTime(activeDrag.event.end)}
+                </div>
+              </div>
+            ) : null}
+          </DragOverlay>
+        </div>
+      </DndContext>
+    );
+  };
+
+  const renderDay = () => {
+    const d = selectedDate || new Date();
+    const key = format(d, 'yyyy-MM-dd');
+    const list = computeOverlaps((eventsByDate[key] || []).map(e => ({ ...e })));
+    const totalHeight = TIME_SLOTS.length * SLOT_HEIGHT;
+    let dayCursorTime: string | null = null;
+    if (dayCursor.v) {
+      const minutesOffset = Math.min(
+        MINUTES_IN_DAY_RANGE,
+        Math.max(0, (dayCursor.y / totalHeight) * MINUTES_IN_DAY_RANGE)
+      );
+      const absMinutes = Math.round(minutesOffset);
+      const hour24 = DAY_START_HOUR + Math.floor(absMinutes / 60);
+      const minute = absMinutes % 60;
+      const hour12 = ((hour24 + 11) % 12) + 1;
+      const ampm = hour24 >= 12 ? 'PM' : 'AM';
+      dayCursorTime = `${hour12}:${pad2(minute)} ${ampm}`;
+    }
+    return (
+      <DndContext
+        collisionDetection={closestCenter}
+        onDragStart={handleDragStart}
+        onDragEnd={handleDragEnd}
+        onDragOver={handleDragOver}
+      >
+        <div className="w-full border border-t-0 bg-white dark:bg-zinc-900 flex flex-col rounded-b-md rounded-t-none">
+          <div className={cn("sticky flex items-center justify-between px-6 py-4 border-b z-40", GLASS_HEADER, GRID_LINE)} style={{ top: VIEW_HEADER_OFFSET }}>
+            <div className="flex items-end gap-4">
+              <div className="flex flex-col leading-none">
+                <span className="text-4xl font-bold tracking-tight">
+                  {format(d, 'd')}
+                </span>
+              </div>
+              <div className="flex flex-col">
+                <span className="text-lg font-semibold">{format(d, 'MMMM')}</span>
+                <span className="text-sm text-muted-foreground">{format(d, 'EEEE, yyyy')}</span>
+              </div>
+            </div>
+            <Badge variant="secondary" className="text-[11px] px-3 py-1">
+              Approved Defenses
+            </Badge>
+          </div>
+          <div
+            ref={dayGridRef}
+            className="relative"
+            onMouseMove={handleDayMove}
+            onMouseLeave={handleDayLeave}
+          >
+            <DroppableDayColumn
+              dateKey={key}
+              editMode={editMode}
+              isDragOver={draggedOverDate === key}
+              activeDrag={activeDrag}
+            >
+              <div className="relative" style={{ minHeight: totalHeight }}>
+                <div className={cn("absolute left-0 top-0 bottom-0 w-[90px] border-r bg-white dark:bg-zinc-900 z-20", GRID_LINE)}>
+                  {TIME_SLOTS.map(slot => (
+                    <div key={slot.minutes} className="relative flex items-center justify-end pr-3" style={{ height: SLOT_HEIGHT }}>
+                      <span className={cn("text-[11px] select-none", slot.isHour ? "font-semibold text-muted-foreground" : "text-muted-foreground/50")}>
+                        {slot.label.replace(':00', '')}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+                <div className="absolute left-[90px] right-0 top-0 bottom-0 bg-white dark:bg-zinc-900">
+                  {Array.from({ length: DAY_END_HOUR - DAY_START_HOUR }, (_, i) => (
+                    i % 2 === 1 ? (
+                      <div key={'stripe-' + i} className="absolute inset-x-0 bg-muted/15 dark:bg-zinc-800/30" style={{ top: i * 2 * SLOT_HEIGHT, height: SLOT_HEIGHT * 2 }} />
+                    ) : null
+                  ))}
+                  {TIME_SLOTS.map((slot, i) => (
+                    <div
+                      key={slot.minutes}
+                      className={cn("absolute left-0 right-0", slot.isHour ? `${GRID_LINE} border-b-2` : `${GRID_LINE} border-b`)}
+                      style={{ top: i * SLOT_HEIGHT }}
+                    />
+                  ))}
+                  {list.map(ev => (
+                    <DraggableDayEvent
+                      key={ev.id}
+                      event={ev}
+                      editMode={editMode}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (!editMode) {
+                          if (canManage && !ev.defense) {
+                            setEditEvent(ev);
+                          } else {
+                            setDetailEvent(ev);
+                          }
+                        }
+                      }}
+                    />
+                  ))}
+                  {dayCursor.v && (
+                    <>
+                      <div className="pointer-events-none absolute left-0 right-0 h-px bg-black/60 z-40" style={{ top: dayCursor.y }} />
+                      {dayCursorTime && (
+                        <div
+                          className="pointer-events-none absolute z-50 -translate-y-1/2 px-1.5 py-0.5 bg-black text-white rounded text-[10px] font-medium shadow"
+                          style={{ top: dayCursor.y, left: 4 }}
+                        >
+                          {dayCursorTime}
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
+              </div>
+            </DroppableDayColumn>
+          </div>
+          <DragOverlay>
+            {activeDrag ? (
+              <div
+                className={cn(
+                  "absolute rounded-md p-2 text-[11px] flex flex-col overflow-hidden shadow-lg",
+                  EVENT_BASE_SOLID
+                )}
+                style={{
+                  backgroundColor: activeDrag.event.defense ? undefined : (activeDrag.event.color || '#34d399'),
+                  color: activeDrag.event.defense ? undefined : getTextColor(activeDrag.event.color),
+                  minWidth: '150px',
+                  maxWidth: '250px',
+                }}
+              >
+                <div className="font-semibold leading-tight truncate text-[12px]">
+                  {truncate(activeDrag.event.title, 60)}
+                </div>
+                <div className="text-[11px] font-medium mt-0.5">
+                  {activeDrag.event.start && formatTime(activeDrag.event.start)}
+                  {activeDrag.event.end && ' – ' + formatTime(activeDrag.event.end)}
+                </div>
+              </div>
+            ) : null}
+          </DragOverlay>
+        </div>
+      </DndContext>
+    );
+  };
+
+  const sidePanelRef = useRef<HTMLDivElement | null>(null);
+  const [editEvent, setEditEvent] = useState<CalendarEntry | null>(null);
+  const [detailEvent, setDetailEvent] = useState<CalendarEntry | null>(null);
+  const [detailClosing, setDetailClosing] = useState(false);
+  const [detailAnimating, setDetailAnimating] = useState(false);
+  const isEditing = !!editEvent;
+
+  const closeDetail = () => {
+    if (!detailEvent || detailClosing) return;
+    setDetailClosing(true);
+    setTimeout(() => {
+      setDetailEvent(null);
+      setDetailClosing(false);
+    }, 180);
+  };
+
+  useEffect(() => {
+    if (detailEvent) {
+      setDetailClosing(false);
+      setDetailAnimating(true);
+      const id = requestAnimationFrame(() => setDetailAnimating(false));
+      return () => cancelAnimationFrame(id);
+    }
+  }, [detailEvent]);
+
+  // Outside click / ESC close for detail panel
+  useEffect(() => {
+    if (!detailEvent) return;
+    const handleClick = (e: MouseEvent) => {
+      if (sidePanelRef.current && !sidePanelRef.current.contains(e.target as Node)) {
+        closeDetail();
+      }
+    };
+    const handleEsc = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') closeDetail();
+    };
+    document.addEventListener('mousedown', handleClick);
+    document.addEventListener('keydown', handleEsc);
+    return () => {
+      document.removeEventListener('mousedown', handleClick);
+      document.removeEventListener('keydown', handleEsc);
+    };
+  }, [detailEvent]);
+
+  const DetailPanel = detailEvent && view === 'day'
+    ? createPortal(
+      <div
+        ref={sidePanelRef}
+        className={cn(
+          "fixed right-4 w-[400px] max-h-[82vh] flex flex-col rounded-lg overflow-hidden shadow-lg border z-[2500]",
+          "transition-all duration-200 ease-out will-change-transform will-change-opacity origin-top",
+          (detailAnimating || detailClosing)
+            ? "opacity-0 translate-y-2 scale-[0.97]"
+            : "opacity-100 translate-y-0 scale-100"
+        )}
+        style={{ top: TOOLBAR_STICKY_TOP + TOOLBAR_HEIGHT + 14 }}
+      >
+        {(() => {
+          const ev = detailEvent;
+          const t = getTheme(ev);
+          const dateStr = format(parseISO(ev.date), 'PPP');
+          const timeStr =
+            (ev.start ? format(parseISO('2020-01-01T' + ev.start), 'h:mm a') : '') +
+            (ev.end ? ' – ' + format(parseISO('2020-01-01T' + ev.end), 'h:mm a') : (ev.start ? '' : ''));
+          const desc = (ev.description && ev.description.trim()) || '—';
+          return (
+            <>
+              <div
+                className="px-4 py-3 flex items-start gap-3"
+                style={{ background: t.base, borderBottom: `1px solid ${t.border}`, color: t.text }}
+              >
+                <div className="mt-0.5 shrink-0">
+                  {ev.defense
+                    ? <GraduationCap className="h-5 w-5" style={{ color: t.text }} />
+                    : <CalendarIcon className="h-5 w-5" style={{ color: t.text }} />}
+                </div>
+                <div className="flex-1">
+                  <h2 className="font-semibold text-sm leading-snug pr-6" style={{ color: t.text }} title={ev.title}>
+                    {ev.title}
+                  </h2>
+                  <div className="text-[11px] font-medium mt-0.5" style={{ color: t.subText }}>
+                    {dateStr}{timeStr && ' • ' + timeStr}
+                  </div>
+                </div>
+                <Button variant="ghost" size="icon" className="h-7 w-7 -m-1" onClick={closeDetail}>
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+              <div className="flex-1 overflow-y-auto p-4 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100">
+                <div className="space-y-4">
+                  <div className="space-y-3">
+                    <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                      {ev.defense ? 'Defense Details' : 'Event Details'}
+                    </div>
+                    <dl className="grid grid-cols-3 gap-x-2 gap-y-1 text-[11px]">
+                      <dt className="font-medium text-muted-foreground">Date</dt>
+                      <dd className="col-span-2">{dateStr}</dd>
+
+                      <dt className="font-medium text-muted-foreground">Time</dt>
+                      <dd className="col-span-2">{timeStr || '—'}</dd>
+
+                      {ev.defense && (
+                        <>
+                          <dt className="font-medium text-muted-foreground">Student</dt>
+                          <dd className="col-span-2">{ev.raw.student_name || '—'}</dd>
+
+                          <dt className="font-medium text-muted-foreground">Program</dt>
+                          <dd className="col-span-2">{ev.raw.program || '—'}</dd>
+
+                          <dt className="font-medium text-muted-foreground">Type</dt>
+                          <dd className="col-span-2 uppercase">{ev.raw.defense_type || '—'}</dd>
+
+                          <dt className="font-medium text-muted-foreground">Mode</dt>
+                          <dd className="col-span-2">{ev.raw.defense_mode || '—'}</dd>
+
+                          <dt className="font-medium text-muted-foreground">Venue</dt>
+                          <dd className="col-span-2">{ev.raw.defense_venue || '—'}</dd>
+                        </>
+                      )}
+
+                      <dt className="font-medium text-muted-foreground">Description</dt>
+                      <dd className="col-span-2 whitespace-pre-wrap">{desc}</dd>
+                    </dl>
+                  </div>
+                </div>
+              </div>
+            </>
+          );
+        })()}
+      </div>,
+      document.body
+    )
+    : null;
+
+  useEffect(() => {
+    if (editEvent) {
+      setShowAdd(true);
+      setAddTitle(editEvent.title);
+      setAddDate(editEvent.date);
+      setAddAllDay(false);
+      setAddStart(editEvent.start ? editEvent.start.slice(0, 5) : "08:00");
+      setAddEnd(editEvent.end ? editEvent.end.slice(0, 5) : (editEvent.start ? editEvent.start.slice(0, 5) : "09:00"));
+      setAddDesc(editEvent.description || "");
+      setAddColor(editEvent.color || "#10b981");
+    }
+  }, [editEvent]);
+
+  useEffect(() => {
+    if (!showAdd && editEvent) setEditEvent(null);
+  }, [showAdd, editEvent]);
+
+  const handlePrint = () => {
+    try {
+      const sorted = [...filtered].slice().sort((a, b) =>
+        a.date === b.date
+          ? (a.start || '23:59').localeCompare(b.start || '23:59')
+          : a.date.localeCompare(b.date)
+      );
+      const esc = (s: string) => (s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+      const rows = sorted.map(ev => {
+        const dateStr = format(parseISO(ev.date), 'MMM d, yyyy');
+        const timeStr =
+          (ev.start ? format(parseISO('2020-01-01T' + ev.start), 'h:mm a') : '') +
+          (ev.end ? ' – ' + format(parseISO('2020-01-01T' + ev.end), 'h:mm a') : '');
+        return `<tr>
+          <td>${esc(dateStr)}</td>
+          <td>${esc(timeStr)}</td>
+          <td>${esc(ev.title)}</td>
+          <td>${esc(ev.raw.student_name || '—')}</td>
+          <td>${esc(ev.raw.program || '—')}</td>
+          <td>${esc(ev.raw.defense_type || '—')}</td>
+          <td>${esc(ev.raw.defense_venue || ev.raw.defense_mode || '—')}</td>
+        </tr>`;
+      }).join('') || `<tr><td colspan="7" style="text-align:center;padding:16px;color:#666;">No scheduled defenses.</td></tr>`;
+      const html = `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8"/>
+<title>Schedules Print</title>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<style>
+  * { box-sizing:border-box; font-family: system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial,sans-serif; }
+  body { margin:24px; color:#111; }
+  h1 { margin:0 0 16px; font-size:20px; }
+  table { border-collapse:collapse; width:100%; font-size:12px; }
+  thead th { background:#f1f5f9; text-align:left; padding:6px 8px; font-weight:600; border:1px solid #dbe1e6; }
+  td { padding:6px 8px; border:1px solid #e2e8f0; vertical-align:top; }
+  tbody tr:nth-child(even) { background:#fafafa; }
+  @media print { body { margin:8px 16px; } }
+</style>
+</head>
+<body>
+<h1>Schedules (${sorted.length})</h1>
+<table>
+  <thead>
+    <tr>
+      <th>Date</th><th>Time</th><th>Title</th><th>Student</th><th>Program</th><th>Type</th><th>Venue / Mode</th>
+    </tr>
+  </thead>
+  <tbody>${rows}</tbody>
+</table>
+<script>window.addEventListener('load',()=>{setTimeout(()=>window.print(),120);});</script>
+</body>
+</html>`;
+      const blob = new Blob([html], { type: 'text/html' });
+      const url = URL.createObjectURL(blob);
+      const w = window.open(url, '_blank');
+      if (!w) {
+        alert('Pop-up blocked. Allow pop-ups to print.');
+        URL.revokeObjectURL(url);
+        return;
+      }
+      setTimeout(() => URL.revokeObjectURL(url), 5000);
+    } catch (e) {
+      console.error('Print failed', e);
+      alert('Print failed.');
+    }
+  };
+
+  return (
+    <AppLayout breadcrumbs={breadcrumbs}>
+      <Head title="Schedules" />
+      <div className="flex flex-col gap-0 bg-white dark:bg-zinc-900 min-h-screen">
+        {/* Skeleton Loader */}
+        {loading ? (
+          <div className="w-full min-h-[70vh] bg-zinc-100 dark:bg-zinc-900 flex flex-col gap-4 p-0 m-0">
+            {/* Top short row */}
+            <Skeleton className="h-6 w-1/6 rounded bg-zinc-300 dark:bg-zinc-800 mt-8 mx-8" />
+            {/* Main rows */}
+            <Skeleton className="h-12 w-3/4 rounded bg-zinc-300 dark:bg-zinc-800 mx-8" />
+            <Skeleton className="h-12 w-2/3 rounded bg-zinc-300 dark:bg-zinc-800 mx-8" />
+            {/* Big rectangle for calendar/content */}
+            <Skeleton className="h-[500px] w-full rounded bg-zinc-300 dark:bg-zinc-800 mt-4" />
+          </div>
+        ) : (
+          <>
+            <div
+              className={cn(
+                "flex flex-wrap items-center gap-2 w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-md rounded-b-none px-3 py-2 sticky z-50",
+                "shadow-sm"
+              )}
+              style={{ top: TOOLBAR_STICKY_TOP }}
+            >
+              {/* Navigation buttons */}
+              <div className="flex items-center gap-1">
+                <Button size="icon" variant="outline" onClick={goPrev}>
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                <Button size="icon" variant="outline" onClick={goNext}>
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+                <Button className="hover:cursor-pointer" variant="outline" onClick={goToday}>Today</Button>
+              </div>
+              {/* View switcher tabs */}
+              <Tabs value={view} onValueChange={v => setView(v as typeof view)}>
+                <TabsList>
+                  <TabsTrigger className="hover:cursor-pointer" value="day">
+                    <CalendarDays className="mr-1 h-4 w-4" />
+                    Day
+                  </TabsTrigger>
+                  <TabsTrigger className="hover:cursor-pointer" value="week">
+                    <CalendarRange className="mr-1 h-4 w-4" />
+                    Week
+                  </TabsTrigger>
+                  <TabsTrigger className="hover:cursor-pointer" value="month">
+                    <Calendar className="mr-1 h-4 w-4" />
+                    Month
+                  </TabsTrigger>
+                </TabsList>
+              </Tabs>
+              {/* Month/Year dropdowns (only in month view) */}
+              {view === 'month' && (
+                <div className="flex items-center gap-2 ml-2">
+                  <Select
+                    value={MONTHS[monthCursor.getMonth()]}
+                    onValueChange={val => {
+                      const idx = MONTHS.indexOf(val);
+                      if (idx !== -1) setMonthCursor(new Date(monthCursor.getFullYear(), idx, 1));
+                    }}
+                  >
+                    <SelectTrigger className="w-[120px] h-8" >
+                      <SelectValue placeholder="Month" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {MONTHS.map(m => (
+                        <SelectItem key={m} value={m}>{m}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Select
+                    value={monthCursor.getFullYear().toString()}
+                    onValueChange={val => setMonthCursor(new Date(Number(val), monthCursor.getMonth(), 1))}
+                  >
+                    <SelectTrigger className="w-[90px] h-8" >
+                      <SelectValue placeholder="Year" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {YEARS.map(y => (
+                        <SelectItem key={y} value={y.toString()}>{y}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+              {/* Edit/View Mode Dropdown, Print, Add Event */}
+              {canManage && (
+                <div className="flex items-center gap-2 ml-auto">
+                  <Select
+                    value={editMode ? "editing" : "viewing"}
+                    onValueChange={val => setEditMode(val === "editing")}
+                  >
+                    <SelectTrigger className=" h-8">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="viewing">
+                        <Eye className="inline-block mr-2 h-4 w-4" />
+                        Viewing
+                      </SelectItem>
+                      <SelectItem value="editing">
+                        <Edit className="inline-block mr-2 h-4 w-4" />
+                        Editing
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Button type="button" size="icon" variant="outline" onClick={handlePrint} title="Print schedules">
+                    <Printer className="h-4 w-4 hover:cursor-printer" />
+                  </Button>
+                  {/* Add/Edit Event Dialog */}
+                  <Dialog open={showAdd} onOpenChange={o => {
+                    setShowAdd(o);
+                    setAddError(null);
+                    if (!o) {
+                      setEditEvent(null);
+                      resetDragState(); // Use the new reset function
+                    }
+                  }}>
+                    <DialogTrigger asChild>
+                      <Button className="hover:cursor-pointer dark:bg-rose" size="sm">{isEditing ? 'Edit Event' : 'Add Event'}</Button>
+                    </DialogTrigger>
+                    <DialogContent className="sm:max-w-md">
+                      <DialogHeader>
+                        <DialogTitle className="text-sm font-semibold">
+                          {isEditing ? 'Edit Event' : 'Create Event'}
+                        </DialogTitle>
+                      </DialogHeader>
+                      <div className="space-y-3 py-1">
+                        {addError && (
+                          <div className="text-[11px] text-red-600 bg-red-50 border border-red-200 px-2 py-1 rounded">
+                            {addError}
+                          </div>
+                        )}
+                        <div className="grid gap-1">
+                          <Label className="text-xs">Title</Label>
+                          <Textarea
+                            value={addTitle}
+                            onChange={e => setAddTitle(e.target.value)}
+                            placeholder="Short description..."
+                          />
+                        </div>
+                        <div className="grid gap-1">
+                          <Label className="text-xs">Date</Label>
+                          <input
+                            type="date"
+                            className="border rounded px-2 py-1 text-sm"
+                            value={addDate}
+                            onChange={e => setAddDate(e.target.value)}
+                          />
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Checkbox
+                            checked={addAllDay}
+                            onCheckedChange={v => setAddAllDay(!!v)}
+                            id="allDay"
+                          />
+                          <Label htmlFor="allDay" className="text-xs">All Day</Label>
+                        </div>
+                        <div className="grid grid-cols-2 gap-2">
+                          <div>
+                            <Label className="text-xs">Start Time</Label>
+                            <input
+                              type="time"
+                              className="border rounded px-2 py-1 text-sm w-full"
+                              value={addStart}
+                              onChange={e => setAddStart(e.target.value)}
+                              disabled={addAllDay}
+                            />
+                          </div>
+                          <div>
+                            <Label className="text-xs">End Time</Label>
+                            <input
+                              type="time"
+                              className="border rounded px-2 py-1 text-sm w-full"
+                              value={addEnd}
+                              onChange={e => setAddEnd(e.target.value)}
+                              disabled={addAllDay}
+                            />
+                          </div>
+                        </div>
+                        <div className="grid gap-1">
+                          <Label className="text-xs">Description</Label>
+                          <Textarea
+                            value={addDesc}
+                            onChange={e => setAddDesc(e.target.value)}
+                            placeholder="Details (optional)..."
+                          />
+                        </div>
+                        <div className="grid gap-1">
+                          <Label className="text-xs">Color</Label>
+                          <div className="flex flex-wrap gap-2">
+                            {colorChoices.map(c => (
+                              <button
+                                key={c}
+                                type="button"
+                                onClick={() => setAddColor(c)}
+                                className={cn(
+                                  "w-6 h-6 rounded-full ring-2 transition",
+                                  addColor === c ? "ring-black scale-110" : "ring-transparent hover:ring-gray-400"
+                                )}
+                                style={{ backgroundColor: c }}
+                                aria-label={`Choose ${c}`}
+                              />
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                      <DialogFooter className="gap-2">
+                        {isEditing && (
+                          <Button
+                            type="button"
+                            variant="destructive"
+                            size="sm"
+                            onClick={async () => {
+                              if (!editEvent) return;
+                              if (!confirm('Delete this event?')) return;
+                              setAdding(true);
+                              try {
+                                const csrf = getCsrf();
+                                const resp = await fetch(`/api/calendar/events/${editEvent.raw.id}`, {
+                                  method: 'DELETE',
+                                  headers: { 'Accept': 'application/json', 'X-CSRF-TOKEN': csrf }
+                                });
+                                if (!resp.ok) throw new Error('Delete failed');
+                                setExtraEvents(prev => prev.filter(p => p.raw.id !== editEvent.raw.id));
+                                setShowAdd(false);
+                                setEditEvent(null);
+                              } catch (e: any) {
+                                setAddError(e.message || 'Delete failed');
+                              } finally {
+                                setAdding(false);
+                              }
+                            }}
+                          >
+                            <Trash2 className="h-4 w-4 mr-1" /> Delete
+                          </Button>
+                        )}
+                        <Button variant="outline" size="sm" onClick={() => {
+                          setShowAdd(false);
+                          resetDragState(); // Reset drag state on cancel
+                        }} disabled={adding}>Cancel</Button>
+                        <Button
+                          size="sm"
+                          onClick={async () => {
+                            if (!addTitle.trim()) { setAddError("Title required."); return; }
+                            if (!addDate) { setAddError("Date required."); return; }
+                            if (!addAllDay && addEnd <= addStart) {
+                              setAddError("End must be after start.");
+                              return;
+                            }
+                            setAddError(null);
+                            setAdding(true);
+                            try {
+                              const csrf = getCsrf();
+                              const payload: any = {
+                                title: addTitle.trim(),
+                                description: addDesc.trim() || null,
+                                start: addAllDay ? `${addDate} 00:00:00` : `${addDate} ${addStart}:00`,
+                                end: addAllDay ? `${addDate} 23:59:59` : `${addDate} ${addEnd}:00`,
+                                allDay: addAllDay,
+                                color: addColor
+                              };
+                              let resp: Response;
+                              if (isEditing && editEvent) {
+                                resp = await fetch(`/api/calendar/events/${editEvent.raw.id}`, {
+                                  method: 'PUT',
+                                  headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-TOKEN': csrf },
+                                  body: JSON.stringify(payload)
+                                });
+                              } else {
+                                resp = await fetch('/api/calendar/events', {
+                                  method: 'POST',
+                                  headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-TOKEN': csrf },
+                                  body: JSON.stringify(payload)
+                                });
+                              }
+                              if (!resp.ok) {
+                                const j = await resp.json().catch(() => ({}));
+                                throw new Error(j.message || j.error || 'Save failed');
+                              }
+                              const j = await resp.json().catch(() => ({}));
+                              const eventId = j.event_id || (editEvent && editEvent.raw.id);
+                              const s = addAllDay ? "00:00" : addStart;
+                              const e = addAllDay ? "23:59" : addEnd;
+                              setExtraEvents(prev => {
+                                const others = prev.filter(p => p.raw.id !== eventId);
+                                const newEntry: CalendarEntry = {
+                                  id: 'ev-' + eventId,
+                                  title: addTitle.trim(),
+                                  date: addDate,
+                                  start: s,
+                                  end: e,
+                                  raw: {
+                                    id: eventId,
+                                    thesis_title: addTitle.trim(),
+                                    date_of_defense: addDate,
+                                    start_time: s,
+                                    end_time: e,
+                                    defense_type: undefined,
+                                    defense_mode: undefined,
+                                    defense_venue: undefined,
+                                    program: undefined,
+                                    student_name: undefined,
+                                  },
+                                  color: addColor,
+                                  defense: false,
+                                  description: addDesc.trim()
+                                };
+                                return [...others, newEntry];
+                              });
+                              setShowAdd(false);
+                              setEditEvent(null);
+                              resetDragState(); // Reset drag state on successful save
+                            } catch (err: any) {
+                              setAddError(err.message || 'Error');
+                            } finally {
+                              setAdding(false);
+                            }
+                          }}
+                          disabled={adding}
+                        >
+                          {adding ? 'Saving...' : 'Save Event'}
+                        </Button>
+                      </DialogFooter>
+                    </DialogContent>
+                  </Dialog>
+                </div>
+              )}
+            </div>
+            {view === 'month' && renderMonth()}
+            {view === 'week' && renderWeek()}
+            {view === 'day' && renderDay()}
+            {DetailPanel}
+            {false && (
+              <div className="border rounded-md overflow-hidden bg-white hidden">
+                <div className="bg-muted/40 px-3 py-2 text-xs font-semibold">Scheduled Defenses (Filtered)</div>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="text-xs">Date</TableHead>
+                      <TableHead className="text-xs">Time</TableHead>
+                      <TableHead className="text-xs">Title</TableHead>
+                      <TableHead className="text-xs">Student</TableHead>
+                      <TableHead className="text-xs">Program</TableHead>
+                      <TableHead className="text-xs">Type</TableHead>
+                      <TableHead className="text-xs">Venue / Mode</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filtered.length === 0 && (
+                      <TableRow>
+                        <TableCell colSpan={7} className="text-center text-xs text-muted-foreground">
+                          No scheduled defenses.
+                        </TableCell>
+                      </TableRow>
+                    )}
+                    {filtered
+                      .slice()
+                      .sort((a, b) => a.date === b.date
+                        ? (a.start || '23:59').localeCompare(b.start || '23:59')
+                        : a.date.localeCompare(b.date))
+                      .map(ev => (
+                        <TableRow
+                          key={ev.id}
+                          className="cursor-pointer hover:bg-muted/40"
+                          onClick={() => {
+                            setSelectedDate(parseISO(ev.date));
+                            setView('day');
+                          }}
+                        >
+                          <TableCell className="text-[11px]">
+                            {format(parseISO(ev.date), 'MMM d, yyyy')}
+                          </TableCell>
+                          <TableCell className="text-[11px] whitespace-nowrap">
+                            {ev.start && format(parseISO('2020-01-01T' + ev.start), 'h:mm a')}
+                            {ev.end && ' – ' + format(parseISO('2020-01-01T' + ev.end), 'h:mm a')}
+                          </TableCell>
+                          <TableCell className="text-[11px] truncate max-w-[240px]" title={ev.title}>
+                            {ev.title}
+                          </TableCell>
+                          <TableCell className="text-[11px] truncate max-w-[160px]" title={ev.raw.student_name}>
+                            {ev.raw.student_name || '—'}
+                          </TableCell>
+                          <TableCell className="text-[11px]">{ev.raw.program || '—'}</TableCell>
+                          <TableCell className="text-[11px]">{ev.raw.defense_type || '—'}</TableCell>
+                          <TableCell className="text-[11px]">
+                            {ev.raw.defense_venue || ev.raw.defense_mode || '—'}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+          </>
+        )}
+      </div>
+    </AppLayout>
+  );
+}  

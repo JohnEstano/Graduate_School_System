@@ -9,6 +9,10 @@ use App\Http\Controllers\Auth\PasswordResetLinkController;
 use App\Http\Controllers\Auth\RegisteredUserController;
 use App\Http\Controllers\Auth\VerifyEmailController;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
+use App\Models\User;
 
 Route::middleware('guest')->group(function () {
     Route::get('register', [RegisteredUserController::class, 'create'])
@@ -20,6 +24,12 @@ Route::middleware('guest')->group(function () {
         ->name('login');
 
     Route::post('login', [AuthenticatedSessionController::class, 'store']);
+
+    // V2 Debug login (no OAuth) - only enabled when DEBUG_LOGIN_V2=true or APP_ENV != production
+    Route::get('login-v2', [\App\Http\Controllers\Auth\AuthenticatedSessionV2Controller::class, 'create'])
+        ->name('login.v2.get');
+    Route::post('login-v2', [\App\Http\Controllers\Auth\AuthenticatedSessionV2Controller::class, 'store'])
+        ->name('login.v2');
 
     Route::get('forgot-password', [PasswordResetLinkController::class, 'create'])
         ->name('password.request');
@@ -54,3 +64,24 @@ Route::middleware('auth')->group(function () {
     Route::post('logout', [AuthenticatedSessionController::class, 'destroy'])
         ->name('logout');
 });
+
+Route::post('/login-registered', function (Request $request) {
+    $credentials = $request->validate([
+        'identifier' => 'required|string',
+        'password' => 'required|string',
+    ]);
+
+    $user = User::where('email', $credentials['identifier'])
+        ->orWhere('school_id', $credentials['identifier'])
+        ->first();
+
+    if ($user && $user->password && Hash::check($credentials['password'], $user->password)) {
+        Auth::login($user, $request->boolean('remember'));
+        $request->session()->regenerate();
+        return redirect()->intended('/dashboard');
+    }
+
+    return back()->withErrors([
+        'identifier' => 'These credentials do not match our records.',
+    ]);
+})->name('login.registered');

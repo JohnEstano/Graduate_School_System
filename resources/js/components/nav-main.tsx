@@ -1,29 +1,35 @@
-
 import { Separator } from '@/components/ui/separator';
 import { SidebarGroup, SidebarGroupLabel, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '@/components/ui/sidebar';
 import { MainNavItem } from '@/types';
 import { Link, usePage } from '@inertiajs/react';
 import { ChevronRight } from 'lucide-react';
-import React, { useState } from 'react';
+import React from 'react';
 
 interface NavMainProps {
     items: MainNavItem[];
+    expandedMenus: string[];
+    setExpandedMenus: (menus: string[]) => void;
+    sectionTitle?: string; // <-- add this
 }
 
-export function NavMain({ items = [] }: NavMainProps) {
+export function NavMain({ items = [], expandedMenus, setExpandedMenus, sectionTitle }: NavMainProps) {
     const page = usePage();
-    const [openMap, setOpenMap] = useState<Record<string, boolean>>({});
 
-    const toggle = (title: string) => setOpenMap((prev) => ({ ...prev, [title]: !prev[title] }));
+    const toggle = (title: string) => {
+        const newMenus = expandedMenus.includes(title)
+            ? expandedMenus.filter((t: string) => t !== title)
+            : [...expandedMenus, title];
+        setExpandedMenus(newMenus);
+    };
 
     return (
         <SidebarGroup className="px-2 py-0">
-            <SidebarGroupLabel>Graduate School</SidebarGroupLabel>
+            <SidebarGroupLabel>{sectionTitle || "Graduate School"}</SidebarGroupLabel>
             <SidebarMenu>
                 {items.map((item) => {
                     const isActive = item.href === page.url;
                     const hasSubs = !!item.subItems?.length;
-                    const isOpen = Boolean(openMap[item.title]);
+                    const isOpen = expandedMenus.includes(item.title);
 
                     return (
                         <React.Fragment key={item.title}>
@@ -39,7 +45,6 @@ export function NavMain({ items = [] }: NavMainProps) {
                                             <span className="flex items-center gap-2">
                                                 {item.icon && <item.icon className="size-4" />}
                                                 {item.title}
-              
                                                 {item.indicator && (
                                                     <span className="ml-1 w-1.5 h-1.5 rounded-full bg-rose-500 inline-block" />
                                                 )}
@@ -51,7 +56,6 @@ export function NavMain({ items = [] }: NavMainProps) {
                                             <span className="flex items-center gap-2">
                                                 {item.icon && <item.icon className="size-4" />}
                                                 {item.title}
-                                               
                                                 {item.indicator && (
                                                     <span className="ml-1 w-1 h-1 rounded-full bg-zinc-500 inline-block" />
                                                 )}

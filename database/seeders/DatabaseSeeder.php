@@ -2,22 +2,25 @@
 
 namespace Database\Seeders;
 
-use App\Models\User;
-// use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 
 class DatabaseSeeder extends Seeder
 {
     /**
-     * Seed the application's database.
+     * Seed the Graduate School database for tests and developments.
      */
     public function run(): void
     {
-        // User::factory(10)->create();
+        // You can truncate tables here if you want a clean slate
+        // \DB::statement('SET FOREIGN_KEY_CHECKS=0;');
+        // \App\Models\User::truncate();
+        // \App\Models\DefenseRequest::truncate();
+        // \App\Models\Panelist::truncate();
+        // \DB::statement('SET FOREIGN_KEY_CHECKS=1;');
 
-        User::factory()->create([
-            'name' => 'Test User',
-            'email' => 'test@example.com',
+        $this->call([
+            DefenseRequestSeeder::class,
+          
         ]);
     }
 }

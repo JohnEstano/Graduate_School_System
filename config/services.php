@@ -72,7 +72,7 @@ return [
     ],
 
     'resend' => [
-        'key' => env('RESEND_KEY'),
+        'key' => env('RESEND_API_KEY'),
     ],
 
     'slack' => [
@@ -80,6 +80,15 @@ return [
             'bot_user_oauth_token' => env('SLACK_BOT_USER_OAUTH_TOKEN'),
             'channel' => env('SLACK_BOT_USER_DEFAULT_CHANNEL'),
         ],
+    ],
+
+    // School SSO (custom OAuth2 / OIDC) configuration
+    'school' => [
+        'client_id' => env('SCHOOL_CLIENT_ID'),
+        'client_secret' => env('SCHOOL_CLIENT_SECRET'),
+        'redirect' => env('SCHOOL_REDIRECT_URI'), // e.g. https://your-domain.com/auth/school/callback
+        // Optional OIDC issuer / discovery URL (set if using OpenID Connect)
+        'issuer' => env('SCHOOL_OIDC_ISSUER'),
     ],
 
 ];

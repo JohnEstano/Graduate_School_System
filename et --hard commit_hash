@@ -1,0 +1,198 @@
+[33md8da8b9[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32m_dev_develop[m[33m)[m HEAD@{0}: pull: Merge made by the 'ort' strategy.
+[33m44007f7[m HEAD@{1}: commit: Esignature
+[33m31a0686[m HEAD@{2}: commit: Added and fixed the E-signature implementation
+[33m1dafaf8[m HEAD@{3}: commit: Fixed buttons
+[33m82bc3f0[m HEAD@{4}: commit: Fixed the defense requirement submission
+[33m76a3ca4[m HEAD@{5}: commit: Fixed layout
+[33mf2c660e[m HEAD@{6}: commit: Added adviser code, reset button and auto accept
+[33mfdbfa7a[m HEAD@{7}: commit: Fixed the profile settings
+[33m1ab10d4[m HEAD@{8}: commit: Added students list table, student-adviser relationship, and shareable link code
+[33m6f04d6d[m HEAD@{9}: commit: Fixed the Schedule Calendar
+[33m6901ad8[m HEAD@{10}: commit: Schedule page
+[33m57f53df[m HEAD@{11}: commit: Fixed calendar darkmode
+[33m699a06b[m HEAD@{12}: commit: Fixed calendar dark mode
+[33m0a3e28f[m HEAD@{13}: commit: Fixed calendar
+[33m462c2ae[m HEAD@{14}: commit: Fixed profiles
+[33m8920073[m HEAD@{15}: commit: Drag and Drop schedules
+[33me68cd38[m HEAD@{16}: commit: Fixed the dashboard
+[33mc1af63e[m HEAD@{17}: commit: Fixed the build error
+[33m48115a0[m HEAD@{18}: commit: removed gitignore
+[33m39aad97[m HEAD@{19}: commit: Fixed
+[33me0970b7[m HEAD@{20}: commit: New
+[33m5c2197b[m HEAD@{21}: commit: Schedules fixed, weekly-events-schedule-widget fixed
+[33mb2a729a[m HEAD@{22}: commit: Fixed Schedules page, route /schedules, Day, Week, Month view
+[33me50160e[m HEAD@{23}: commit: Defense requirement row collapse trigger fix
+[33m0f672f1[m HEAD@{24}: commit: Fixed the defense requirement, defense requests, workflow history
+[33m8761bf2[m HEAD@{25}: commit: - fixed the Academic Records
+[33m2f0156c[m HEAD@{26}: checkout: moving from defense-request/defense-tracking to _dev_develop
+[33m68ee9a2[m[33m ([m[1;31morigin/defense-request/defense-tracking[m[33m, [m[1;32mdefense-request/defense-tracking[m[33m)[m HEAD@{27}: checkout: moving from _dev_develop to defense-request/defense-tracking
+[33m2f0156c[m HEAD@{28}: commit: Sidebar
+[33mc438a17[m HEAD@{29}: commit: Fixes
+[33m4302f74[m HEAD@{30}: commit: Fixing Coordinator DEFENSE MANAGEMENT AND DEFENSE REQUEST
+[33m5eba8e4[m HEAD@{31}: checkout: moving from compre-exam to _dev_develop
+[33m6d2c745[m[33m ([m[1;32mcompre-exam[m[33m)[m HEAD@{32}: checkout: moving from _dev_develop to compre-exam
+[33m5eba8e4[m HEAD@{33}: checkout: moving from compre-exam to _dev_develop
+[33m6d2c745[m[33m ([m[1;32mcompre-exam[m[33m)[m HEAD@{34}: pull: Fast-forward
+[33mc3e7996[m HEAD@{35}: checkout: moving from develop to compre-exam
+[33m96b9039[m[33m ([m[1;31morigin/develop[m[33m, [m[1;32mdevelop[m[33m)[m HEAD@{36}: pull: Fast-forward
+[33m6ab3af5[m HEAD@{37}: checkout: moving from _dev_develop to develop
+[33m5eba8e4[m HEAD@{38}: reset: moving to HEAD
+[33m5eba8e4[m HEAD@{39}: checkout: moving from dev to _dev_develop
+[33m43292cd[m[33m ([m[1;31morigin/dev[m[33m, [m[1;32mdev[m[33m)[m HEAD@{40}: checkout: moving from _dev_develop to dev
+[33m5eba8e4[m HEAD@{41}: checkout: moving from dev to _dev_develop
+[33m43292cd[m[33m ([m[1;31morigin/dev[m[33m, [m[1;32mdev[m[33m)[m HEAD@{42}: checkout: moving from _dev_develop to dev
+[33m5eba8e4[m HEAD@{43}: checkout: moving from dev to _dev_develop
+[33m43292cd[m[33m ([m[1;31morigin/dev[m[33m, [m[1;32mdev[m[33m)[m HEAD@{44}: checkout: moving from DEV to dev
+[33m43292cd[m[33m ([m[1;31morigin/dev[m[33m, [m[1;32mdev[m[33m)[m HEAD@{45}: checkout: moving from _dev_develop to DEV
+[33m5eba8e4[m HEAD@{46}: pull: Fast-forward
+[33md8a63a7[m HEAD@{47}: checkout: moving from compre-exam to _dev_develop
+[33mc3e7996[m HEAD@{48}: checkout: moving from _dev_develop to compre-exam
+[33md8a63a7[m HEAD@{49}: checkout: moving from compre-exam to _dev_develop
+[33mc3e7996[m HEAD@{50}: checkout: moving from _dev_develop to compre-exam
+[33md8a63a7[m HEAD@{51}: checkout: moving from compre-exam to _dev_develop
+[33mc3e7996[m HEAD@{52}: checkout: moving from _dev_develop to compre-exam
+[33md8a63a7[m HEAD@{53}: commit: initial_dev
+[33m43292cd[m[33m ([m[1;31morigin/dev[m[33m, [m[1;32mdev[m[33m)[m HEAD@{54}: checkout: moving from dev to _dev_develop
+[33m43292cd[m[33m ([m[1;31morigin/dev[m[33m, [m[1;32mdev[m[33m)[m HEAD@{55}: checkout: moving from dev to dev
+[33m43292cd[m[33m ([m[1;31morigin/dev[m[33m, [m[1;32mdev[m[33m)[m HEAD@{56}: pull: Fast-forward
+[33m1b3e1ad[m HEAD@{57}: checkout: moving from develop to dev
+[33m6ab3af5[m HEAD@{58}: checkout: moving from develop to develop
+[33m6ab3af5[m HEAD@{59}: pull: Fast-forward
+[33m097ce38[m HEAD@{60}: checkout: moving from defense-request/defense-tracking to develop
+[33m68ee9a2[m[33m ([m[1;31morigin/defense-request/defense-tracking[m[33m, [m[1;32mdefense-request/defense-tracking[m[33m)[m HEAD@{61}: checkout: moving from develop to defense-request/defense-tracking
+[33m097ce38[m HEAD@{62}: pull: Fast-forward
+[33mec7ed91[m HEAD@{63}: checkout: moving from defense-request/defense-tracking to develop
+[33m68ee9a2[m[33m ([m[1;31morigin/defense-request/defense-tracking[m[33m, [m[1;32mdefense-request/defense-tracking[m[33m)[m HEAD@{64}: checkout: moving from dev to defense-request/defense-tracking
+[33m1b3e1ad[m HEAD@{65}: reset: moving to HEAD
+[33m1b3e1ad[m HEAD@{66}: checkout: moving from defense-request/defense-tracking to dev
+[33m68ee9a2[m[33m ([m[1;31morigin/defense-request/defense-tracking[m[33m, [m[1;32mdefense-request/defense-tracking[m[33m)[m HEAD@{67}: commit: Fixed quick actions
+[33m8a9a75b[m HEAD@{68}: commit: Fixed the dashboard for student dashboard
+[33m8b4d6a8[m HEAD@{69}: commit: Fixed Dashboard
+[33m2e18d42[m HEAD@{70}: commit: defense table
+[33mcdd7ea0[m HEAD@{71}: commit: Added Tabs list on defense request and defense requirements
+[33m98be22c[m HEAD@{72}: commit: Added logic for the Defense Requirements and Defense Requests
+[33m6bbe9c5[m HEAD@{73}: commit: Added defense requirements and Advisers sending defense request
+[33m13baae0[m HEAD@{74}: commit: feat: implement card-style radio group for defense_type selection and ensure defense_type is validated and saved in DefenseRequirementController
+[33m7082bc9[m[33m ([m[1;32mmain[m[33m)[m HEAD@{75}: merge origin/main: Fast-forward
+[33mc671ebd[m HEAD@{76}: reset: moving to HEAD
+[33mc671ebd[m HEAD@{77}: checkout: moving from develop to defense-request/defense-tracking
+[33mec7ed91[m HEAD@{78}: checkout: moving from defense-request/defense-tracking to develop
+[33mc671ebd[m HEAD@{79}: checkout: moving from main to defense-request/defense-tracking
+[33m7082bc9[m[33m ([m[1;32mmain[m[33m)[m HEAD@{80}: reset: moving to HEAD
+[33m7082bc9[m[33m ([m[1;32mmain[m[33m)[m HEAD@{81}: commit: README
+[33m0454e91[m HEAD@{82}: commit: README
+[33mdbeb4a7[m HEAD@{83}: commit: README file
+[33m11fab0c[m HEAD@{84}: commit: README file
+[33mf211f4c[m HEAD@{85}: pull: Fast-forward
+[33m7a97cff[m HEAD@{86}: checkout: moving from defense-request/schedules to main
+[33mdea4bcf[m[33m ([m[1;32mdefense-request/schedules[m[33m)[m HEAD@{87}: commit: Added README and Fixed Database Seeder (Populates 50 students and defense requests each) 2 AAs, 10 Coordinators, and 1 Dean"
+[33m9a0a9df[m[33m ([m[1;31morigin/defense-request/schedules[m[33m)[m HEAD@{88}: commit: Added README and Fixed Database Seeder (Populates 50 students and defense requests each) 2 AAs, 10 Coordinators, and 1 Dean
+[33m91fcf93[m HEAD@{89}: commit: Scheduler Navigation
+[33m20fb4ba[m HEAD@{90}: commit: Date Scheduler: /schedules, floating card details, date details, defense-requests scheduled details
+[33mec7ed91[m HEAD@{91}: checkout: moving from develop to defense-request/schedules
+[33mec7ed91[m HEAD@{92}: checkout: moving from develop to develop
+[33mec7ed91[m HEAD@{93}: pull: Fast-forward
+[33m65061d8[m HEAD@{94}: checkout: moving from defense-request/schedules to develop
+[33mec7ed91[m HEAD@{95}: reset: moving to HEAD
+[33mec7ed91[m HEAD@{96}: merge origin/develop: Fast-forward
+[33m113ce42[m HEAD@{97}: checkout: moving from defense-request/defense-tracking to defense-request/schedules
+[33mc671ebd[m HEAD@{98}: commit: Pagination fixed
+[33m2bd2386[m HEAD@{99}: commit: Pending, Rejected, Approved Tabs: Cards grid on Approved tab
+[33mc008729[m HEAD@{100}: commit: Fixed details dialog layout
+[33mf8e287a[m HEAD@{101}: commit: Updated defense request table: Added Tabs, Fixed Bulk Options, Fixed dynamic counts, Added Column defense_type
+[33mf3e4c97[m HEAD@{102}: merge origin/develop: Merge made by the 'ort' strategy.
+[33m873069a[m HEAD@{103}: checkout: moving from develop to defense-request/defense-tracking
+[33m65061d8[m HEAD@{104}: checkout: moving from defense-request/defense-tracking to develop
+[33m873069a[m HEAD@{105}: commit: Bug fixes
+[33mb006528[m HEAD@{106}: checkout: moving from defense-request/defense-tracking to defense-request/defense-tracking
+[33mb006528[m HEAD@{107}: checkout: moving from defense-request/defense-tracking to defense-request/defense-tracking
+[33mb006528[m HEAD@{108}: checkout: moving from database/supabase to defense-request/defense-tracking
+[33ma418d55[m[33m ([m[1;32mdatabase/supabase[m[33m)[m HEAD@{109}: checkout: moving from develop to database/supabase
+[33m65061d8[m HEAD@{110}: commit: Added floating hover options
+[33m6613f9f[m HEAD@{111}: pull: Fast-forward
+[33m3e0c31c[m HEAD@{112}: checkout: moving from notifications to develop
+[33m810ee25[m[33m ([m[1;31morigin/notifications[m[33m, [m[1;32mnotifications[m[33m)[m HEAD@{113}: checkout: moving from develop to notifications
+[33m3e0c31c[m HEAD@{114}: checkout: moving from notifications to develop
+[33m810ee25[m[33m ([m[1;31morigin/notifications[m[33m, [m[1;32mnotifications[m[33m)[m HEAD@{115}: commit: Fixes
+[33ma418d55[m[33m ([m[1;32mdatabase/supabase[m[33m)[m HEAD@{116}: checkout: moving from database/supabase to notifications
+[33ma418d55[m[33m ([m[1;32mdatabase/supabase[m[33m)[m HEAD@{117}: checkout: moving from notifications to database/supabase
+[33ma418d55[m[33m ([m[1;32mdatabase/supabase[m[33m)[m HEAD@{118}: commit: Added notifications badge, notification count, real time notifications, notifications layout, notifications dynamics, read and unread message
+[33m32952a6[m HEAD@{119}: merge origin/main: Merge made by the 'ort' strategy.
+[33m7de24b4[m HEAD@{120}: merge origin/main: Merge made by the 'ort' strategy.
+[33m0b6165b[m HEAD@{121}: checkout: moving from defense-request/defense-tracking to notifications
+[33mb006528[m HEAD@{122}: commit: Fixed everything
+[33m00e81c5[m HEAD@{123}: commit: Fixed
+[33m98d77f2[m HEAD@{124}: commit: Added Last Updated column on the defense request table
+[33m8d90d45[m HEAD@{125}: commit: Fixed
+[33m1b31773[m HEAD@{126}: commit: Fixed
+[33m31af842[m HEAD@{127}: commit: Disabled bulk options
+[33m3f323ea[m HEAD@{128}: commit: Added print bulk
+[33md83d849[m HEAD@{129}: commit: Fixed bulk status updates
+[33m765a4b7[m HEAD@{130}: commit: Fixed bulk status update
+[33md797786[m HEAD@{131}: commit: Fixed defense request filters: Status and Priority
+[33m3e0c31c[m HEAD@{132}: merge origin/develop: Fast-forward
+[33mf225614[m HEAD@{133}: checkout: moving from develop to defense-request/defense-tracking
+[33m3e0c31c[m HEAD@{134}: commit: Fixed visual bugs
+[33ma7e7d8d[m HEAD@{135}: pull origin develop: Fast-forward
+[33m70dfc67[m HEAD@{136}: checkout: moving from develop to develop
+[33m70dfc67[m HEAD@{137}: commit: Retrieve
+[33m31d4d65[m HEAD@{138}: commit: Sidebar fix honorarium
+[33m658de54[m HEAD@{139}: checkout: moving from honorarium/honorarium-summary to develop
+[33m454e59f[m[33m ([m[1;32mhonorarium/honorarium-summary[m[33m)[m HEAD@{140}: checkout: moving from develop to honorarium/honorarium-summary
+[33m658de54[m HEAD@{141}: commit (merge): Fixed
+[33m53fc582[m HEAD@{142}: checkout: moving from develop to develop
+[33m53fc582[m HEAD@{143}: checkout: moving from notifications to develop
+[33m0b6165b[m HEAD@{144}: checkout: moving from develop to notifications
+[33m53fc582[m HEAD@{145}: checkout: moving from notifications to develop
+[33m0b6165b[m HEAD@{146}: checkout: moving from develop to notifications
+[33m53fc582[m HEAD@{147}: checkout: moving from notifications to develop
+[33m0b6165b[m HEAD@{148}: checkout: moving from develop to notifications
+[33m53fc582[m HEAD@{149}: checkout: moving from notifications to develop
+[33m0b6165b[m HEAD@{150}: checkout: moving from develop to notifications
+[33m53fc582[m HEAD@{151}: checkout: moving from notifications to develop
+[33m0b6165b[m HEAD@{152}: checkout: moving from develop to notifications
+[33m53fc582[m HEAD@{153}: commit: CHanges
+[33m5a59d24[m HEAD@{154}: checkout: moving from notifications to develop
+[33m0b6165b[m HEAD@{155}: checkout: moving from develop to notifications
+[33m5a59d24[m HEAD@{156}: commit: Edited
+[33m47a7c7a[m HEAD@{157}: checkout: moving from notifications to develop
+[33m0b6165b[m HEAD@{158}: commit: search
+[33m2cf7fd1[m HEAD@{159}: checkout: moving from develop to notifications
+[33m47a7c7a[m HEAD@{160}: checkout: moving from notifications to develop
+[33m2cf7fd1[m HEAD@{161}: commit: Fixed
+[33m5bd9dc7[m HEAD@{162}: merge origin/develop: Merge made by the 'ort' strategy.
+[33m73f1b36[m HEAD@{163}: commit: Changes
+[33m113ce42[m HEAD@{164}: checkout: moving from develop to notifications
+[33m47a7c7a[m HEAD@{165}: commit: sfsd
+[33m113ce42[m HEAD@{166}: checkout: moving from notifications to develop
+[33m113ce42[m HEAD@{167}: checkout: moving from defense-request/schedules to notifications
+[33m113ce42[m HEAD@{168}: merge origin/develop: Fast-forward
+[33mbf7d6ca[m HEAD@{169}: checkout: moving from develop to defense-request/schedules
+[33m113ce42[m HEAD@{170}: checkout: moving from defense-request/schedules to develop
+[33mbf7d6ca[m HEAD@{171}: checkout: moving from develop to defense-request/schedules
+[33m113ce42[m HEAD@{172}: commit: Fixed
+[33mbf7d6ca[m HEAD@{173}: checkout: moving from defense-request/schedules to develop
+[33mbf7d6ca[m HEAD@{174}: merge origin/develop: Fast-forward
+[33m495ed18[m HEAD@{175}: checkout: moving from develop to defense-request/schedules
+[33mbf7d6ca[m HEAD@{176}: commit: Fixed
+[33m495ed18[m HEAD@{177}: checkout: moving from defense-request/schedules to develop
+[33m495ed18[m HEAD@{178}: checkout: moving from develop to defense-request/schedules
+[33m495ed18[m HEAD@{179}: commit: Added badge counter for defense request
+[33m125bbf8[m HEAD@{180}: commit: Added defense-tracking
+[33m168fb46[m HEAD@{181}: commit: Added defense-tracking
+[33mcabe8e5[m HEAD@{182}: commit (merge): Resolve merge: confirm deletion of show-all-requests.tsx
+[33m26ec0bd[m HEAD@{183}: pull origin develop: Merge made by the 'ort' strategy.
+[33mb345291[m HEAD@{184}: checkout: moving from debug/fix_tests to develop
+[33m9f96cce[m[33m ([m[1;31morigin/debug/fix_tests[m[33m, [m[1;32mdebug/fix_tests[m[33m)[m HEAD@{185}: checkout: moving from defense-request/defense-tracking to debug/fix_tests
+[33mf225614[m HEAD@{186}: checkout: moving from develop to defense-request/defense-tracking
+[33mb345291[m HEAD@{187}: commit (merge): Resolve merge conflicts between develop and defense-request/defense-tracking
+[33m23e2381[m HEAD@{188}: checkout: moving from develop to develop
+[33m23e2381[m HEAD@{189}: commit (merge): Remove defense-request submissions directory
+[33m383300b[m HEAD@{190}: checkout: moving from defense-request/defense-tracking to develop
+[33mf225614[m HEAD@{191}: commit: Update student defense request page to remove ShowAllRequests traces
+[33m48d19fd[m HEAD@{192}: commit (merge): Remove defense-request submissions folder
+[33mdc5b0ea[m HEAD@{193}: checkout: moving from develop to defense-request/defense-tracking
+[33m383300b[m HEAD@{194}: checkout: moving from defense-request/defense-tracking to develop
+[33mdc5b0ea[m HEAD@{195}: commit: Completed defense request tracking
+[33m972e0e1[m HEAD@{196}: commit: Added filter buttons Status & Priority, Added functional updates on the status and ppriority
+[33me4d1332[m HEAD@{197}: checkout: moving from defense-request/defense-tracking to defense-request/defense-tracking

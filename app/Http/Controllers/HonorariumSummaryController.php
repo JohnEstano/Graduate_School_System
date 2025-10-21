@@ -14,12 +14,66 @@ class HonorariumSummaryController extends Controller
 {
    public function index(Request $request)
     {
-        $records = ProgramRecord::query()
-            ->when($request->year, fn($q) => $q->whereYear('date_edited', $request->year))
-            ->when($request->category, fn($q) => $q->where('category', $request->category))
-            ->when($request->search, fn($q) => $q->where('name', 'like', '%'.$request->search.'%'))
-            ->orderBy('date_edited', 'desc')
-            ->get();
+        // Add this line at the top:
+        \Log::info('HonorariumSummaryController@index CALLED');
+
+        // Get all programs
+        $programs = \App\Models\ProgramRecord::all();
+
+        // Get all defense requests with payments
+        $defenseRequests = \App\Models\DefenseRequest::with(['honorariumPayments', 'user'])->get();
+
+        // Group payments by program
+        $records = [];
+        foreach ($programs as $program) {
+            $programPayments = [];
+            foreach ($defenseRequests as $dr) {
+                if ($dr->program === $program->program) {
+                    if ($dr->honorariumPayments) {
+                        foreach ($dr->honorariumPayments as $payment) {
+                            $programPayments[] = [
+                                'id' => $payment->id,
+                                'school_year' => $dr->created_at ? $dr->created_at->format('Y') . '-' . ($dr->created_at->format('Y') + 1) : '',
+                                'payment_date' => $payment->payment_date ?? '',
+                                'defense_status' => $dr->workflow_state_display ?? $dr->workflow_state ?? '',
+                                'amount' => $payment->amount ?? '',
+                                'panelist_name' => $payment->panelist->name ?? '',
+                                'role' => $payment->role ?? '',
+                            ];
+                        }
+                    }
+                }
+            }
+            $records[] = [
+                'id' => $program->id,
+                'name' => $program->name,
+                'program' => $program->program,
+                'category' => $program->category,
+                'date_edited' => $program->date_edited,
+                'payments' => $programPayments,
+            ];
+        }
+
+        // --- Add this dummy record for testing ---
+        $records[] = [
+            'id' => 999,
+            'name' => 'Test Program',
+            'program' => 'BSCOMP',
+            'category' => 'Bachelors',
+            'date_edited' => '2025-08-08',
+            'payments' => [
+                [
+                    'id' => 1,
+                    'school_year' => '2024-2025',
+                    'payment_date' => '2025-08-08',
+                    'defense_status' => 'Completed',
+                    'amount' => '1000',
+                    'panelist_name' => 'John Doe',
+                    'role' => 'Panelist',
+                ]
+            ],
+        ];
+        // --- End dummy record ---
 
         return Inertia::render('honorarium/Index', [
             'records' => $records,
@@ -77,7 +131,8 @@ public function storePanelist(Request $request, $programId)
 
 public function downloadCSV(ProgramRecord $record)
     {
-        $filename = $record->name . '_payments.csv';
+        // Get all defense requests for this program
+        $defenseRequests = \App\Models\DefenseRequest::where('program', $record->program)->get();
 
         // Collect all payments for students under this program
         $payments = $record->studentRecords()
@@ -85,6 +140,7 @@ public function downloadCSV(ProgramRecord $record)
             ->get()
             ->flatMap(fn($student) => $student->payments);
 
+        $filename = "honorarium-{$record->name}.csv";
         $headers = [
             'Content-Type' => 'text/csv',
             'Content-Disposition' => "attachment; filename=\"$filename\"",
@@ -92,7 +148,8 @@ public function downloadCSV(ProgramRecord $record)
 
         $callback = function () use ($payments) {
             $handle = fopen('php://output', 'w');
-            fputcsv($handle, ['School Year', 'Payment Date', 'Defense Status', 'Amount']);
+            // CSV header
+            fputcsv($handle, ['School Year', 'Payment Date', 'Defense Status', 'Panelist', 'Role', 'Amount']);
 
             foreach ($payments as $payment) {
                 fputcsv($handle, [

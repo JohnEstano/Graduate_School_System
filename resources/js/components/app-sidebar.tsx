@@ -4,10 +4,9 @@ import { NavUser } from '@/components/nav-user';
 import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '@/components/ui/sidebar';
 import { MainNavItem, type NavItem } from '@/types';
 import { Link, usePage } from '@inertiajs/react';
-import { Bell, Calendar, CalendarFold, CalendarSync, CreditCard, DollarSign, File, FileText, LayoutGrid, MessageSquareText, ScrollText, Users } from 'lucide-react';
+import { CalendarFold, Calendar, CreditCard, DollarSign, FileText, GraduationCap, LayoutGrid, MessageSquareText, ScrollText, SquareUserRound, Users, Box, LibraryBig, Send, BadgeDollarSign } from 'lucide-react';
 import AppLogo from './app-logo';
 import { useEffect, useState } from "react";
-
 
 type PageProps = {
     auth: {
@@ -16,6 +15,7 @@ type PageProps = {
             name: string;
             role: string;
         };
+        is_adviser?: boolean; // <-- Add this
     };
 };
 
@@ -28,11 +28,21 @@ const studentNavItems: MainNavItem[] = [
     {
         title: 'Submissions',
         href: '/submission',
-        icon: FileText,
+        icon: Send,
         subItems: [
             { title: 'Comprehensive Exam', href: '/comprehensive-exam' },
-            { title: 'Defense Requests', href: '/defense-request' },
+            { title: 'Defense Requirements', href: '/defense-requirements' },
         ],
+    },
+    {
+        title: 'My Documents', // <-- Add this block
+        href: '/student/documents',
+        icon: FileText,
+    },
+    {
+        title: 'Academic Records',
+        href: '/academic-records',
+        icon: LibraryBig,
     },
     {
         title: 'Payments',
@@ -43,26 +53,51 @@ const studentNavItems: MainNavItem[] = [
         title: 'Schedules',
         href: '/schedule',
         icon: CalendarFold,
-       
+
     },
-     {
-        title: 'Messages',
-        href: '/messages',
-        icon: MessageSquareText,
+    
+
+];
+
+const coordinatorNavItems: MainNavItem[] = [
+    { title: 'Dashboard', href: '/dashboard', icon: LayoutGrid },
+    {
+        title: 'Thesis & Dissertations',
+        href: '/coordinator/defense-requests',
+        icon: GraduationCap,
+        subItems: [
+            { title: 'Defense Requests', href: '/coordinator/defense-requests' },
+            { title: 'Panel Assignment', href: '/panelists' },
+            { title: 'Adviser List', href: '/coordinator/adviser-list'},
+        ],
     },
- 
+    {
+        title: 'Applications',
+        href: '/defense',
+        icon: FileText,
+        subItems: [
+            { title: 'Comprehensive Exams', href: '/coordinator/compre-exam' },
+            { title: 'Payment Receipt', href: '/coordinator/compre-payment' },
+        ],
+    },
+    { title: 'Honorarium', href: '/honorarium', icon: DollarSign },
+    { title: 'Student Records', href: '/student-records', icon: Users },
+     { title: 'Payment Rates', href: '/dean/payment-rates', icon: DollarSign },
+    { title: 'Schedules', href: '/schedules', icon: CalendarFold },
+   
 ];
 
 const assistantNavItems: MainNavItem[] = [
     { title: 'Dashboard', href: '/dashboard', icon: LayoutGrid },
+    { title: 'Defense Requests', href: '/assistant/all-defense-list', icon: FileText }, 
+   
     {
-        title: 'Requests',
-        href: '/requests',
-        icon: ScrollText,
+        title: 'Applications',
+        href: '/defense',
+        icon: FileText,
         subItems: [
-            { title: 'Defense Requests', href: '/defense-request' },
-            { title: 'Comprehensive Exams', href: '/comprehensive-exam' },
-            { title: 'Payment Receipt', href: '/payment-receipt' },
+            { title: 'Comprehensive Exams', href: '/coordinator/compre-exam' },
+            { title: 'Payment Receipt', href: '/coordinator/compre-payment' },
         ],
     },
     {
@@ -74,61 +109,84 @@ const assistantNavItems: MainNavItem[] = [
 
     
     { title: 'Student Records', href: '/student-records', icon: Users },
+     { title: 'Payment Rates', href: '/dean/payment-rates', icon: DollarSign },
     { title: 'Schedules', href: '/schedules', icon: CalendarFold },
-    { title: 'Messages', href: '/messages', icon: MessageSquareText },
-     
+    
+];
 
+const facultyNavItems: MainNavItem[] = [
+    { title: 'Dashboard', href: '/dashboard', icon: LayoutGrid },
+    { title: 'Schedules', href: '/schedules', icon: CalendarFold },
+];
 
+const deanNavItems: MainNavItem[] = [
+    { title: 'Dashboard', href: '/dashboard', icon: LayoutGrid },
+    { title: 'Defense Requests', href: '/dean/defense-requests', icon: FileText },
+      {
+        title: 'Honorarium Summary',
+        href: '/honorarium',
+        icon: DollarSign,
+        
+    },
+    { title: 'Schedules', href: '/schedules', icon: CalendarFold },
+    { title: 'Payment Rates', href: '/dean/payment-rates', icon: DollarSign },
 ];
 
 const footerNavItems: NavItem[] = [];
 
 export function AppSidebar() {
     const {
-        auth: { user },
+        auth: { user, is_adviser }, 
     } = usePage<PageProps>().props;
 
-    const staffRoles = ['Administrative Assistant', 'Coordinator', 'Dean'];
-    const isStaff = staffRoles.includes(user.role);
-    const items = isStaff ? assistantNavItems : studentNavItems;
+    let navItems: MainNavItem[];
 
-    const [defenseRequestCount, setDefenseRequestCount] = useState<number>(0);
+    if (user.role === 'Coordinator') {
+        navItems = coordinatorNavItems;
+    } else if (user.role === 'Dean') {
+        navItems = deanNavItems;
+    } else if (user.role === 'Administrative Assistant') {
+        navItems = assistantNavItems;
+    } else if (user.role === 'Faculty' || user.role === 'Adviser') {
+        navItems = facultyNavItems;
+    } else {
+        navItems = studentNavItems;
+    }
+
+    // Expanded menus state
+    const [expandedMenus, setExpandedMenus] = useState<string[]>(() => {
+        try {
+            const saved = localStorage.getItem("sidebar.expandedMenus");
+            return saved ? JSON.parse(saved) : [];
+        } catch {
+            return [];
+        }
+    });
 
     useEffect(() => {
-        async function fetchCount() {
-            try {
-                const res = await fetch('/api/defense-requests/count');
-                if (res.ok) {
-                    const data = await res.json();
-                    setDefenseRequestCount(data.count);
-                }
-            } catch {
+        localStorage.setItem("sidebar.expandedMenus", JSON.stringify(expandedMenus));
+    }, [expandedMenus]);
 
-                //errrrroorror
-            }
-        }
-        fetchCount();
-        const interval = setInterval(fetchCount, 1000);
-        return () => clearInterval(interval);
-    }, []);
+    // Show "Others" section for Faculty, Coordinator, Dean, or actual Adviser
+    const showOthers =
+        user.role === 'Faculty' ||
+        user.role === 'Coordinator' ||
+        user.role === 'Dean' ||
+        is_adviser; // <-- Only show if user is an actual adviser
 
-    let navItems = items;
-    if (isStaff) {
-        navItems = assistantNavItems.map(item => {
-            if (item.title === 'Requests') {
-                return {
-                    ...item,
-                    indicator: defenseRequestCount > 0,
-                    subItems: item.subItems?.map(sub =>
-                        sub.title === 'Defense Requests'
-                            ? { ...sub, count: defenseRequestCount }
-                            : sub
-                    ),
-                };
-            }
-            return item;
-        });
-    }
+    // Items for the Others section
+    const othersNavItems: MainNavItem[] = [
+        {
+            title: 'My Students',
+            href: '/adviser/students-list',
+            icon: Users,
+        },
+        {
+            title: 'Defense Requirements',
+            href: '/all-defense-requirements',
+            icon: GraduationCap,
+        },
+    ];
 
     return (
         <Sidebar collapsible="offcanvas" className="px-3 pt-5" variant="inset">
@@ -145,11 +203,25 @@ export function AppSidebar() {
             </SidebarHeader>
 
             <SidebarContent>
-                <NavMain items={navItems} />
+                <NavMain
+                    items={navItems}
+                    expandedMenus={expandedMenus}
+                    setExpandedMenus={setExpandedMenus}
+                />
+                {showOthers && (
+                    <div className="mb-2">
+                        <NavMain
+                            items={othersNavItems}
+                            expandedMenus={expandedMenus}
+                            setExpandedMenus={setExpandedMenus}
+                            sectionTitle="Others"
+                        />
+                    </div>
+                )}
             </SidebarContent>
 
             <SidebarFooter>
-                <NavFooter items={footerNavItems} className="mt-auto" />
+                <NavFooter items={[]} className="mt-auto" />
                 <NavUser />
             </SidebarFooter>
         </Sidebar>
