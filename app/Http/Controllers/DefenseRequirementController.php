@@ -112,7 +112,9 @@ class DefenseRequirementController extends Controller
                      'school_id' => $user->school_id,
                      'program' => $user->program,
                      'email' => $user->email,
+                     // Show only accepted advisers
                      'advisers' => $user->advisers()
+                         ->wherePivot('status', 'accepted')
                          ->select('users.id', 'users.first_name', 'users.middle_name', 'users.last_name', 'users.email', 'users.adviser_code')
                          ->get(),
                  ],

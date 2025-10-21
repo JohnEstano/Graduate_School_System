@@ -490,6 +490,30 @@ class CoordinatorAdviserController extends Controller
             ]
         ]);
 
+        // Send email notification to adviser about the new student assignment
+        try {
+            if ($adviserUser->email) {
+                Mail::to($adviserUser->email)
+                    ->send(new \App\Mail\StudentAssignedToAdviser($adviserUser, $student, $coordinator));
+                
+                Log::info('Student Assignment: Email sent to adviser', [
+                    'adviser_id' => $adviserUser->id,
+                    'adviser_email' => $adviserUser->email,
+                    'student_id' => $student->id,
+                    'student_name' => trim(($student->first_name ?? '') . ' ' . ($student->last_name ?? '')),
+                    'coordinator_id' => $coordinator->id
+                ]);
+            }
+        } catch (\Exception $e) {
+            Log::error('Student Assignment: Failed to send email to adviser', [
+                'adviser_id' => $adviserUser->id,
+                'adviser_email' => $adviserUser->email ?? 'N/A',
+                'student_id' => $student->id,
+                'error' => $e->getMessage()
+            ]);
+            // Don't fail the assignment if email fails
+        }
+
         // return pending list after adding
         return $this->pendingStudents($request, $adviserId);
     }

@@ -417,6 +417,48 @@ class DefenseRequestController extends Controller
                 $current,
                 $defenseRequest->workflow_state
             );
+            
+            // Save first before sending emails
+            $defenseRequest->save();
+            
+            // Send email notifications after approval
+            // 1. Notify student of approval
+            try {
+                $student = $defenseRequest->user;
+                if ($student && $student->email) {
+                    Mail::to($student->email)
+                        ->send(new DefenseRequestApproved($defenseRequest, $student, 'adviser', $comment));
+                    Log::info('Adviser Approval: Email sent to student', [
+                        'defense_request_id' => $defenseRequest->id,
+                        'student_email' => $student->email,
+                        'adviser_id' => $user->id
+                    ]);
+                }
+            } catch (\Exception $e) {
+                Log::error('Adviser Approval: Failed to send email to student', [
+                    'defense_request_id' => $defenseRequest->id,
+                    'error' => $e->getMessage()
+                ]);
+            }
+            
+            // 2. Notify coordinator of new request needing review
+            if ($coordinator && $coordinator->email) {
+                try {
+                    Mail::to($coordinator->email)
+                        ->send(new DefenseRequestAssignedToCoordinator($defenseRequest));
+                    Log::info('Adviser Approval: Email sent to coordinator', [
+                        'defense_request_id' => $defenseRequest->id,
+                        'coordinator_email' => $coordinator->email,
+                        'adviser_id' => $user->id
+                    ]);
+                } catch (\Exception $e) {
+                    Log::error('Adviser Approval: Failed to send email to coordinator', [
+                        'defense_request_id' => $defenseRequest->id,
+                        'coordinator_id' => $coordinator->id ?? null,
+                        'error' => $e->getMessage()
+                    ]);
+                }
+            }
         } else {
             // reject: do not advance to coordinator; record adviser rejection
             $defenseRequest->adviser_status = 'Rejected';
@@ -430,11 +472,31 @@ class DefenseRequestController extends Controller
                 $current,
                 $defenseRequest->workflow_state
             );
+            
+            // Save first before sending emails
+            $defenseRequest->save();
+            
+            // Send rejection email to student
+            try {
+                $student = $defenseRequest->user;
+                if ($student && $student->email) {
+                    Mail::to($student->email)
+                        ->send(new DefenseRequestRejected($defenseRequest, $student, 'adviser', $comment));
+                    Log::info('Adviser Rejection: Email sent to student', [
+                        'defense_request_id' => $defenseRequest->id,
+                        'student_email' => $student->email,
+                        'adviser_id' => $user->id
+                    ]);
+                }
+            } catch (\Exception $e) {
+                Log::error('Adviser Rejection: Failed to send email to student', [
+                    'defense_request_id' => $defenseRequest->id,
+                    'error' => $e->getMessage()
+                ]);
+            }
         }
 
-        $defenseRequest->save();
-
-        return back()->with('success', 'Decision recorded.');
+        return back()->with('success', 'Decision recorded and notifications sent.');
     }
 
     /** Coordinator approve / reject */
