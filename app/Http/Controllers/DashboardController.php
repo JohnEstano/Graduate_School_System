@@ -187,9 +187,10 @@ class DashboardController extends Controller
                     'role' => $effective,
                     'school_id' => $user->school_id,
                     'avatar' => $user->employee_photo_url ?? null,
-                    // --- Changed: qualify columns to avoid ambiguous `id` ---
+                    // Show only accepted advisers
                     'advisers' => method_exists($user, 'advisers')
                         ? $user->advisers()
+                            ->wherePivot('status', 'accepted')
                             ->select('users.id', 'users.first_name', 'users.middle_name', 'users.last_name', 'users.email', 'users.adviser_code')
                              ->get()
                         : collect(),

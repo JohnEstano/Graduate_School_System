@@ -21,10 +21,11 @@ class ProfileController extends Controller
     {
         $user = $request->user();
 
-        // If student, include adviser info
+        // If student, include adviser info (only accepted advisers)
         $advisers = [];
         if ($user->role === 'Student') {
             $advisers = $user->advisers()
+                ->wherePivot('status', 'accepted')
                 ->select('first_name', 'last_name', 'email')
                 ->get()
                 ->map(function ($a) {

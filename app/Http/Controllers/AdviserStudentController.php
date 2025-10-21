@@ -119,7 +119,7 @@ class AdviserStudentController extends Controller
         return response()->json(['success' => true]);
     }
 
-    // Adviser rejects a pending student (marks rejected)
+    // Adviser rejects a pending student (marks rejected and sends email)
     public function rejectPending(Request $request, $studentId)
     {
         $adviser = $request->user();
@@ -128,8 +128,42 @@ class AdviserStudentController extends Controller
             return response()->json(['error' => 'Pending assignment not found.'], 404);
         }
 
-        // Option: change to detach(...) if you prefer removal
+        // Mark as rejected (do NOT delete)
         $adviser->advisedStudents()->updateExistingPivot($studentId, ['status' => 'rejected']);
+        
+        // Send rejection email to student
+        try {
+            $student = User::find($studentId);
+            if ($student && $student->email) {
+                // Get the pivot data to find who assigned this student
+                $pivotStudent = $adviser->advisedStudents()->wherePivot('student_id', $studentId)->first();
+                $coordinatorId = $pivotStudent->pivot->requested_by ?? null;
+                
+                if ($coordinatorId) {
+                    $coordinator = User::find($coordinatorId);
+                    if ($coordinator) {
+                        Mail::to($student->email)
+                            ->send(new \App\Mail\StudentRejectedByAdviser($student, $adviser, $coordinator));
+                        
+                        Log::info('Student Rejection: Email sent to student', [
+                            'student_id' => $student->id,
+                            'student_email' => $student->email,
+                            'adviser_id' => $adviser->id,
+                            'adviser_name' => trim(($adviser->first_name ?? '') . ' ' . ($adviser->last_name ?? '')),
+                            'coordinator_id' => $coordinator->id
+                        ]);
+                    }
+                }
+            }
+        } catch (\Exception $e) {
+            Log::error('Student Rejection: Failed to send email to student', [
+                'student_id' => $studentId,
+                'adviser_id' => $adviser->id,
+                'error' => $e->getMessage()
+            ]);
+            // Don't fail the rejection if email fails
+        }
+        
         return response()->json(['success' => true]);
     }
 
