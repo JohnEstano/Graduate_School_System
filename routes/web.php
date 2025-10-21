@@ -157,6 +157,14 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     // HONORARIUM ROUTES
     // Page 1 - List all programs
+
+
+
+    
+Route::get('/honorarium/individual-record/{programId}', [HonorariumSummaryController::class, 'show'])
+    ->name('honorarium.individual-record');
+
+
     Route::get('/honorarium', [HonorariumSummaryController::class, 'index']) 
         ->name('honorarium.index'); 
 
@@ -438,61 +446,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('/panel-members', [CoordinatorDefenseController::class, 'panelMembersAll'])
             ->name('defense.panel-members');
 
-        Route::get('/defense-requests/{defenseRequest}/details', function (DefenseRequest $defenseRequest) {
-            $user = Auth::user();
-            $roles = ['Coordinator', 'Administrative Assistant', 'Dean'];
-            if (!$user || !in_array($user->role, $roles))
-                abort(403);
-
-            $mapped = [
-                'id' => $defenseRequest->id,
-                'first_name' => $defenseRequest->first_name,
-                'middle_name' => $defenseRequest->middle_name,
-                'last_name' => $defenseRequest->last_name,
-                'school_id' => $defenseRequest->school_id,
-                'program' => $defenseRequest->program,
-                'thesis_title' => $defenseRequest->thesis_title,
-                'defense_type' => $defenseRequest->defense_type,
-                'status' => $defenseRequest->status,
-                'priority' => $defenseRequest->priority,
-                'workflow_state' => $defenseRequest->workflow_state,
-                'defense_adviser' => $defenseRequest->defense_adviser,
-                'defense_chairperson' => $defenseRequest->defense_chairperson,
-                'defense_panelist1' => $defenseRequest->defense_panelist1,
-                'defense_panelist2' => $defenseRequest->defense_panelist2,
-                'defense_panelist3' => $defenseRequest->defense_panelist3,
-                'defense_panelist4' => $defenseRequest->defense_panelist4,
-                'scheduled_date' => $defenseRequest->scheduled_date?->format('Y-m-d'),
-                'scheduled_time' => $defenseRequest->scheduled_time,
-                'scheduled_end_time' => $defenseRequest->scheduled_end_time,
-                'defense_mode' => $defenseRequest->defense_mode,
-                'defense_venue' => $defenseRequest->defense_venue,
-                'scheduling_notes' => $defenseRequest->scheduling_notes,
-                // --- ALL DOCUMENT FIELDS ---
-                'advisers_endorsement' => $defenseRequest->advisers_endorsement,
-                'rec_endorsement' => $defenseRequest->rec_endorsement,
-                'proof_of_payment' => $defenseRequest->proof_of_payment,
-                'reference_no' => $defenseRequest->reference_no,
-                'manuscript_proposal' => $defenseRequest->manuscript_proposal,
-                'similarity_index' => $defenseRequest->similarity_index,
-                'avisee_adviser_attachment' => $defenseRequest->avisee_adviser_attachment,
-                'ai_detection_certificate' => $defenseRequest->ai_detection_certificate,
-                'endorsement_form' => $defenseRequest->endorsement_form,
-                // --- END DOCUMENT FIELDS ---
-                'last_status_updated_by' => $defenseRequest->last_status_updated_by,
-                'last_status_updated_at' => $defenseRequest->last_status_updated_at,
-                'workflow_history' => $defenseRequest->workflow_history ?? [],
-                'adviser_status' => $defenseRequest->adviser_status ?? null,
-                'coordinator_status' => $defenseRequest->coordinator_status ?? null,
-
-                // ADD: exact level for rate matching
-                'program_level' => \App\Helpers\ProgramLevel::getLevel($defenseRequest->program),
-            ];
-            return Inertia::render('coordinator/submissions/defense-request/details', [
-                'defenseRequest' => $mapped,
-                'userRole' => $user->role
-            ]);
-        })->name('defense-requests.details');
+        Route::get('/defense-requests/{defenseRequest}/details', [CoordinatorDefenseController::class, 'details'])
+            ->name('coordinator.defense-requests.details');
     });
 
     /* Profile */
@@ -920,3 +875,7 @@ Route::get('/test-adviser-invitation', function () {
         'Dr. Maria Santos (Coordinator)'
     );
 })->middleware('auth');
+
+// Add this route inside the auth middleware group:
+Route::post('/defense-requests/{defenseRequest}/complete', [DefenseRequestController::class, 'completeDefense'])
+    ->name('defense-requests.complete');

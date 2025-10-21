@@ -19,10 +19,6 @@ use App\Jobs\GenerateDefenseDocumentsJob;
 use App\Mail\DefenseRequestSubmitted;
 use App\Mail\DefenseRequestApproved;
 use App\Mail\DefenseRequestRejected;
-use App\Mail\DefenseScheduled;
-use App\Mail\DefenseRequestAssignedToCoordinator;
-use App\Helpers\ProgramLevel;
-use App\Models\PaymentRate;
 
 class DefenseRequestController extends Controller
 {
@@ -500,136 +496,154 @@ class DefenseRequestController extends Controller
     }
 
     /** Coordinator approve / reject */
-    public function coordinatorDecision(Request $request, DefenseRequest $defenseRequest)
-    {
-        $user = Auth::user();
-        if (!$user) abort(401);
-        if (!in_array($user->role,['Coordinator','Administrative Assistant','Dean'])) {
-            return response()->json(['error'=>'Unauthorized'],403);
-        }
-
-        // AUTHORIZATION: Verify this coordinator is assigned to this request
-        if ($defenseRequest->coordinator_user_id !== $user->id) {
-            Log::warning('Unauthorized coordinator action attempt', [
-                'defense_request_id' => $defenseRequest->id,
-                'assigned_coordinator_id' => $defenseRequest->coordinator_user_id,
-                'attempted_by_user_id' => $user->id,
-                'attempted_by_email' => $user->email,
-            ]);
-
-            return response()->json([
-                'error' => 'You are not authorized to act on this defense request. This request is assigned to another coordinator.'
-            ], 403);
-        }
-
-        $data = $request->validate([
-            'decision' => 'required|in:approve,reject',
-            'comment'  => 'nullable|string|max:3000'
-        ]);
-        $comment = $data['comment'] ?? null;
-
-        $allowedCurrent = ['adviser-approved','coordinator-review'];
-        $current = $defenseRequest->workflow_state;
-        if (!in_array($current, $allowedCurrent)) {
-            return response()->json([
-                'error'=>"Cannot act in state '{$current}'"
-            ],422);
-        }
-
-        try {
-            $defenseRequest->ensureSubmittedHistory();
-
-            if ($data['decision'] === 'approve') {
-                $defenseRequest->workflow_state = 'coordinator-approved';
-                $defenseRequest->status = 'Approved';
-                $defenseRequest->coordinator_comments = $comment;
-                $defenseRequest->coordinator_reviewed_at = now();
-                $defenseRequest->coordinator_reviewed_by = $user->id;
-                $defenseRequest->addWorkflowEntry(
-                    'coordinator-approved',
-                    $comment,
-                    $user->id,
-                    $current,
-                    'coordinator-approved'
-                );
-            } else {
-                $defenseRequest->workflow_state = 'coordinator-rejected';
-                $defenseRequest->status = 'Rejected';
-                $defenseRequest->coordinator_comments = $comment;
-                $defenseRequest->coordinator_reviewed_at = now();
-                $defenseRequest->coordinator_reviewed_by = $user->id;
-                $defenseRequest->addWorkflowEntry(
-                    'coordinator-rejected',
-                    $comment,
-                    $user->id,
-                    $current,
-                    'coordinator-rejected'
-                );
-            }
-
-            $defenseRequest->last_status_updated_at = now();
-            $defenseRequest->last_status_updated_by = $user->id;
-
-            $hist = is_array($defenseRequest->workflow_history) ? $defenseRequest->workflow_history : [];
-            foreach ($hist as &$h) {
-                $h['comment']   = $h['comment']   ?? null;
-                $h['user_name'] = $h['user_name'] ?? '';
-            }
-            $defenseRequest->workflow_history = $hist;
-
-            $defenseRequest->save();
-            
-            // Send email notification to student
-            $student = User::find($defenseRequest->submitted_by);
-            if ($student && $student->email) {
-                if ($data['decision'] === 'approve') {
-                    Mail::to($student->email)
-                        ->queue(new DefenseRequestApproved(
-                            $defenseRequest,
-                            $student,
-                            'coordinator',
-                            $comment
-                        ));
-                } else {
-                    Mail::to($student->email)
-                        ->queue(new DefenseRequestRejected(
-                            $defenseRequest,
-                            $student,
-                            'coordinator',
-                            $comment
-                        ));
-                }
-            }
-
-            // --- NEW: Auto-create payment verification record if approved ---
-            if ($defenseRequest->coordinator_status === 'Approved') {
-                $existing = \App\Models\AaPaymentVerification::where('defense_request_id', $defenseRequest->id)->first();
-                if (!$existing) {
-                    \App\Models\AaPaymentVerification::create([
-                        'defense_request_id' => $defenseRequest->id,
-                        'assigned_to' => null, // or set to an AA user id if you want
-                        'status' => 'pending',
-                        'remarks' => null,
-                    ]);
-                }
-            }
-
-            return response()->json([
-                'ok'=>true,
-                'workflow_state'=>$defenseRequest->workflow_state,
-                'status'=>$defenseRequest->status,
-                'coordinator_comments'=>$defenseRequest->coordinator_comments,
-                'adviser_comments'=>$defenseRequest->adviser_comments,
-                'workflow_history'=>$defenseRequest->workflow_history
-            ]);
-        } catch (\Throwable $e) {
-            Log::error('coordinatorDecision error',[
-                'id'=>$defenseRequest->id,
-                'error'=>$e->getMessage()
-            ]);
-            return response()->json(['error'=>app()->environment('local')?$e->getMessage():'Internal error'],500);
-        }
+  
+public function coordinatorDecision(Request $request, DefenseRequest $defenseRequest)
+{
+    $user = Auth::user();
+    if (!$user) abort(401);
+    if (!in_array($user->role,['Coordinator','Administrative Assistant','Dean'])) {
+        return response()->json(['error'=>'Unauthorized'],403);
     }
+
+    // AUTHORIZATION: Verify this coordinator is assigned to this request
+    if ($defenseRequest->coordinator_user_id !== $user->id) {
+        Log::warning('Unauthorized coordinator action attempt', [
+            'defense_request_id' => $defenseRequest->id,
+            'assigned_coordinator_id' => $defenseRequest->coordinator_user_id,
+            'attempted_by_user_id' => $user->id,
+            'attempted_by_email' => $user->email,
+        ]);
+
+        return response()->json([
+            'error' => 'You are not authorized to act on this defense request. This request is assigned to another coordinator.'
+        ], 403);
+    }
+
+    $data = $request->validate([
+        'decision' => 'required|in:approve,reject,retrieve',
+        'comment'  => 'nullable|string|max:3000'
+    ]);
+    $comment = $data['comment'] ?? null;
+
+    // FIXED: Allow approval from 'scheduled' state as well
+    $allowedCurrent = ['adviser-approved','coordinator-review','scheduled'];
+    $current = $defenseRequest->workflow_state;
+    if (!in_array($current, $allowedCurrent)) {
+        return response()->json([
+            'error'=>"Cannot act in state '{$current}'. Request must be in adviser-approved, coordinator-review, or scheduled state."
+        ],422);
+    }
+
+    try {
+        $defenseRequest->ensureSubmittedHistory();
+
+        if ($data['decision'] === 'approve') {
+            $defenseRequest->workflow_state = 'coordinator-approved';
+            $defenseRequest->status = 'Approved';
+            $defenseRequest->coordinator_status = 'Approved';
+            $defenseRequest->coordinator_comments = $comment;
+            $defenseRequest->coordinator_reviewed_at = now();
+            $defenseRequest->coordinator_reviewed_by = $user->id;
+            $defenseRequest->addWorkflowEntry(
+                'coordinator-approved',
+                $comment,
+                $user->id,
+                $current,
+                'coordinator-approved'
+            );
+        } elseif ($data['decision'] === 'reject') {
+            $defenseRequest->workflow_state = 'coordinator-rejected';
+            $defenseRequest->status = 'Rejected';
+            $defenseRequest->coordinator_status = 'Rejected';
+            $defenseRequest->coordinator_comments = $comment;
+            $defenseRequest->coordinator_reviewed_at = now();
+            $defenseRequest->coordinator_reviewed_by = $user->id;
+            $defenseRequest->addWorkflowEntry(
+                'coordinator-rejected',
+                $comment,
+                $user->id,
+                $current,
+                'coordinator-rejected'
+            );
+        } else { // retrieve
+            $defenseRequest->workflow_state = 'coordinator-review';
+            $defenseRequest->status = 'Pending';
+            $defenseRequest->coordinator_status = 'Pending';
+            $defenseRequest->coordinator_comments = $comment;
+            $defenseRequest->addWorkflowEntry(
+                'coordinator-retrieved',
+                $comment,
+                $user->id,
+                $current,
+                'coordinator-review'
+            );
+        }
+
+        $defenseRequest->last_status_updated_at = now();
+        $defenseRequest->last_status_updated_by = $user->id;
+
+        $hist = is_array($defenseRequest->workflow_history) ? $defenseRequest->workflow_history : [];
+        foreach ($hist as &$h) {
+            $h['comment']   = $h['comment']   ?? null;
+            $h['user_name'] = $h['user_name'] ?? '';
+        }
+        $defenseRequest->workflow_history = $hist;
+
+        $defenseRequest->save();
+        
+        // Send email notification to student
+        $student = User::find($defenseRequest->submitted_by);
+        if ($student && $student->email) {
+            if ($data['decision'] === 'approve') {
+                Mail::to($student->email)
+                    ->queue(new DefenseRequestApproved(
+                        $defenseRequest,
+                        $student,
+                        'coordinator',
+                        $comment
+                    ));
+            } else if ($data['decision'] === 'reject') {
+                Mail::to($student->email)
+                    ->queue(new DefenseRequestRejected(
+                        $defenseRequest,
+                        $student,
+                        'coordinator',
+                        $comment
+                    ));
+            }
+        }
+
+        // --- Auto-create payment verification record if approved ---
+        if ($defenseRequest->coordinator_status === 'Approved') {
+            $existing = \App\Models\AaPaymentVerification::where('defense_request_id', $defenseRequest->id)->first();
+            if (!$existing) {
+                \App\Models\AaPaymentVerification::create([
+                    'defense_request_id' => $defenseRequest->id,
+                    'assigned_to' => null,
+                    'status' => 'pending',
+                    'remarks' => null,
+                ]);
+            }
+        }
+
+        return response()->json([
+            'ok'=>true,
+            'workflow_state'=>$defenseRequest->workflow_state,
+            'status'=>$defenseRequest->status,
+            'coordinator_status'=>$defenseRequest->coordinator_status,
+            'coordinator_comments'=>$defenseRequest->coordinator_comments,
+            'adviser_comments'=>$defenseRequest->adviser_comments,
+            'workflow_history'=>$defenseRequest->workflow_history
+        ]);
+    } catch (\Throwable $e) {
+        Log::error('coordinatorDecision error',[
+            'id'=>$defenseRequest->id,
+            'error'=>$e->getMessage(),
+            'trace'=>$e->getTraceAsString()
+        ]);
+        return response()->json(['error'=>app()->environment('local')?$e->getMessage():'Internal error'],500);
+    }
+}
 
     /** Lightweight API for polling */
     public function apiShow(DefenseRequest $defenseRequest)
@@ -668,176 +682,113 @@ class DefenseRequestController extends Controller
         ]);
     }
 
-    public function updateStatus(Request $request, DefenseRequest $defenseRequest)
+    /**
+     * Update the status of a defense request (for coordinators/admins)
+     */
+    public function updateStatus(Request $request, $id)
     {
-        $user = Auth::user();
-        if (!$user) return response()->json(['error'=>'Unauthorized'],401);
-
-        $coordinatorRoles = ['Coordinator','Administrative Assistant','Dean'];
-        if (!in_array($user->role,$coordinatorRoles)) {
-            return response()->json(['error'=>'Forbidden'],403);
-        }
-
-        $data = $request->validate([
-            'status' => 'required|in:Pending,Approved,Rejected,Completed'
+        $defenseRequest = DefenseRequest::findOrFail($id);
+        
+        $validated = $request->validate([
+            'coordinator_status' => 'nullable|string|in:Pending,Approved,Rejected',
+            'coordinator_comments' => 'nullable|string',
         ]);
 
-        $target = $data['status'];
-        $originalState = $defenseRequest->workflow_state;
+        $oldStatus = $defenseRequest->coordinator_status;
+        $newStatus = $validated['coordinator_status'] ?? $oldStatus;
 
+        DB::beginTransaction();
         try {
-            // --- Update coordinator_status and workflow_state ---
-            if ($target === 'Approved') {
-                $defenseRequest->coordinator_status = 'Approved';
+            // Update coordinator status
+            $defenseRequest->coordinator_status = $newStatus;
+            $defenseRequest->coordinator_comments = $validated['coordinator_comments'] ?? null;
+            $defenseRequest->coordinator_reviewed_at = now();
+            $defenseRequest->coordinator_reviewed_by = Auth::id();
+
+            // Update workflow state based on coordinator status
+            if ($newStatus === 'Approved') {
                 $defenseRequest->workflow_state = 'coordinator-approved';
-                $defenseRequest->status = 'Approved';
-            } elseif ($target === 'Rejected') {
-                $defenseRequest->coordinator_status = 'Rejected';
-                $defenseRequest->workflow_state = 'coordinator-rejected';
-                $defenseRequest->status = 'Rejected';
-            } elseif ($target === 'Pending') {
-                $defenseRequest->coordinator_status = 'Pending';
-                $defenseRequest->workflow_state = 'coordinator-review';
-                $defenseRequest->status = 'Pending';
-            } elseif ($target === 'Completed') {
-                $defenseRequest->coordinator_status = 'Approved'; // or 'Completed' if you want a new value
-                $defenseRequest->workflow_state = 'completed';
-                $defenseRequest->status = 'Completed';
+            } elseif ($newStatus === 'Rejected') {
+                $defenseRequest->workflow_state = 'rejected';
             }
 
-            $defenseRequest->last_status_updated_at = now();
-            $defenseRequest->last_status_updated_by = $user->id;
-
-            // --- Add workflow history entry ---
-            $hist = $defenseRequest->workflow_history ?? [];
-            $hist[] = [
-                'action' => 'coordinator-status-updated',
-                'coordinator_status' => $defenseRequest->coordinator_status,
-                'timestamp' => now()->toISOString(),
-                'user_id' => $user->id,
-                'user_name' => $user->first_name . ' ' . $user->last_name,
-                'from_state' => $originalState,
-                'to_state' => $defenseRequest->workflow_state
-            ];
-            $defenseRequest->workflow_history = $hist;
+            // Add workflow history
+            $defenseRequest->addWorkflowEntry(
+                'coordinator-status-updated',
+                $validated['coordinator_comments'],
+                Auth::id(),
+                $oldStatus,
+                $newStatus
+            );
 
             $defenseRequest->save();
 
-            return response()->json([
-                'ok' => true,
-                'request' => $defenseRequest,
-                'workflow_history' => $defenseRequest->workflow_history,
-                'workflow_state' => $defenseRequest->workflow_state,
-                'status' => $defenseRequest->status,
-                'coordinator_status' => $defenseRequest->coordinator_status,
-            ]);
-        } catch (\Throwable $e) {
-            Log::error('updateStatus error',[
-                'id'=>$defenseRequest->id,
-                'error'=>$e->getMessage()
-            ]);
-            return response()->json(['error'=>'Update failed'],500);
-        }
-    }
-
-    public function updatePriority(Request $request, DefenseRequest $defenseRequest)
-    {
-        $user = Auth::user();
-        if (!$user) return response()->json(['error'=>'Unauthorized'],401);
-        $coordinatorRoles = ['Coordinator','Administrative Assistant','Dean'];
-        if (!in_array($user->role,$coordinatorRoles)) {
-            return response()->json(['error'=>'Forbidden'],403);
-        }
-
-        $data = $request->validate([
-            'priority'=>'required|in:Low,Medium,High'
-        ]);
-
-        $defenseRequest->priority = $data['priority'];
-        $defenseRequest->last_status_updated_at = now();
-        $defenseRequest->last_status_updated_by = $user->id;
-        $defenseRequest->save();
-
-        return response()->json([
-            'ok'=>true,
-            'id'=>$defenseRequest->id,
-            'priority'=>$defenseRequest->priority
-        ]);
-    }
-
-    public function bulkUpdateStatus(Request $request)
-    {
-        $user = Auth::user();
-        if (!$user) return response()->json(['error'=>'Unauthorized'],401);
-        $coordinatorRoles = ['Coordinator','Administrative Assistant','Dean'];
-        if (!in_array($user->role,$coordinatorRoles)) {
-            return response()->json(['error'=>'Forbidden'],403);
-        }
-
-        $data = $request->validate([
-            'ids' => 'required|array|min:1',
-            'ids.*' => 'integer|exists:defense_requests,id',
-            'status' => 'required|in:Pending,Approved,Rejected,Completed' // <-- add Completed
-        ]);
-
-        $updated = [];
-        DB::beginTransaction();
-        try {
-            foreach ($data['ids'] as $id) {
-                $dr = DefenseRequest::lockForUpdate()->find($id);
-                if (!$dr) continue;
-                $fakeReq = new Request(['status'=>$data['status']]);
-                $this->updateStatus($fakeReq, $dr);
-                $updated[] = $id;
-            }
             DB::commit();
-        } catch (\Throwable $e) {
-            DB::rollBack();
-            Log::error('bulkUpdateStatus error',['error'=>$e->getMessage()]);
-            return response()->json(['error'=>'Bulk status update failed'],500);
-        }
 
-        return response()->json([
-            'ok'=>true,
-            'updated_ids'=>$updated,
-            'status'=>$data['status']
-        ]);
+            return redirect()->back()->with('success', 'Defense request status updated successfully.');
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Error updating defense request status', [
+                'error' => $e->getMessage(),
+                'defense_request_id' => $id
+            ]);
+            return redirect()->back()->with('error', 'Failed to update defense request status.');
+        }
     }
 
-    public function bulkUpdatePriority(Request $request)
+    /**
+     * Mark defense as completed
+     */
+    public function markAsCompleted(Request $request, $id)
     {
-        $user = Auth::user();
-        if (!$user) return response()->json(['error'=>'Unauthorized'],401);
-        $coordinatorRoles = ['Coordinator','Administrative Assistant','Dean'];
-        if (!in_array($user->role,$coordinatorRoles)) {
-            return response()->json(['error'=>'Forbidden'],403);
-        }
+        $defenseRequest = DefenseRequest::findOrFail($id);
 
-        $data = $request->validate([
-            'ids' => 'required|array|min:1',
-            'ids.*' => 'integer|exists:defense_requests,id',
-            'priority' => 'required|in:Low,Medium,High'
+        $validated = $request->validate([
+            'coordinator_status' => 'required|string|in:Approved',
+            'coordinator_comments' => 'nullable|string',
         ]);
 
         DB::beginTransaction();
         try {
-            DefenseRequest::whereIn('id',$data['ids'])->update([
-                'priority'=>$data['priority'],
-                'last_status_updated_at'=>now(),
-                'last_status_updated_by'=>$user->id
-            ]);
-            DB::commit();
-        } catch (\Throwable $e) {
-            DB::rollBack();
-            Log::error('bulkUpdatePriority error',['error'=>$e->getMessage()]);
-            return response()->json(['error'=>'Bulk priority update failed'],500);
-        }
+            // Update status
+            $defenseRequest->coordinator_status = 'Approved';
+            $defenseRequest->coordinator_comments = $validated['coordinator_comments'] ?? null;
+            $defenseRequest->coordinator_reviewed_at = now();
+            $defenseRequest->coordinator_reviewed_by = Auth::id();
+            $defenseRequest->workflow_state = 'completed';
+            $defenseRequest->last_status_updated_at = now();
+            $defenseRequest->last_status_updated_by = Auth::id();
 
-        return response()->json([
-            'ok'=>true,
-            'priority'=>$data['priority'],
-            'updated_ids'=>$data['ids']
-        ]);
+            // Add workflow history
+            $defenseRequest->addWorkflowEntry(
+                'coordinator-status-updated',
+                $validated['coordinator_comments'],
+                Auth::id(),
+                $defenseRequest->workflow_state,
+                'completed'
+            );
+
+            $defenseRequest->save();
+
+            // 🎉 AUTOMATICALLY CREATE HONORARIUM PAYMENTS
+            Log::info('Defense marked as completed, creating honorarium payments', [
+                'defense_id' => $defenseRequest->id,
+                'user_id' => Auth::id()
+            ]);
+            
+            $defenseRequest->createHonorariumPayments();
+
+            DB::commit();
+
+            return redirect()->back()->with('success', 'Defense marked as completed and honorarium payments created.');
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Error marking defense as completed', [
+                'error' => $e->getMessage(),
+                'defense_request_id' => $id
+            ]);
+            return redirect()->back()->with('error', 'Failed to mark defense as completed.');
+        }
     }
 
     /** Coordinator queue (JSON API) */
@@ -1554,5 +1505,77 @@ class DefenseRequestController extends Controller
                 'coordinator_status' => $defenseRequest->coordinator_status ?? null,
             ],
         ]);
+    }
+
+    /**
+     * Manually mark a defense as completed
+     */
+    public function completeDefense(Request $request, DefenseRequest $defenseRequest)
+    {
+        // Check authorization
+        $user = Auth::user();
+        if (!in_array($user->role, ['Administrative Assistant', 'Dean', 'Coordinator'])) {
+            return response()->json(['error' => 'Unauthorized'], 403);
+        }
+
+        DB::beginTransaction();
+        try {
+            // Update defense request to completed
+            $defenseRequest->workflow_state = 'completed';
+            $defenseRequest->coordinator_status = 'Approved';
+            $defenseRequest->last_status_updated_at = now();
+            $defenseRequest->last_status_updated_by = Auth::id();
+            
+            // Add workflow history
+            $defenseRequest->addWorkflowEntry(
+                'marked-completed',
+                'Defense marked as completed by ' . $user->name,
+                Auth::id(),
+                $defenseRequest->workflow_state,
+                'completed'
+            );
+
+            $defenseRequest->save();
+
+            // 🎉 AUTOMATICALLY CREATE HONORARIUM PAYMENTS
+            Log::info('Defense marked as completed, creating honorarium payments', [
+                'defense_id' => $defenseRequest->id,
+                'user_id' => Auth::id(),
+                'user_name' => $user->name
+            ]);
+            
+            $defenseRequest->createHonorariumPayments();
+
+            DB::commit();
+
+            Log::info('Defense completed successfully', [
+                'defense_id' => $defenseRequest->id,
+                'payments_created' => $defenseRequest->honorariumPayments()->count()
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Defense marked as completed and honorarium payments created.',
+                'defense' => [
+                    'id' => $defenseRequest->id,
+                    'workflow_state' => $defenseRequest->workflow_state,
+                    'status' => 'Completed',
+                    'payments_count' => $defenseRequest->honorariumPayments()->count()
+                ]
+            ]);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            
+            Log::error('Error marking defense as completed', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+                'defense_request_id' => $defenseRequest->id
+            ]);
+            
+            return response()->json([
+                'error' => 'Failed to mark defense as completed: ' . $e->getMessage()
+            ], 500);
+        }
     }
 }

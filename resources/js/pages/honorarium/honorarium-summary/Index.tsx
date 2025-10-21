@@ -85,8 +85,8 @@ export default function Index({ records = [] }: { records?: ProgramRecord[] }) {
   };
 
   const handleViewRecordsClick = (record: ProgramRecord) => {
-    setSelectedRecord(record);
-    setShowRecordModal(true);
+    // Use the record ID to navigate
+    window.location.href = `/honorarium/individual-record/${record.id}`;
   };
 
   return (

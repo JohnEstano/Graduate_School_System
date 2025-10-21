@@ -24,7 +24,8 @@ import {
   XCircle,
   CircleArrowLeft,
   Signature,
-  User
+  User,
+  X  // ADD THIS
 } from 'lucide-react';
 import { useRef } from 'react';
 
@@ -110,6 +111,12 @@ export type DefenseRequestFull = {
   adviser_status?: string;
   coordinator_status?: string;
   program_level?: string; // "Masteral" | "Doctorate" from server
+  submitted_at?: string; // ADD THIS
+  coordinator?: {       // ADD THIS
+    id: number;
+    name: string;
+    email: string;
+  } | null;
 };
 
 // add: local type for payment rate to avoid cross-file type conflicts
@@ -169,12 +176,25 @@ function PanelMemberCombobox({
             className="w-full h-9 px-3 flex items-center justify-between rounded-md border bg-background text-sm text-left focus:outline-none focus:ring-2 focus:ring-primary/40 hover:bg-accent disabled:opacity-50"
             disabled={disabled}
           >
-            <span
-              className={`truncate ${!value ? 'text-muted-foreground' : ''}`}
-            >
+            <span className={`truncate flex-1 ${!value ? 'text-muted-foreground' : ''}`}>
               {value || `Select ${label}`}
             </span>
-            <ChevronsUpDown size={14} className="opacity-50" />
+            <div className="flex items-center gap-1 ml-2">
+              {/* X button - only show when there's a value and not disabled */}
+              {value && !disabled && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onChange('');
+                  }}
+                  className="h-5 w-5 rounded-sm hover:bg-muted flex items-center justify-center transition-colors"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              )}
+              <ChevronsUpDown size={14} className="opacity-50" />
+            </div>
           </button>
         </PopoverTrigger>
         <PopoverContent
@@ -326,8 +346,23 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
           }
           const data = await r.json();
           if (alive) {
-            // Keep combined list (faculty + panelists) so we can resolve emails and ids robustly
-            setPanelMembers(Array.isArray(data) ? data : []);
+            const allMembers = Array.isArray(data) ? data : [];
+            
+            // FILTER OUT FACULTY - Only show panelists from panelists table
+            const panelistsOnly = allMembers.filter(
+              (m: PanelMemberOption) => 
+                m.type !== 'Faculty' && 
+                !m.id.startsWith('faculty-') &&
+                m.id.startsWith('panelist-') // Only include panelist- prefix
+            );
+            
+            console.log('Loaded panel members:', {
+              total: allMembers.length,
+              panelistsOnly: panelistsOnly.length,
+              sample: panelistsOnly.slice(0, 3)
+            });
+            
+            setPanelMembers(panelistsOnly);
             loaded = true;
           }
           break;
@@ -564,41 +599,43 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
     else if (action === 'retrieve') newStatus = 'Pending';
 
     try {
-      const res = await fetchWithCsrfRetry(`/defense-requests/${request.id}/status`, {
-        method: 'PATCH',
+      // FIXED: Use the correct coordinator decision endpoint
+      const res = await fetchWithCsrfRetry(`/defense-requests/${request.id}/coordinator-decision`, {
+        method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           Accept: 'application/json'
         },
-        body: JSON.stringify({ status: newStatus }),
+        body: JSON.stringify({ 
+          decision: action === 'approve' ? 'approve' : action === 'reject' ? 'reject' : 'retrieve',
+          comment: null 
+        }),
       });
+      
       let data: any = {};
       try {
         data = await res.json();
       } catch {
         data = { error: 'Invalid response from server.' };
       }
-      if (res.ok) {
-        if (data.request) {
-          setRequest(data.request);
-        } else {
-          setRequest(r => ({
-            ...r,
-            coordinator_status: newStatus,
-            workflow_state: data.workflow_state || r.workflow_state,
-            workflow_history: data.workflow_history || r.workflow_history,
-            status: data.status || r.status,
-          }));
-        }
-        toast.success(`Coordinator status set to ${newStatus}`);
+      
+      if (res.ok && data.ok) {
+        setRequest(r => ({
+          ...r,
+          coordinator_status: newStatus,
+          workflow_state: data.workflow_state || r.workflow_state,
+          workflow_history: data.workflow_history || r.workflow_history,
+          status: data.status || r.status,
+        }));
+        toast.success(`Defense request ${action}d successfully`);
       } else {
-        toast.error(data?.error || `Failed to update status (${res.status})`);
+        toast.error(data?.error || `Failed to ${action} (${res.status})`);
       }
     } catch (err: any) {
       if (err instanceof Error && err.message === 'network') {
-        toast.error('Network error updating status. Please check your connection and try again.');
+        toast.error('Network error. Please check your connection and try again.');
       } else {
-        toast.error('Unknown error updating status.');
+        toast.error(`Unknown error during ${action}.`);
       }
     } finally {
       setIsLoading(false);
@@ -695,7 +732,7 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
     }
   }
 
-  // Workflow stepper config
+  // Workflow stepper config (UPDATED ORDER)
   const workflowSteps = [
     {
       key: 'submitted',
@@ -704,8 +741,18 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
     },
     {
       key: 'adviser-approved',
-      label: 'Endorsed by Adviser', // CHANGED from "Approved by Adviser"
+      label: 'Endorsed by Adviser',
       icon: <UserCheck className="h-5 w-5" />,
+    },
+    {
+      key: 'panels-assigned',
+      label: 'Panels Assigned',
+      icon: <UsersIcon className="h-5 w-5" />,
+    },
+    {
+      key: 'scheduled',
+      label: 'Scheduled',
+      icon: <Clock className="h-5 w-5" />,
     },
     {
       key: 'coordinator-approved',
@@ -713,26 +760,20 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
       icon: <Signature className="h-5 w-5" />, 
     },
     {
+      key: 'completed',
+      label: 'Completed',
+      icon: <CheckCircle className="h-5 w-5" />,
+    },
+    {
       key: 'rejected',
-      label: 'Rejected by Coordinator',
+      label: 'Rejected',
       icon: <XCircle className="h-5 w-5" />,
     },
     {
       key: 'retrieved',
-      label: 'Retrieved (Set to Pending)',
+      label: 'Retrieved',
       icon: <CircleArrowLeft className="h-5 w-5" />,
     },
-    {
-      key: 'panels-assigned',
-      label: 'Panels Assigned',
-      icon: <User className="h-5 w-5" />,
-    },
-    {
-      key: 'scheduled',
-      label: 'Scheduled',
-      icon: <Clock className="h-5 w-5" />,
-    },
-    // Add more steps as needed
   ];
 
   // Update this function:
@@ -811,7 +852,8 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
                 disabled={
                   isLoading ||
                   request.coordinator_status === 'Approved' ||
-                  request.workflow_state === 'completed'
+                  request.workflow_state === 'completed' ||
+                  request.workflow_state !== 'scheduled' // MUST be scheduled first
                 }
               >
                 <CheckCircle className="h-4 w-4 mr-1 text-green-600" />
@@ -857,39 +899,37 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
             <Tabs value={tab} onValueChange={v => setTab(v as 'details' | 'assign-schedule')} className="w-full">
               {/* DETAILS TAB */}
               <TabsContent value="details" className="space-y-5">
-                {/* Submission summary card */}
+                {/* Submission summary card - MATCHING ADVISER LAYOUT */}
                 <div className="rounded-xl border p-8 bg-white dark:bg-zinc-900">
-                  {/* Thesis Title Header with Status */}
-                  <div className="mb-1 flex flex-col md:flex-row md:items-center md:justify-between gap-2">
-                    <div>
+                  {/* Thesis Title Header with Adviser Status ONLY */}
+                  <div className="mb-1 flex flex-col md:flex-row md:items-start md:justify-between gap-2">
+                    <div className="flex-1">
                       <div className="text-2xl font-semibold">{request.thesis_title}</div>
                       <div className="text-xs text-muted-foreground font-medium mt-0.5">Thesis Title</div>
                     </div>
                     <div className="flex flex-col md:items-end gap-1">
-                      {/* Coordinator Status */}
-                      {request.coordinator_status && (
-                        <span
-                          className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
-                            request.coordinator_status === 'Approved'
-                              ? 'bg-green-100 text-green-600'
-                              : request.coordinator_status === 'Rejected'
-                              ? 'bg-red-100 text-red-600'
-                              : request.coordinator_status === 'Needs Signature'
-                              ? 'bg-blue-100 text-blue-600'
-                              : request.coordinator_status === 'Not Scheduled'
-                              ? 'bg-yellow-100 text-yellow-700'
-                              : request.coordinator_status === 'No Assigned Panelists'
-                              ? 'bg-orange-100 text-orange-600'
-                              : 'bg-gray-100 text-gray-600'
-                          }`}
+                      {/* Adviser Status Badge */}
+                      {request.adviser_status && (
+                        <Badge
+                          variant="secondary"
+                          className={cn(
+                            "text-xs font-semibold px-3 py-1",
+                            request.adviser_status === 'Approved'
+                              ? 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300'
+                              : request.adviser_status === 'Rejected'
+                              ? 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300'
+                              : 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300'
+                          )}
                         >
-                          Coordinator Status: {request.coordinator_status}
-                        </span>
+                          Adviser Status: {request.adviser_status === 'Approved' ? 'Endorsed' : request.adviser_status}
+                        </Badge>
                       )}
                     </div>
                   </div>
+
                   {/* Info Grid */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-6 mt-6">
+                    {/* Presenter */}
                     <div>
                       <div className="text-xs text-muted-foreground mb-1">Presenter</div>
                       <div className="flex items-center gap-3">
@@ -908,20 +948,65 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
                         </div>
                       </div>
                     </div>
+
+                    {/* Program */}
                     <div>
                       <div className="text-xs text-muted-foreground mb-1">Program</div>
                       <div className="font-medium text-sm">{request.program}</div>
                     </div>
+
+                    {/* Defense Type */}
                     <div>
                       <div className="text-xs text-muted-foreground mb-1">Defense Type</div>
                       <Badge variant="secondary" className="text-xs font-medium">
                         {request.defense_type ?? '—'}
                       </Badge>
                     </div>
+
+                    {/* Submitted At */}
+                    <div>
+                      <div className="text-xs text-muted-foreground mb-1">Submitted At</div>
+                      <div className="font-medium text-sm">{formatDate(request.submitted_at)}</div>
+                    </div>
+
+                    {/* Program Coordinator */}
+                    <div>
+                      <div className="text-xs text-muted-foreground mb-1">Program Coordinator</div>
+                      <div className="font-medium text-sm">
+                        {request.coordinator?.name || 'Rogelio O. Badiang (rbadiang@uic.edu.ph)'}
+                      </div>
+                    </div>
+
+                    {/* Coordinator Status */}
+                    <div>
+                      <div className="text-xs text-muted-foreground mb-1">Coordinator Status</div>
+                      <Badge
+                        variant="secondary"
+                        className={cn(
+                          "text-xs font-semibold",
+                          request.coordinator_status === 'Approved'
+                            ? 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300'
+                            : request.coordinator_status === 'Rejected'
+                            ? 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300'
+                            : 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300'
+                        )}
+                      >
+                        {request.coordinator_status || 'Pending'}
+                      </Badge>
+                    </div>
+
+                    {/* Separator before schedule info */}
+                    <div className="md:col-span-2">
+                      <Separator className="my-2" />
+                    </div>
+
+                    {/* Scheduled Date */}
                     <div>
                       <div className="text-xs text-muted-foreground mb-1">Scheduled Date</div>
                       <div className="font-medium text-sm">{formatDate(request.scheduled_date)}</div>
                     </div>
+
+                    {/* Time */}
                     <div>
                       <div className="text-xs text-muted-foreground mb-1">Time</div>
                       <div className="font-medium text-sm">
@@ -930,14 +1015,22 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
                           : '—'}
                       </div>
                     </div>
+
+                    {/* Venue */}
                     <div>
                       <div className="text-xs text-muted-foreground mb-1">Venue</div>
                       <div className="font-medium text-sm">{request.defense_venue || '—'}</div>
                     </div>
+
+                    {/* Mode */}
                     <div>
                       <div className="text-xs text-muted-foreground mb-1">Mode</div>
-                      <div className="font-medium text-sm">{request.defense_mode ? (request.defense_mode === 'face-to-face' ? 'Face-to-Face' : 'Online') : '—'}</div>
+                      <div className="font-medium text-sm capitalize">
+                        {request.defense_mode ? (request.defense_mode === 'face-to-face' ? 'Face-to-Face' : 'Online') : '—'}
+                      </div>
                     </div>
+
+                    {/* Notes */}
                     <div className="md:col-span-2">
                       <div className="text-xs text-muted-foreground mb-1">Notes</div>
                       <div className="font-medium text-sm">{request.scheduling_notes || '—'}</div>
@@ -964,7 +1057,7 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
 
                     const rows = [
                       { key: 'adviser', info: memberFor(request.defense_adviser, 'Adviser') },
-                      { key: 'defense_chairperson', info: memberFor(panels.defense_chairperson || request.defense_chairperson, 'Panel Chair') },
+                      { key: 'defense_chairperson', info: memberFor(panels.defense_chairperson || request.defense_chairperson, 'Chairperson') },
                       { key: 'defense_panelist1', info: memberFor(panels.defense_panelist1 || request.defense_panelist1, 'Panel Member') },
                       { key: 'defense_panelist2', info: memberFor(panels.defense_panelist2 || request.defense_panelist2, 'Panel Member') },
                       { key: 'defense_panelist3', info: memberFor(panels.defense_panelist3 || request.defense_panelist3, 'Panel Member') },
@@ -975,11 +1068,7 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
                       const status = namePresent ? (emailPresent ? 'Assigned' : 'Pending confirmation') : '—';
 
                       const receivable = namePresent
-                        ? (
-                            request.program_level
-                              ? getMemberReceivableByProgramLevel(paymentRates, request.program_level, request.defense_type, r.info.role)
-                              : getMemberReceivable(paymentRates, request.program, request.defense_type, r.info.role)
-                          )
+                        ? getMemberReceivableByProgramLevel(paymentRates, request.program_level, request.defense_type, r.info.role)
                         : null;
 
                       return {
@@ -1001,34 +1090,38 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
                         <Table>
                           <TableHeader>
                             <TableRow>
-                              <TableHead className="min-w-[180px]">Name</TableHead>
-                              <TableHead className="min-w-[220px]">Email</TableHead>
-                              <TableHead className="min-w-[120px]">Role</TableHead>
-                              <TableHead className="min-w-[120px]">Status</TableHead>
-                              <TableHead className="min-w-[160px] text-right">Receivable</TableHead>
+                              <TableHead className="min-w-[200px]">Name & Email</TableHead>
+                              <TableHead className="min-w-[100px]">Role</TableHead>
+                              <TableHead className="min-w-[100px]">Status</TableHead>
+                              <TableHead className="min-w-[140px] text-right">Receivable</TableHead>
                             </TableRow>
                           </TableHeader>
                           <TableBody>
                             {rows.map((r, idx) => (
                               <TableRow key={idx}>
-                                <TableCell className="font-medium">{r.name}</TableCell>
-                                <TableCell className="text-xs text-muted-foreground">{r.email || '—'}</TableCell>
-                                <TableCell>{r.role}</TableCell>
+                                <TableCell>
+                                  <div className="flex flex-col">
+                                    <span className="font-medium text-sm">{r.name}</span>
+                                    <span className="text-xs text-muted-foreground">{r.email}</span>
+                                  </div>
+                                </TableCell>
+                                <TableCell className="text-xs">{r.role}</TableCell>
                                 <TableCell>
                                   <Badge
                                     variant="secondary"
-                                    className={
+                                    className={cn(
+                                      "text-xs",
                                       r.status === 'Assigned'
                                         ? 'bg-green-100 text-green-700'
                                         : r.status === 'Pending confirmation'
                                         ? 'bg-yellow-100 text-amber-700'
                                         : 'bg-amber-100 text-amber-700'
-                                    }
+                                    )}
                                   >
                                     {r.status}
                                   </Badge>
                                 </TableCell>
-                                <TableCell className="text-right">{formatCurrency(r.receivable)}</TableCell>
+                                <TableCell className="text-right text-xs font-medium">{formatCurrency(r.receivable)}</TableCell>
                               </TableRow>
                             ))}
                           </TableBody>

@@ -242,21 +242,33 @@ export default function Details({ id, defenseRequest: initialDefenseRequest }: P
   async function handleMarkCompleted() {
     if (!details) return;
     try {
-      const res = await fetch(`/defense-requests/${details.id}/status`, {
-        method: 'PATCH',
+      const res = await fetch(`/defense-requests/${details.id}/complete`, {
+        method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'X-CSRF-TOKEN': (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content || '',
         },
-        body: JSON.stringify({ status: 'Completed' }),
       });
+      
       if (res.ok) {
-        setDetails({ ...details, status: 'Completed', workflow_state: 'completed' });
-        toast.success('Marked as Completed');
+        const data = await res.json();
+        setDetails({ 
+          ...details, 
+          status: 'Completed', 
+          workflow_state: 'completed' 
+        });
+        toast.success('Defense marked as completed and honorarium payments created!');
+        
+        // Optionally redirect back to list after a delay
+        setTimeout(() => {
+          router.visit('/assistant/all-defense-list');
+        }, 1500);
       } else {
-        toast.error('Failed to mark as completed');
+        const errorData = await res.json();
+        toast.error(errorData.error || 'Failed to mark as completed');
       }
-    } catch {
+    } catch (error) {
+      console.error('Error marking as completed:', error);
       toast.error('Error marking as completed');
     }
   }

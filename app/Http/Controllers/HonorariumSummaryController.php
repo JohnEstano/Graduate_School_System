@@ -2,262 +2,225 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\ProgramRecord;
-use App\Models\PaymentRecord;
+use App\Models\DefenseRequest;
+use App\Models\HonorariumPayment;
+use App\Models\Panelist;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
-use App\Services\HonorariumService;
 use Illuminate\Support\Facades\Log;
 use Barryvdh\DomPDF\Facade\Pdf;
+use App\Helpers\ProgramLevel;
 
 class HonorariumSummaryController extends Controller
 {
-   public function index(Request $request)
+    public function index(Request $request)
     {
-        // Add this line at the top:
-        \Log::info('HonorariumSummaryController@index CALLED');
+        Log::info('HonorariumSummaryController@index CALLED');
 
-        // Get all programs
-        $programs = \App\Models\ProgramRecord::all();
+        // Get all completed defense requests grouped by program
+        $completedDefenses = DefenseRequest::where('workflow_state', 'completed')
+            ->with(['honorariumPayments.panelist'])
+            ->get();
 
-        // Get all defense requests with payments
-        $defenseRequests = \App\Models\DefenseRequest::with(['honorariumPayments', 'user'])->get();
-
-        // Group payments by program
-        $records = [];
-        foreach ($programs as $program) {
-            $programPayments = [];
-            foreach ($defenseRequests as $dr) {
-                if ($dr->program === $program->program) {
-                    if ($dr->honorariumPayments) {
-                        foreach ($dr->honorariumPayments as $payment) {
-                            $programPayments[] = [
-                                'id' => $payment->id,
-                                'school_year' => $dr->created_at ? $dr->created_at->format('Y') . '-' . ($dr->created_at->format('Y') + 1) : '',
-                                'payment_date' => $payment->payment_date ?? '',
-                                'defense_status' => $dr->workflow_state_display ?? $dr->workflow_state ?? '',
-                                'amount' => $payment->amount ?? '',
-                                'panelist_name' => $payment->panelist->name ?? '',
-                                'role' => $payment->role ?? '',
-                            ];
-                        }
-                    }
-                }
+        // Group by program
+        $programsData = [];
+        foreach ($completedDefenses as $defense) {
+            $programKey = $defense->program;
+            
+            if (!isset($programsData[$programKey])) {
+                $programsData[$programKey] = [
+                    'id' => $defense->id,
+                    'name' => $defense->program,
+                    'program' => $defense->program,
+                    'category' => ProgramLevel::getLevel($defense->program),
+                    'date_edited' => $defense->updated_at->format('Y-m-d'),
+                ];
             }
-            $records[] = [
-                'id' => $program->id,
-                'name' => $program->name,
-                'program' => $program->program,
-                'category' => $program->category,
-                'date_edited' => $program->date_edited,
-                'payments' => $programPayments,
-            ];
         }
 
-        // --- Add this dummy record for testing ---
-        $records[] = [
-            'id' => 999,
-            'name' => 'Test Program',
-            'program' => 'BSCOMP',
-            'category' => 'Bachelors',
-            'date_edited' => '2025-08-08',
-            'payments' => [
-                [
-                    'id' => 1,
-                    'school_year' => '2024-2025',
-                    'payment_date' => '2025-08-08',
-                    'defense_status' => 'Completed',
-                    'amount' => '1000',
-                    'panelist_name' => 'John Doe',
-                    'role' => 'Panelist',
-                ]
-            ],
-        ];
-        // --- End dummy record ---
+        $records = array_values($programsData);
 
         return Inertia::render('honorarium/Index', [
             'records' => $records,
         ]);
     }
 
-    // This method renders the individual record page (Page 2)
-public function show($programId)
-{
-    $record = ProgramRecord::with([
-        'panelists' => function($q) {
-        $q->with([
-            'students.payments']);
-        },
-            'studentRecords.payments',
-            'studentRecords.panelists',
-            'panelists.students.payments'
-    ])->findOrFail($programId);
-
-    $receivables = HonorariumService::computeReceivables('masteral', 'proposal');;
-
-  
-    return Inertia::render('honorarium/individual-record', [
-        'record'    => $record,
-        'panelists' => $record->panelists,
-        'receivables' => $receivables,
-    ]);
-}
-
-
-
-public function storePanelist(Request $request, $programId)
-{
-    $program = ProgramRecord::findOrFail($programId);
-
-    $validated = $request->validate([
-        'pfirst_name'   => 'required|string|max:255',
-        'pmiddle_name'  => 'nullable|string|max:255',
-        'plast_name'    => 'required|string|max:255',
-        'role'          => 'required|string',
-        'defense_type'  => 'required|string',
-        'received_date' => 'required|date|before_or_equal:today',
-    ]);
-
-    $panelist = $program->panelists()->create($validated);
-    $panelist->load('program');
-
-    return response()->json([
-        'message' => 'Panelist added successfully!',
-        'panelist' => $panelist
-    ], 201);
-}
-
-
-
-public function downloadCSV(ProgramRecord $record)
+    public function show($programId)
     {
-        // Get all defense requests for this program
-        $defenseRequests = \App\Models\DefenseRequest::where('program', $record->program)->get();
+        Log::info('HonorariumSummaryController@show CALLED', ['programId' => $programId]);
 
-        // Collect all payments for students under this program
-        $payments = $record->studentRecords()
-            ->with('payments')
-            ->get()
-            ->flatMap(fn($student) => $student->payments);
-
-        $filename = "honorarium-{$record->name}.csv";
-        $headers = [
-            'Content-Type' => 'text/csv',
-            'Content-Disposition' => "attachment; filename=\"$filename\"",
-        ];
-
-        $callback = function () use ($payments) {
-            $handle = fopen('php://output', 'w');
-            // CSV header
-            fputcsv($handle, ['School Year', 'Payment Date', 'Defense Status', 'Panelist', 'Role', 'Amount']);
-
-            foreach ($payments as $payment) {
-                fputcsv($handle, [
-                    $payment->school_year,
-                    $payment->payment_date,
-                    $payment->defense_status,
-                    $payment->amount,
-                ]);
+        // Get the program name
+        $programName = null;
+        
+        if (is_numeric($programId)) {
+            $firstDefense = DefenseRequest::find($programId);
+            if ($firstDefense) {
+                $programName = $firstDefense->program;
             }
+        } else {
+            $programName = $programId;
+        }
 
-            fclose($handle);
-        };
+        if (!$programName) {
+            abort(404, 'Program not found');
+        }
 
-        return response()->stream($callback, 200, $headers);
-    }
-
-    public function students($programId)
-    {
-        // Get all students for this program, with their payments
-        $students = \App\Models\StudentRecord::with('payments')
-            ->where('program_record_id', $programId)
+        // Get all completed defenses for this program WITH their stored honorarium payments
+        $defenses = DefenseRequest::where('program', $programName)
+            ->where('workflow_state', 'completed')
+            ->with(['honorariumPayments.panelist'])
             ->get();
 
-        return response()->json(['students' => $students]);
+        if ($defenses->isEmpty()) {
+            abort(404, 'No completed defenses found for this program');
+        }
+
+        $program = $defenses->first()->program;
+        $programLevel = ProgramLevel::getLevel($program);
+
+        Log::info('Processing program honorarium', [
+            'program' => $program,
+            'program_level' => $programLevel,
+            'defenses_count' => $defenses->count()
+        ]);
+
+        // Group payments by panelist
+        $panelistsData = [];
+        
+        foreach ($defenses as $defense) {
+            Log::info('Processing defense for honorarium', [
+                'defense_id' => $defense->id,
+                'payments_count' => $defense->honorariumPayments->count()
+            ]);
+
+            // Use STORED honorarium payments instead of recalculating
+            foreach ($defense->honorariumPayments as $payment) {
+                $panelist = $payment->panelist;
+                
+                if (!$panelist) {
+                    Log::warning('Honorarium payment missing panelist', [
+                        'payment_id' => $payment->id,
+                        'panelist_id' => $payment->panelist_id
+                    ]);
+                    continue;
+                }
+
+                // Create unique key for panelist + role combination
+                $panelistKey = $payment->panelist_id . '_' . $payment->role . '_' . $defense->defense_type;
+                
+                if (!isset($panelistsData[$panelistKey])) {
+                    $panelistsData[$panelistKey] = [
+                        'id' => $panelist->id,
+                        'pfirst_name' => $panelist->name,
+                        'pmiddle_name' => '',
+                        'plast_name' => '',
+                        'role' => $payment->role,
+                        'defense_type' => $defense->defense_type,
+                        'received_date' => $payment->payment_date ?? $defense->updated_at->format('Y-m-d'),
+                        'amount' => 0, // Will accumulate
+                        'students' => []
+                    ];
+                }
+
+                Log::info('Adding student payment to panelist', [
+                    'panelist_id' => $panelist->id,
+                    'panelist_name' => $panelist->name,
+                    'role' => $payment->role,
+                    'stored_amount' => $payment->amount,
+                    'defense_id' => $defense->id,
+                    'student' => $defense->first_name . ' ' . $defense->last_name
+                ]);
+
+                // Add student with STORED payment amount
+                $panelistsData[$panelistKey]['students'][] = [
+                    'id' => $defense->id,
+                    'first_name' => $defense->first_name,
+                    'middle_name' => $defense->middle_name,
+                    'last_name' => $defense->last_name,
+                    'program' => $defense->program,
+                    'course_section' => $defense->defense_type,
+                    'school_year' => $defense->created_at->format('Y') . '-' . ($defense->created_at->format('Y') + 1),
+                    'or_number' => $defense->reference_no,
+                    'defense_date' => $defense->scheduled_date ? $defense->scheduled_date->format('Y-m-d') : null,
+                    'defense_type' => $defense->defense_type,
+                    'payments' => [
+                        [
+                            'id' => $payment->id,
+                            'defense_status' => 'Completed',
+                            'payment_date' => $payment->payment_date ?? $defense->updated_at->format('Y-m-d'),
+                            'amount' => floatval($payment->amount) // USE STORED AMOUNT from honorarium_payments table
+                        ]
+                    ]
+                ];
+
+                // Accumulate total amount from STORED payments
+                $panelistsData[$panelistKey]['amount'] += floatval($payment->amount);
+            }
+        }
+
+        $record = [
+            'id' => $programId,
+            'name' => $program,
+            'program' => $program,
+            'category' => $programLevel,
+            'date_edited' => now()->format('Y-m-d')
+        ];
+
+        $panelistsList = array_values($panelistsData);
+
+        Log::info('Honorarium summary prepared', [
+            'program' => $program,
+            'panelists_count' => count($panelistsList),
+            'total_receivables' => array_sum(array_column($panelistsList, 'amount')),
+            'sample_panelist' => $panelistsList[0] ?? null
+        ]);
+
+        return Inertia::render('honorarium/individual-record', [
+            'record' => $record,
+            'panelists' => $panelistsList,
+        ]);
     }
 
-    // Add this method for the PDF download functionality from your React component
     public function downloadProgramPdf($programId)
     {
         try {
-            $record = ProgramRecord::with([
-                'panelists.students.payments',
-                'studentRecords.payments',
-            ])->findOrFail($programId);
+            $programName = null;
+            
+            if (is_numeric($programId)) {
+                $firstDefense = DefenseRequest::find($programId);
+                if ($firstDefense) {
+                    $programName = $firstDefense->program;
+                }
+            } else {
+                $programName = $programId;
+            }
 
+            if (!$programName) {
+                abort(404, 'Program not found');
+            }
+
+            $defenses = DefenseRequest::where('program', $programName)
+                ->where('workflow_state', 'completed')
+                ->with(['honorariumPayments.panelist'])
+                ->get();
+
+            if ($defenses->isEmpty()) {
+                abort(404, 'No completed defenses found');
+            }
+
+            $program = $defenses->first()->program;
+            
             $pdf = Pdf::loadView('pdfs.honorarium-summary', [
-                'record' => $record,
-                'panelists' => $record->panelists,
-                'program_name' => $record->name,
-                'program_level' => $record->program,
+                'defenses' => $defenses,
+                'program_name' => $program,
             ]);
 
-            $filename = "honorarium-{$record->name}.pdf";
-
+            $filename = "honorarium-{$program}.pdf";
             return $pdf->download($filename);
 
         } catch (\Exception $e) {
             Log::error('Program PDF Generation Error: ' . $e->getMessage());
             return response()->json(['error' => 'Failed to generate program PDF'], 500);
-        }
-    }
-
-    public function downloadPdfApi(Request $request, $programId)
-    {
-        try {
-            // 1. Load program with relationships
-            $record = ProgramRecord::with([
-                'panelists.students.payments',
-                'studentRecords.payments',
-            ])->findOrFail($programId);
-
-            if (!$record) {
-                throw new \Exception("Program record not found");
-            }
-
-            // 2. Filter panelists if array provided
-            if ($request->has('panelists') && !empty($request->panelists)) {
-                $panelistIds = $request->panelists;
-                $filteredPanelists = $record->panelists->filter(function ($panelist) use ($panelistIds) {
-                    return in_array($panelist->id, $panelistIds);
-                });
-
-                // Replace relation safely
-                $record->setRelation('panelists', $filteredPanelists);
-            }
-
-            // 3. Ensure Blade template exists
-            if (!view()->exists('pdfs.honorarium-summary')) {
-                throw new \Exception("PDF template not found");
-            }
-
-            // 4. Prepare data for view
-            $viewData = [
-                'record' => $record,
-                'panelists' => $record->panelists,
-                'generated_at' => now()->format('Y-m-d H:i:s'),
-            ];
-
-            // 5. Generate PDF
-            $pdf = Pdf::loadView('pdfs.honorarium-summary', $viewData);
-            $pdf->setPaper('a4', 'portrait');
-            $pdf->setOption(['dpi' => 150, 'defaultFont' => 'sans-serif']);
-
-            // 6. Safe filename
-            $safeName = preg_replace('/[^A-Za-z0-9\-]/', '-', $record->name);
-            $filename = "honorarium-{$safeName}-" . date('Y-m-d') . ".pdf";
-
-            return $pdf->download($filename);
-
-        } catch (\Exception $e) {
-            Log::error('API PDF Generation Error: ' . $e->getMessage());
-            Log::error($e->getTraceAsString());
-
-            return response()->json([
-                'error' => 'Failed to generate PDF',
-                'message' => $e->getMessage(),
-                'trace' => app()->environment('local') ? $e->getTraceAsString() : null,
-            ], 500);
         }
     }
 }
