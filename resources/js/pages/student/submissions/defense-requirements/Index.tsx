@@ -171,7 +171,8 @@ export default function DefenseRequestIndex() {
     const [processingUnsubmit, setProcessingUnsubmit] = useState(false);
     const [openItemId, setOpenItemId] = useState<number | null>(null);
 
-    const STATE_ORDER = ['submitted','adviser-approved','coordinator-approved','panels-assigned','scheduled','completed'] as const;
+    // Update the STATE_ORDER to match actual workflow
+    const STATE_ORDER = ['submitted','adviser-approved','panels-assigned','scheduled','coordinator-approved','completed'] as const;
     type CanonicalState = typeof STATE_ORDER[number];
 
     function normalizeWorkflowState(raw?: string | null): CanonicalState | null {
@@ -179,23 +180,35 @@ export default function DefenseRequestIndex() {
         const r = raw.toLowerCase();
         if (r === 'submitted' || r === 'adviser-review') return 'submitted';
         if (r === 'adviser-approved' || r === 'coordinator-review') return 'adviser-approved';
-        if (r === 'coordinator-approved') return 'coordinator-approved';
         if (r === 'panels-assigned' || r === 'panel-assigned') return 'panels-assigned';
         if (r === 'scheduled') return 'scheduled';
+        if (r === 'coordinator-approved') return 'coordinator-approved';
         if (r === 'completed') return 'completed';
         return null;
     }
 
     function currentStepperIndex(dr: DefenseRequest | { workflow_state?: string } | null): number {
         if (!dr) return 0;
-        const wf = (dr.workflow_state || '').toLowerCase();
-        if ((dr as any).panels_assigned_at && !['panels-assigned','scheduled','completed'].includes(wf)) {
-            return STATE_ORDER.indexOf('panels-assigned');
-        }
-        const norm = normalizeWorkflowState(wf);
-        if (!norm) return 0;
-        return STATE_ORDER.indexOf(norm);
+        const wf = (dr.workflow_state || '').toLowerCase().trim();
+        
+        // Map workflow states to their correct position
+        if (wf === 'completed') return 5; // Step 6
+        if (wf === 'coordinator-approved') return 4; // Step 5 - Coordinator approves AFTER scheduling
+        if (wf === 'scheduled') return 3; // Step 4 - Schedule AFTER panels
+        if (wf === 'panels-assigned' || wf === 'panel-assigned') return 2; // Step 3 - Panels AFTER adviser
+        if (wf === 'adviser-approved' || wf === 'coordinator-review') return 1; // Step 2
+        if (wf === 'submitted' || wf === 'adviser-review' || wf === 'pending') return 0; // Step 1
+        
+        return 0;
     }
+
+    // Add console log to debug
+    useEffect(() => {
+        if (defenseRequest) {
+            console.log('Defense Request Workflow State:', defenseRequest.workflow_state);
+            console.log('Current Stepper Index:', currentStepperIndex(defenseRequest));
+        }
+    }, [defenseRequest]);
 
     useEffect(() => {
         if (!defenseRequest?.id) return;
@@ -325,12 +338,13 @@ export default function DefenseRequestIndex() {
                                     const isCompleted = wf === 'completed';
                                     const showStepper = !isCancelled && !isRejected && !isCompleted;
 
+                                    // Update workflow steps to match the correct order
                                     const workflowSteps = [
                                         { key: 'submitted', label: 'Submitted', icon: <Hourglass className="w-4 h-4" /> },
                                         { key: 'adviser-approved', label: 'Adviser Approved', icon: <CheckCircle className="w-4 h-4" /> },
-                                        { key: 'coordinator-approved', label: 'Coordinator Approved', icon: <CheckCircle className="w-4 h-4" /> },
                                         { key: 'panels-assigned', label: 'Panels Assigned', icon: <Users className="w-4 h-4" /> },
                                         { key: 'scheduled', label: 'Scheduled', icon: <Calendar className="w-4 h-4" /> },
+                                        { key: 'coordinator-approved', label: 'Coordinator Approved', icon: <CheckCircle className="w-4 h-4" /> },
                                         { key: 'completed', label: 'Completed', icon: <GraduationCap className="w-4 h-4" /> },
                                     ] as const;
 

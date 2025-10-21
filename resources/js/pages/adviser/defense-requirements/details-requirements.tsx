@@ -27,6 +27,8 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
+import { cn } from '@/lib/utils';
 
 type DefenseRequestFull = {
   id: number;
@@ -40,6 +42,11 @@ type DefenseRequestFull = {
   priority?: 'Low' | 'Medium' | 'High';
   workflow_state?: string;
   defense_adviser?: string;
+  defense_chairperson?: string; // ADD THIS
+  defense_panelist1?: string; // ADD THIS
+  defense_panelist2?: string; // ADD THIS
+  defense_panelist3?: string; // ADD THIS
+  defense_panelist4?: string; // ADD THIS
   advisers_endorsement?: string;
   rec_endorsement?: string;
   proof_of_payment?: string;
@@ -524,7 +531,37 @@ export default function DetailsRequirementsPage(rawProps: any) {
   const coordinators = props.coordinators ?? [];
   const loadingCoordinators = false; // No need to fetch, already loaded
 
+  // Add panelMembers state for resolving panel member info
+  const [panelMembers, setPanelMembers] = useState<any[]>([]);
+  const [loadingMembers, setLoadingMembers] = useState(false);
 
+  useEffect(() => {
+    let alive = true;
+    async function loadPanelMembers() {
+      setLoadingMembers(true);
+      try {
+        const res = await fetch('/api/panel-members', { 
+          headers: { Accept: 'application/json' } 
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (alive) setPanelMembers(Array.isArray(data) ? data : []);
+        }
+      } catch (e) {
+        console.warn('Failed to load panel members', e);
+      } finally {
+        if (alive) setLoadingMembers(false);
+      }
+    }
+    loadPanelMembers();
+    return () => { alive = false; };
+  }, []);
+
+  // Helper to find panelist by name
+  function findPanelMember(name: string | null | undefined) {
+    if (!name) return null;
+    return panelMembers.find(m => m.name === name);
+  }
 
   return (
     <AppLayout breadcrumbs={breadcrumbs}>
@@ -724,7 +761,88 @@ export default function DetailsRequirementsPage(rawProps: any) {
                   </div>
                 </div>
 
-                {/* Attachments moved to sidebar */}
+                {/* Committee Table - NEW */}
+                <div className="rounded-lg border p-5 space-y-3">
+                  <h2 className="text-sm font-semibold flex items-center gap-2">
+                    <Users className="h-4 w-4" /> Committee
+                  </h2>
+                  <Separator />
+                  {(() => {
+                    const memberFor = (value: string | null | undefined, fallbackRole: string) => {
+                      const resolved = findPanelMember(value);
+                      return {
+                        displayName: resolved?.name || value || '—',
+                        email: resolved?.email || '',
+                        rawValue: value || '',
+                        role: fallbackRole,
+                      };
+                    };
+
+                    const rows = [
+                      { key: 'adviser', info: memberFor(request.defense_adviser, 'Adviser') },
+                      { key: 'chairperson', info: memberFor(request.defense_chairperson, 'Chairperson') },
+                      { key: 'panelist1', info: memberFor(request.defense_panelist1, 'Panel Member') },
+                      { key: 'panelist2', info: memberFor(request.defense_panelist2, 'Panel Member') },
+                      { key: 'panelist3', info: memberFor(request.defense_panelist3, 'Panel Member') },
+                      { key: 'panelist4', info: memberFor(request.defense_panelist4, 'Panel Member') },
+                    ].map(r => {
+                      const namePresent = !!(r.info.rawValue || (r.info.displayName && r.info.displayName !== '—'));
+                      const emailPresent = !!(r.info.email);
+                      const status = namePresent ? (emailPresent ? 'Assigned' : 'Pending confirmation') : '—';
+
+                      return {
+                        name: r.info.displayName,
+                        email: r.info.email || '—',
+                        role: r.info.role,
+                        status,
+                      };
+                    });
+
+                    return (
+                      <div className="rounded-md border overflow-x-auto">
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead className="min-w-[200px]">Name & Email</TableHead>
+                              <TableHead className="min-w-[100px]">Role</TableHead>
+                              <TableHead className="min-w-[100px]">Status</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {rows.map((r, idx) => (
+                              <TableRow key={idx}>
+                                <TableCell>
+                                  <div className="flex flex-col">
+                                    <span className="font-medium text-sm">{r.name}</span>
+                                    <span className="text-xs text-muted-foreground">{r.email}</span>
+                                  </div>
+                                </TableCell>
+                                <TableCell className="text-xs">{r.role}</TableCell>
+                                <TableCell>
+                                  <Badge
+                                    variant="secondary"
+                                    className={cn(
+                                      "text-xs",
+                                      r.status === 'Assigned'
+                                        ? 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300'
+                                        : r.status === 'Pending confirmation'
+                                        ? 'bg-yellow-100 text-amber-700 dark:bg-yellow-900 dark:text-yellow-300'
+                                        : 'bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300'
+                                    )}
+                                  >
+                                    {r.status}
+                                  </Badge>
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    );
+                  })()}
+                </div>
+
+                {/* Attachments */}
                 <div className={sectionClass}>
                   <h2 className="text-sm font-semibold mb-2 flex items-center gap-2">
                     <FileText className="h-4 w-4" /> Attachments
@@ -800,23 +918,7 @@ export default function DetailsRequirementsPage(rawProps: any) {
                   </div>
                 </div>
 
-                {/* Committee (read-only summary) */}
-                <div className={sectionClass}>
-                  <h2 className="text-sm font-semibold flex items-center gap-2">
-                    <Users className="h-4 w-4" /> Committee
-                  </h2>
-                  <Separator />
-                  <div className="grid md:grid-cols-2 gap-4 text-sm">
-                    <div>
-                      <div className="text-[11px] text-muted-foreground uppercase tracking-wide">
-                        Adviser
-                      </div>
-                      <div className="font-medium">
-                        {request.defense_adviser || '—'}
-                      </div>
-                    </div>
-                  </div>
-                </div>
+                {/* Remove old Committee (read-only summary) section */}
               </TabsContent>
 
               {/* LINK DOCUMENTS TAB */}

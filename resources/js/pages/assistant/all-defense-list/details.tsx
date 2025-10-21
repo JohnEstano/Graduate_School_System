@@ -21,7 +21,9 @@ import {
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"; // Make sure this import exists
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
+import { cn } from '@/lib/utils';
 import PaymentValidationSection from "./payment-validation";
 
 type DefenseRequestDetails = {
@@ -58,12 +60,19 @@ type DefenseRequestDetails = {
   reference_no?: string;
   attachments?: any;
   amount?: number;
+  program_level?: string;
+  expected_rate?: number;
+};
+
+type PaymentRateRow = {
+  program_level: string;
+  type: string;
+  defense_type: string;
+  amount: number | string;
 };
 
 type Props = {
-  id?: number;
   defenseRequest?: DefenseRequestDetails;
-  onClose?: () => void;
 };
 
 function formatDate(d?: string) {
@@ -90,24 +99,71 @@ function getInitials(user: { first_name?: string; last_name?: string }) {
   return (first + last).toUpperCase() || 'U';
 }
 
-export default function Details({ id, defenseRequest: initialDefenseRequest }: Props) {
+export default function Details({ defenseRequest: initialDefenseRequest }: Props) {
   const [details, setDetails] = useState<DefenseRequestDetails | null>(initialDefenseRequest ?? null);
-  const [loading, setLoading] = useState(!initialDefenseRequest);
-
-  // Add tab state
   const [tab, setTab] = useState<'details' | 'payment'>('details');
+  const [panelMembers, setPanelMembers] = useState<any[]>([]);
+  const [loadingMembers, setLoadingMembers] = useState(false);
+  const [paymentRates, setPaymentRates] = useState<PaymentRateRow[]>([]);
 
+  // Fetch panel members once
   useEffect(() => {
-    if (details) return; // Already hydrated from server
-    if (!id) return;
-    setLoading(true);
-    fetch(`/api/defense-request/${id}`)
-      .then(res => res.json())
-      .then(data => {
-        setDetails(data);
-        setLoading(false);
-      });
-  }, [id, details]);
+    let alive = true;
+    async function loadPanelMembers() {
+      setLoadingMembers(true);
+      try {
+        const res = await fetch('/api/panel-members', { 
+          headers: { Accept: 'application/json' } 
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (alive) setPanelMembers(Array.isArray(data) ? data : []);
+        }
+      } catch (e) {
+        console.warn('Failed to load panel members', e);
+      } finally {
+        if (alive) setLoadingMembers(false);
+      }
+    }
+    loadPanelMembers();
+    return () => { alive = false; };
+  }, []);
+
+  // Fetch payment rates once
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        const r = await fetch('/dean/payment-rates/data', { headers: { Accept: 'application/json' } });
+        const json = await r.json();
+        const arr = Array.isArray(json?.rates) ? json.rates : (Array.isArray(json) ? json : []);
+        if (alive) setPaymentRates(arr as any);
+      } catch (e) {
+        if (alive) setPaymentRates([]);
+      }
+    })();
+    return () => { alive = false; };
+  }, []);
+
+  function findPanelMember(name: string | null | undefined) {
+    if (!name) return null;
+    return panelMembers.find(m => m.name === name);
+  }
+
+  function getMemberReceivable(role: string): number | null {
+    if (!details?.program_level || !details?.defense_type) return null;
+    
+    const rateType = role === 'Adviser' ? 'Adviser' : 
+                     role === 'Chairperson' ? 'Chairperson' : 'Panelist';
+    
+    const rate = paymentRates.find(
+      r => r.program_level === details.program_level && 
+           r.defense_type === details.defense_type && 
+           r.type === rateType
+    );
+    
+    return rate ? Number(rate.amount) : null;
+  }
 
   // Breadcrumbs
   const breadcrumbs: BreadcrumbItem[] = [
@@ -134,15 +190,6 @@ export default function Details({ id, defenseRequest: initialDefenseRequest }: P
       item.status ||
       item.type ||
       'Event';
-    const desc =
-      item.description ||
-      item.details ||
-      item.note ||
-      item.notes ||
-      item.remarks ||
-      '';
-    const from = item.from_state || item.from || item.previous_state;
-    const to = item.to_state || item.to || item.new_state;
     const created =
       item.created_at ||
       item.timestamp ||
@@ -157,7 +204,7 @@ export default function Details({ id, defenseRequest: initialDefenseRequest }: P
       item.performed_by_name ||
       item.performed_by ||
       '';
-    return { event, desc, from, to, created, userName };
+    return { event, created, userName };
   }
 
   function formatReadableDate(d?: string) {
@@ -169,14 +216,14 @@ export default function Details({ id, defenseRequest: initialDefenseRequest }: P
     }
   }
 
-  // Attachments (show all, including manuscript, similarity, avisee, etc.)
+  // Attachments
   function resolveFileUrl(url?: string | null) {
     if (!url) return null;
     if (/^https?:\/\//i.test(url) || url.startsWith('/storage/')) return url;
     return `/storage/${url.replace(/^\/?storage\//, '')}`;
   }
   const attachments = [
-    { label: "Adviser’s Endorsement", url: resolveFileUrl(details?.attachments?.advisers_endorsement) },
+    { label: "Adviser's Endorsement", url: resolveFileUrl(details?.attachments?.advisers_endorsement) },
     { label: 'REC Endorsement', url: resolveFileUrl(details?.attachments?.rec_endorsement) },
     { label: 'Proof of Payment', url: resolveFileUrl(details?.attachments?.proof_of_payment) },
     { label: 'Manuscript', url: resolveFileUrl(details?.attachments?.manuscript_proposal) },
@@ -205,16 +252,6 @@ export default function Details({ id, defenseRequest: initialDefenseRequest }: P
       icon: <Signature className="h-5 w-5" />,
     },
     {
-      key: 'rejected',
-      label: 'Rejected by Coordinator',
-      icon: <XCircle className="h-5 w-5" />,
-    },
-    {
-      key: 'retrieved',
-      label: 'Retrieved (Set to Pending)',
-      icon: <CircleArrowLeft className="h-5 w-5" />,
-    },
-    {
       key: 'panels-assigned',
       label: 'Panels Assigned',
       icon: <User className="h-5 w-5" />,
@@ -224,17 +261,27 @@ export default function Details({ id, defenseRequest: initialDefenseRequest }: P
       label: 'Scheduled',
       icon: <Clock className="h-5 w-5" />,
     },
+    {
+      key: 'rejected',
+      label: 'Rejected',
+      icon: <XCircle className="h-5 w-5" />,
+    },
+    {
+      key: 'retrieved',
+      label: 'Retrieved',
+      icon: <CircleArrowLeft className="h-5 w-5" />,
+    },
   ];
 
   function getStepForEvent(event: string) {
     event = (event || '').toLowerCase();
     if (event.includes('submit')) return 'submitted';
-    if (event.includes('adviser')) return 'adviser-approved';
-    if (event.includes('rejected')) return 'rejected';
-    if (event.includes('retrieved')) return 'retrieved';
-    if (event.includes('coordinator')) return 'coordinator-approved';
+    if (event.includes('adviser-approved') || event.includes('endorsed')) return 'adviser-approved';
+    if (event.includes('coordinator-approved')) return 'coordinator-approved';
     if (event.includes('panel')) return 'panels-assigned';
     if (event.includes('schedule')) return 'scheduled';
+    if (event.includes('rejected')) return 'rejected';
+    if (event.includes('retrieved')) return 'retrieved';
     return '';
   }
 
@@ -251,7 +298,6 @@ export default function Details({ id, defenseRequest: initialDefenseRequest }: P
       });
       
       if (res.ok) {
-        const data = await res.json();
         setDetails({ 
           ...details, 
           status: 'Completed', 
@@ -259,7 +305,6 @@ export default function Details({ id, defenseRequest: initialDefenseRequest }: P
         });
         toast.success('Defense marked as completed and honorarium payments created!');
         
-        // Optionally redirect back to list after a delay
         setTimeout(() => {
           router.visit('/assistant/all-defense-list');
         }, 1500);
@@ -287,7 +332,6 @@ export default function Details({ id, defenseRequest: initialDefenseRequest }: P
             >
               <ArrowLeft className="h-4 w-4" />
             </Button>
-            {/* Tabs beside back arrow */}
             <Tabs value={tab} onValueChange={v => setTab(v as 'details' | 'payment')}>
               <TabsList>
                 <TabsTrigger value="details">Details</TabsTrigger>
@@ -295,7 +339,6 @@ export default function Details({ id, defenseRequest: initialDefenseRequest }: P
               </TabsList>
             </Tabs>
           </div>
-          {/* Only show if not completed */}
           {details?.status !== 'Completed' && tab === 'details' && (
             <Button
               size="sm"
@@ -309,22 +352,19 @@ export default function Details({ id, defenseRequest: initialDefenseRequest }: P
           )}
         </div>
 
-        {/* Tab Content */}
         <div className="grid md:grid-cols-3 gap-8">
-          {/* Left: Tabbed content (summary cards) */}
+          {/* Left: Tabbed content */}
           <div className="md:col-span-2 space-y-6">
             <Tabs value={tab} onValueChange={v => setTab(v as 'details' | 'payment')}>
-              <TabsContent value="details">
+              <TabsContent value="details" className="space-y-6">
                 {/* Submission summary card */}
                 <div className="rounded-xl border p-8 bg-white dark:bg-zinc-900">
-                  {/* Thesis Title Header with Status */}
                   <div className="mb-1 flex flex-col md:flex-row md:items-center md:justify-between gap-2">
                     <div>
                       <div className="text-2xl font-semibold">{details?.thesis_title}</div>
                       <div className="text-xs text-muted-foreground font-medium mt-0.5">Thesis Title</div>
                     </div>
                     <div className="flex flex-col md:items-end gap-1">
-                      {/* Status */}
                       {details?.status && (
                         <span
                           className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
@@ -403,51 +443,96 @@ export default function Details({ id, defenseRequest: initialDefenseRequest }: P
                   </div>
                 </div>
 
-                {/* Committee (read-only summary) */}
-                <div className={sectionClass}>
+                {/* Committee Table - NEW */}
+                <div className="rounded-lg border p-5 space-y-3">
                   <h2 className="text-sm font-semibold flex items-center gap-2">
                     <Users className="h-4 w-4" /> Committee
                   </h2>
                   <Separator />
-                  <div className="grid md:grid-cols-2 gap-4 text-sm">
-                    <div>
-                      <div className="text-[11px] text-muted-foreground uppercase tracking-wide">
-                        Adviser
+                  {(() => {
+                    const memberFor = (value: string | null | undefined, fallbackRole: string) => {
+                      const resolved = findPanelMember(value);
+                      return {
+                        displayName: resolved?.name || value || '—',
+                        email: resolved?.email || '',
+                        rawValue: value || '',
+                        role: fallbackRole,
+                      };
+                    };
+
+                    const rows = [
+                      { key: 'adviser', info: memberFor(details?.defense_adviser, 'Adviser') },
+                      { key: 'chairperson', info: memberFor(details?.defense_chairperson, 'Chairperson') },
+                      { key: 'panelist1', info: memberFor(details?.defense_panelist1, 'Panel Member') },
+                      { key: 'panelist2', info: memberFor(details?.defense_panelist2, 'Panel Member') },
+                      { key: 'panelist3', info: memberFor(details?.defense_panelist3, 'Panel Member') },
+                      { key: 'panelist4', info: memberFor(details?.defense_panelist4, 'Panel Member') },
+                    ].map(r => {
+                      const namePresent = !!(r.info.rawValue || (r.info.displayName && r.info.displayName !== '—'));
+                      const emailPresent = !!(r.info.email);
+                      const status = namePresent ? (emailPresent ? 'Assigned' : 'Pending confirmation') : '—';
+                      const receivable = namePresent ? getMemberReceivable(r.info.role) : null;
+
+                      return {
+                        name: r.info.displayName,
+                        email: r.info.email || '—',
+                        role: r.info.role,
+                        status,
+                        receivable,
+                      };
+                    });
+
+                    const formatCurrency = (v: number | null) =>
+                      v !== null
+                        ? new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' }).format(v)
+                        : '—';
+
+                    return (
+                      <div className="rounded-md border overflow-x-auto">
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead className="min-w-[200px]">Name & Email</TableHead>
+                              <TableHead className="min-w-[100px]">Role</TableHead>
+                              <TableHead className="min-w-[100px]">Status</TableHead>
+                              <TableHead className="min-w-[140px] text-right">Receivable</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {rows.map((r, idx) => (
+                              <TableRow key={idx}>
+                                <TableCell>
+                                  <div className="flex flex-col">
+                                    <span className="font-medium text-sm">{r.name}</span>
+                                    <span className="text-xs text-muted-foreground">{r.email}</span>
+                                  </div>
+                                </TableCell>
+                                <TableCell className="text-xs">{r.role}</TableCell>
+                                <TableCell>
+                                  <Badge
+                                    variant="secondary"
+                                    className={cn(
+                                      "text-xs",
+                                      r.status === 'Assigned'
+                                        ? 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300'
+                                        : r.status === 'Pending confirmation'
+                                        ? 'bg-yellow-100 text-amber-700 dark:bg-yellow-900 dark:text-yellow-300'
+                                        : 'bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300'
+                                    )}
+                                  >
+                                    {r.status}
+                                  </Badge>
+                                </TableCell>
+                                <TableCell className="text-right text-xs font-medium">
+                                  {formatCurrency(r.receivable)}
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
                       </div>
-                      <div className="font-medium">
-                        {details?.defense_adviser || details?.adviser || '—'}
-                      </div>
-                    </div>
-                    {[
-                      {
-                        label: 'Chairperson',
-                        v: details?.defense_chairperson
-                      },
-                      {
-                        label: 'Panelist 1',
-                        v: details?.defense_panelist1
-                      },
-                      {
-                        label: 'Panelist 2',
-                        v: details?.defense_panelist2
-                      },
-                      {
-                        label: 'Panelist 3',
-                        v: details?.defense_panelist3
-                      },
-                      {
-                        label: 'Panelist 4',
-                        v: details?.defense_panelist4
-                      }
-                    ].map(r => (
-                      <div key={r.label}>
-                        <div className="text-[11px] text-muted-foreground uppercase tracking-wide">
-                          {r.label}
-                        </div>
-                        <div className="font-medium">{r.v || '—'}</div>
-                      </div>
-                    ))}
-                  </div>
+                    );
+                  })()}
                 </div>
 
                 {/* Attachments */}
@@ -477,7 +562,6 @@ export default function Details({ id, defenseRequest: initialDefenseRequest }: P
                           </span>
                         </a>
                       ))}
-                    {/* Reference No. as plain text if present */}
                     {details?.reference_no && (
                       <div className="flex items-center gap-2 px-3 py-2 rounded-md border bg-white dark:bg-zinc-900">
                         <FileText className="h-4 w-4" />
@@ -494,7 +578,7 @@ export default function Details({ id, defenseRequest: initialDefenseRequest }: P
                     details?.last_status_updated_by ||
                     '—'}{' '}
                   {details?.last_status_updated_at
-                    ? `(${details.last_status_updated_at})`
+                    ? `(${formatReadableDate(details.last_status_updated_at)})`
                     : ''}
                 </div>
               </TabsContent>
@@ -503,7 +587,8 @@ export default function Details({ id, defenseRequest: initialDefenseRequest }: P
               </TabsContent>
             </Tabs>
           </div>
-          {/* Sidebar: Workflow Progress (always shown) */}
+
+          {/* Sidebar: Workflow Progress */}
           <div className="w-full md:w-[340px] flex-shrink-0">
             <div className="rounded-xl border p-5 bg-white dark:bg-zinc-900">
               <h2 className="text-xs font-semibold mb-8 flex items-center gap-2">
@@ -519,11 +604,10 @@ export default function Details({ id, defenseRequest: initialDefenseRequest }: P
                       icon: <Clock className="h-5 w-5 text-gray-500" />,
                     };
                     const isLast = idx === details.workflow_history!.length - 1;
-                    const iconBoxColor = 'bg-gray-100 text-gray-500';
                     return (
                       <div key={idx} className="flex items-start gap-3 relative">
                         <div className="flex flex-col items-center">
-                          <div className={`w-9 h-9 rounded-md flex items-center justify-center ${iconBoxColor}`}>
+                          <div className="w-9 h-9 rounded-md flex items-center justify-center bg-gray-100 text-gray-500">
                             {step.icon}
                           </div>
                           {!isLast && (

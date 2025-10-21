@@ -184,6 +184,14 @@ class DefenseRequest extends Model
         }
     }
 
+    /**
+     * Get the AA payment verification record for this defense request
+     */
+    public function aaVerification()
+    {
+        return $this->hasOne(\App\Models\AaPaymentVerification::class, 'defense_request_id');
+    }
+
     public function addWorkflowEntry($action, $comment = null, $userId = null, $from = null, $to = null)
     {
         $hist = is_array($this->workflow_history) ? $this->workflow_history : [];

@@ -311,7 +311,7 @@ export default function ShowAdvisers() {
               </Button>
             </DialogTrigger>
             <DialogContent>
-              <DialogHeader>
+              <DialogHeader>show
                 <DialogTitle>Register an Adviser</DialogTitle>
                 <DialogDescription>
                   Enter the adviser's name and email to add them under your coordination.
