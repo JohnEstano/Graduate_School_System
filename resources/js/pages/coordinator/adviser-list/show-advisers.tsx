@@ -306,6 +306,7 @@ export default function ShowAdvisers() {
           }}>
             <DialogTrigger asChild>
               <Button className="h-8 px-4 py-1 text-sm">
+                <UserPlus className="mr-2 h-4 w-4" />
                 Register an Adviser
               </Button>
             </DialogTrigger>

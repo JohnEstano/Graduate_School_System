@@ -945,53 +945,6 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
                   </div>
                 </div>
 
-                {/* Committee (read-only summary) */}
-                <div className="rounded-lg border p-5 space-y-3">
-                  <h2 className="text-sm font-semibold flex items-center gap-2">
-                    <Users className="h-4 w-4" /> Committee
-                  </h2>
-                  <Separator />
-                  <div className="grid md:grid-cols-2 gap-4 text-sm">
-                    <div>
-                      <div className="text-[11px] text-muted-foreground uppercase tracking-wide">
-                        Adviser
-                      </div>
-                      <div className="font-medium">
-                        {request.defense_adviser || '—'}
-                      </div>
-                    </div>
-                    {[
-                      {
-                        label: 'Chairperson',
-                        v: panels.defense_chairperson || request.defense_chairperson
-                      },
-                      {
-                        label: 'Panelist 1',
-                        v: panels.defense_panelist1 || request.defense_panelist1
-                      },
-                      {
-                        label: 'Panelist 2',
-                        v: panels.defense_panelist2 || request.defense_panelist2
-                      },
-                      {
-                        label: 'Panelist 3',
-                        v: panels.defense_panelist3 || request.defense_panelist3
-                      },
-                      {
-                        label: 'Panelist 4',
-                        v: panels.defense_panelist4 || request.defense_panelist4
-                      }
-                    ].map(r => (
-                      <div key={r.label}>
-                        <div className="text-[11px] text-muted-foreground uppercase tracking-wide">
-                          {r.label}
-                        </div>
-                        <div className="font-medium">{r.v || '—'}</div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
                 {/* Committee (ShadCN table with receivables) */}
                 <div className="rounded-lg border p-5 space-y-3">
                   <h2 className="text-sm font-semibold flex items-center gap-2">
@@ -1011,7 +964,7 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
 
                     const rows = [
                       { key: 'adviser', info: memberFor(request.defense_adviser, 'Adviser') },
-                      { key: 'defense_chairperson', info: memberFor(panels.defense_chairperson || request.defense_chairperson, 'Panel Chair') }, // prefer DB wording
+                      { key: 'defense_chairperson', info: memberFor(panels.defense_chairperson || request.defense_chairperson, 'Panel Chair') },
                       { key: 'defense_panelist1', info: memberFor(panels.defense_panelist1 || request.defense_panelist1, 'Panel Member') },
                       { key: 'defense_panelist2', info: memberFor(panels.defense_panelist2 || request.defense_panelist2, 'Panel Member') },
                       { key: 'defense_panelist3', info: memberFor(panels.defense_panelist3 || request.defense_panelist3, 'Panel Member') },
