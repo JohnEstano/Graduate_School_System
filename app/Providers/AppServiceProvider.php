@@ -37,7 +37,14 @@ class AppServiceProvider extends ServiceProvider
                         ->where('read', false)->count();
                 }
                 return 0;
-            }
+            },
+            'auth' => function () {
+                $user = Auth::user();
+                return [
+                    'user' => $user,
+                    'is_adviser' => $user ? $user->isActiveAdviser() : false,
+                ];
+            },
         ]);
     }
 }

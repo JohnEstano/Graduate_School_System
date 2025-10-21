@@ -1,13 +1,14 @@
 <?php
 
-
 namespace App\Http\Controllers;
 
 use App\Models\User;
 use App\Models\Panelist;
-use App\Models\PanelistHonorariumSpec;
+use App\Models\PaymentRate;
+use App\Models\DefenseRequest;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
+use App\Helpers\ProgramLevel;
 
 class PanelistController extends Controller
 {
@@ -49,11 +50,9 @@ class PanelistController extends Controller
     public function destroy($id)
     {
         Panelist::findOrFail($id)->delete();
-        // Return updated panelists list for Inertia
         return redirect()->route('panelists.view');
     }
 
-    // Bulk delete
     public function bulkDelete(Request $request)
     {
         $request->validate([
@@ -64,7 +63,6 @@ class PanelistController extends Controller
         return redirect()->route('panelists.view');
     }
 
-    // Bulk status update
     public function bulkUpdateStatus(Request $request)
     {
         $request->validate([
@@ -80,115 +78,117 @@ class PanelistController extends Controller
 
     public function view()
     {
-        $honorariumSpecs = \App\Models\PanelistHonorariumSpec::all()->keyBy(function($s) {
-            return $s->role . '-' . $s->defense_type;
+        // Preload and normalize rates (case-insensitive, normalized defense_type)
+        $rates = PaymentRate::all()->map(function ($r) {
+            return [
+                'program_level' => strtolower(trim($r->program_level)), // masteral | doctorate
+                'type'          => strtolower(trim($r->type)),          // chairperson | panel member
+                'defense_type'  => strtolower($this->normalizeDefenseType($r->defense_type)), // proposal | prefinal | final
+                'amount'        => is_numeric($r->amount) ? (float) $r->amount : $r->amount,
+            ];
         });
 
-        $panelists = Panelist::all()->map(function($panelist) use ($honorariumSpecs) {
+        $panelists = Panelist::orderBy('name')->get()->map(function ($panelist) use ($rates) {
             $panelistName = strtolower(trim($panelist->name));
-            $panelistId = $panelist->id;
+            $panelistId   = $panelist->id;
 
-            // Find all defense requests where this panelist is assigned by ID or by name (case-insensitive)
-            $assignments = \App\Models\DefenseRequest::where(function($q) use ($panelistId, $panelistName) {
-                $fields = [
-                    'defense_chairperson',
-                    'defense_panelist1',
-                    'defense_panelist2',
-                    'defense_panelist3',
-                    'defense_panelist4',
-                ];
+            // Find defenses where this panelist is chair or member (support id or stored name)
+            $defenses = DefenseRequest::where(function ($q) use ($panelistId, $panelistName) {
+                $fields = ['defense_chairperson','defense_panelist1','defense_panelist2','defense_panelist3','defense_panelist4'];
                 foreach ($fields as $field) {
-                    $q->orWhere(function($qq) use ($field, $panelistId, $panelistName) {
-                        $qq->where(function($q3) use ($field, $panelistId) {
-                            $q3->where($field, $panelistId);
-                        })->orWhereRaw("LOWER($field) = ?", [$panelistName]);
+                    $q->orWhere(function ($qq) use ($field, $panelistId, $panelistName) {
+                        $qq->where($field, $panelistId)
+                           ->orWhereRaw("LOWER(CAST($field as CHAR)) = ?", [$panelistName]);
                     });
                 }
             })->get([
-                'id', 'defense_type', 'thesis_title',
-                'defense_chairperson', 'defense_panelist1', 'defense_panelist2', 'defense_panelist3', 'defense_panelist4'
+                'id','program','defense_type','thesis_title',
+                'defense_chairperson','defense_panelist1','defense_panelist2','defense_panelist3','defense_panelist4'
             ]);
 
-            // For each assignment, check each role field and push an assignment for each match
             $assignmentDetails = [];
-            foreach ($assignments as $a) {
-                $foundRole = null;
-                // Check for Chairperson first
+
+            foreach ($defenses as $d) {
+                // Determine role for this panelist
+                $role = null;
                 if (
-                    $a->defense_chairperson == $panelistId ||
-                    (is_string($a->defense_chairperson) && strtolower(trim($a->defense_chairperson)) === $panelistName)
+                    $d->defense_chairperson == $panelistId ||
+                    (is_string($d->defense_chairperson) && strtolower(trim($d->defense_chairperson)) === $panelistName)
                 ) {
-                    $foundRole = 'Chairperson';
+                    $role = 'Chairperson';
                 } else {
-                    // Check all panel member fields
-                    foreach (['defense_panelist1', 'defense_panelist2', 'defense_panelist3', 'defense_panelist4'] as $field) {
-                        if (
-                            $a->$field == $panelistId ||
-                            (is_string($a->$field) && strtolower(trim($a->$field)) === $panelistName)
-                        ) {
-                            $foundRole = 'Panel Member';
+                    foreach (['defense_panelist1','defense_panelist2','defense_panelist3','defense_panelist4'] as $field) {
+                        if ($d->$field == $panelistId || (is_string($d->$field) && strtolower(trim($d->$field)) === $panelistName)) {
+                            $role = 'Panel Member';
                             break;
                         }
                     }
                 }
-                if ($foundRole) {
-                    $key = $foundRole . '-' . $a->defense_type;
-                    $amount = isset($honorariumSpecs[$key]) ? $honorariumSpecs[$key]->amount : null;
-                    $assignmentDetails[] = [
-                        'id' => $a->id,
-                        'defense_type' => $a->defense_type,
-                        'thesis_title' => $a->thesis_title,
-                        'role' => $foundRole,
-                        'receivable' => $amount,
-                    ];
+
+                if (!$role) {
+                    continue;
                 }
+
+                // Classify program to Masteral/Doctorate (same concept as AA uses)
+                $programLevel = ProgramLevel::getLevel((string) $d->program);
+
+                // Normalize defense type (Proposal | Prefinal | Final)
+                $dtypeNorm = $this->normalizeDefenseType($d->defense_type);
+
+                // Case-insensitive match in preloaded rates
+                $key_pl = strtolower(trim($programLevel));
+                $key_ty = strtolower(trim($role));
+                $key_dt = strtolower($dtypeNorm);
+
+                $rate = collect($rates)->first(function ($r) use ($key_pl, $key_ty, $key_dt) {
+                    return $r['program_level'] === $key_pl
+                        && $r['type'] === $key_ty
+                        && $r['defense_type'] === $key_dt;
+                });
+
+                $assignmentDetails[] = [
+                    'id'            => $d->id,
+                    'defense_type'  => $d->defense_type,
+                    'thesis_title'  => $d->thesis_title,
+                    'role'          => $role,
+                    'type'          => $role,          // aligns with PaymentRate.type
+                    'program_level' => $programLevel,  // aligns with PaymentRate.program_level
+                    'receivable'    => $rate ? $rate['amount'] : null, // computed expected amount
+                ];
             }
 
-            // Remove duplicates (in case of data issues)
             $assignmentDetails = collect($assignmentDetails)
-                ->unique(fn($a) => $a['id'] . '-' . $a['role'])
+                ->unique(fn ($a) => $a['id'].'-'.$a['role'])
                 ->values();
 
-            // If no assignments, show default honorarium for each defense type
-            if ($assignmentDetails->isEmpty()) {
-                $defaultReceivables = [];
-                foreach (['Proposal', 'Prefinal', 'Final'] as $dtype) {
-                    $key = $panelist->role . '-' . $dtype;
-                    $amount = $honorariumSpecs[$key]->amount ?? null;
-                    $defaultReceivables[] = [
-                        'defense_type' => $dtype,
-                        'role' => '-',
-                        'receivable' => $amount,
-                        'thesis_title' => null,
-                    ];
-                }
-                return [
-                    ...$panelist->toArray(),
-                    'assignments' => [],
-                    'default_receivables' => $defaultReceivables,
-                    'status' => 'Not Assigned',
-                ];
-            } else {
-                return [
-                    ...$panelist->toArray(),
-                    'assignments' => $assignmentDetails,
-                    'default_receivables' => [],
-                    'status' => 'Assigned',
-                ];
-            }
-        });
-
-        $honorariumSpecs = \App\Models\PanelistHonorariumSpec::all();
+            return [
+                ...$panelist->toArray(),
+                'assignments' => $assignmentDetails,
+                'status'      => $assignmentDetails->isEmpty() ? 'Not Assigned' : 'Assigned',
+            ];
+        })->values();
 
         return Inertia::render('coordinator/panelists/index', [
-            'panelists' => $panelists,
-            'honorariumSpecs' => $honorariumSpecs,
+            'panelists'     => $panelists,
+            // optional to pass for client fallback
+            'paymentRates'  => PaymentRate::all()->values(),
         ]);
     }
 
+    private function normalizeDefenseType($dt)
+    {
+        if (!$dt) return '';
+        $s = strtolower(preg_replace('/[\s-]+/', '', (string) $dt));
+        if (str_contains($s, 'prefinal')) return 'Prefinal';
+        if (str_contains($s, 'proposal')) return 'Proposal';
+        // ensure 'final' check does not override 'prefinal'
+        if (str_contains($s, 'final')) return 'Final';
+        return (string) $dt;
+    }
+
+    // Kept for other endpoints used elsewhere
     public function allCombined()
     {
-        // (Optional) auth()->check() guard; keep simple
         $faculty = User::whereIn('role',['Faculty','Adviser'])
             ->orderBy('last_name')
             ->orderBy('first_name')
@@ -210,30 +210,5 @@ class PanelistController extends Controller
             ]);
 
         return response()->json($faculty->concat($panelists)->values());
-    }
-
-    // Add this method
-    public function count()
-    {
-        return response()->json([
-            'count' => \App\Models\Panelist::count()
-        ]);
-    }
-
-    public function saveHonorariumSpecs(Request $request)
-    {
-        $specs = $request->input('specs', []);
-        foreach ($specs as $spec) {
-            \App\Models\PanelistHonorariumSpec::updateOrCreate(
-                [
-                    'role' => $spec['role'],
-                    'defense_type' => $spec['defense_type'],
-                ],
-                [
-                    'amount' => $spec['amount'],
-                ]
-            );
-        }
-        return redirect()->route('panelists.view');
     }
 }

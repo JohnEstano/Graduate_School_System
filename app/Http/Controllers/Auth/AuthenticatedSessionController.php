@@ -22,45 +22,26 @@ class AuthenticatedSessionController extends Controller
         return Inertia::render('auth/login', [
             'canResetPassword' => Route::has('password.request'),
             'status' => $request->session()->get('status'),
-            'googleJustVerified' => (bool)$request->session()->get('google_success'),
-            'googleSuccessMessage' => $request->session()->get('google_success'),
-            'googleVerifiedEmail' => $request->session()->get('google_verified_email'),
-            'googleSuggestedIdentifier' => $request->session()->get('google_suggested_identifier'),
         ]);
     }
 
     /**
      * Handle an incoming authentication request.
      */
-    public function store(Request $request): RedirectResponse
+    public function store(LoginRequest $request): RedirectResponse
     {
-        $request->validate([
-            'email' => ['required', 'email'],
-            'password' => ['required'],
-        ]);
-
-        $user = User::where('email', $request->email)->first();
-
-        if (! $user || ! $user->hasRole('Super Admin')) {
-            return back()->withErrors([
-                'email' => 'Only Super Admins can log in.',
-            ]);
-        }
-
-        if (! Auth::attempt($request->only('email', 'password'), $request->boolean('remember'))) {
-            return back()->withErrors([
-                'email' => 'The provided credentials do not match our records.',
-            ]);
-        }
-
+        $request->authenticate();
         $request->session()->regenerate();
 
         // Update adviser status if matching adviser exists
-        $adviser = \App\Models\Adviser::where('email', $user->email)->first();
-        if ($adviser) {
-            $adviser->status = 'active';
-            $adviser->user_id = $user->id;
-            $adviser->save();
+        $user = Auth::user();
+        if ($user) {
+            $adviser = \App\Models\Adviser::where('email', $user->email)->first();
+            if ($adviser) {
+                $adviser->status = 'active';
+                $adviser->user_id = $user->id;
+                $adviser->save();
+            }
         }
 
         return redirect()->intended(route('dashboard'));

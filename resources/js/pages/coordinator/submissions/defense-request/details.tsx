@@ -58,6 +58,9 @@ import {
   TabsTrigger,
   TabsContent,
 } from '@/components/ui/tabs';
+// add: ShadCN table + program level util
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
+import { findPanelMember, getMemberReceivableByProgramLevel, getMemberReceivable } from '@/utils/payment-rates';
 
 type PanelMemberOption = {
   id: string;
@@ -106,6 +109,15 @@ export type DefenseRequestFull = {
   workflow_history?: any[];
   adviser_status?: string;
   coordinator_status?: string;
+  program_level?: string; // "Masteral" | "Doctorate" from server
+};
+
+// add: local type for payment rate to avoid cross-file type conflicts
+type PaymentRateRow = {
+  program_level: string;
+  type: string;
+  defense_type: string;
+  amount: number | string;
 };
 
 interface PageProps {
@@ -292,6 +304,9 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
   const [loadingMembers, setLoadingMembers] = useState(false);
   const [panelLoadError, setPanelLoadError] = useState<string | null>(null);
 
+  // add: payment rates state
+  const [paymentRates, setPaymentRates] = useState<PaymentRateRow[]>([]);
+
   useEffect(() => {
     let alive = true;
     async function loadAll() {
@@ -311,8 +326,8 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
           }
           const data = await r.json();
           if (alive) {
-            // Only keep Panelists
-            setPanelMembers(Array.isArray(data) ? data.filter((m: any) => m.type === 'Panelist') : []);
+            // Keep combined list (faculty + panelists) so we can resolve emails and ids robustly
+            setPanelMembers(Array.isArray(data) ? data : []);
             loaded = true;
           }
           break;
@@ -330,6 +345,22 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
     return () => {
       alive = false;
     };
+  }, []);
+
+  // fetch payment rates once
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        const r = await fetch('/dean/payment-rates/data', { headers: { Accept: 'application/json' } });
+        const json = await r.json();
+        const arr = Array.isArray(json?.rates) ? json.rates : (Array.isArray(json) ? json : []);
+        if (alive) setPaymentRates(arr as any);
+      } catch (e) {
+        if (alive) setPaymentRates([]);
+      }
+    })();
+    return () => { alive = false; };
   }, []);
 
   // Panels
@@ -914,51 +945,97 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
                   </div>
                 </div>
 
-                {/* Committee (read-only summary) */}
-                <div className={sectionClass}>
+                {/* Committee (ShadCN table with receivables) */}
+                <div className="rounded-lg border p-5 space-y-3">
                   <h2 className="text-sm font-semibold flex items-center gap-2">
                     <Users className="h-4 w-4" /> Committee
                   </h2>
                   <Separator />
-                  <div className="grid md:grid-cols-2 gap-4 text-sm">
-                    <div>
-                      <div className="text-[11px] text-muted-foreground uppercase tracking-wide">
-                        Adviser
+                  {(() => {
+                    const memberFor = (value: string | null | undefined, fallbackRole: string) => {
+                      const resolved = findPanelMember(panelMembers, value);
+                      return {
+                        displayName: resolved?.name || value || '—',
+                        email: resolved?.email || '',
+                        rawValue: value || '',
+                        role: fallbackRole,
+                      };
+                    };
+
+                    const rows = [
+                      { key: 'adviser', info: memberFor(request.defense_adviser, 'Adviser') },
+                      { key: 'defense_chairperson', info: memberFor(panels.defense_chairperson || request.defense_chairperson, 'Panel Chair') },
+                      { key: 'defense_panelist1', info: memberFor(panels.defense_panelist1 || request.defense_panelist1, 'Panel Member') },
+                      { key: 'defense_panelist2', info: memberFor(panels.defense_panelist2 || request.defense_panelist2, 'Panel Member') },
+                      { key: 'defense_panelist3', info: memberFor(panels.defense_panelist3 || request.defense_panelist3, 'Panel Member') },
+                      { key: 'defense_panelist4', info: memberFor(panels.defense_panelist4 || request.defense_panelist4, 'Panel Member') },
+                    ].map(r => {
+                      const namePresent = !!(r.info.rawValue || (r.info.displayName && r.info.displayName !== '—'));
+                      const emailPresent = !!(r.info.email);
+                      const status = namePresent ? (emailPresent ? 'Assigned' : 'Pending confirmation') : '—';
+
+                      const receivable = namePresent
+                        ? (
+                            request.program_level
+                              ? getMemberReceivableByProgramLevel(paymentRates, request.program_level, request.defense_type, r.info.role)
+                              : getMemberReceivable(paymentRates, request.program, request.defense_type, r.info.role)
+                          )
+                        : null;
+
+                      return {
+                        name: r.info.displayName,
+                        email: r.info.email || '—',
+                        role: r.info.role,
+                        status,
+                        receivable,
+                      };
+                    });
+
+                    const formatCurrency = (v: any) =>
+                      typeof v === 'number'
+                        ? new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' }).format(v)
+                        : v ?? '—';
+
+                    return (
+                      <div className="rounded-md border overflow-x-auto">
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead className="min-w-[180px]">Name</TableHead>
+                              <TableHead className="min-w-[220px]">Email</TableHead>
+                              <TableHead className="min-w-[120px]">Role</TableHead>
+                              <TableHead className="min-w-[120px]">Status</TableHead>
+                              <TableHead className="min-w-[160px] text-right">Receivable</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {rows.map((r, idx) => (
+                              <TableRow key={idx}>
+                                <TableCell className="font-medium">{r.name}</TableCell>
+                                <TableCell className="text-xs text-muted-foreground">{r.email || '—'}</TableCell>
+                                <TableCell>{r.role}</TableCell>
+                                <TableCell>
+                                  <Badge
+                                    variant="secondary"
+                                    className={
+                                      r.status === 'Assigned'
+                                        ? 'bg-green-100 text-green-700'
+                                        : r.status === 'Pending confirmation'
+                                        ? 'bg-yellow-100 text-amber-700'
+                                        : 'bg-amber-100 text-amber-700'
+                                    }
+                                  >
+                                    {r.status}
+                                  </Badge>
+                                </TableCell>
+                                <TableCell className="text-right">{formatCurrency(r.receivable)}</TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
                       </div>
-                      <div className="font-medium">
-                        {request.defense_adviser || '—'}
-                      </div>
-                    </div>
-                    {[
-                      {
-                        label: 'Chairperson',
-                        v: panels.defense_chairperson || request.defense_chairperson
-                      },
-                      {
-                        label: 'Panelist 1',
-                        v: panels.defense_panelist1 || request.defense_panelist1
-                      },
-                      {
-                        label: 'Panelist 2',
-                        v: panels.defense_panelist2 || request.defense_panelist2
-                      },
-                      {
-                        label: 'Panelist 3',
-                        v: panels.defense_panelist3 || request.defense_panelist3
-                      },
-                      {
-                        label: 'Panelist 4',
-                        v: panels.defense_panelist4 || request.defense_panelist4
-                      }
-                    ].map(r => (
-                      <div key={r.label}>
-                        <div className="text-[11px] text-muted-foreground uppercase tracking-wide">
-                          {r.label}
-                        </div>
-                        <div className="font-medium">{r.v || '—'}</div>
-                      </div>
-                    ))}
-                  </div>
+                    );
+                  })()}
                 </div>
 
                 {/* Attachments */}

@@ -166,27 +166,7 @@ export default function Profile({ mustVerifyEmail, status }: { mustVerifyEmail: 
                                         <div className="text-xs text-muted-foreground mt-1">{adviser.email}</div>
                                     </>
                                 ) : (
-                                    <div className="flex flex-row gap-2 mt-2 items-center">
-                                        <Input
-                                            type="text"
-                                            placeholder="Paste adviser code here"
-                                            value={typeof adviserCode === "string" ? adviserCode : ""}
-                                            onChange={e => setAdviserCode(e.target.value)}
-                                            disabled={registerLoading}
-                                            className="w-48"
-                                        />
-                                        <Button
-                                            onClick={handleRegisterAdviser}
-                                            disabled={registerLoading || !adviserCode}
-                                            variant="default"
-                                            className="px-4"
-                                        >
-                                            Register Adviser
-                                        </Button>
-                                        {error && (
-                                            <div className="text-xs text-rose-500 mt-1">{error}</div>
-                                        )}
-                                    </div>
+                                    <div className="text-base text-muted-foreground">No adviser assigned.</div>
                                 )}
                             </div>
                         )}
@@ -205,27 +185,7 @@ export default function Profile({ mustVerifyEmail, status }: { mustVerifyEmail: 
                                             <div className="text-xs text-muted-foreground mt-1">{coordinator.email}</div>
                                         </>
                                     ) : (
-                                        <div className="flex flex-row gap-2 mt-2 items-center">
-                                            <Input
-                                                type="text"
-                                                placeholder="Paste coordinator code here"
-                                                value={coordinatorCode}
-                                                onChange={e => setCoordinatorCode(e.target.value)}
-                                                disabled={coordinatorRegisterLoading}
-                                                className="w-48"
-                                            />
-                                            <Button
-                                                onClick={handleRegisterCoordinator}
-                                                disabled={coordinatorRegisterLoading || !coordinatorCode}
-                                                variant="default"
-                                                className="px-4"
-                                            >
-                                                Register Coordinator
-                                            </Button>
-                                            {coordinatorError && (
-                                                <div className="text-xs text-rose-500 mt-1">{coordinatorError}</div>
-                                            )}
-                                        </div>
+                                        <div className="text-base text-muted-foreground">No coordinator assigned.</div>
                                     )}
                                 </div>
                             </>

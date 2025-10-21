@@ -7,6 +7,9 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Database\QueryException;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Log;
+use App\Mail\AdviserInvitation;
 
 class CoordinatorAdviserController extends Controller
 {
@@ -171,6 +174,13 @@ class CoordinatorAdviserController extends Controller
             if (method_exists($user, 'coordinators')) {
                 $user->coordinators()->syncWithoutDetaching([$coordinator->id]);
             }
+        } else {
+            // If no matching user exists (inactive adviser), mark as needs invitation
+            // but don't send automatically - wait for user confirmation
+            Log::info('Adviser registered as inactive, awaiting invitation confirmation', [
+                'adviser_email' => $adviser->email,
+                'adviser_id' => $adviser->id
+            ]);
         }
 
         $payload = [
@@ -226,6 +236,75 @@ class CoordinatorAdviserController extends Controller
         $adviser->save();
 
         return response()->json(['success' => true, 'adviser' => $adviser]);
+    }
+
+    // Send invitation email to inactive adviser
+    public function sendInvitation(Request $request, $id)
+    {
+        $coordinator = $request->user();
+        
+        // Verify adviser belongs to this coordinator
+        $adviser = Adviser::where('coordinator_id', $coordinator->id)->findOrFail($id);
+        
+        // Only send invitation to inactive advisers
+        if ($adviser->status !== 'inactive') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Adviser is already active.'
+            ], 400);
+        }
+        
+        try {
+            $adviserFullName = trim($adviser->first_name . ' ' . 
+                ($adviser->middle_name ? $adviser->middle_name . ' ' : '') . 
+                $adviser->last_name);
+            
+            $coordinatorFullName = trim($coordinator->first_name . ' ' . 
+                ($coordinator->middle_name ? $coordinator->middle_name . ' ' : '') . 
+                $coordinator->last_name);
+
+            Log::info('Attempting to send adviser invitation email', [
+                'adviser_email' => $adviser->email,
+                'adviser_name' => $adviserFullName,
+                'coordinator_name' => $coordinatorFullName,
+                'adviser_id' => $adviser->id,
+                'mail_mailer' => config('mail.default'),
+                'mail_from' => config('mail.from.address')
+            ]);
+
+            Mail::to($adviser->email)->send(new AdviserInvitation($adviserFullName, $coordinatorFullName));
+            
+            Log::info('Adviser invitation email sent successfully', [
+                'adviser_email' => $adviser->email,
+                'adviser_name' => $adviserFullName,
+                'coordinator_name' => $coordinatorFullName,
+                'adviser_id' => $adviser->id
+            ]);
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Invitation email sent successfully.'
+            ]);
+            
+        } catch (\Exception $e) {
+            Log::error('Failed to send adviser invitation email', [
+                'error' => $e->getMessage(),
+                'error_class' => get_class($e),
+                'trace' => $e->getTraceAsString(),
+                'adviser_email' => $adviser->email,
+                'adviser_id' => $adviser->id,
+                'mail_config' => [
+                    'mailer' => config('mail.default'),
+                    'from_address' => config('mail.from.address'),
+                    'from_name' => config('mail.from.name')
+                ]
+            ]);
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to send invitation email. ' . $e->getMessage()
+            ], 500);
+        }
     }
 
     // Remove adviser and all their student relationships
@@ -410,6 +489,30 @@ class CoordinatorAdviserController extends Controller
                 'requested_by' => $coordinator->id,
             ]
         ]);
+
+        // Send email notification to adviser about the new student assignment
+        try {
+            if ($adviserUser->email) {
+                Mail::to($adviserUser->email)
+                    ->send(new \App\Mail\StudentAssignedToAdviser($adviserUser, $student, $coordinator));
+                
+                Log::info('Student Assignment: Email sent to adviser', [
+                    'adviser_id' => $adviserUser->id,
+                    'adviser_email' => $adviserUser->email,
+                    'student_id' => $student->id,
+                    'student_name' => trim(($student->first_name ?? '') . ' ' . ($student->last_name ?? '')),
+                    'coordinator_id' => $coordinator->id
+                ]);
+            }
+        } catch (\Exception $e) {
+            Log::error('Student Assignment: Failed to send email to adviser', [
+                'adviser_id' => $adviserUser->id,
+                'adviser_email' => $adviserUser->email ?? 'N/A',
+                'student_id' => $student->id,
+                'error' => $e->getMessage()
+            ]);
+            // Don't fail the assignment if email fails
+        }
 
         // return pending list after adding
         return $this->pendingStudents($request, $adviserId);

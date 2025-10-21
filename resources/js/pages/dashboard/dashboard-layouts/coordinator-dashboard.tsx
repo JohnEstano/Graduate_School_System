@@ -262,62 +262,63 @@ export default function CoordinatorDashboard() {
                 </div>
             ) : (
                 <>
-                    {/* Header */}
-                    <div className="mb-7 mt-3 pt-3 flex flex-row justify-between items-center relative overflow-hidden" style={{ minHeight: '120px' }}>
-                        <div className="flex flex-col pr-8 pl-7">
-                            <span className="flex items-center text-xs font-semibold text-gray-700 dark:text-gray-200 mb-1 relative z-10">
-                                {isDaytime() ? (
-                                    <Sun className="mr-1 size-4 text-rose-500" />
-                                ) : (
-                                    <Moon className="mr-1 size-4 text-rose-500" />
-                                )}
-                                {getFormattedDate()}
-                            </span>
-                            <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white relative z-10">
-                                Hi, {user?.name}!
-                            </h1>
-                            <span className="text-xs text-gray-400 dark:text-gray-500 mt-1 relative z-10">
-                                {user?.role ?? 'Student'}
-                            </span>
-                        </div>
-                        <div className="flex items-center">
-                            <div className="h-12 w-px mx-4 bg-gray-300 dark:bg-gray-700 opacity-60" />
-                            {/* Quick Actions Widget */}
-                            <div className="mr-8">
-                                <QuickActionsWidget userRole={user?.role} />
+                    {/* Header - Mobile Responsive */}
+                    <div className="mb-4 md:mb-7 mt-2 md:mt-3 pt-2 md:pt-3 px-4 md:px-7">
+                        <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4 md:gap-0 relative overflow-hidden">
+                            <div className="flex flex-col">
+                                <span className="flex items-center text-xs font-semibold text-gray-700 dark:text-gray-200 mb-1 md:mb-2 relative z-10">
+                                    {isDaytime() ? (
+                                        <Sun className="mr-1 size-3 md:size-4 text-rose-500" />
+                                    ) : (
+                                        <Moon className="mr-1 size-3 md:size-4 text-rose-500" />
+                                    )}
+                                    {getFormattedDate()}
+                                </span>
+                                <h1 className="text-xl md:text-2xl lg:text-3xl font-bold text-gray-900 dark:text-white relative z-10">
+                                    Hi, {user?.name}!
+                                </h1>
+                                <span className="text-xs text-gray-400 dark:text-gray-500 mt-1 relative z-10">
+                                    {user?.role ?? 'Student'}
+                                </span>
+                            </div>
+                            {/* Quick Actions - Hidden on mobile, shown on md+ */}
+                            <div className="hidden md:flex items-center">
+                                <div className="h-12 w-px mx-4 bg-gray-300 dark:bg-gray-700 opacity-60" />
+                                <div className="mr-8">
+                                    <QuickActionsWidget userRole={user?.role} />
+                                </div>
                             </div>
                         </div>
                     </div>
 
-                    {/* Tabs */}
-                    <div className="w-full max-w-screen-xl mx-auto px-7">
-                        <Tabs value={tab} onValueChange={setTab} className="w-full">
-                            <TabsList className="mb-2">
-                                <TabsTrigger value="overview">Overview</TabsTrigger>
-                                <TabsTrigger value="analytics">Analytics</TabsTrigger>
+                    {/* Tabs - Mobile Responsive */}
+                    <div className="w-full max-w-screen-xl mx-auto px-4 md:px-7">
+                        <Tabs value={tab} onValueChange={setTab} className="">
+                            <TabsList className="mb-2 ">
+                                <TabsTrigger value="overview" className="flex-1 ">Overview</TabsTrigger>
+                                <TabsTrigger value="analytics" className="flex-1 ">Analytics</TabsTrigger>
                             </TabsList>
 
                             {/* Overview Tab */}
                             <TabsContent value="overview" className="w-full">
-                                {/* Metric Cards - Student Dashboard Style */}
-                                <div className="w-full max-w-screen-xl mx-auto grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 px-0 mb-6">
+                                {/* Metric Cards - Mobile Optimized */}
+                                <div className="w-full max-w-screen-xl mx-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-4 px-0 mb-4 md:mb-6">
                                     {metrics.map((metric, idx) => (
                                         <Card
                                             key={idx}
-                                            className="col-span-1 rounded-xl border border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-sm flex flex-col justify-between p-0 min-h-0 h-auto transition hover:shadow-md"
+                                            className="col-span-1 rounded-lg md:rounded-xl border border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-sm flex flex-col justify-between p-0 min-h-0 h-auto transition hover:shadow-md"
                                             style={{ minWidth: 0 }}
                                         >
-                                            <div className="flex items-center justify-between px-5 pt-4 pb-0">
-                                                <div className="text-sm font-extrabold text-gray-800 dark:text-zinc-100">
+                                            <div className="flex items-center justify-between px-4 md:px-5 pt-3 md:pt-4 pb-0">
+                                                <div className="text-xs md:text-sm font-extrabold text-gray-800 dark:text-zinc-100 leading-tight">
                                                     {metric.title}
                                                 </div>
-                                                <div className={`rounded-full p-1.5 flex items-center justify-center ${metric.iconTheme}`}>
-                                                    {/* Use size-4 for icons, matching student-dashboard */}
-                                                    {React.cloneElement(metric.icon, { className: "size-4 font-extrabold " + (metric.iconTheme?.split(" ").find(c => c.startsWith("text-")) ?? "") })}
+                                                <div className={`rounded-full p-1 md:p-1.5 flex items-center justify-center flex-shrink-0 ${metric.iconTheme}`}>
+                                                    {React.cloneElement(metric.icon, { className: "size-3 md:size-4 font-extrabold " + (metric.iconTheme?.split(" ").find(c => c.startsWith("text-")) ?? "") })}
                                                 </div>
                                             </div>
-                                            <div className="flex flex-col px-5 pb-4 pt-2">
-                                                <span className="text-2xl font-bold text-gray-900 dark:text-white leading-none">
+                                            <div className="flex flex-col px-4 md:px-5 pb-3 md:pb-4 pt-1 md:pt-2">
+                                                <span className="text-xl md:text-2xl font-bold text-gray-900 dark:text-white leading-none">
                                                     {metric.value}
                                                 </span>
                                                 <span className="text-xs text-gray-400 dark:text-gray-500 mt-1 truncate">
@@ -328,9 +329,9 @@ export default function CoordinatorDashboard() {
                                     ))}
                                 </div>
 
-                                {/* Widgets Body - full width */}
-                                <div className="flex flex-col gap-6 bg-gray-100 dark:bg-muted rounded-xl mt-2 mb-2 px-4 py-8 w-full">
-                                    <div className="w-full mb-2 flex flex-col md:flex-row gap-4">
+                                {/* Widgets Body - Mobile Responsive */}
+                                <div className="flex flex-col gap-4 md:gap-6 bg-gray-100 dark:bg-muted rounded-lg md:rounded-xl mt-2 mb-2 px-3 md:px-4 py-4 md:py-8 w-full">
+                                    <div className="w-full mb-2 flex flex-col gap-4">
                                         <WeeklyDefenseSchedulesWidget
                                             weekDays={weekDays}
                                             selectedDay={selectedDay}
@@ -344,9 +345,9 @@ export default function CoordinatorDashboard() {
                                 </div>
                             </TabsContent>
 
-                            {/* Analytics Tab */}
+                            {/* Analytics Tab - Mobile Responsive */}
                             <TabsContent value="analytics" className="w-full">
-                                <div className="w-full max-w-screen-xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                                <div className="w-full max-w-screen-xl mx-auto grid grid-cols-1 gap-4 mb-4 md:mb-6">
                                     <DefenseCountLineChart />
                                     {/* Add more analytics widgets here later */}
                                 </div>

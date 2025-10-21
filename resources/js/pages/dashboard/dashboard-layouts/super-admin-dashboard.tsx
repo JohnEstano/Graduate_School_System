@@ -85,31 +85,31 @@ export default function SuperAdminDashboard() {
     const greeting = isDaytime() ? 'Good morning' : 'Good evening';
 
     return (
-        <div className="flex h-full flex-1 flex-col gap-6 overflow-auto rounded-xl pt-6 pr-7 pl-7 pb-6">
-            {/* Header Section */}
+        <div className="flex h-full flex-1 flex-col gap-4 md:gap-6 overflow-auto rounded-xl pt-4 md:pt-6 px-4 md:px-7 pb-4 md:pb-6">
+            {/* Header Section - Mobile Responsive */}
             <div className="flex flex-col gap-2">
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-0">
                     <div className="flex flex-col">
-                        <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+                        <h1 className="text-xl md:text-2xl lg:text-3xl font-bold text-gray-900 dark:text-white">
                             {greeting}, {user?.name ?? 'Super Admin'}
                         </h1>
-                        <p className="text-sm text-gray-500 dark:text-gray-400">
+                        <p className="text-xs md:text-sm text-gray-500 dark:text-gray-400">
                             {getFormattedDate()} • System Administrator
                         </p>
                     </div>
                     <div className="flex items-center gap-2">
                         {isDaytime() ? (
-                            <Sun className="size-6 text-yellow-500" />
+                            <Sun className="size-5 md:size-6 text-yellow-500" />
                         ) : (
-                            <Moon className="size-6 text-blue-400" />
+                            <Moon className="size-5 md:size-6 text-blue-400" />
                         )}
                     </div>
                 </div>
                 <Separator />
             </div>
 
-            {/* Stats Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {/* Stats Cards - Mobile Responsive */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
                 <Card className="border-l-4 border-l-blue-500">
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                         <CardTitle className="text-sm font-medium">Total Users</CardTitle>
@@ -144,11 +144,11 @@ export default function SuperAdminDashboard() {
                 </Card>
             </div>
 
-            {/* Tab Navigation */}
-            <div className="flex space-x-1 rounded-lg bg-muted p-1">
+            {/* Tab Navigation - Mobile Responsive */}
+            <div className="flex flex-col sm:flex-row space-y-1 sm:space-y-0 sm:space-x-1 rounded-lg bg-muted p-1 overflow-x-auto">
                 <button
                     onClick={() => setSelectedTab('overview')}
-                    className={`flex-1 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
+                    className={`flex-1 sm:flex-none rounded-md px-2 md:px-3 py-2 text-xs md:text-sm font-medium transition-colors whitespace-nowrap ${
                         selectedTab === 'overview'
                             ? 'bg-background text-foreground shadow-sm'
                             : 'text-muted-foreground hover:text-foreground'
@@ -158,17 +158,17 @@ export default function SuperAdminDashboard() {
                 </button>
                 <button
                     onClick={() => setSelectedTab('users')}
-                    className={`flex-1 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
+                    className={`flex-1 sm:flex-none rounded-md px-2 md:px-3 py-2 text-xs md:text-sm font-medium transition-colors whitespace-nowrap ${
                         selectedTab === 'users'
                             ? 'bg-background text-foreground shadow-sm'
                             : 'text-muted-foreground hover:text-foreground'
                     }`}
                 >
-                    User Management
+                    Users
                 </button>
                 <button
                     onClick={() => setSelectedTab('programs')}
-                    className={`flex-1 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
+                    className={`flex-1 sm:flex-none rounded-md px-2 md:px-3 py-2 text-xs md:text-sm font-medium transition-colors whitespace-nowrap ${
                         selectedTab === 'programs'
                             ? 'bg-background text-foreground shadow-sm'
                             : 'text-muted-foreground hover:text-foreground'
@@ -178,7 +178,7 @@ export default function SuperAdminDashboard() {
                 </button>
                 <button
                     onClick={() => setSelectedTab('notifications')}
-                    className={`flex-1 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
+                    className={`flex-1 sm:flex-none rounded-md px-2 md:px-3 py-2 text-xs md:text-sm font-medium transition-colors whitespace-nowrap ${
                         selectedTab === 'notifications'
                             ? 'bg-background text-foreground shadow-sm'
                             : 'text-muted-foreground hover:text-foreground'
@@ -188,7 +188,7 @@ export default function SuperAdminDashboard() {
                 </button>
                 <button
                     onClick={() => setSelectedTab('coordinators')}
-                    className={`flex-1 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
+                    className={`flex-1 sm:flex-none rounded-md px-2 md:px-3 py-2 text-xs md:text-sm font-medium transition-colors whitespace-nowrap ${
                         selectedTab === 'coordinators'
                             ? 'bg-background text-foreground shadow-sm'
                             : 'text-muted-foreground hover:text-foreground'
@@ -232,17 +232,17 @@ export default function SuperAdminDashboard() {
             )}
 
             {selectedTab === 'users' && (
-                <div className="space-y-6">
-                    {/* Summary Stats */}
+                <div className="space-y-4 md:space-y-6">
+                    {/* Summary Stats - Mobile Responsive */}
                     <Card>
                         <CardHeader>
-                            <CardTitle className="flex items-center gap-2">
-                                <Database className="h-5 w-5" />
+                            <CardTitle className="flex items-center gap-2 text-base md:text-lg">
+                                <Database className="h-4 w-4 md:h-5 md:w-5" />
                                 User Management Dashboard
                             </CardTitle>
                         </CardHeader>
                         <CardContent>
-                            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+                            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 md:gap-4">
                                 <div className="text-center">
                                     <div className="text-2xl font-bold text-blue-600">{allUsers.filter(u => u.role === 'Student').length}</div>
                                     <div className="text-sm text-muted-foreground">Students</div>
@@ -271,199 +271,211 @@ export default function SuperAdminDashboard() {
                         </CardContent>
                     </Card>
 
-                    {/* Students Section */}
+                    {/* Students Section - Mobile Responsive */}
                     <Card>
                         <CardHeader>
-                            <CardTitle className="flex items-center gap-2">
-                                <Users className="h-5 w-5 text-blue-600" />
+                            <CardTitle className="flex items-center gap-2 text-base md:text-lg">
+                                <Users className="h-4 w-4 md:h-5 md:w-5 text-blue-600" />
                                 Students ({allUsers.filter(u => u.role === 'Student').length})
                             </CardTitle>
                         </CardHeader>
                         <CardContent>
-                            <div className="border rounded-lg">
-                                <div className="grid grid-cols-4 gap-4 p-4 bg-blue-50 dark:bg-blue-950 font-medium text-sm">
-                                    <div>Name</div>
-                                    <div>Email</div>
-                                    <div>School ID</div>
-                                    <div>Program</div>
-                                </div>
-                                <div className="max-h-60 overflow-y-auto">
-                                    {allUsers.filter(u => u.role === 'Student').map((user) => (
-                                        <div key={user.id} className="grid grid-cols-4 gap-4 p-4 border-t text-sm">
-                                            <div className="font-medium">{user.name || 'N/A'}</div>
-                                            <div className="text-muted-foreground">{user.email}</div>
-                                            <div className="text-muted-foreground">{user.school_id || 'N/A'}</div>
-                                            <div className="text-muted-foreground">{user.program || 'N/A'}</div>
-                                        </div>
-                                    ))}
-                                    {allUsers.filter(u => u.role === 'Student').length === 0 && (
-                                        <div className="p-4 text-center text-muted-foreground">No students found</div>
-                                    )}
+                            <div className="border rounded-lg overflow-x-auto">
+                                <div className="min-w-[600px]">
+                                    <div className="grid grid-cols-4 gap-4 p-3 md:p-4 bg-blue-50 dark:bg-blue-950 font-medium text-xs md:text-sm">
+                                        <div>Name</div>
+                                        <div>Email</div>
+                                        <div>School ID</div>
+                                        <div>Program</div>
+                                    </div>
+                                    <div className="max-h-60 overflow-y-auto">
+                                        {allUsers.filter(u => u.role === 'Student').map((user) => (
+                                            <div key={user.id} className="grid grid-cols-4 gap-4 p-3 md:p-4 border-t text-xs md:text-sm">
+                                                <div className="font-medium">{user.name || 'N/A'}</div>
+                                                <div className="text-muted-foreground">{user.email}</div>
+                                                <div className="text-muted-foreground">{user.school_id || 'N/A'}</div>
+                                                <div className="text-muted-foreground">{user.program || 'N/A'}</div>
+                                            </div>
+                                        ))}
+                                        {allUsers.filter(u => u.role === 'Student').length === 0 && (
+                                            <div className="p-4 text-center text-muted-foreground">No students found</div>
+                                        )}
+                                    </div>
                                 </div>
                             </div>
                         </CardContent>
                     </Card>
 
-                    {/* Faculty Section */}
+                    {/* Faculty Section - Mobile Responsive */}
                     <Card>
                         <CardHeader>
-                            <CardTitle className="flex items-center gap-2">
-                                <BookOpen className="h-5 w-5 text-green-600" />
+                            <CardTitle className="flex items-center gap-2 text-base md:text-lg">
+                                <BookOpen className="h-4 w-4 md:h-5 md:w-5 text-green-600" />
                                 Faculty ({allUsers.filter(u => u.role === 'Faculty').length})
                             </CardTitle>
                         </CardHeader>
                         <CardContent>
-                            <div className="border rounded-lg">
-                                <div className="grid grid-cols-4 gap-4 p-4 bg-green-50 dark:bg-green-950 font-medium text-sm">
-                                    <div>Name</div>
-                                    <div>Email</div>
-                                    <div>School ID</div>
-                                    <div>Program</div>
-                                </div>
-                                <div className="max-h-60 overflow-y-auto">
-                                    {allUsers.filter(u => u.role === 'Faculty').map((user) => (
-                                        <div key={user.id} className="grid grid-cols-4 gap-4 p-4 border-t text-sm">
-                                            <div className="font-medium">{user.name || 'N/A'}</div>
-                                            <div className="text-muted-foreground">{user.email}</div>
-                                            <div className="text-muted-foreground">{user.school_id || 'N/A'}</div>
-                                            <div className="text-muted-foreground">{user.program || 'N/A'}</div>
-                                        </div>
-                                    ))}
-                                    {allUsers.filter(u => u.role === 'Faculty').length === 0 && (
-                                        <div className="p-4 text-center text-muted-foreground">No faculty found</div>
-                                    )}
+                            <div className="border rounded-lg overflow-x-auto">
+                                <div className="min-w-[600px]">
+                                    <div className="grid grid-cols-4 gap-4 p-3 md:p-4 bg-green-50 dark:bg-green-950 font-medium text-xs md:text-sm">
+                                        <div>Name</div>
+                                        <div>Email</div>
+                                        <div>School ID</div>
+                                        <div>Program</div>
+                                    </div>
+                                    <div className="max-h-60 overflow-y-auto">
+                                        {allUsers.filter(u => u.role === 'Faculty').map((user) => (
+                                            <div key={user.id} className="grid grid-cols-4 gap-4 p-3 md:p-4 border-t text-xs md:text-sm">
+                                                <div className="font-medium">{user.name || 'N/A'}</div>
+                                                <div className="text-muted-foreground">{user.email}</div>
+                                                <div className="text-muted-foreground">{user.school_id || 'N/A'}</div>
+                                                <div className="text-muted-foreground">{user.program || 'N/A'}</div>
+                                            </div>
+                                        ))}
+                                        {allUsers.filter(u => u.role === 'Faculty').length === 0 && (
+                                            <div className="p-4 text-center text-muted-foreground">No faculty found</div>
+                                        )}
+                                    </div>
                                 </div>
                             </div>
                         </CardContent>
                     </Card>
 
-                    {/* Coordinators Section */}
+                    {/* Coordinators Section - Mobile Responsive */}
                     <Card>
                         <CardHeader>
-                            <CardTitle className="flex items-center gap-2">
-                                <Settings className="h-5 w-5 text-purple-600" />
+                            <CardTitle className="flex items-center gap-2 text-base md:text-lg">
+                                <Settings className="h-4 w-4 md:h-5 md:w-5 text-purple-600" />
                                 Coordinators ({allUsers.filter(u => u.role === 'Coordinator').length})
                             </CardTitle>
                         </CardHeader>
                         <CardContent>
-                            <div className="border rounded-lg">
-                                <div className="grid grid-cols-4 gap-4 p-4 bg-purple-50 dark:bg-purple-950 font-medium text-sm">
-                                    <div>Name</div>
-                                    <div>Email</div>
-                                    <div>Program</div>
-                                    <div>School ID</div>
-                                </div>
-                                <div className="max-h-60 overflow-y-auto">
-                                    {allUsers.filter(u => u.role === 'Coordinator').map((user) => (
-                                        <div key={user.id} className="grid grid-cols-4 gap-4 p-4 border-t text-sm">
-                                            <div className="font-medium">{user.name || 'N/A'}</div>
-                                            <div className="text-muted-foreground">{user.email}</div>
-                                            <div className="text-muted-foreground">{user.program || 'N/A'}</div>
-                                            <div className="text-muted-foreground">{user.school_id || 'N/A'}</div>
-                                        </div>
-                                    ))}
-                                    {allUsers.filter(u => u.role === 'Coordinator').length === 0 && (
-                                        <div className="p-4 text-center text-muted-foreground">No coordinators found</div>
-                                    )}
+                            <div className="border rounded-lg overflow-x-auto">
+                                <div className="min-w-[600px]">
+                                    <div className="grid grid-cols-4 gap-4 p-3 md:p-4 bg-purple-50 dark:bg-purple-950 font-medium text-xs md:text-sm">
+                                        <div>Name</div>
+                                        <div>Email</div>
+                                        <div>Program</div>
+                                        <div>School ID</div>
+                                    </div>
+                                    <div className="max-h-60 overflow-y-auto">
+                                        {allUsers.filter(u => u.role === 'Coordinator').map((user) => (
+                                            <div key={user.id} className="grid grid-cols-4 gap-4 p-3 md:p-4 border-t text-xs md:text-sm">
+                                                <div className="font-medium">{user.name || 'N/A'}</div>
+                                                <div className="text-muted-foreground">{user.email}</div>
+                                                <div className="text-muted-foreground">{user.program || 'N/A'}</div>
+                                                <div className="text-muted-foreground">{user.school_id || 'N/A'}</div>
+                                            </div>
+                                        ))}
+                                        {allUsers.filter(u => u.role === 'Coordinator').length === 0 && (
+                                            <div className="p-4 text-center text-muted-foreground">No coordinators found</div>
+                                        )}
+                                    </div>
                                 </div>
                             </div>
                         </CardContent>
                     </Card>
 
-                    {/* Administrative Assistants Section */}
+                    {/* Administrative Assistants Section - Mobile Responsive */}
                     <Card>
                         <CardHeader>
-                            <CardTitle className="flex items-center gap-2">
-                                <UserCheck className="h-5 w-5 text-orange-600" />
+                            <CardTitle className="flex items-center gap-2 text-base md:text-lg">
+                                <UserCheck className="h-4 w-4 md:h-5 md:w-5 text-orange-600" />
                                 Administrative Assistants ({allUsers.filter(u => u.role === 'Administrative Assistant').length})
                             </CardTitle>
                         </CardHeader>
                         <CardContent>
-                            <div className="border rounded-lg">
-                                <div className="grid grid-cols-4 gap-4 p-4 bg-orange-50 dark:bg-orange-950 font-medium text-sm">
-                                    <div>Name</div>
-                                    <div>Email</div>
-                                    <div>School ID</div>
-                                    <div>Program</div>
-                                </div>
-                                <div className="max-h-60 overflow-y-auto">
-                                    {allUsers.filter(u => u.role === 'Administrative Assistant').map((user) => (
-                                        <div key={user.id} className="grid grid-cols-4 gap-4 p-4 border-t text-sm">
-                                            <div className="font-medium">{user.name || 'N/A'}</div>
-                                            <div className="text-muted-foreground">{user.email}</div>
-                                            <div className="text-muted-foreground">{user.school_id || 'N/A'}</div>
-                                            <div className="text-muted-foreground">{user.program || 'N/A'}</div>
-                                        </div>
-                                    ))}
-                                    {allUsers.filter(u => u.role === 'Administrative Assistant').length === 0 && (
-                                        <div className="p-4 text-center text-muted-foreground">No administrative assistants found</div>
-                                    )}
+                            <div className="border rounded-lg overflow-x-auto">
+                                <div className="min-w-[600px]">
+                                    <div className="grid grid-cols-4 gap-4 p-3 md:p-4 bg-orange-50 dark:bg-orange-950 font-medium text-xs md:text-sm">
+                                        <div>Name</div>
+                                        <div>Email</div>
+                                        <div>School ID</div>
+                                        <div>Program</div>
+                                    </div>
+                                    <div className="max-h-60 overflow-y-auto">
+                                        {allUsers.filter(u => u.role === 'Administrative Assistant').map((user) => (
+                                            <div key={user.id} className="grid grid-cols-4 gap-4 p-3 md:p-4 border-t text-xs md:text-sm">
+                                                <div className="font-medium">{user.name || 'N/A'}</div>
+                                                <div className="text-muted-foreground">{user.email}</div>
+                                                <div className="text-muted-foreground">{user.school_id || 'N/A'}</div>
+                                                <div className="text-muted-foreground">{user.program || 'N/A'}</div>
+                                            </div>
+                                        ))}
+                                        {allUsers.filter(u => u.role === 'Administrative Assistant').length === 0 && (
+                                            <div className="p-4 text-center text-muted-foreground">No administrative assistants found</div>
+                                        )}
+                                    </div>
                                 </div>
                             </div>
                         </CardContent>
                     </Card>
 
-                    {/* Deans Section */}
+                    {/* Deans Section - Mobile Responsive */}
                     <Card>
                         <CardHeader>
-                            <CardTitle className="flex items-center gap-2">
-                                <Shield className="h-5 w-5 text-red-600" />
+                            <CardTitle className="flex items-center gap-2 text-base md:text-lg">
+                                <Shield className="h-4 w-4 md:h-5 md:w-5 text-red-600" />
                                 Deans ({allUsers.filter(u => u.role === 'Dean').length})
                             </CardTitle>
                         </CardHeader>
                         <CardContent>
-                            <div className="border rounded-lg">
-                                <div className="grid grid-cols-4 gap-4 p-4 bg-red-50 dark:bg-red-950 font-medium text-sm">
-                                    <div>Name</div>
-                                    <div>Email</div>
-                                    <div>School ID</div>
-                                    <div>Program</div>
-                                </div>
-                                <div className="max-h-60 overflow-y-auto">
-                                    {allUsers.filter(u => u.role === 'Dean').map((user) => (
-                                        <div key={user.id} className="grid grid-cols-4 gap-4 p-4 border-t text-sm">
-                                            <div className="font-medium">{user.name || 'N/A'}</div>
-                                            <div className="text-muted-foreground">{user.email}</div>
-                                            <div className="text-muted-foreground">{user.school_id || 'N/A'}</div>
-                                            <div className="text-muted-foreground">{user.program || 'N/A'}</div>
-                                        </div>
-                                    ))}
-                                    {allUsers.filter(u => u.role === 'Dean').length === 0 && (
-                                        <div className="p-4 text-center text-muted-foreground">No deans found</div>
-                                    )}
+                            <div className="border rounded-lg overflow-x-auto">
+                                <div className="min-w-[600px]">
+                                    <div className="grid grid-cols-4 gap-4 p-3 md:p-4 bg-red-50 dark:bg-red-950 font-medium text-xs md:text-sm">
+                                        <div>Name</div>
+                                        <div>Email</div>
+                                        <div>School ID</div>
+                                        <div>Program</div>
+                                    </div>
+                                    <div className="max-h-60 overflow-y-auto">
+                                        {allUsers.filter(u => u.role === 'Dean').map((user) => (
+                                            <div key={user.id} className="grid grid-cols-4 gap-4 p-3 md:p-4 border-t text-xs md:text-sm">
+                                                <div className="font-medium">{user.name || 'N/A'}</div>
+                                                <div className="text-muted-foreground">{user.email}</div>
+                                                <div className="text-muted-foreground">{user.school_id || 'N/A'}</div>
+                                                <div className="text-muted-foreground">{user.program || 'N/A'}</div>
+                                            </div>
+                                        ))}
+                                        {allUsers.filter(u => u.role === 'Dean').length === 0 && (
+                                            <div className="p-4 text-center text-muted-foreground">No deans found</div>
+                                        )}
+                                    </div>
                                 </div>
                             </div>
                         </CardContent>
                     </Card>
 
-                    {/* Other Roles Section */}
+                    {/* Other Roles Section - Mobile Responsive */}
                     {allUsers.filter(u => !['Student', 'Faculty', 'Coordinator', 'Administrative Assistant', 'Dean'].includes(u.role)).length > 0 && (
                         <Card>
                             <CardHeader>
-                                <CardTitle className="flex items-center gap-2">
-                                    <Users className="h-5 w-5 text-gray-600" />
+                                <CardTitle className="flex items-center gap-2 text-base md:text-lg">
+                                    <Users className="h-4 w-4 md:h-5 md:w-5 text-gray-600" />
                                     Other Roles ({allUsers.filter(u => !['Student', 'Faculty', 'Coordinator', 'Administrative Assistant', 'Dean'].includes(u.role)).length})
                                 </CardTitle>
                             </CardHeader>
                             <CardContent>
-                                <div className="border rounded-lg">
-                                    <div className="grid grid-cols-4 gap-4 p-4 bg-gray-50 dark:bg-gray-950 font-medium text-sm">
-                                        <div>Name</div>
-                                        <div>Email</div>
-                                        <div>Role</div>
-                                        <div>School ID</div>
-                                    </div>
-                                    <div className="max-h-60 overflow-y-auto">
-                                        {allUsers.filter(u => !['Student', 'Faculty', 'Coordinator', 'Administrative Assistant', 'Dean'].includes(u.role)).map((user) => (
-                                            <div key={user.id} className="grid grid-cols-4 gap-4 p-4 border-t text-sm">
-                                                <div className="font-medium">{user.name || 'N/A'}</div>
-                                                <div className="text-muted-foreground">{user.email}</div>
-                                                <div>
-                                                    <Badge variant="secondary">{user.role}</Badge>
+                                <div className="border rounded-lg overflow-x-auto">
+                                    <div className="min-w-[600px]">
+                                        <div className="grid grid-cols-4 gap-4 p-3 md:p-4 bg-gray-50 dark:bg-gray-950 font-medium text-xs md:text-sm">
+                                            <div>Name</div>
+                                            <div>Email</div>
+                                            <div>Role</div>
+                                            <div>School ID</div>
+                                        </div>
+                                        <div className="max-h-60 overflow-y-auto">
+                                            {allUsers.filter(u => !['Student', 'Faculty', 'Coordinator', 'Administrative Assistant', 'Dean'].includes(u.role)).map((user) => (
+                                                <div key={user.id} className="grid grid-cols-4 gap-4 p-3 md:p-4 border-t text-xs md:text-sm">
+                                                    <div className="font-medium">{user.name || 'N/A'}</div>
+                                                    <div className="text-muted-foreground">{user.email}</div>
+                                                    <div>
+                                                        <Badge variant="secondary">{user.role}</Badge>
+                                                    </div>
+                                                    <div className="text-muted-foreground">{user.school_id || 'N/A'}</div>
                                                 </div>
-                                                <div className="text-muted-foreground">{user.school_id || 'N/A'}</div>
-                                            </div>
-                                        ))}
+                                            ))}
+                                        </div>
                                     </div>
                                 </div>
                             </CardContent>
@@ -473,12 +485,12 @@ export default function SuperAdminDashboard() {
             )}
 
             {selectedTab === 'programs' && (
-                <div className="space-y-6">
+                <div className="space-y-4 md:space-y-6">
                     <Card>
                         <CardHeader>
-                            <div className="flex justify-between items-center">
-                                <CardTitle className="flex items-center gap-2">
-                                    <Settings className="h-5 w-5" />
+                            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
+                                <CardTitle className="flex items-center gap-2 text-base md:text-lg">
+                                    <Settings className="h-4 w-4 md:h-5 md:w-5" />
                                     Program Management
                                 </CardTitle>
                                 <Dialog>

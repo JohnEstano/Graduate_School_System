@@ -136,14 +136,34 @@ type DefaultReceivable = {
   receivable: number | string | null;
 };
 
-type Assignment = {
-  id: number;
-  defense_type: string;
-  thesis_title?: string | null;
-  role?: string | null;
-  receivable?: number | string | null;
-};
+export interface PaymentRate {
+  id?: number;
+  program_level: string; // Masteral | Doctorate
+  type: string;          // Chairperson | Panel Member
+  defense_type: string;  // Proposal | Prefinal | Final
+  amount: number | string;
+}
 
+export interface Assignment {
+  id: number;
+  defense_type: "Proposal" | "Prefinal" | "Final" | string;
+  thesis_title: string;
+  role?: "Chairperson" | "Panel Member";
+  receivable?: string | number | null;
+  program_level?: string | null; // Masteral | Doctorate
+  type?: string | null;          // maps to PaymentRate.type (fallback to role)
+}
+
+export interface Panelist {
+  id: number;
+  name: string;
+  email: string;
+  role: "Chairperson" | "Panel Member";
+  status: "Assigned" | "Not Assigned";
+  assignments?: Assignment[];
+  created_at?: string;
+  updated_at?: string;
+}
 type PanelistWithAssignments = Panelist & {
   assignments?: Assignment[];
   default_receivables?: DefaultReceivable[];

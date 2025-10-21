@@ -356,4 +356,11 @@ class User extends Authenticatable
             }
         });
     }
+
+    public function isActiveAdviser(): bool
+    {
+        return \App\Models\Adviser::where('user_id', $this->id)
+            ->where('status', 'active')
+            ->exists();
+    }
 }
