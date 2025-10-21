@@ -195,7 +195,7 @@ export default function AssistantDashboard() {
                     {/* Tabs - Mobile Responsive */}
                     <div className="w-full max-w-screen-xl mx-auto px-4 md:px-7">
                         <Tabs value={tab} onValueChange={setTab} className="w-full">
-                            <TabsList className="mb-2 w-full sm:w-auto">
+                            <TabsList className="mb-2 ">
                                 <TabsTrigger value="overview" className="flex-1 sm:flex-none">Overview</TabsTrigger>
                                 <TabsTrigger value="analytics" className="flex-1 sm:flex-none">Analytics</TabsTrigger>
                             </TabsList>

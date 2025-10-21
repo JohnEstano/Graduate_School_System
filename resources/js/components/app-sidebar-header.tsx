@@ -74,6 +74,7 @@ export function AppSidebarHeader({ breadcrumbs = [] }: { breadcrumbs?: Breadcrum
                         </SheetTrigger>
                         <SheetContent className='w-[100px] sm:w-[340px] dark:bg-background dark:text-muted-foreground'>
                             <SheetHeader>
+                                <Bell/>
                                 <SheetTitle>Notifications</SheetTitle>
                             </SheetHeader>
                             <Notifications notifications={notifications} />
