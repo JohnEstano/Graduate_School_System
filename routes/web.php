@@ -117,11 +117,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
 
     //PAYMENT RATESS ETC.
-    Route::post('/dean/payment-rates', [\App\Http\Controllers\PaymentRateController::class, 'update'])
+    Route::post('/dean/payment-rates', [\AppHttp\Controllers\PaymentRateController::class, 'update'])
         ->name('dean.payment-rates.update');
-    Route::get('/dean/payment-rates', [\App\Http\Controllers\PaymentRateController::class, 'index'])
+    Route::get('/dean/payment-rates', [\AppHttp\Controllers\PaymentRateController::class, 'index'])
         ->name('dean.payment-rates.index');
-    Route::get('/dean/payment-rates/data', [\App\Http\Controllers\PaymentRateController::class, 'data'])
+    Route::get('/dean/payment-rates/data', [\AppHttp\Controllers\PaymentRateController::class, 'data'])
         ->name('dean.payment-rates.data');
 
 
@@ -305,7 +305,6 @@ Route::get('/honorarium/individual-record/{programId}', [HonorariumSummaryContro
 
     /* Defense Request (main workflow) */
     Route::get('/defense-request', [DefenseRequestController::class, 'index'])->name('defense-request.index');
-    // Alias so frontend calls to /defense-requests (plural) also hit the same index action (JSON or Inertia)
     Route::get('/defense-requests', [DefenseRequestController::class, 'index'])->name('defense-requests.index');
     Route::post('/defense-request', [DefenseRequestController::class, 'store'])->name('defense-request.store');
 
@@ -314,10 +313,17 @@ Route::get('/honorarium/individual-record/{programId}', [HonorariumSummaryContro
         '/defense-requests/{defenseRequest}/adviser-decision',
         [DefenseRequestController::class, 'adviserDecision']
     )->name('defense-requests.adviser-decision');
+    
     Route::post(
         '/defense-requests/{defenseRequest}/coordinator-decision',
         [DefenseRequestController::class, 'coordinatorDecision']
     )->name('defense-requests.coordinator-decision');
+
+    // ADD THIS ROUTE - Mark defense as completed
+    Route::post(
+        '/defense-requests/{defenseRequest}/complete',
+        [DefenseRequestController::class, 'completeDefense']
+    )->name('defense-requests.complete');
 
     /* Status / priority */
     Route::patch(
@@ -741,7 +747,7 @@ Route::get('/assistant/all-defense-list/data', function () {
             ];
         });
 
-    return response()->json($defenseRequests);
+    return response()->json($defenseRequests);  
 })->name('assistant.all-defense-list.data');
 
 Route::get('/coordinator/defense-requests', function () {

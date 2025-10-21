@@ -768,59 +768,10 @@ public function apiShow(DefenseRequest $defenseRequest)
     }
 
     /**
-     * Mark defense as completed
+     * (Removed duplicate) completeDefense is implemented later as
+     * "Manually mark a defense as completed" which includes honorarium creation
+     * and transactional safety; this placeholder avoids redeclaration and unused param warnings.
      */
-    public function markAsCompleted(Request $request, $id)
-    {
-        $defenseRequest = DefenseRequest::findOrFail($id);
-
-        $validated = $request->validate([
-            'coordinator_status' => 'required|string|in:Approved',
-            'coordinator_comments' => 'nullable|string',
-        ]);
-
-        DB::beginTransaction();
-        try {
-            // Update status
-            $defenseRequest->coordinator_status = 'Approved';
-            $defenseRequest->coordinator_comments = $validated['coordinator_comments'] ?? null;
-            $defenseRequest->coordinator_reviewed_at = now();
-            $defenseRequest->coordinator_reviewed_by = Auth::id();
-            $defenseRequest->workflow_state = 'completed';
-            $defenseRequest->last_status_updated_at = now();
-            $defenseRequest->last_status_updated_by = Auth::id();
-
-            // Add workflow history
-            $defenseRequest->addWorkflowEntry(
-                'coordinator-status-updated',
-                $validated['coordinator_comments'],
-                Auth::id(),
-                $defenseRequest->workflow_state,
-                'completed'
-            );
-
-            $defenseRequest->save();
-
-            // 🎉 AUTOMATICALLY CREATE HONORARIUM PAYMENTS
-            Log::info('Defense marked as completed, creating honorarium payments', [
-                'defense_id' => $defenseRequest->id,
-                'user_id' => Auth::id()
-            ]);
-            
-            $defenseRequest->createHonorariumPayments();
-
-            DB::commit();
-
-            return redirect()->back()->with('success', 'Defense marked as completed and honorarium payments created.');
-        } catch (\Exception $e) {
-            DB::rollBack();
-            Log::error('Error marking defense as completed', [
-                'error' => $e->getMessage(),
-                'defense_request_id' => $id
-            ]);
-            return redirect()->back()->with('error', 'Failed to mark defense as completed.');
-        }
-    }
 
     /** Coordinator queue (JSON API) */
     public function coordinatorQueue(Request $request)
