@@ -9,7 +9,8 @@ use Illuminate\Http\Request;
 use PhpOffice\PhpWord\PhpWord;
 use PhpOffice\PhpWord\IOFactory;
 use Inertia\Inertia;
-use Barryvdh\DomPDF\Facade\Pdf; 
+use Barryvdh\DomPDF\Facade\Pdf;
+use Illuminate\Support\Facades\Log;
 
 class StudentRecordController extends Controller
 {
@@ -44,7 +45,9 @@ public function show($id)
 {
     // Load the student with all payments and panelists
     $studentRecord = StudentRecord::with([
-        'payments.panelist', // eager load panelist relation
+        'payments' => function($query) {
+            $query->with('panelist')->orderBy('payment_date', 'desc');
+        }
     ])->findOrFail($id);
 
     // Transform payments to include a panelists array
@@ -54,13 +57,16 @@ public function show($id)
             'payment_date' => $payment->payment_date,
             'defense_status' => $payment->defense_status,
             'amount' => $payment->amount,
-            // 🔹 Always return panelists as an array
-            'panelists' => $payment->panelist ? [[
-                'role' => $payment->panelist->role,
-                'pfirst_name' => $payment->panelist->pfirst_name,
-                'plast_name' => $payment->panelist->plast_name,
-                'amount' => $payment->amount, // payment amount
-            ]] : [],
+            'panelists' => $payment->panelist ? [
+                [
+                    'id' => $payment->panelist->id,
+                    'role' => $payment->panelist->role,
+                    'pfirst_name' => $payment->panelist->pfirst_name,
+                    'plast_name' => $payment->panelist->plast_name,
+                    'amount' => $payment->amount,
+                ]
+            ] : [],
+            'total_amount' => $payment->amount // Will be the same as individual amount since one panelist per payment
         ];
     });
 
@@ -135,21 +141,63 @@ public function show($id)
 
 public function downloadPdf($id)
 {
-    $payment = PaymentRecord::with('studentRecord')->findOrFail($id);
-    $student = $payment->studentRecord;
+    try {
+        $payment = PaymentRecord::with('studentRecord')->findOrFail($id);
+        $student = $payment->studentRecord;
 
-    // Prepare data for PDF view
-    $data = [
-        'student' => $student,
-        'payment' => $payment,
-    ];
+        if (!$student) {
+            Log::error('Student record not found for payment ID: ' . $id);
+            return response()->json(['error' => 'Student record not found'], 404);
+        }
 
-    // Load a Blade view into PDF
-    $pdf = Pdf::loadView('pdfs.payment-summary', $data);
+        // Convert images to base64
+        $uicLogo = $this->getImageAsBase64('logoUIC.png');
+        $tuvLogo = $this->getImageAsBase64('managementSystemLogo.jpg');
+        $location = $this->getImageAsBase64('location.png');
+        $phone    = $this->getImageAsBase64('phone.png');
+        $printer   = $this->getImageAsBase64('printer.png');
+        $internet = $this->getImageAsBase64('internet.png');
+        $email    = $this->getImageAsBase64('email.png');
 
-    $fileName = "payment-{$payment->id}.pdf";
-    return $pdf->download($fileName);
+        $data = [
+            'student' => $student,
+            'payment' => $payment,
+            'uicLogo' => $uicLogo,
+            'tuvLogo' => $tuvLogo,
+            'locationIcon' => $location,
+            'phoneIcon' => $phone, 
+            'printerIcon' => $printer,
+            'internetIcon' => $internet,
+            'emailIcon' => $email,
+        ];
+
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('pdfs.payment-summary', $data);
+        $pdf->getDomPDF()->set_option('isRemoteEnabled', true);
+        $pdf->getDomPDF()->set_option('isHtml5ParserEnabled', true);
+
+        $fileName = "payment-{$payment->id}.pdf";
+
+        // ✅ Return clean response for fetch()
+        return response($pdf->output(), 200)
+            ->header('Content-Type', 'application/pdf')
+            ->header('Content-Disposition', 'attachment; filename="'.$fileName.'"');
+
+    } catch (\Exception $e) {
+        Log::error('PDF generation failed: ' . $e->getMessage());
+        return response()->json(['error' => 'Failed to generate PDF. Please try again.'], 500);
+    }
 }
 
+protected function getImageAsBase64($path)
+{
+    $fullPath = public_path($path);
+    if (!file_exists($fullPath)) {
+        return '';
+    }
+
+    $type = pathinfo($fullPath, PATHINFO_EXTENSION);
+    $data = file_get_contents($fullPath);
+    return 'data:image/' . $type . ';base64,' . base64_encode($data);
 }
-    
+
+}    

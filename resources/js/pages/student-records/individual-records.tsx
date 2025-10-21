@@ -31,7 +31,9 @@ interface Payment {
   payment_date: string;
   defense_status: string;
   amount: string;
+  total_amount: string;
   panelists?: {
+    id?: number;
     role: string;
     pfirst_name: string;
     plast_name: string;
@@ -263,6 +265,7 @@ export default function IndividualRecord({ record, onClose }: IndividualRecordPr
                             </TableRow>
 
                             {/* Hidden element for client-side PDF fallback */}
+                            {/* Hidden element for client-side PDF fallback */}
                             <div
                               id={`payment-${payment.id}-pdf`}
                               style={{ position: "absolute", left: "-9999px" }}
@@ -281,46 +284,105 @@ export default function IndividualRecord({ record, onClose }: IndividualRecordPr
                             {/* Expanded Panelist rows */}
                             {expandedPayment === payment.id && (
                               <TableRow>
-                                <TableCell colSpan={8} className="bg-gray-50 p-3 pt-1">
-                                  <h4 className="font-semibold text-gray-600 mb-2">
-                                    Payment Breakdown:
-                                  </h4>
-                                  <Table className="w-full text-sm">
-                                    <TableHeader>
-                                      <TableRow>
-                                        <TableHead className="text-left font-normal text-gray-500">
-                                          Role
-                                        </TableHead>
-                                        <TableHead className="text-left font-normal text-gray-500">
-                                          Panelist Name
-                                        </TableHead>
-                                        <TableHead className="text-left font-normal text-gray-500">
-                                          Amount
-                                        </TableHead>
-                                        <TableHead className="text-left font-normal text-gray-500">
-                                          Total
-                                        </TableHead>
-                                      </TableRow>
-                                    </TableHeader>
-
-                                    <TableBody>
-                                      {payment.panelists && payment.panelists.length > 0 ? (
-                                        payment.panelists.map((p, i) => (
-                                          <TableRow key={i}>
-                                            <TableCell>{p.role}</TableCell>
-                                            <TableCell>{p.pfirst_name} {p.plast_name}</TableCell>
-                                            <TableCell>₱{Number(p.amount).toFixed(2)}</TableCell>
+                                <TableCell colSpan={8}>
+                                  <div className="bg-gray-50 p-4 rounded-md">
+                                    <h4 className="font-semibold text-gray-600 mb-3">
+                                      Payment Breakdown
+                                    </h4>
+                                    <div className="border rounded-lg bg-white overflow-hidden">
+                                      <Table>
+                                        <TableHeader>
+                                          <TableRow className="bg-gray-100">
+                                            <TableHead className="font-medium w-1/4 py-3">Role</TableHead>
+                                            <TableHead className="font-medium w-1/2 py-3">Panelist Name</TableHead>
+                                            <TableHead className="font-medium w-1/4 text-right py-3">Amount</TableHead>
                                           </TableRow>
-                                        ))
-                                      ) : (
-                                        <TableRow>
-                                          <TableCell colSpan={3} className="text-center py-3 text-gray-500">
-                                            No panelists found.
-                                          </TableCell>
-                                        </TableRow>
-                                      )}
-                                    </TableBody>
-                                  </Table>
+                                        </TableHeader>
+                                        <TableBody>
+                                          {payment.panelists && payment.panelists.length > 0 ? (
+                                            <>
+                                              {payment.panelists.map((p, i) => (
+                                                <TableRow key={`${payment.id}-${p.id || i}`} className="hover:bg-gray-50">
+                                                  <TableCell className="font-medium py-3">{p.role || 'Not specified'}</TableCell>
+                                                  <TableCell className="py-3">
+                                                    {p.pfirst_name && p.plast_name 
+                                                      ? `${p.pfirst_name} ${p.plast_name}`
+                                                      : 'Name not available'}
+                                                  </TableCell>
+                                                  <TableCell className="text-right py-3">
+                                                    {p.amount 
+                                                      ? `₱${Number(p.amount).toFixed(2)}`
+                                                      : '₱0.00'}
+                                                  </TableCell>
+                                                </TableRow>
+                                              ))}
+                                              <TableRow className="border-t bg-gray-50">
+                                                <TableCell colSpan={2} className="font-semibold text-right py-3 pr-4">
+                                                  Total Amount:
+                                                </TableCell>
+                                                <TableCell className="font-semibold text-right py-3">
+                                                  ₱{Number(payment.total_amount || 0).toFixed(2)}
+                                                </TableCell>
+                                              </TableRow>
+                                            </>
+                                          ) : (
+                                            <TableRow>
+                                              <TableCell colSpan={3} className="text-center py-4 text-gray-500">
+                                                No panelists found for this payment.
+                                              </TableCell>
+                                            </TableRow>
+                                          )}
+                                        </TableBody>
+                                      </Table>
+                                    </div>
+                                  </div>
+                                </TableCell>
+                              </TableRow>
+                            )}                            {/* Expanded Panelist rows */}
+                            {expandedPayment === payment.id && (
+                              <TableRow>
+                                <TableCell colSpan={8} className="bg-gray-50 p-4">
+                                  <div className="rounded-md overflow-hidden">
+                                    <h4 className="font-semibold text-gray-600 mb-3 px-1">
+                                      Payment Breakdown:
+                                    </h4>
+                                    <div className="overflow-x-auto">
+                                      <table className="w-full text-sm border-separate border-spacing-0">
+                                        <thead>
+                                          <tr>
+                                            <th className="text-left font-normal text-gray-500 pb-2 pr-4">Role</th>
+                                            <th className="text-left font-normal text-gray-500 pb-2 pr-4">Panelist Name</th>
+                                            <th className="text-left font-normal text-gray-500 pb-2">Amount</th>
+                                          </tr>
+                                        </thead>
+                                        <tbody>
+                                          {payment.panelists && payment.panelists.length > 0 ? (
+                                            payment.panelists.map((p, i) => (
+                                              <tr key={i} className="hover:bg-gray-100">
+                                                <td className="py-2 pr-4">{p.role}</td>
+                                                <td className="py-2 pr-4">{p.pfirst_name} {p.plast_name}</td>
+                                                <td className="py-2">₱{Number(p.amount).toFixed(2)}</td>
+                                              </tr>
+                                            ))
+                                          ) : (
+                                            <tr>
+                                              <td colSpan={3} className="text-center py-3 text-gray-500">
+                                                No panelists found.
+                                              </td>
+                                            </tr>
+                                          )}
+                                          {payment.panelists && payment.panelists.length > 0 && (
+                                            <tr className="border-t">
+                                              <td colSpan={2} className="py-3 font-semibold text-right pr-4">Total:</td>
+                                              <td className="py-3 font-semibold">
+                                                ₱{payment.panelists.reduce((sum, p) => sum + Number(p.amount), 0).toFixed(2)}
+                                              </td>
+                                            </tr>
+                                          )}
+                                        </tbody>
+                                      </table>
+                                    </div>
+                                  </div>
                                 </TableCell>
                               </TableRow>
                             )}

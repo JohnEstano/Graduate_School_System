@@ -71,24 +71,16 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/honorarium', [HonorariumSummaryController::class, 'index']) 
         ->name('honorarium.index'); 
 
-        
-Route::get('/honorarium/individual-record/{programId}', [HonorariumSummaryController::class, 'show'])
-    ->name('honorarium-record.show');
+    Route::get('/honorarium/individual-record/{programId}', [HonorariumSummaryController::class, 'show'])
+        ->name('honorarium-record.show');
     
+    // Download CSV for a program
+    // API route
+    Route::get('/api/honorarium/{programId}/download-pdf', [HonorariumSummaryController::class, 'downloadPdfApi']);
 
-// Download CSV for a program
-// API route
-Route::get('/api/honorarium/{programId}/download-pdf', [HonorariumSummaryController::class, 'downloadPdfApi']);
-
-// Web route
-Route::get('/honorarium/{programId}/download-pdf', [HonorariumSummaryController::class, 'downloadProgramPdf'])
-    ->name('honorarium.downloadPDF');
-
-
-
-
-
-    
+    // Web route
+    Route::get('/honorarium/{programId}/download-pdf', [HonorariumSummaryController::class, 'downloadProgramPdf'])
+        ->name('honorarium.downloadPDF');
 
     // For program filter
     Route::get('/student-records/program/{program}', [StudentRecordController::class, 'getByProgram'])

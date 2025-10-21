@@ -1,124 +1,142 @@
-"use client";
-import { useState } from "react";
+import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Download } from "lucide-react";
-import axios from "axios";
-import html2canvas from "html2canvas"; 
-import { jsPDF } from "jspdf";
-
-interface Payment {
-  id: number;
-  payment_date: string;
-  defense_status: string;
-  amount: number;
-}
-
-interface Student {
-  id: number;
-  first_name: string;
-  middle_name?: string;
-  last_name: string;
-  course_section: string;
-  school_year: string;
-  payments: Payment[];
-}
-
-interface Panelist {
-  id: number;
-  pfirst_name: string;
-  pmiddle_name?: string;
-  plast_name: string;
-  role: string;
-  defense_type: string;
-  received_date: string;
-  amount: number;
-  students?: Student[];
-}
 
 interface ProgramRecord {
   id: number;
-  name: string;
+  name?: string;
 }
 
 interface PDFDownloadButtonProps {
   record: ProgramRecord;
-  panelists: Panelist[];
   onClick?: (e: React.MouseEvent) => void;
+  useServerSide?: boolean; // Toggle between server-side and client-side
 }
 
-export default function PDFDownloadButton({ record, panelists, onClick }: PDFDownloadButtonProps) {
+export default function PDFDownloadButton({ 
+  record, 
+  onClick,
+  useServerSide = true 
+}: PDFDownloadButtonProps) {
   const [isGenerating, setIsGenerating] = useState(false);
 
-  const downloadPDF = async () => {
-    setIsGenerating(true);
+  // Server-side download (Laravel route)
+  const handleServerDownload = async () => {
     try {
-      let pdfBlob;
+      setIsGenerating(true);
+      
+      const response = await fetch(`/payments/${record.id}/download-pdf`, {
 
-      try {
-        // Try primary API endpoint
-        const apiRes = await axios.get(`/api/honorarium/${record.id}/download-pdf`, {
-          responseType: 'blob',
-          params: { record_id: record.id, panelists: panelists.map(p => p.id) },
-          headers: { 
-            'Accept': 'application/pdf',
-            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || ''
-          },
-          timeout: 15000,
-        });
-        pdfBlob = new Blob([apiRes.data], { type: 'application/pdf' });
-      } catch (apiError) {
-        console.warn("Primary API failed, trying fallback...", apiError);
-        const fallbackRes = await axios.get(`/honorarium-summary/${record.id}/download-pdf`, {
-          responseType: 'blob',
-          headers: { 
-            'Accept': 'application/pdf',
-            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || ''
-          },
-          timeout: 15000,
-        });
-        pdfBlob = new Blob([fallbackRes.data], { type: 'application/pdf' });
-      }
+        method: 'GET',
+        headers: {
+          'Accept': 'application/pdf',
+        },
+      });
 
-      const url = window.URL.createObjectURL(pdfBlob);
+      if (!response.ok) throw new Error('Download failed');
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = `honorarium-${record.name || record.id}.pdf`;
+      link.download = `${record?.name || record?.id || "honorarium"}_honorarium.pdf`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
-
+      
     } catch (error) {
-      console.warn("Backend failed, using client-side fallback...", error);
-      try {
-        const element = document.getElementById("honorarium-details");
-        if (!element) return alert("PDF Export Error: Content not found.");
-
-        const canvas = await html2canvas(element, { scale: 2, useCORS: true, logging: false });
-        const imgData = canvas.toDataURL("image/png");
-
-        const pdf = new jsPDF("p", "mm", "a4");
-        const pageWidth = pdf.internal.pageSize.getWidth();
-        const pageHeight = pdf.internal.pageSize.getHeight();
-        const imgProps = pdf.getImageProperties(imgData);
-        const ratio = Math.min(pageWidth / imgProps.width, pageHeight / imgProps.height);
-
-        pdf.addImage(imgData, "PNG", 0, 0, imgProps.width * ratio, imgProps.height * ratio);
-        pdf.save(`${record.name || record.id}_honorarium.pdf`);
-
-      } catch (fallbackError) {
-        console.error("Client-side PDF generation failed:", fallbackError);
-        alert("Failed to generate PDF. Please try again or contact support.");
-      }
+      console.error("PDF download failed:", error);
+      alert("Failed to download PDF. Please try again.");
     } finally {
       setIsGenerating(false);
     }
   };
 
+  // Client-side generation (html2canvas fallback)
+  const handleClientDownload = async () => {
+    try {
+      setIsGenerating(true);
+
+      // Dynamically import to reduce bundle size
+      const html2canvas = (await import("html2canvas")).default;
+      const { jsPDF } = await import("jspdf");
+
+      const element = document.getElementById("honorarium-details");
+      if (!element) {
+        alert("Honorarium container not found!");
+        return;
+      }
+
+      // Convert all img elements to use base64
+      const images = element.querySelectorAll('img');
+      const imagePromises = Array.from(images).map(async (img) => {
+        try {
+          // Try to convert image to base64
+          const canvas = document.createElement('canvas');
+          const ctx = canvas.getContext('2d');
+          canvas.width = img.naturalWidth || img.width;
+          canvas.height = img.naturalHeight || img.height;
+          
+          if (ctx) {
+            ctx.drawImage(img as HTMLImageElement, 0, 0);
+            const dataUrl = canvas.toDataURL('image/png');
+            img.setAttribute('src', dataUrl);
+          }
+        } catch (err) {
+          console.warn('Failed to convert image:', err);
+        }
+      });
+
+      await Promise.all(imagePromises);
+
+      // Small delay to ensure DOM updates
+      await new Promise(resolve => setTimeout(resolve, 100));
+
+      const canvas = await html2canvas(element, {
+        scale: 2,
+        useCORS: true,
+        allowTaint: true,
+        backgroundColor: "#ffffff",
+        logging: false,
+        imageTimeout: 0,
+      });
+
+      const imgData = canvas.toDataURL("image/png", 1.0);
+      const pdf = new jsPDF("p", "mm", "a4");
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
+      const imgWidth = pageWidth;
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+
+      pdf.addImage(imgData, "PNG", 0, 0, imgWidth, imgHeight, "", "FAST");
+
+      let heightLeft = imgHeight - pageHeight;
+      let position = 0;
+
+      while (heightLeft > 0) {
+        position = heightLeft - imgHeight;
+        pdf.addPage();
+        pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight, "", "FAST");
+        heightLeft -= pageHeight;
+      }
+
+      pdf.save(`${record?.name || record?.id || "honorarium"}_honorarium.pdf`);
+      
+    } catch (error) {
+      console.error("PDF generation failed:", error);
+      alert("Failed to generate PDF. Please try again.");
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  const handleDownload = useServerSide ? handleServerDownload : handleClientDownload;
+
   const handleClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (onClick) onClick(e);
-    if (!e.defaultPrevented) downloadPDF();
+    if (!e.defaultPrevented) handleDownload();
   };
 
   return (
