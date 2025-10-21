@@ -18,7 +18,6 @@ use App\Http\Controllers\PaymentSubmissionController;
 use App\Http\Controllers\CoordinatorCompreExamController;
 use App\Http\Controllers\CoordinatorComprePaymentController;
 use App\Http\Controllers\AcademicRecordController;
-use App\Http\Controllers\Auth\GoogleController;
 use App\Http\Controllers\CoordinatorDefenseController;
 use App\Models\User;
 use App\Models\DefenseRequest;
@@ -52,16 +51,6 @@ Route::middleware('guest')->group(function () {
     // Uncomment if you allow registration
     // Route::get('/register', fn() => Inertia::render('auth/Register'))->name('register');
 });
-
-/*
-|--------------------------------------------------------------------------
-| Google OAuth
-|--------------------------------------------------------------------------
-*/
-Route::get('/auth/google/redirect', [GoogleController::class, 'redirect'])->name('google.redirect');
-Route::get('/auth/google/callback', [GoogleController::class, 'callback'])->name('google.callback');
-Route::get('/auth/status/google-verified', [\App\Http\Controllers\Auth\AuthStatusController::class, 'googleVerified'])
-    ->name('auth.status.google-verified');
 
 /*
 |--------------------------------------------------------------------------
