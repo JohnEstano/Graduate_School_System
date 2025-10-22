@@ -93,27 +93,37 @@ class AdviserStudentController extends Controller
 
         $adviser->advisedStudents()->updateExistingPivot($studentId, ['status' => 'accepted']);
         
-        // Send welcome email to student
-        try {
-            $student = User::find($studentId);
-            if ($student && $student->email) {
-                Mail::to($student->email)
-                    ->send(new \App\Mail\StudentAcceptedByAdviser($student, $adviser));
-                
-                Log::info('Student Acceptance: Welcome email sent to student', [
-                    'student_id' => $student->id,
-                    'student_email' => $student->email,
+        // Check if email should be sent
+        $sendEmail = $request->input('send_email', false);
+        
+        // Send welcome email to student only if requested
+        if ($sendEmail) {
+            try {
+                $student = User::find($studentId);
+                if ($student && $student->email) {
+                    Mail::to($student->email)
+                        ->send(new \App\Mail\StudentAcceptedByAdviser($student, $adviser));
+                    
+                    Log::info('Student Acceptance: Welcome email sent to student', [
+                        'student_id' => $student->id,
+                        'student_email' => $student->email,
+                        'adviser_id' => $adviser->id,
+                        'adviser_name' => trim(($adviser->first_name ?? '') . ' ' . ($adviser->last_name ?? ''))
+                    ]);
+                }
+            } catch (\Exception $e) {
+                Log::error('Student Acceptance: Failed to send welcome email to student', [
+                    'student_id' => $studentId,
                     'adviser_id' => $adviser->id,
-                    'adviser_name' => trim(($adviser->first_name ?? '') . ' ' . ($adviser->last_name ?? ''))
+                    'error' => $e->getMessage()
                 ]);
+                // Don't fail the acceptance if email fails
             }
-        } catch (\Exception $e) {
-            Log::error('Student Acceptance: Failed to send welcome email to student', [
+        } else {
+            Log::info('Student Acceptance: Email sending skipped by adviser', [
                 'student_id' => $studentId,
-                'adviser_id' => $adviser->id,
-                'error' => $e->getMessage()
+                'adviser_id' => $adviser->id
             ]);
-            // Don't fail the acceptance if email fails
         }
         
         return response()->json(['success' => true]);
@@ -131,37 +141,47 @@ class AdviserStudentController extends Controller
         // Mark as rejected (do NOT delete)
         $adviser->advisedStudents()->updateExistingPivot($studentId, ['status' => 'rejected']);
         
-        // Send rejection email to student
-        try {
-            $student = User::find($studentId);
-            if ($student && $student->email) {
-                // Get the pivot data to find who assigned this student
-                $pivotStudent = $adviser->advisedStudents()->wherePivot('student_id', $studentId)->first();
-                $coordinatorId = $pivotStudent->pivot->requested_by ?? null;
-                
-                if ($coordinatorId) {
-                    $coordinator = User::find($coordinatorId);
-                    if ($coordinator) {
-                        Mail::to($student->email)
-                            ->send(new \App\Mail\StudentRejectedByAdviser($student, $adviser, $coordinator));
-                        
-                        Log::info('Student Rejection: Email sent to student', [
-                            'student_id' => $student->id,
-                            'student_email' => $student->email,
-                            'adviser_id' => $adviser->id,
-                            'adviser_name' => trim(($adviser->first_name ?? '') . ' ' . ($adviser->last_name ?? '')),
-                            'coordinator_id' => $coordinator->id
-                        ]);
+        // Check if email should be sent
+        $sendEmail = $request->input('send_email', false);
+        
+        // Send rejection email to student only if requested
+        if ($sendEmail) {
+            try {
+                $student = User::find($studentId);
+                if ($student && $student->email) {
+                    // Get the pivot data to find who assigned this student
+                    $pivotStudent = $adviser->advisedStudents()->wherePivot('student_id', $studentId)->first();
+                    $coordinatorId = $pivotStudent->pivot->requested_by ?? null;
+                    
+                    if ($coordinatorId) {
+                        $coordinator = User::find($coordinatorId);
+                        if ($coordinator) {
+                            Mail::to($student->email)
+                                ->send(new \App\Mail\StudentRejectedByAdviser($student, $adviser, $coordinator));
+                            
+                            Log::info('Student Rejection: Email sent to student', [
+                                'student_id' => $student->id,
+                                'student_email' => $student->email,
+                                'adviser_id' => $adviser->id,
+                                'adviser_name' => trim(($adviser->first_name ?? '') . ' ' . ($adviser->last_name ?? '')),
+                                'coordinator_id' => $coordinator->id
+                            ]);
+                        }
                     }
                 }
+            } catch (\Exception $e) {
+                Log::error('Student Rejection: Failed to send email to student', [
+                    'student_id' => $studentId,
+                    'adviser_id' => $adviser->id,
+                    'error' => $e->getMessage()
+                ]);
+                // Don't fail the rejection if email fails
             }
-        } catch (\Exception $e) {
-            Log::error('Student Rejection: Failed to send email to student', [
+        } else {
+            Log::info('Student Rejection: Email sending skipped by adviser', [
                 'student_id' => $studentId,
-                'adviser_id' => $adviser->id,
-                'error' => $e->getMessage()
+                'adviser_id' => $adviser->id
             ]);
-            // Don't fail the rejection if email fails
         }
         
         return response()->json(['success' => true]);

@@ -133,11 +133,11 @@
 
             <div class="instructions">
                 <ul>
-                    <li>✓ View and manage your advisees</li>
-                    <li>✓ Review defense requirement submissions</li>
-                    <li>✓ Track student progress and milestones</li>
-                    <li>✓ Communicate with coordinators and students</li>
-                    <li>✓ Access important documents and schedules</li>
+                    <li> View and manage your advisees</li>
+                    <li> Review defense requirement submissions</li>
+                    <li> Track student progress and milestones</li>
+                    <li> Communicate with coordinators and students</li>
+                    <li> Access important documents and schedules</li>
                 </ul>
             </div>
 
@@ -148,13 +148,13 @@
             <div class="instructions">
                 <ol>
                     <li>Click the button below to access the login page</li>
-                    <li>Enter your <strong>my.uic.edu.ph</strong> email and password</li>
+                    <li>Enter your <strong>my.uic.edu.ph</strong> username and password</li>
                     <li>Your account will be automatically activated upon successful login</li>
                 </ol>
             </div>
 
             <div class="button-container">
-                <a href="{{ config('app.url') }}/login" class="cta-button">
+                <a href="{{ config('app.url') }}https://grad.diapana.dev/login" class="cta-button">
                     Log In to Graduate School System
                 </a>
             </div>

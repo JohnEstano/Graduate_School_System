@@ -111,11 +111,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     });
 
-    Route::get('/assistant/defense-batches', [\App\Http\Controllers\Assistant\DefenseBatchController::class, 'index']);
-    Route::post('/assistant/defense-batches', [\App\Http\Controllers\Assistant\DefenseBatchController::class, 'store']);
-    Route::post('/assistant/defense-batches/{batch}/status', [\App\Http\Controllers\Assistant\DefenseBatchController::class, 'updateStatus']);
-
-
     //PAYMENT RATESS ETC.
     Route::post('/dean/payment-rates', [\App\Http\Controllers\PaymentRateController::class, 'update'])
         ->name('dean.payment-rates.update');
