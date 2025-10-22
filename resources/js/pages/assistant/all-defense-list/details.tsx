@@ -3,6 +3,7 @@ import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
 import { Head, router } from '@inertiajs/react';
 import { format } from 'date-fns';
+import dayjs from 'dayjs';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import {
@@ -482,7 +483,7 @@ export default function Details({ id, defenseRequest: initialDefenseRequest }: P
                     details?.last_status_updated_by ||
                     '—'}{' '}
                   {details?.last_status_updated_at
-                    ? `(${details.last_status_updated_at})`
+                    ? `(${dayjs(details.last_status_updated_at).format('YYYY-MM-DD [at] h:mm A')})`
                     : ''}
                 </div>
               </TabsContent>

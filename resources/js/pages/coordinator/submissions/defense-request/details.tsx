@@ -5,6 +5,7 @@ import { type BreadcrumbItem } from '@/types';
 import { useEffect, useState, useMemo } from 'react';
 import { Head, router } from '@inertiajs/react';
 import { format } from 'date-fns';
+import dayjs from 'dayjs';
 import { toast, Toaster } from 'sonner';
 import {
   ArrowLeft,
@@ -33,6 +34,8 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
 import {
   Command,
   CommandEmpty,
@@ -293,9 +296,10 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
   const [request, setRequest] = useState<DefenseRequestFull>(requestProp);
 
   // Confirmation dialog state for approve/reject/retrieve
-  const [confirm, setConfirm] = useState<{ open: boolean; action: 'approve' | 'reject' | 'retrieve' | null }>({
+  const [confirm, setConfirm] = useState<{ open: boolean; action: 'approve' | 'reject' | 'retrieve' | null; sendEmail: boolean }>({
     open: false,
     action: null,
+    sendEmail: false,
   });
   const [isLoading, setIsLoading] = useState(false);
 
@@ -554,7 +558,7 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
   }
 
   // --- Approve/Reject/Retrieve logic (robust, uses fetchWithCsrfRetry) ---
-  async function handleStatusChange(action: 'approve' | 'reject' | 'retrieve') {
+  async function handleStatusChange(action: 'approve' | 'reject' | 'retrieve', sendEmail: boolean = false) {
     if (!request.id) return;
     setIsLoading(true);
 
@@ -564,13 +568,44 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
     else if (action === 'retrieve') newStatus = 'Pending';
 
     try {
+      const payload: any = { status: newStatus, send_email: sendEmail };
+      console.log('handleStatusChange payload:', payload);
+      // If approving, include current panels and schedule to be saved together
+      if (action === 'approve') {
+        payload.panels = {
+          defense_chairperson: panels.defense_chairperson,
+          defense_panelist1: panels.defense_panelist1,
+          defense_panelist2: panels.defense_panelist2,
+          defense_panelist3: panels.defense_panelist3,
+          defense_panelist4: panels.defense_panelist4,
+        };
+        
+        // Format times to H:i (strip seconds if present)
+        const formatTimeForBackend = (time: string) => {
+          if (!time) return '';
+          // If time has seconds (HH:mm:ss), strip them to get HH:mm
+          const parts = time.split(':');
+          return parts.length >= 2 ? `${parts[0]}:${parts[1]}` : time;
+        };
+        
+        payload.schedule = {
+          scheduled_date: schedule.scheduled_date,
+          scheduled_time: formatTimeForBackend(schedule.scheduled_time),
+          scheduled_end_time: formatTimeForBackend(schedule.scheduled_end_time),
+          defense_mode: schedule.defense_mode,
+          defense_venue: schedule.defense_venue,
+          scheduling_notes: schedule.scheduling_notes,
+        };
+        console.log('Approval payload with panels and schedule:', payload);
+      }
+
       const res = await fetchWithCsrfRetry(`/defense-requests/${request.id}/status`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
           Accept: 'application/json'
         },
-        body: JSON.stringify({ status: newStatus }),
+        body: JSON.stringify(payload),
       });
       let data: any = {};
       try {
@@ -578,9 +613,26 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
       } catch {
         data = { error: 'Invalid response from server.' };
       }
+      console.log('updateStatus response:', { ok: res.ok, status: res.status, data });
       if (res.ok) {
         if (data.request) {
           setRequest(data.request);
+          // Also update local state from server response to fix cache issue
+          setPanels({
+            defense_chairperson: data.request.defense_chairperson || '',
+            defense_panelist1: data.request.defense_panelist1 || '',
+            defense_panelist2: data.request.defense_panelist2 || '',
+            defense_panelist3: data.request.defense_panelist3 || '',
+            defense_panelist4: data.request.defense_panelist4 || '',
+          });
+          setSchedule({
+            scheduled_date: data.request.scheduled_date || '',
+            scheduled_time: data.request.scheduled_time || '',
+            scheduled_end_time: data.request.scheduled_end_time || '',
+            defense_mode: data.request.defense_mode || '',
+            defense_venue: data.request.defense_venue || '',
+            scheduling_notes: data.request.scheduling_notes || '',
+          });
         } else {
           setRequest(r => ({
             ...r,
@@ -591,6 +643,17 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
           }));
         }
         toast.success(`Coordinator status set to ${newStatus}`);
+      } else if (res.status === 422 && data?.conflicts) {
+        // Show conflict details to the user and offer force option
+        const conflictList = (data.conflicts || []).map((c: any) => `${c.person} has a conflict (${c.time_range}) with ${c.student_name}`).join('\n');
+        if (action === 'approve') {
+          // Ask user whether to force approve despite conflicts
+          if (window.confirm('Scheduling conflicts detected:\n' + conflictList + '\n\nClick OK to force approve and override, Cancel to abort.')) {
+            // resend with force=true
+            await handleForceApprove();
+          }
+        }
+        toast.error(data?.error || `Failed to update status (${res.status})`);
       } else {
         toast.error(data?.error || `Failed to update status (${res.status})`);
       }
@@ -602,7 +665,60 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
       }
     } finally {
       setIsLoading(false);
-      setConfirm({ open: false, action: null });
+      setConfirm({ open: false, action: null, sendEmail: false });
+    }
+  }
+
+  // Helper to resend approve with force=true
+  async function handleForceApprove() {
+    if (!request.id) return;
+    setIsLoading(true);
+    try {
+      // Format times to H:i (strip seconds if present)
+      const formatTimeForBackend = (time: string) => {
+        if (!time) return '';
+        const parts = time.split(':');
+        return parts.length >= 2 ? `${parts[0]}:${parts[1]}` : time;
+      };
+      
+      const payload: any = {
+        status: 'Approved',
+        send_email: confirm.sendEmail,
+        force: true,
+        panels: {
+          defense_chairperson: panels.defense_chairperson,
+          defense_panelist1: panels.defense_panelist1,
+          defense_panelist2: panels.defense_panelist2,
+          defense_panelist3: panels.defense_panelist3,
+          defense_panelist4: panels.defense_panelist4,
+        },
+        schedule: {
+          scheduled_date: schedule.scheduled_date,
+          scheduled_time: formatTimeForBackend(schedule.scheduled_time),
+          scheduled_end_time: formatTimeForBackend(schedule.scheduled_end_time),
+          defense_mode: schedule.defense_mode,
+          defense_venue: schedule.defense_venue,
+          scheduling_notes: schedule.scheduling_notes,
+        }
+      };
+
+      const res = await fetchWithCsrfRetry(`/defense-requests/${request.id}/status`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok) {
+        if (data.request) setRequest(data.request);
+        toast.success('Coordinator status set to Approved (forced)');
+      } else {
+        toast.error(data?.error || `Failed to force approve (${res.status})`);
+      }
+    } catch (e) {
+      toast.error('Network error while forcing approval');
+    } finally {
+      setIsLoading(false);
+      setConfirm({ open: false, action: null, sendEmail: false });
     }
   }
 
@@ -807,7 +923,7 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
               <Button
                 size="sm"
                 variant="outline"
-                onClick={() => setConfirm({ open: true, action: 'approve' })}
+                onClick={() => setConfirm({ open: true, action: 'approve', sendEmail: false })}
                 disabled={
                   isLoading ||
                   request.coordinator_status === 'Approved' ||
@@ -821,7 +937,7 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
               <Button
                 size="sm"
                 variant="outline"
-                onClick={() => setConfirm({ open: true, action: 'reject' })}
+                onClick={() => setConfirm({ open: true, action: 'reject', sendEmail: false })}
                 disabled={
                   isLoading ||
                   request.coordinator_status === 'Rejected' ||
@@ -836,7 +952,7 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
               <Button
                 size="sm"
                 variant="outline"
-                onClick={() => setConfirm({ open: true, action: 'retrieve' })}
+                onClick={() => setConfirm({ open: true, action: 'retrieve', sendEmail: false })}
                 disabled={
                   isLoading ||
                   !['Rejected', 'Approved'].includes(request.coordinator_status || '') ||
@@ -1105,15 +1221,9 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
                     ))}
                   </div>
                   <div className="flex justify-end mt-4">
-                    <Button
-                      onClick={savePanels}
-                      disabled={!canEdit || savingPanels}
-                      className="gap-2 dark:bg-rose-500 text-white hover:cursor-pointer"
-                    >
-                      {savingPanels && <Loader2 className="animate-spin h-4 w-4" />}
-                      <Save className="h-4 w-4" />
-                      Save Panel Assignment
-                    </Button>
+                    <div className="text-sm text-muted-foreground">
+                      Changes to panel assignments are saved when you Approve the request.
+                    </div>
                   </div>
                   {panelLoadError && (
                     <div className="text-xs text-red-500 mt-2">{panelLoadError}</div>
@@ -1228,15 +1338,9 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
                     </div>
                   </div>
                   <div className="flex justify-end mt-4">
-                    <Button
-                      onClick={saveSchedule}
-                      disabled={!canEdit || savingSchedule}
-                      className="gap-2 dark:bg-rose-500 dark:text-white hover:cursor-pointer"
-                    >
-                      {savingSchedule && <Loader2 className="animate-spin h-4 w-4" />}
-                      <Save className="h-4 w-4" />
-                      Save Schedule
-                    </Button>
+                    <div className="text-sm text-muted-foreground">
+                      Scheduling changes will be persisted when you Approve the request.
+                    </div>
                   </div>
                 </div>
               </TabsContent>
@@ -1300,18 +1404,20 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
             request.last_status_updated_by ||
             '—'}{' '}
           {request.last_status_updated_at
-            ? `(${request.last_status_updated_at})`
+            ? `(${dayjs(request.last_status_updated_at).format('YYYY-MM-DD [at] h:mm A')})`
             : ''}
         </div>
       </div>
 
       {/* Confirmation Dialog for Approve/Reject/Retrieve */}
-      <Dialog open={confirm.open} onOpenChange={o => { if (!o) setConfirm({ open: false, action: null }); }}>
+      <Dialog open={confirm.open} onOpenChange={o => { if (!o) setConfirm({ open: false, action: null, sendEmail: false }); }}>
         <DialogContent>
           <DialogTitle>Confirm Action</DialogTitle>
           <DialogDescription>
             {confirm.action === 'approve'
               ? 'Please review before approving.'
+              : confirm.action === 'reject'
+              ? 'Are you sure you want to reject this defense request?'
               : 'Apply this status change?'}
           </DialogDescription>
           <div className="mt-3 text-sm space-y-3">
@@ -1337,15 +1443,57 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
               </div>
             )}
           </div>
-          <div className="flex justify-end gap-2 mt-4">
-            <Button variant="ghost" onClick={() => setConfirm({ open: false, action: null })}>Cancel</Button>
-            <Button
-              onClick={() => confirm.action && handleStatusChange(confirm.action)}
-              disabled={isLoading}
-            >
-              Confirm
-            </Button>
-          </div>
+          
+          {/* Action buttons - Only show for approve/reject actions */}
+          {(confirm.action === 'approve' || confirm.action === 'reject') ? (
+            <div className="flex flex-col gap-2 mt-4">
+              <p className="text-sm text-muted-foreground mb-2">
+                Would you like to send email notifications to all parties?
+              </p>
+              <div className="flex gap-2">
+                <Button 
+                  variant="ghost" 
+                  className="flex-1"
+                  onClick={() => setConfirm({ open: false, action: null, sendEmail: false })}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  variant="outline"
+                  className="flex-1"
+                  onClick={() => {
+                    if (confirm.action) {
+                      handleStatusChange(confirm.action, false); // Pass sendEmail=false directly
+                    }
+                  }}
+                  disabled={isLoading}
+                >
+                  Skip Email
+                </Button>
+                <Button
+                  className="flex-1"
+                  onClick={() => {
+                    if (confirm.action) {
+                      handleStatusChange(confirm.action, true); // Pass sendEmail=true directly
+                    }
+                  }}
+                  disabled={isLoading}
+                >
+                  Send Emails
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <div className="flex justify-end gap-2 mt-4">
+              <Button variant="ghost" onClick={() => setConfirm({ open: false, action: null, sendEmail: false })}>Cancel</Button>
+              <Button
+                onClick={() => confirm.action && handleStatusChange(confirm.action, false)}
+                disabled={isLoading}
+              >
+                Confirm
+              </Button>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </AppLayout>

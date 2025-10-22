@@ -50,6 +50,7 @@ type DefenseRequestFull = {
   submitted_at?: string;
   workflow_history?: any[];
   last_status_updated_by?: string;
+  last_status_updated_by_name?: string;
   last_status_updated_at?: string;
   ai_detection_certificate?: string;
   endorsement_form?: string;
@@ -1046,9 +1047,9 @@ export default function DetailsRequirementsPage(rawProps: any) {
 
         <div className="text-[11px] text-muted-foreground">
           Last updated by:{' '}
-          {request.last_status_updated_by || '—'}{' '}
+          {request.last_status_updated_by_name || request.last_status_updated_by || '—'}{' '}
           {request.last_status_updated_at
-            ? `(${request.last_status_updated_at})`
+            ? `(${dayjs(request.last_status_updated_at).format('YYYY-MM-DD [at] h:mm A')})`
             : ''}
         </div>
       </div>

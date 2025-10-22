@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Adviser;
 use App\Models\User;
+use App\Models\Notification;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Database\QueryException;
@@ -488,6 +489,24 @@ class CoordinatorAdviserController extends Controller
                 'status' => 'pending',
                 'requested_by' => $coordinator->id,
             ]
+        ]);
+
+        // Create notification for adviser
+        Notification::create([
+            'user_id' => $adviserUser->id,
+            'type' => 'student_assigned',
+            'title' => 'New Student Assigned',
+            'message' => "Coordinator {$coordinator->first_name} {$coordinator->last_name} has assigned {$student->first_name} {$student->last_name} to you. Please review and accept/reject.",
+            'action_url' => route('adviser.pending-students'),
+        ]);
+
+        // Create notification for student
+        Notification::create([
+            'user_id' => $student->id,
+            'type' => 'assigned_to_adviser',
+            'title' => 'Assigned to Adviser',
+            'message' => "You have been assigned to adviser {$adviserUser->first_name} {$adviserUser->last_name} by {$coordinator->first_name} {$coordinator->last_name}. Awaiting adviser's acceptance.",
+            'action_url' => route('dashboard'),
         ]);
 
         // Send email notification to adviser about the new student assignment

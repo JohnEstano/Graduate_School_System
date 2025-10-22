@@ -14,8 +14,10 @@
         "inertiajs/inertia-laravel": "^2.0",
         "intervention/image": "^3.11",
         "laravel/framework": "^12.0",
+        "laravel/reverb": "^1.6",
         "laravel/sanctum": "^4.0",
         "laravel/tinker": "^2.10.1",
+        "pusher/pusher-php-server": "^7.2",
         "resend/resend-laravel": "^0.23.0",
         "setasign/fpdi": "^2.6",
         "tightenco/ziggy": "^2.4"

@@ -189,6 +189,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     /* Notifications */
     Route::get('/notification', fn() => Inertia::render('notification/Index'))->name('notification.index');
     Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
+    Route::post('/notifications/{notification}/read', [NotificationController::class, 'markAsRead'])->name('notifications.read');
+    Route::post('/notifications/read-all', [NotificationController::class, 'markAllAsRead'])->name('notifications.read-all');
 
     /* Payments */
     Route::get('/payment', [PaymentSubmissionController::class, 'index'])->name('payment.index');
@@ -408,6 +410,19 @@ Route::middleware(['auth', 'verified'])->group(function () {
                 // ADD: exact level for rate matching
                 'program_level' => \App\Helpers\ProgramLevel::getLevel($defenseRequest->program),
             ];
+            
+            // Add the name of the user who last updated the status
+            if ($defenseRequest->last_status_updated_by) {
+                $updatedByUser = \App\Models\User::find($defenseRequest->last_status_updated_by);
+                if ($updatedByUser) {
+                    $mapped['last_status_updated_by_name'] = trim(
+                        $updatedByUser->first_name . ' ' . 
+                        ($updatedByUser->middle_name ? strtoupper($updatedByUser->middle_name[0]) . '. ' : '') . 
+                        $updatedByUser->last_name
+                    );
+                }
+            }
+            
             return Inertia::render('coordinator/submissions/defense-request/details', [
                 'defenseRequest' => $mapped,
                 'userRole' => $user->role
@@ -574,6 +589,18 @@ Route::get('/adviser/defense-requirements/{id}/details', function ($id) {
         abort(403);
 
     $defenseRequest = \App\Models\DefenseRequest::findOrFail($id);
+
+    // Add the name of the user who last updated the status
+    if ($defenseRequest->last_status_updated_by) {
+        $updatedByUser = \App\Models\User::find($defenseRequest->last_status_updated_by);
+        if ($updatedByUser) {
+            $defenseRequest->last_status_updated_by_name = trim(
+                $updatedByUser->first_name . ' ' . 
+                ($updatedByUser->middle_name ? strtoupper($updatedByUser->middle_name[0]) . '. ' : '') . 
+                $updatedByUser->last_name
+            );
+        }
+    }
 
     // Fetch all coordinators linked to this adviser
     $coordinators = $user->coordinators()

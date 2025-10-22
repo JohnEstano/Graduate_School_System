@@ -670,22 +670,176 @@ class DefenseRequestController extends Controller
 
     public function updateStatus(Request $request, DefenseRequest $defenseRequest)
     {
-        $user = Auth::user();
-        if (!$user) return response()->json(['error'=>'Unauthorized'],401);
+        try {
+            Log::info('updateStatus called', [
+                'defense_id' => $defenseRequest->id,
+                'request_data' => $request->all()
+            ]);
 
-        $coordinatorRoles = ['Coordinator','Administrative Assistant','Dean'];
-        if (!in_array($user->role,$coordinatorRoles)) {
-            return response()->json(['error'=>'Forbidden'],403);
-        }
+            $user = Auth::user();
+            if (!$user) {
+                Log::warning('updateStatus: Unauthorized - no user');
+                return response()->json(['error'=>'Unauthorized'],401);
+            }
 
-        $data = $request->validate([
-            'status' => 'required|in:Pending,Approved,Rejected,Completed'
-        ]);
+            $coordinatorRoles = ['Coordinator','Administrative Assistant','Dean'];
+            if (!in_array($user->role,$coordinatorRoles)) {
+                Log::warning('updateStatus: Forbidden', ['user_role' => $user->role]);
+                return response()->json(['error'=>'Forbidden'],403);
+            }
 
-        $target = $data['status'];
+            $data = $request->validate([
+                'status' => 'required|in:Pending,Approved,Rejected,Completed',
+                // Optional payloads when approving: panels and schedule
+                'panels' => 'sometimes|array',
+                'panels.defense_chairperson' => 'sometimes|string|max:255',
+                'panels.defense_panelist1' => 'sometimes|string|max:255',
+                'panels.defense_panelist2' => 'sometimes|string|max:255',
+                'panels.defense_panelist3' => 'sometimes|string|max:255',
+                'panels.defense_panelist4' => 'sometimes|string|max:255',
+                'schedule' => 'sometimes|array',
+                'schedule.scheduled_date' => 'sometimes|date',
+                'schedule.scheduled_time' => 'sometimes|date_format:H:i',
+                'schedule.scheduled_end_time' => 'sometimes|date_format:H:i',
+                'schedule.defense_mode' => 'sometimes|in:face-to-face,online',
+                'schedule.defense_venue' => 'sometimes|string|max:255',
+                'send_email' => 'sometimes|boolean',
+                'force' => 'sometimes|boolean'
+            ]);
+
+            Log::info('updateStatus validation passed', [
+                'target_status' => $data['status'],
+                'has_panels' => isset($data['panels']),
+                'has_schedule' => isset($data['schedule']),
+                'send_email' => $data['send_email'] ?? false,
+                'force' => $data['force'] ?? false
+            ]);
+
+            $target = $data['status'];
+        $sendEmail = $data['send_email'] ?? false;
+        $force = $data['force'] ?? false;
         $originalState = $defenseRequest->workflow_state;
 
-        try {
+        // If approving, optionally save panels/schedule first (atomic)
+        if ($target === 'Approved') {
+            // If panels payload provided, validate basic assignment rules via service
+            $conflictService = new \App\Services\DefenseConflictService();
+            if (isset($data['panels'])) {
+                // Merge panels with existing values - only update non-empty fields
+                // Also filter out placeholder values like "Panel 1", "Panel 2", etc.
+                $panelsToValidate = [];
+                foreach ($data['panels'] as $k => $v) {
+                    $trimmed = trim($v ?? '');
+                    // Skip if empty or looks like a placeholder (e.g., "Panel 1", "Panel 2")
+                    if (empty($trimmed) || preg_match('/^Panel\s+\d+$/i', $trimmed)) {
+                        // Use existing value from database if available
+                        if (!empty($defenseRequest->{$k}) && !preg_match('/^Panel\s+\d+$/i', $defenseRequest->{$k})) {
+                            $panelsToValidate[$k] = $defenseRequest->{$k};
+                        }
+                    } else {
+                        // Use the new value from payload
+                        $panelsToValidate[$k] = $trimmed;
+                    }
+                }
+                
+                Log::info('Panels after filtering placeholders', [
+                    'payload' => $data['panels'],
+                    'validated' => $panelsToValidate,
+                    'existing_in_db' => [
+                        'defense_chairperson' => $defenseRequest->defense_chairperson,
+                        'defense_panelist1' => $defenseRequest->defense_panelist1,
+                        'defense_panelist2' => $defenseRequest->defense_panelist2,
+                        'defense_panelist3' => $defenseRequest->defense_panelist3,
+                        'defense_panelist4' => $defenseRequest->defense_panelist4,
+                    ]
+                ]);
+                
+                if (!empty($panelsToValidate)) {
+                    $panelErrors = $conflictService->validateAssignmentBasic($defenseRequest, $panelsToValidate);
+                    if (!empty($panelErrors) && !$force) {
+                        Log::warning('Panel validation failed', ['errors' => $panelErrors]);
+                        return response()->json(['error' => 'Panel validation failed', 'errors' => $panelErrors], 422);
+                    }
+                    // Apply panels to model (only non-empty, non-placeholder values)
+                    foreach ($data['panels'] as $k => $v) {
+                        $trimmed = trim($v ?? '');
+                        if (!empty($trimmed) && !preg_match('/^Panel\s+\d+$/i', $trimmed)) {
+                            $defenseRequest->{$k} = $trimmed;
+                        }
+                    }
+                    $defenseRequest->panels_assigned_at = now();
+                }
+            }
+
+            // If schedule provided, check conflicts before saving
+            if (isset($data['schedule'])) {
+                $sched = $data['schedule'];
+                
+                // Merge schedule with existing values - use database values for empty fields
+                $scheduleToValidate = [];
+                foreach (['scheduled_date','scheduled_time','scheduled_end_time','defense_mode','defense_venue'] as $f) {
+                    if (!empty($sched[$f])) {
+                        $scheduleToValidate[$f] = $sched[$f];
+                    } elseif (!empty($defenseRequest->{$f})) {
+                        // Use existing value from database
+                        $scheduleToValidate[$f] = $defenseRequest->{$f};
+                    }
+                }
+                
+                // Check completeness - all required fields must have values (either new or existing)
+                $missing = [];
+                foreach (['scheduled_date','scheduled_time','scheduled_end_time','defense_mode','defense_venue'] as $f) {
+                    if (empty($scheduleToValidate[$f])) {
+                        $missing[] = $f;
+                    }
+                }
+                
+                if (!empty($missing) && !$force) {
+                    Log::warning('Missing schedule fields after merge', [
+                        'missing' => $missing,
+                        'payload' => $sched,
+                        'existing' => [
+                            'scheduled_date' => $defenseRequest->scheduled_date,
+                            'scheduled_time' => $defenseRequest->scheduled_time,
+                            'scheduled_end_time' => $defenseRequest->scheduled_end_time,
+                            'defense_mode' => $defenseRequest->defense_mode,
+                            'defense_venue' => $defenseRequest->defense_venue,
+                        ]
+                    ]);
+                    return response()->json(['error'=>'Missing schedule fields','missing'=>$missing],422);
+                }
+
+                // conflict checks - use merged values
+                $panelsForCheck = [
+                    'defense_chairperson' => $data['panels']['defense_chairperson'] ?? $defenseRequest->defense_chairperson,
+                    'defense_panelist1' => $data['panels']['defense_panelist1'] ?? $defenseRequest->defense_panelist1,
+                    'defense_panelist2' => $data['panels']['defense_panelist2'] ?? $defenseRequest->defense_panelist2,
+                    'defense_panelist3' => $data['panels']['defense_panelist3'] ?? $defenseRequest->defense_panelist3,
+                    'defense_panelist4' => $data['panels']['defense_panelist4'] ?? $defenseRequest->defense_panelist4,
+                ];
+
+                $conflicts = $conflictService->findPanelSchedulingConflicts(
+                    $defenseRequest,
+                    $panelsForCheck,
+                    $scheduleToValidate['scheduled_date'] ?? null,
+                    $scheduleToValidate['scheduled_time'] ?? null,
+                    $scheduleToValidate['scheduled_end_time'] ?? null
+                );
+                if (!empty($conflicts) && !$force) {
+                    return response()->json(['error'=>'Scheduling conflicts detected','conflicts'=>$conflicts],422);
+                }
+
+                // Persist schedule (only non-empty values from payload)
+                foreach ($sched as $k => $v) {
+                    if (!empty($v) || $v === '0') { // Allow '0' as valid value
+                        $defenseRequest->{$k} = $v;
+                    }
+                }
+                $defenseRequest->workflow_state = 'scheduled';
+            }
+
+        }
+
             // --- Update coordinator_status and workflow_state ---
             if ($target === 'Approved') {
                 $defenseRequest->coordinator_status = 'Approved';
@@ -723,6 +877,11 @@ class DefenseRequestController extends Controller
 
             $defenseRequest->save();
 
+            // --- Send email notifications if requested (only for approve/reject) ---
+            if ($sendEmail && ($target === 'Approved' || $target === 'Rejected')) {
+                $this->sendApprovalNotifications($defenseRequest, $target);
+            }
+
             return response()->json([
                 'ok' => true,
                 'request' => $defenseRequest,
@@ -737,6 +896,173 @@ class DefenseRequestController extends Controller
                 'error'=>$e->getMessage()
             ]);
             return response()->json(['error'=>'Update failed'],500);
+        }
+    }
+
+    /**
+     * Send email notifications when defense is approved or rejected
+     */
+    private function sendApprovalNotifications(DefenseRequest $defenseRequest, string $status)
+    {
+        try {
+            Log::info('sendApprovalNotifications called', [
+                'defense_id' => $defenseRequest->id,
+                'status' => $status
+            ]);
+
+            $student = $defenseRequest->student;
+            $adviser = $defenseRequest->adviser;
+            
+            Log::info('Email recipients loaded', [
+                'student_id' => $student?->id,
+                'student_email' => $student?->email,
+                'adviser_id' => $adviser?->id,
+                'adviser_email' => $adviser?->email,
+            ]);
+            
+            // Get all panel members by name (they're stored as names, not IDs)
+            $panelMemberNames = array_filter([
+                $defenseRequest->defense_chairperson,
+                $defenseRequest->defense_panelist1,
+                $defenseRequest->defense_panelist2,
+                $defenseRequest->defense_panelist3,
+                $defenseRequest->defense_panelist4,
+            ]);
+            
+            Log::info('Panel names to lookup', ['names' => $panelMemberNames]);
+            
+            $panelMembers = [];
+            foreach ($panelMemberNames as $panelMemberName) {
+                Log::info('Looking up panel member', ['name' => $panelMemberName]);
+                
+                // First try to find in panelists table (for external panelists)
+                $panelist = DB::table('panelists')
+                    ->where('name', $panelMemberName)
+                    ->first();
+                
+                if ($panelist && $panelist->email) {
+                    Log::info('Panel member found in panelists table', [
+                        'name' => $panelMemberName,
+                        'panelist_id' => $panelist->id,
+                        'email' => $panelist->email
+                    ]);
+                    // Create a simple object with email property for consistency
+                    $panelMembers[] = (object)[
+                        'id' => $panelist->id,
+                        'email' => $panelist->email,
+                        'first_name' => $panelMemberName, // Use full name as first_name for email template
+                        'last_name' => '',
+                        'role' => 'Panel'
+                    ];
+                    continue;
+                }
+                
+                // If not found in panelists, try users table (for internal faculty)
+                $panelUser = User::where(function ($q) use ($panelMemberName) {
+                    $parts = preg_split('/\s+/', trim($panelMemberName));
+                    if (count($parts) >= 2) {
+                        $firstName = $parts[0];
+                        $lastName = end($parts);
+                        Log::info('Searching users by name parts', [
+                            'first_name_search' => $firstName,
+                            'last_name_search' => $lastName
+                        ]);
+                        $q->where('first_name', 'LIKE', '%' . $firstName . '%')
+                          ->where('last_name', 'LIKE', '%' . $lastName . '%');
+                    } else {
+                        Log::info('Searching users by single name', ['name' => $panelMemberName]);
+                        $q->where('first_name', 'LIKE', '%' . $panelMemberName . '%')
+                          ->orWhere('last_name', 'LIKE', '%' . $panelMemberName . '%');
+                    }
+                })->first();
+                
+                if ($panelUser) {
+                    Log::info('Panel member found in users table', [
+                        'name' => $panelMemberName,
+                        'user_id' => $panelUser->id,
+                        'user_first_name' => $panelUser->first_name,
+                        'user_last_name' => $panelUser->last_name,
+                        'email' => $panelUser->email
+                    ]);
+                    $panelMembers[] = $panelUser;
+                } else {
+                    Log::warning('Panel member NOT found in either panelists or users table', ['name' => $panelMemberName]);
+                }
+            }
+
+            // Send email to student
+            if ($student && $student->email) {
+                Log::info('Sending email to student', ['email' => $student->email]);
+                Mail::to($student->email)->send(new DefenseScheduled(
+                    $defenseRequest,
+                    $student
+                ));
+                Log::info('Student email sent');
+                // Add delay to respect Resend's rate limit (2 requests/second)
+                usleep(500000); // 500ms delay
+            } else {
+                Log::warning('Student email skipped', [
+                    'has_student' => !!$student,
+                    'has_email' => $student?->email
+                ]);
+            }
+
+            // Send email to adviser
+            if ($adviser && $adviser->email) {
+                Log::info('Sending email to adviser', ['email' => $adviser->email]);
+                Mail::to($adviser->email)->send(new DefenseScheduled(
+                    $defenseRequest,
+                    $adviser
+                ));
+                Log::info('Adviser email sent');
+                // Add delay to respect Resend's rate limit (2 requests/second)
+                usleep(500000); // 500ms delay
+            } else {
+                Log::warning('Adviser email skipped', [
+                    'has_adviser' => !!$adviser,
+                    'has_email' => $adviser?->email
+                ]);
+            }
+
+            // Send email to each panel member
+            // Add delay between sends to respect Resend's rate limit (2 requests/second)
+            foreach ($panelMembers as $index => $member) {
+                if ($member && $member->email) {
+                    // Add 500ms delay between emails (except for the first one)
+                    if ($index > 0) {
+                        usleep(500000); // 500ms = 0.5 seconds
+                    }
+                    
+                    Log::info('Sending email to panel member', [
+                        'user_id' => $member->id,
+                        'email' => $member->email
+                    ]);
+                    Mail::to($member->email)->send(new DefenseScheduled(
+                        $defenseRequest,
+                        $member
+                    ));
+                    Log::info('Panel member email sent');
+                } else {
+                    Log::warning('Panel member email skipped', [
+                        'has_member' => !!$member,
+                        'has_email' => $member?->email
+                    ]);
+                }
+            }
+
+            Log::info('Approval notifications sent', [
+                'defense_id' => $defenseRequest->id,
+                'status' => $status,
+                'recipients' => count($panelMembers) + 2, // student + adviser + panels
+                'panel_count' => count($panelMembers)
+            ]);
+        } catch (\Throwable $e) {
+            Log::error('Failed to send approval notifications', [
+                'defense_id' => $defenseRequest->id,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            // Don't throw - email failures shouldn't block the approval
         }
     }
 
@@ -1245,15 +1571,28 @@ class DefenseRequestController extends Controller
 
     public function updateAdviserStatus(Request $request, DefenseRequest $defenseRequest)
     {
-        $user = Auth::user();
-        if (!$user || !in_array($user->role, ['Faculty', 'Adviser'])) {
-            return response()->json(['error' => 'Unauthorized'], 403);
-        }
+        try {
+            \Log::info('updateAdviserStatus: START', [
+                'defense_request_id' => $defenseRequest->id,
+                'request_data' => $request->all()
+            ]);
+            
+            $user = Auth::user();
+            if (!$user || !in_array($user->role, ['Faculty', 'Adviser'])) {
+                \Log::error('updateAdviserStatus: Unauthorized', [
+                    'user_id' => $user->id ?? null,
+                    'role' => $user->role ?? null
+                ]);
+                return response()->json(['error' => 'Unauthorized'], 403);
+            }
 
-        $data = $request->validate([
-            'adviser_status' => 'required|in:Pending,Approved,Rejected',
-            'coordinator_user_id' => 'nullable|integer|exists:users,id', // <-- add this
-        ]);
+            \Log::info('updateAdviserStatus: Validating request');
+            $data = $request->validate([
+                'adviser_status' => 'required|in:Pending,Approved,Rejected',
+                'coordinator_user_id' => 'nullable|integer|exists:users,id',
+            ]);
+            
+            \Log::info('updateAdviserStatus: Validation passed', ['data' => $data]);
 
         $fromState = $defenseRequest->workflow_state;
         $defenseRequest->adviser_status = $data['adviser_status'];
@@ -1262,6 +1601,7 @@ class DefenseRequestController extends Controller
         if ($data['adviser_status'] === 'Approved') {
             $defenseRequest->workflow_state = 'adviser-approved';
             $defenseRequest->status = 'Pending';
+            \Log::info('updateAdviserStatus: Setting status to Approved');
         } elseif ($data['adviser_status'] === 'Rejected') {
             $defenseRequest->workflow_state = 'adviser-rejected';
             $defenseRequest->status = 'Rejected';
@@ -1290,9 +1630,16 @@ class DefenseRequestController extends Controller
 
         // --- FIX: Use coordinator_user_id from request if present ---
         if ($data['adviser_status'] === 'Approved') {
+            \Log::info('updateAdviserStatus: Processing approval');
             if (!empty($data['coordinator_user_id'])) {
                 $defenseRequest->coordinator_user_id = $data['coordinator_user_id'];
+                \Log::info('updateAdviserStatus: Using coordinator from request', [
+                    'coordinator_id' => $data['coordinator_user_id']
+                ]);
             } elseif (!$defenseRequest->coordinator_user_id) {
+                \Log::info('updateAdviserStatus: Finding coordinator by program', [
+                    'program' => $defenseRequest->program
+                ]);
                 // Fallback: Find the coordinator for this program/department
                 $coordinator = User::where('role', 'Coordinator')
                     ->where('program', $defenseRequest->program)
@@ -1300,19 +1647,85 @@ class DefenseRequestController extends Controller
 
                 if ($coordinator) {
                     $defenseRequest->coordinator_user_id = $coordinator->id;
+                    \Log::info('updateAdviserStatus: Found coordinator', [
+                        'coordinator_id' => $coordinator->id
+                    ]);
+                } else {
+                    \Log::warning('updateAdviserStatus: No coordinator found for program', [
+                        'program' => $defenseRequest->program
+                    ]);
                 }
+            }
+            
+            \Log::info('updateAdviserStatus: Creating notifications', [
+                'coordinator_id' => $defenseRequest->coordinator_user_id,
+                'student_id' => $defenseRequest->user_id
+            ]);
+            
+            // Create notification for coordinator when adviser endorses
+            if ($defenseRequest->coordinator_user_id) {
+                \Log::info('updateAdviserStatus: Creating coordinator notification');
+                Notification::create([
+                    'user_id' => $defenseRequest->coordinator_user_id,
+                    'type' => 'defense_endorsed',
+                    'title' => 'Defense Request Endorsed by Adviser',
+                    'message' => "{$user->first_name} {$user->last_name} has endorsed the defense request for {$defenseRequest->first_name} {$defenseRequest->last_name} - \"{$defenseRequest->thesis_title}\".",
+                    'action_url' => route('coordinator.defense-requests.details', $defenseRequest->id),
+                ]);
+                \Log::info('updateAdviserStatus: Coordinator notification created');
+            }
+            
+            // Also notify the student that their defense was endorsed
+            if ($defenseRequest->user_id) {
+                \Log::info('updateAdviserStatus: Creating student notification');
+                Notification::create([
+                    'user_id' => $defenseRequest->user_id,
+                    'type' => 'defense_endorsed_by_adviser',
+                    'title' => 'Defense Request Endorsed',
+                    'message' => "Your adviser {$user->first_name} {$user->last_name} has endorsed your defense request. It will now be reviewed by the coordinator.",
+                    'action_url' => route('dashboard'),
+                ]);
+                \Log::info('updateAdviserStatus: Student notification created');
             }
         } else {
             $defenseRequest->coordinator_user_id = null;
         }
 
+        \Log::info('updateAdviserStatus: Saving defense request', [
+            'id' => $defenseRequest->id,
+            'adviser_status' => $defenseRequest->adviser_status,
+            'workflow_state' => $defenseRequest->workflow_state,
+            'coordinator_user_id' => $defenseRequest->coordinator_user_id
+        ]);
+        
         $defenseRequest->save();
+        
+        \Log::info('updateAdviserStatus: Defense request saved successfully');
 
         return response()->json([
             'ok' => true,
             'request' => $defenseRequest,
             'workflow_history' => $defenseRequest->workflow_history,
         ]);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            \Log::error('updateAdviserStatus validation failed', [
+                'errors' => $e->errors()
+            ]);
+            return response()->json([
+                'error' => 'Validation failed',
+                'details' => $e->errors()
+            ], 422);
+        } catch (\Exception $e) {
+            \Log::error('updateAdviserStatus failed', [
+                'error' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            return response()->json([
+                'error' => 'Failed to update adviser status: ' . $e->getMessage()
+            ], 500);
+        }
     }
 
     public function allForCoordinator(Request $request)

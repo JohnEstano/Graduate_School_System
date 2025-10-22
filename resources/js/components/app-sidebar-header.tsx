@@ -26,7 +26,6 @@ export function AppSidebarHeader({ breadcrumbs = [] }: { breadcrumbs?: Breadcrum
 
     const page = usePage<{ notifications?: Notification[]; unreadCount?: number }>();
     const unreadCount = typeof page.props.unreadCount === "number" ? page.props.unreadCount : 0;
-    const notifications = Array.isArray(page.props.notifications) ? page.props.notifications : [];
 
     useEffect(() => {
         function handleClick(e: MouseEvent) {
@@ -77,7 +76,7 @@ export function AppSidebarHeader({ breadcrumbs = [] }: { breadcrumbs?: Breadcrum
                                 <Bell/>
                                 <SheetTitle>Notifications</SheetTitle>
                             </SheetHeader>
-                            <Notifications notifications={notifications} />
+                            <Notifications />
                         </SheetContent>
                     </Sheet>
                     {/* Theme Toggle Dropdown */}

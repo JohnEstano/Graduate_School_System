@@ -191,6 +191,9 @@ class CoordinatorDefenseController extends Controller
 
     public function scheduleDefense(Request $request, DefenseRequest $defenseRequest)
     {
+        // Remove the coordinator approval requirement - scheduling happens BEFORE approval
+        // Coordinators can schedule at any time during their review process
+        
         // Check if this is an update (defense already has a schedule) or new schedule
         $isUpdate = !empty($defenseRequest->scheduled_date);
         
@@ -204,6 +207,7 @@ class CoordinatorDefenseController extends Controller
             'defense_mode' => 'required|in:face-to-face,online',
             'defense_venue' => 'required|string|max:255',
             'scheduling_notes' => 'nullable|string|max:1000',
+            'send_email' => 'nullable|boolean', // ISSUE #6: Email confirmation parameter
         ]);
         
         // Validate that end time is after start time manually
@@ -282,7 +286,10 @@ class CoordinatorDefenseController extends Controller
             $scheduleDate = Carbon::parse($validated['scheduled_date'])->format('M d, Y');
             $timeRange = Carbon::parse($validated['scheduled_time'])->format('g:i A')
                 .' - '.Carbon::parse($validated['scheduled_end_time'])->format('g:i A');
-            $this->createSchedulingNotifications($defenseRequest,$scheduleDate,$timeRange,$validated);
+            
+            // ISSUE #6 & #7: Pass send_email flag to notification method
+            $sendEmails = $validated['send_email'] ?? false;
+            $this->createSchedulingNotifications($defenseRequest,$scheduleDate,$timeRange,$validated, $sendEmails);
 
             return back()->with([
                 'success'=>"Defense scheduled for {$scheduleDate} ({$timeRange})",
@@ -385,7 +392,7 @@ class CoordinatorDefenseController extends Controller
         ]);
     }
 
-    private function createSchedulingNotifications(DefenseRequest $defenseRequest, string $scheduleDate, string $timeRange, array $validated)
+    private function createSchedulingNotifications(DefenseRequest $defenseRequest, string $scheduleDate, string $timeRange, array $validated, bool $sendEmails = false)
     {
         if ($defenseRequest->submitted_by) {
             Notification::create([
@@ -396,11 +403,13 @@ class CoordinatorDefenseController extends Controller
                 'link' => '/defense-requirements',
             ]);
             
-            // Send email notification to student
-            $student = User::find($defenseRequest->submitted_by);
-            if ($student && $student->email) {
-                Mail::to($student->email)
-                    ->queue(new DefenseScheduled($defenseRequest, $student));
+            // ISSUE #6 & #7: Send email notification to student only if requested
+            if ($sendEmails) {
+                $student = User::find($defenseRequest->submitted_by);
+                if ($student && $student->email) {
+                    Mail::to($student->email)
+                        ->queue(new DefenseScheduled($defenseRequest, $student));
+                }
             }
         }
 
@@ -432,6 +441,12 @@ class CoordinatorDefenseController extends Controller
                     'message'=>"Assigned to {$defenseRequest->first_name} {$defenseRequest->last_name}'s defense: {$scheduleDate} {$timeRange} at {$validated['defense_venue']}",
                     'link'=>'/defense-requests',
                 ]);
+                
+                // ISSUE #7: Send email to panel members if requested
+                if ($sendEmails && $panelUser->email) {
+                    Mail::to($panelUser->email)
+                        ->queue(new DefenseScheduled($defenseRequest, $panelUser));
+                }
             }
         }
 
@@ -443,6 +458,15 @@ class CoordinatorDefenseController extends Controller
                 'message'=>"Defense for {$defenseRequest->first_name} {$defenseRequest->last_name}: {$scheduleDate} {$timeRange}.",
                 'link'=>'/defense-requests',
             ]);
+            
+            // ISSUE #7: Send email to adviser if requested
+            if ($sendEmails) {
+                $adviser = User::find($defenseRequest->adviser_user_id);
+                if ($adviser && $adviser->email) {
+                    Mail::to($adviser->email)
+                        ->queue(new DefenseScheduled($defenseRequest, $adviser));
+                }
+            }
         }
     }
 
@@ -862,7 +886,8 @@ class CoordinatorDefenseController extends Controller
             'scheduled_end_time'  => 'required|date_format:H:i',
             'defense_mode'        => 'required|in:face-to-face,online',
             'defense_venue'       => 'required|string|max:255',
-            'scheduling_notes'    => 'nullable|string|max:1000'
+            'scheduling_notes'    => 'nullable|string|max:1000',
+            'send_email'          => 'nullable|boolean', // ISSUE #6: Email confirmation parameter
         ]);
         
         // Validate that end time is after start time manually
@@ -877,14 +902,22 @@ class CoordinatorDefenseController extends Controller
             DB::beginTransaction();
 
             $origState = $defenseRequest->workflow_state;
-            // Allow scheduling from coordinator-review, coordinator-approved, panels-assigned, or scheduled
+            
+            // Remove the coordinator approval requirement - scheduling happens BEFORE approval
+            // Coordinators can schedule at any time during their review process
+            
+            // Allow scheduling from adviser-approved (endorsed), coordinator-review, coordinator-approved, panels-assigned, or scheduled
             if (!in_array($origState, [
-                'coordinator-review', 'coordinator-approved', 'panels-assigned', 'scheduled'
+                'adviser-approved', 'coordinator-review', 'coordinator-approved', 'panels-assigned', 'scheduled'
             ])) {
                 return response()->json([
-                    'error'=>"Cannot schedule from state '{$origState}'"
+                    'error'=>"Cannot schedule from state '{$origState}'. Defense must be endorsed by adviser first."
                 ],422);
             }
+
+            // Extract send_email before assigning to model (it's not a database column)
+            $sendEmails = $data['send_email'] ?? false;
+            unset($data['send_email']); // Remove from data array before mass assignment
 
             foreach ($data as $k=>$v) {
                 $defenseRequest->{$k} = $v;
@@ -916,6 +949,13 @@ class CoordinatorDefenseController extends Controller
             $defenseRequest->save();
 
             DB::commit();
+            
+            // ISSUE #6 & #7: Send notifications and optionally emails
+            $scheduleDate = Carbon::parse($data['scheduled_date'])->format('M d, Y');
+            $timeRange = Carbon::parse($data['scheduled_time'])->format('g:i A')
+                .' - '.Carbon::parse($data['scheduled_end_time'])->format('g:i A');
+            // Note: $sendEmails was already extracted above before mass assignment
+            $this->createSchedulingNotifications($defenseRequest, $scheduleDate, $timeRange, $data, $sendEmails);
 
             return response()->json([
                 'ok'=>true,
