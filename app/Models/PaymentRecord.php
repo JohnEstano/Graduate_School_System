@@ -12,6 +12,7 @@ class PaymentRecord extends Model
     protected $fillable = [
         'student_record_id',
         'panelist_record_id',
+        'defense_request_id',
         'school_year',
         'payment_date',
         'defense_status',

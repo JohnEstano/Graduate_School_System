@@ -217,12 +217,12 @@ Route::get('/honorarium/individual-record/{programId}', [HonorariumSummaryContro
 
     //student-records route
     Route::get('/student-records', [StudentRecordController::class, 'index'])->name('student-records.index');
+    Route::get('/student-records/{id}', [StudentRecordController::class, 'show'])->name('student-records.show');
     Route::put('/student-records/{studentRecord}', [StudentRecordController::class, 'update'])->name('student-records.update');
     Route::delete('/student-records/{studentRecord}', [StudentRecordController::class, 'destroy'])->name('student-records.destroy');
-
     
     Route::get('/payments/{id}/download-pdf', [StudentRecordController::class, 'downloadPdf'])
-    ->name('payments.downloadPdf');
+        ->name('payments.downloadPdf');
 
 
 
@@ -742,8 +742,8 @@ Route::get('/assistant/all-defense-list/data', function () {
                 'amount' => $r->amount,
                 'reference_no' => $r->reference_no,
                 'coordinator' => $coordinator,
-                'aa_verification_status' => $r->aaVerification?->status ?? 'pending',
-                'aa_verification_id' => $r->aaVerification?->id,
+                'aa_verification_status' => optional($r->aaVerification)->status ?? 'pending',
+                'aa_verification_id' => optional($r->aaVerification)->id,
             ];
         });
 

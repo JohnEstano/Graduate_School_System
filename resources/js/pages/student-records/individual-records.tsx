@@ -28,16 +28,19 @@ import { jsPDF } from "jspdf";
 
 interface Payment {
   id: number;
-  payment_date: string;
+  defense_date: string | null;
+  defense_type: string | null;
   defense_status: string;
-  amount: string;
-  total_amount: string;
-  panelists?: {
-    id?: number;
+  or_number: string;
+  payment_date: string | null;
+  amount: number;
+  total_amount: number;
+  panelists: {
+    id?: number | null;
     role: string;
     pfirst_name: string;
     plast_name: string;
-    amount: string;
+    amount: number;
   }[];
 }
 
@@ -223,16 +226,20 @@ export default function IndividualRecord({ record, onClose }: IndividualRecordPr
                               </TableCell>
 
                               <TableCell>
-                                {record.defense_date
-                                  ? format(new Date(record.defense_date), "yyyy-MM-dd")
+                                {payment.defense_date
+                                  ? format(new Date(payment.defense_date), "yyyy-MM-dd")
                                   : "-"}
                               </TableCell>
-                              <TableCell>{record.defense_type || "-"}</TableCell>
+                              <TableCell>{payment.defense_type || "-"}</TableCell>
                               <TableCell>{payment.defense_status || "-"}</TableCell>
-                              <TableCell>{record.or_number || "-"}</TableCell>
-                              <TableCell>{payment.payment_date || "-"}</TableCell>
+                              <TableCell>{payment.or_number || "-"}</TableCell>
+                              <TableCell>
+                                {payment.payment_date
+                                  ? format(new Date(payment.payment_date), "yyyy-MM-dd")
+                                  : "-"}
+                              </TableCell>
                               <TableCell className="text-right">
-                                ₱{Number(payment.amount).toFixed(2)}
+                                ₱{Number(payment.total_amount || 0).toFixed(2)}
                               </TableCell>
 
                               <TableCell className="text-center">

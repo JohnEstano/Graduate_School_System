@@ -97,6 +97,7 @@ class StudentRecordSyncService
                 $paymentRecord = PaymentRecord::create([
                     'student_record_id' => $studentRecord->id,
                     'panelist_record_id' => $panelistRecord->id,
+                    'defense_request_id' => $defenseRequest->id, // Add this line
                     'school_year' => PaymentRecord::getCurrentSchoolYear(),
                     'payment_date' => $honorariumPayment->payment_date ?? now(),
                     'defense_status' => 'completed',
