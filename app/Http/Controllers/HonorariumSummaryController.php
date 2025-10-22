@@ -19,7 +19,6 @@ class HonorariumSummaryController extends Controller
 
         // Get all completed defense requests grouped by program
         $completedDefenses = DefenseRequest::where('workflow_state', 'completed')
-            ->with(['honorariumPayments.panelist'])
             ->get();
 
         // Group by program
@@ -29,10 +28,10 @@ class HonorariumSummaryController extends Controller
             
             if (!isset($programsData[$programKey])) {
                 $programsData[$programKey] = [
-                    'id' => $defense->id,
-                    'name' => $defense->program,
-                    'program' => $defense->program,
-                    'category' => ProgramLevel::getLevel($defense->program),
+                    'id' => $programKey,
+                    'name' => $programKey,
+                    'program' => $programKey,
+                    'category' => ProgramLevel::getLevel($programKey),
                     'date_edited' => $defense->updated_at->format('Y-m-d'),
                 ];
             }
@@ -58,17 +57,16 @@ class HonorariumSummaryController extends Controller
                 $programName = $firstDefense->program;
             }
         } else {
-            $programName = $programId;
+            $programName = urldecode($programId);
         }
 
         if (!$programName) {
             abort(404, 'Program not found');
         }
 
-        // Get all completed defenses for this program WITH their stored honorarium payments
+        // Get all completed defenses for this program
         $defenses = DefenseRequest::where('program', $programName)
             ->where('workflow_state', 'completed')
-            ->with(['honorariumPayments.panelist'])
             ->get();
 
         if ($defenses->isEmpty()) {
@@ -78,84 +76,74 @@ class HonorariumSummaryController extends Controller
         $program = $defenses->first()->program;
         $programLevel = ProgramLevel::getLevel($program);
 
-        Log::info('Processing program honorarium', [
-            'program' => $program,
-            'program_level' => $programLevel,
-            'defenses_count' => $defenses->count()
-        ]);
+        // Get all honorarium payments for these defenses
+        $payments = HonorariumPayment::whereIn('defense_request_id', $defenses->pluck('id'))
+            ->with('panelist', 'defenseRequest')
+            ->get();
 
         // Group payments by panelist
         $panelistsData = [];
         
-        foreach ($defenses as $defense) {
-            Log::info('Processing defense for honorarium', [
-                'defense_id' => $defense->id,
-                'payments_count' => $defense->honorariumPayments->count()
-            ]);
-
-            // Use STORED honorarium payments instead of recalculating
-            foreach ($defense->honorariumPayments as $payment) {
-                $panelist = $payment->panelist;
-                
-                if (!$panelist) {
-                    Log::warning('Honorarium payment missing panelist', [
-                        'payment_id' => $payment->id,
-                        'panelist_id' => $payment->panelist_id
-                    ]);
-                    continue;
-                }
-
-                // Create unique key for panelist + role combination
-                $panelistKey = $payment->panelist_id . '_' . $payment->role . '_' . $defense->defense_type;
-                
-                if (!isset($panelistsData[$panelistKey])) {
-                    $panelistsData[$panelistKey] = [
-                        'id' => $panelist->id,
-                        'pfirst_name' => $panelist->name,
-                        'pmiddle_name' => '',
-                        'plast_name' => '',
-                        'role' => $payment->role,
-                        'defense_type' => $defense->defense_type,
-                        'received_date' => $payment->payment_date ?? $defense->updated_at->format('Y-m-d'),
-                        'amount' => 0, // Will accumulate
-                        'students' => []
-                    ];
-                }
-
-                Log::info('Adding student payment to panelist', [
-                    'panelist_id' => $panelist->id,
-                    'panelist_name' => $panelist->name,
-                    'role' => $payment->role,
-                    'stored_amount' => $payment->amount,
-                    'defense_id' => $defense->id,
-                    'student' => $defense->first_name . ' ' . $defense->last_name
-                ]);
-
-                // Add student with STORED payment amount
-                $panelistsData[$panelistKey]['students'][] = [
-                    'id' => $defense->id,
-                    'first_name' => $defense->first_name,
-                    'middle_name' => $defense->middle_name,
-                    'last_name' => $defense->last_name,
-                    'program' => $defense->program,
-                    'course_section' => $defense->defense_type,
-                    'school_year' => $defense->created_at->format('Y') . '-' . ($defense->created_at->format('Y') + 1),
-                    'or_number' => $defense->reference_no,
-                    'defense_date' => $defense->scheduled_date ? $defense->scheduled_date->format('Y-m-d') : null,
-                    'defense_type' => $defense->defense_type,
-                    'payments' => [
-                        [
-                            'id' => $payment->id,
-                            'defense_status' => 'Completed',
-                            'payment_date' => $payment->payment_date ?? $defense->updated_at->format('Y-m-d'),
-                            'amount' => floatval($payment->amount) // USE STORED AMOUNT from honorarium_payments table
-                        ]
-                    ]
-                ];
-
-                // Accumulate total amount from STORED payments
-                $panelistsData[$panelistKey]['amount'] += floatval($payment->amount);
+        foreach ($payments as $payment) {
+            $panelist = $payment->panelist;
+            
+            if (!$panelist) {
+                continue;
             }
+
+            $defense = $payment->defenseRequest;
+            $key = $panelist->id;
+            
+            if (!isset($panelistsData[$key])) {
+                $panelistsData[$key] = [
+                    'id' => $panelist->id,
+                    'pfirst_name' => $panelist->name,
+                    'pmiddle_name' => '',
+                    'plast_name' => '',
+                    'role' => $payment->role,
+                    'defense_type' => $defense->defense_type ?? 'N/A',
+                    'received_date' => $payment->payment_date,
+                    'students' => [],
+                    'amount' => 0,
+                ];
+            }
+            
+            // Format defense date properly
+            $defenseDate = null;
+            if ($defense->scheduled_date) {
+                $defenseDate = $defense->scheduled_date instanceof \Carbon\Carbon 
+                    ? $defense->scheduled_date->format('m/d/Y')
+                    : \Carbon\Carbon::parse($defense->scheduled_date)->format('m/d/Y');
+            } elseif ($defense->date_of_defense) {
+                $defenseDate = $defense->date_of_defense instanceof \Carbon\Carbon
+                    ? $defense->date_of_defense->format('m/d/Y')
+                    : \Carbon\Carbon::parse($defense->date_of_defense)->format('m/d/Y');
+            }
+
+            // Add student payment data
+            $panelistsData[$key]['students'][] = [
+                'id' => $defense->id,
+                'first_name' => $defense->first_name,
+                'middle_name' => $defense->middle_name,
+                'last_name' => $defense->last_name,
+                'course_section' => $defense->program,
+                'school_year' => date('Y'),
+                'payments' => [
+                    [
+                        'id' => $payment->id,
+                        'payment_date' => $payment->payment_date ?? $defense->updated_at->format('m/d/Y'),
+                        'defense_date' => $defenseDate, // ✅ FIX: Add defense date
+                        'defense_type' => $defense->defense_type, // ✅ FIX: Add defense type
+                        'defense_status' => $defense->workflow_state,
+                        'panelist_role' => $payment->role, // ✅ FIX: Add panelist role
+                        'amount' => (float)$payment->amount,
+                        'or_number' => $defense->reference_no ?? null, // ✅ FIX: Add OR number
+                    ]
+                ]
+            ];
+            
+            // Sum total amount
+            $panelistsData[$key]['amount'] += (float)$payment->amount;
         }
 
         $record = [
@@ -172,7 +160,6 @@ class HonorariumSummaryController extends Controller
             'program' => $program,
             'panelists_count' => count($panelistsList),
             'total_receivables' => array_sum(array_column($panelistsList, 'amount')),
-            'sample_panelist' => $panelistsList[0] ?? null
         ]);
 
         return Inertia::render('honorarium/individual-record', [
@@ -201,7 +188,6 @@ class HonorariumSummaryController extends Controller
 
             $defenses = DefenseRequest::where('program', $programName)
                 ->where('workflow_state', 'completed')
-                ->with(['honorariumPayments.panelist'])
                 ->get();
 
             if ($defenses->isEmpty()) {
@@ -209,18 +195,60 @@ class HonorariumSummaryController extends Controller
             }
 
             $program = $defenses->first()->program;
+            $programLevel = ProgramLevel::getLevel($program);
+
+            // Get all honorarium payments
+            $payments = HonorariumPayment::whereIn('defense_request_id', $defenses->pluck('id'))
+                ->with('panelist', 'defenseRequest')
+                ->get();
+
+            $panelistsData = [];
             
-            $pdf = Pdf::loadView('pdfs.honorarium-summary', [
-                'defenses' => $defenses,
-                'program_name' => $program,
+            foreach ($payments as $payment) {
+                $panelist = $payment->panelist;
+                
+                if (!$panelist) continue;
+
+                $key = $panelist->id;
+                
+                if (!isset($panelistsData[$key])) {
+                    $panelistsData[$key] = [
+                        'id' => $panelist->id,
+                        'name' => $panelist->name, // Add this
+                        'pfirst_name' => $panelist->name, // For compatibility
+                        'pmiddle_name' => '',
+                        'plast_name' => '',
+                        'role' => $payment->role,
+                        'defense_type' => $payment->defenseRequest->defense_type ?? 'N/A',
+                        'amount' => 0,
+                        'received_date' => $payment->payment_date,
+                    ];
+                }
+                
+                $panelistsData[$key]['amount'] += (float) $payment->amount;
+                
+                if ($payment->payment_date) {
+                    $currentDate = $panelistsData[$key]['received_date'];
+                    if (!$currentDate || $payment->payment_date > $currentDate) {
+                        $panelistsData[$key]['received_date'] = $payment->payment_date;
+                    }
+                }
+            }
+
+            $panelistsList = array_values($panelistsData);
+
+            $pdf = Pdf::loadView('pdfs.honorarium-program', [
+                'program' => $program,
+                'programLevel' => $programLevel,
+                'panelists' => $panelistsList,
+                'totalAmount' => array_sum(array_column($panelistsList, 'amount')),
             ]);
 
-            $filename = "honorarium-{$program}.pdf";
-            return $pdf->download($filename);
+            return $pdf->download("honorarium-{$program}.pdf");
 
         } catch (\Exception $e) {
-            Log::error('Program PDF Generation Error: ' . $e->getMessage());
-            return response()->json(['error' => 'Failed to generate program PDF'], 500);
+            Log::error('PDF generation failed', ['error' => $e->getMessage()]);
+            abort(500, 'Failed to generate PDF');
         }
     }
 }

@@ -117,11 +117,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
 
     //PAYMENT RATESS ETC.
-    Route::post('/dean/payment-rates', [\AppHttp\Controllers\PaymentRateController::class, 'update'])
+    Route::post('/dean/payment-rates', [\App\Http\Controllers\PaymentRateController::class, 'update'])
         ->name('dean.payment-rates.update');
-    Route::get('/dean/payment-rates', [\AppHttp\Controllers\PaymentRateController::class, 'index'])
+    Route::get('/dean/payment-rates', [\App\Http\Controllers\PaymentRateController::class, 'index'])
         ->name('dean.payment-rates.index');
-    Route::get('/dean/payment-rates/data', [\AppHttp\Controllers\PaymentRateController::class, 'data'])
+    Route::get('/dean/payment-rates/data', [\App\Http\Controllers\PaymentRateController::class, 'data'])
         ->name('dean.payment-rates.data');
 
 
@@ -742,8 +742,8 @@ Route::get('/assistant/all-defense-list/data', function () {
                 'amount' => $r->amount,
                 'reference_no' => $r->reference_no,
                 'coordinator' => $coordinator,
-                'aa_verification_status' => $r->aaVerification ? $r->aaVerification->status : 'pending',
-                'aa_verification_id' => $r->aaVerification ? $r->aaVerification->id : null,
+                'aa_verification_status' => $r->aaVerification?->status ?? 'pending',
+                'aa_verification_id' => $r->aaVerification?->id,
             ];
         });
 

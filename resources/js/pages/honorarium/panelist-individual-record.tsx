@@ -12,6 +12,10 @@ interface Payment {
   id: number;
   defense_status: string;
   payment_date: string;
+  defense_date?: string; // ✅ ADD
+  defense_type?: string; // ✅ ADD
+  panelist_role?: string; // ✅ ADD
+  or_number?: string; // ✅ ADD
   amount: number;
 }
 
@@ -97,28 +101,23 @@ export default function PanelistIndividualRecord({ panelist, onClose }: Props) {
                         <td className="px-3 py-2">{`${student.first_name} ${
                           student.middle_name || ""
                         } ${student.last_name}`}</td>
-                       <td className="px-3 py-2">
-  {panelist.defense_type === student.defense_type ? panelist.role : "-"}
-</td>
                         <td className="px-3 py-2">
-                          {student.program ? `${student.program} / ` : ""}
+                          {pay.panelist_role || "-"}
+                        </td>
+                        <td className="px-3 py-2">
                           {student.course_section || "-"}
                         </td>
                         <td className="px-3 py-2">
-                          {student.defense_date
-                            ? new Date(student.defense_date).toLocaleDateString()
-                            : "-"}
+                          {pay.defense_date || "-"}
                         </td>
                         <td className="px-3 py-2">
-                          {student.defense_type || "-"}
+                          {pay.defense_type || "-"}
                         </td>
                         <td className="px-3 py-2">{pay.defense_status || "-"}</td>
                         <td className="px-3 py-2">
-                          {pay.payment_date
-                            ? new Date(pay.payment_date).toLocaleDateString()
-                            : "-"}
+                          {pay.payment_date || "-"}
                         </td>
-                        <td className="px-3 py-2">{student.or_number || "-"}</td>
+                        <td className="px-3 py-2">{pay.or_number || "-"}</td>
                         <td className="px-3 py-2 text-right">
                           ₱{Number(pay.amount || 0).toFixed(2)}
                         </td>

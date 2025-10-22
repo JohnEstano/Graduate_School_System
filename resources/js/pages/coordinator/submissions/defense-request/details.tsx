@@ -1048,35 +1048,39 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
                     const memberFor = (value: string | null | undefined, fallbackRole: string) => {
                       const resolved = findPanelMember(panelMembers, value);
                       return {
-                        displayName: resolved?.name || value || '—',
-                        email: resolved?.email || '',
-                        rawValue: value || '',
-                        role: fallbackRole,
+                          displayName: resolved?.name || value || '—',
+                          email: resolved?.email || '',
+                          rawValue: value || '',
+                          role: fallbackRole,
                       };
                     };
 
                     const rows = [
                       { key: 'adviser', info: memberFor(request.defense_adviser, 'Adviser') },
-                      { key: 'defense_chairperson', info: memberFor(panels.defense_chairperson || request.defense_chairperson, 'Chairperson') },
-                      { key: 'defense_panelist1', info: memberFor(panels.defense_panelist1 || request.defense_panelist1, 'Panel Member') },
-                      { key: 'defense_panelist2', info: memberFor(panels.defense_panelist2 || request.defense_panelist2, 'Panel Member') },
-                      { key: 'defense_panelist3', info: memberFor(panels.defense_panelist3 || request.defense_panelist3, 'Panel Member') },
-                      { key: 'defense_panelist4', info: memberFor(panels.defense_panelist4 || request.defense_panelist4, 'Panel Member') },
+                      { key: 'defense_chairperson', info: memberFor(panels.defense_chairperson || request.defense_chairperson, 'Panel Chair') },
+                      { key: 'defense_panelist1', info: memberFor(panels.defense_panelist1 || request.defense_panelist1, 'Panel Member 1') },
+                      { key: 'defense_panelist2', info: memberFor(panels.defense_panelist2 || request.defense_panelist2, 'Panel Member 2') },
+                      { key: 'defense_panelist3', info: memberFor(panels.defense_panelist3 || request.defense_panelist3, 'Panel Member 3') },
+                      { key: 'defense_panelist4', info: memberFor(panels.defense_panelist4 || request.defense_panelist4, 'Panel Member 4') },
                     ].map(r => {
                       const namePresent = !!(r.info.rawValue || (r.info.displayName && r.info.displayName !== '—'));
                       const emailPresent = !!(r.info.email);
                       const status = namePresent ? (emailPresent ? 'Assigned' : 'Pending confirmation') : '—';
 
+                      // Use the payment rates helper with correct type mapping
+                      let rateType = r.info.role;
+                      if (r.info.role === 'Chairperson') rateType = 'Panel Chair';
+                      
                       const receivable = namePresent
-                        ? getMemberReceivableByProgramLevel(paymentRates, request.program_level, request.defense_type, r.info.role)
-                        : null;
+                          ? getMemberReceivableByProgramLevel(paymentRates, request.program_level, request.defense_type, rateType)
+                          : null;
 
                       return {
-                        name: r.info.displayName,
-                        email: r.info.email || '—',
-                        role: r.info.role,
-                        status,
-                        receivable,
+                          name: r.info.displayName,
+                          email: r.info.email || '—',
+                          role: r.info.role,
+                          status,
+                          receivable,
                       };
                     });
 

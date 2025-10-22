@@ -153,14 +153,32 @@ export default function Details({ defenseRequest: initialDefenseRequest }: Props
   function getMemberReceivable(role: string): number | null {
     if (!details?.program_level || !details?.defense_type) return null;
     
-    const rateType = role === 'Adviser' ? 'Adviser' : 
-                     role === 'Chairperson' ? 'Chairperson' : 'Panelist';
+    // Map role to payment rate type exactly as stored in DB
+    let rateType = '';
+    if (role === 'Adviser') {
+        rateType = 'Adviser';
+    } else if (role === 'Chairperson' || role === 'Panel Chair') {
+        rateType = 'Panel Chair';
+    } else if (role === 'Panel Member') {
+        rateType = 'Panel Member 1'; // or 2, 3, 4 depending on position
+    } else {
+        rateType = role; // fallback
+    }
     
     const rate = paymentRates.find(
-      r => r.program_level === details.program_level && 
-           r.defense_type === details.defense_type && 
-           r.type === rateType
+        r => r.program_level === details.program_level && 
+             r.defense_type === details.defense_type && 
+             r.type === rateType
     );
+    
+    console.log('Rate lookup:', { 
+        role, 
+        rateType, 
+        program_level: details.program_level, 
+        defense_type: details.defense_type, 
+        found: rate,
+        allRates: paymentRates 
+    });
     
     return rate ? Number(rate.amount) : null;
   }
@@ -462,11 +480,11 @@ export default function Details({ defenseRequest: initialDefenseRequest }: Props
 
                     const rows = [
                       { key: 'adviser', info: memberFor(details?.defense_adviser, 'Adviser') },
-                      { key: 'chairperson', info: memberFor(details?.defense_chairperson, 'Chairperson') },
-                      { key: 'panelist1', info: memberFor(details?.defense_panelist1, 'Panel Member') },
-                      { key: 'panelist2', info: memberFor(details?.defense_panelist2, 'Panel Member') },
-                      { key: 'panelist3', info: memberFor(details?.defense_panelist3, 'Panel Member') },
-                      { key: 'panelist4', info: memberFor(details?.defense_panelist4, 'Panel Member') },
+                      { key: 'chairperson', info: memberFor(details?.defense_chairperson, 'Panel Chair') },
+                      { key: 'panelist1', info: memberFor(details?.defense_panelist1, 'Panel Member 1') },
+                      { key: 'panelist2', info: memberFor(details?.defense_panelist2, 'Panel Member 2') },
+                      { key: 'panelist3', info: memberFor(details?.defense_panelist3, 'Panel Member 3') },
+                      { key: 'panelist4', info: memberFor(details?.defense_panelist4, 'Panel Member 4') },
                     ].map(r => {
                       const namePresent = !!(r.info.rawValue || (r.info.displayName && r.info.displayName !== '—'));
                       const emailPresent = !!(r.info.email);

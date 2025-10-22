@@ -21,7 +21,7 @@ export function normalizeDefenseType(s?: string | null): 'proposal' | 'prefinal'
  * FIXED: Maps frontend roles to database types correctly
  */
 export function getMemberReceivableByProgramLevel(
-  rates: PaymentRateRow[] | any[],
+  paymentRates: PaymentRateRow[] | any[],
   programLevel?: string | null,
   defenseType?: string | null,
   role?: string | null
@@ -31,36 +31,20 @@ export function getMemberReceivableByProgramLevel(
   const normalizedDefenseType = normalizeDefenseType(defenseType);
   if (!normalizedDefenseType) return null;
 
-  // Map frontend roles to database types
-  let dbType = role;
+  // Map role to exact payment rate type
+  let rateType = role;
   if (role === 'Chairperson') {
-    dbType = 'Panel Chair'; // Database uses "Panel Chair"
-  } else if (role === 'Panel Member') {
-    dbType = 'Panel Member 1'; // Database uses "Panel Member 1" for the base rate
+    rateType = 'Panel Chair';
   }
 
-  console.log('Looking for rate:', {
-    programLevel,
-    defenseType: normalizedDefenseType,
-    role,
-    dbType,
-    availableRates: rates.map(r => ({ type: r.type, defense_type: r.defense_type, amount: r.amount }))
-  });
-
-  const rate = rates.find(
+  const rate = paymentRates.find(
     r =>
-      r.program_level?.toLowerCase() === programLevel.toLowerCase() &&
-      normalizeDefenseType(r.defense_type) === normalizedDefenseType &&
-      r.type === dbType
+      r.program_level === programLevel &&
+      r.defense_type === defenseType &&
+      r.type === rateType
   );
 
-  if (!rate) {
-    console.warn('No rate found for:', { programLevel, defenseType: normalizedDefenseType, dbType });
-    return null;
-  }
-
-  const amount = typeof rate.amount === 'number' ? rate.amount : parseFloat(String(rate.amount));
-  return isNaN(amount) ? null : amount;
+  return rate ? Number(rate.amount) : null;
 }
 
 /**
