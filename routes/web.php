@@ -762,3 +762,10 @@ Route::get('/coordinator/defense-requests', function () {
 
 Route::get('/assistant/all-defense-list/{id}/details', [DefenseRequestController::class, 'showAADetails'])
     ->name('assistant.all-defense-list.details');
+
+// Add this route for manual testing
+Route::post('/admin/sync-student-records', function() {
+    $service = app(\App\Services\StudentRecordSyncService::class);
+    $service->syncAllCompletedDefenses();
+    return response()->json(['message' => 'Sync completed']);
+})->middleware('auth');

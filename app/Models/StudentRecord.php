@@ -9,28 +9,34 @@ class StudentRecord extends Model
 {
     use HasFactory;
 
-        protected $fillable = [
-            'first_name',
-            'middle_name',
-            'last_name',
-            'gender',
-            'program',
-            'school_year',
-            'student_id',
-            'course_section',
-            'birthdate',
-            'academic_status',
-            'or_number',
-            'payment_date',
-            'defense_date',     
-            'defense_type',   
-        ];
-
-        protected $casts = [
-            'birthdate' => 'date',
-            'payment_date' => 'date',
-            'defense_date' => 'date',
+    protected $fillable = [
+        'first_name',
+        'middle_name',
+        'last_name',
+        'gender',
+        'program',
+        'school_year',
+        'student_id',
+        'course_section',
+        'birthdate',
+        'academic_status',
+        'or_number',
+        'payment_date',
+        'defense_date',     
+        'defense_type',
+        'defense_request_id',
     ];
+
+    protected $casts = [
+        'birthdate' => 'date',
+        'payment_date' => 'date',
+        'defense_date' => 'date',
+    ];
+
+    public function defenseRequest()
+    {
+        return $this->belongsTo(DefenseRequest::class);
+    }
 
     public function program()
     {
@@ -44,12 +50,13 @@ class StudentRecord extends Model
 
     public function panelists()
     {
-    return $this->belongsToMany(
-        PanelistRecord::class, 
+        return $this->belongsToMany(
+            PanelistRecord::class, 
             'panelist_student_records', 
             'student_id', 
-            'panelist_id')
-                ->withPivot('role')
-                ->withTimestamps();
+            'panelist_id'
+        )
+        ->withPivot('role', 'amount')
+        ->withTimestamps();
     }
 }

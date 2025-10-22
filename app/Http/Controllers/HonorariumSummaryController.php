@@ -81,7 +81,7 @@ class HonorariumSummaryController extends Controller
             ->with('panelist', 'defenseRequest')
             ->get();
 
-        // Group payments by panelist
+        // ✅ Group payments by PANELIST NAME ONLY (not by role)
         $panelistsData = [];
         
         foreach ($payments as $payment) {
@@ -92,19 +92,20 @@ class HonorariumSummaryController extends Controller
             }
 
             $defense = $payment->defenseRequest;
-            $key = $panelist->id;
+            
+            // ✅ Use panelist name as the key to group all their payments together
+            $key = $panelist->name;
             
             if (!isset($panelistsData[$key])) {
                 $panelistsData[$key] = [
                     'id' => $panelist->id,
+                    'panelist_id' => $panelist->id,
                     'pfirst_name' => $panelist->name,
                     'pmiddle_name' => '',
                     'plast_name' => '',
-                    'role' => $payment->role,
-                    'defense_type' => $defense->defense_type ?? 'N/A',
-                    'received_date' => $payment->payment_date,
                     'students' => [],
-                    'amount' => 0, // ✅ This is panelist's honorarium receivable
+                    'amount' => 0,
+                    'received_date' => null,
                 ];
             }
             
@@ -120,31 +121,54 @@ class HonorariumSummaryController extends Controller
                     : \Carbon\Carbon::parse($defense->date_of_defense)->format('m/d/Y');
             }
 
-            // Add student payment data
-            $panelistsData[$key]['students'][] = [
-                'id' => $defense->id,
-                'first_name' => $defense->first_name,
-                'middle_name' => $defense->middle_name,
-                'last_name' => $defense->last_name,
-                'course_section' => $defense->program,
-                'school_year' => date('Y'),
-                'payments' => [
-                    [
-                        'id' => $payment->id,
-                        'payment_date' => $payment->payment_date ?? $defense->updated_at->format('m/d/Y'),
-                        'defense_date' => $defenseDate,
-                        'defense_type' => $defense->defense_type,
-                        'defense_status' => $defense->workflow_state,
-                        'panelist_role' => $payment->role,
-                        'panelist_honorarium' => (float)$payment->amount, // ✅ Panelist's share
-                        'amount' => (float)$defense->amount, // ✅ Full student payment
-                        'or_number' => $defense->reference_no ?? null,
-                    ]
-                ]
+            // ✅ Find if this student already exists for this panelist
+            $studentIndex = null;
+            foreach ($panelistsData[$key]['students'] as $idx => $student) {
+                if ($student['id'] === $defense->id) {
+                    $studentIndex = $idx;
+                    break;
+                }
+            }
+
+            // Payment data
+            $paymentData = [
+                'id' => $payment->id,
+                'payment_date' => $payment->payment_date ?? $defense->updated_at->format('m/d/Y'),
+                'defense_date' => $defenseDate,
+                'defense_type' => $defense->defense_type,
+                'defense_status' => $defense->workflow_state,
+                'panelist_role' => $payment->role,
+                'panelist_honorarium' => (float)$payment->amount,
+                'amount' => (float)$defense->amount,
+                'or_number' => $defense->reference_no ?? null,
             ];
+
+            if ($studentIndex !== null) {
+                // Add payment to existing student
+                $panelistsData[$key]['students'][$studentIndex]['payments'][] = $paymentData;
+            } else {
+                // Add new student entry
+                $panelistsData[$key]['students'][] = [
+                    'id' => $defense->id,
+                    'first_name' => $defense->first_name,
+                    'middle_name' => $defense->middle_name,
+                    'last_name' => $defense->last_name,
+                    'course_section' => $defense->program,
+                    'school_year' => date('Y'),
+                    'payments' => [$paymentData]
+                ];
+            }
             
-            // Sum total panelist honorarium (their receivable)
-            $panelistsData[$key]['amount'] += (float)$payment->amount; // ✅ Sum panelist honorarium
+            // ✅ Sum total panelist honorarium
+            $panelistsData[$key]['amount'] += (float)$payment->amount;
+            
+            // Update received_date to the latest payment date
+            if ($payment->payment_date) {
+                $currentDate = $panelistsData[$key]['received_date'];
+                if (!$currentDate || $payment->payment_date > $currentDate) {
+                    $panelistsData[$key]['received_date'] = $payment->payment_date;
+                }
+            }
         }
 
         $record = [
@@ -160,7 +184,15 @@ class HonorariumSummaryController extends Controller
         Log::info('Honorarium summary prepared', [
             'program' => $program,
             'panelists_count' => count($panelistsList),
+            'total_entries' => count($panelistsData),
             'total_receivables' => array_sum(array_column($panelistsList, 'amount')),
+            'panelists' => array_map(function($p) {
+                return [
+                    'name' => $p['pfirst_name'],
+                    'amount' => $p['amount'],
+                    'payments_count' => count($p['students'])
+                ];
+            }, $panelistsList)
         ]);
 
         return Inertia::render('honorarium/individual-record', [

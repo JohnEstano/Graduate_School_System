@@ -19,7 +19,7 @@ return new class extends Migration
             $table->string('time_last_opened', 20);
             $table->date('date_edited');
             $table->timestamps(); 
-            $table->timestamp('recently_updated')->nullable()->default(now());
+           
         });
     }
 

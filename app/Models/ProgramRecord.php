@@ -9,12 +9,19 @@ class ProgramRecord extends Model
 {
     use HasFactory;
     
-    protected $fillable = ['name', 'program'];
+    protected $fillable = [
+        'name',
+        'program',
+        'category',
+        'recently_updated',
+        'time_last_opened',
+        'date_edited',
+    ];
 
     const DOCTORATE = 'Doctorate';
     const MASTERS = 'Masters';
 
-        public static function defaultPrograms(): array
+    public static function defaultPrograms(): array
     {
         return [
             self::DOCTORATE => [
@@ -62,6 +69,7 @@ class ProgramRecord extends Model
 
     protected $casts = [
         'date_edited' => 'datetime',
+        'time_last_opened' => 'datetime',
     ];
 
     public function studentRecords()
@@ -73,5 +81,4 @@ class ProgramRecord extends Model
     {
         return $this->hasMany(PanelistRecord::class, 'program_record_id');
     }
-
 }

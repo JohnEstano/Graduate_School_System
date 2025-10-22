@@ -56,138 +56,216 @@ class DefenseRequest extends Model
     public function createHonorariumPayments()
     {
         try {
-            Log::info('Creating honorarium payments for defense', [
+            // Prevent duplicate payments
+            if ($this->honorariumPayments()->exists()) {
+                Log::info('Honorarium payments already exist for defense', ['defense_id' => $this->id]);
+                return;
+            }
+
+            // Get program level to fetch correct rates
+            $programLevel = ProgramLevel::getLevel($this->program);
+            
+            Log::info('Creating honorarium payments', [
                 'defense_id' => $this->id,
                 'program' => $this->program,
+                'program_level' => $programLevel,
                 'defense_type' => $this->defense_type
             ]);
 
-            $programLevel = ProgramLevel::getLevel($this->program);
-            
-            Log::info('Program level determined', [
-                'program' => $this->program,
-                'program_level' => $programLevel
-            ]);
+            $paymentsCreated = [];
 
-            // Define panelist fields with their roles
-            $panelistFields = [
-                ['field' => 'defense_adviser', 'role' => 'Adviser', 'rate_lookup' => 'Adviser'],
-                ['field' => 'defense_chairperson', 'role' => 'Panel Chair', 'rate_lookup' => 'Panel Chair'],
-                ['field' => 'defense_panelist1', 'role' => 'Panel Member 1', 'rate_lookup' => 'Panel Member'],
-                ['field' => 'defense_panelist2', 'role' => 'Panel Member 2', 'rate_lookup' => 'Panel Member'],
-                ['field' => 'defense_panelist3', 'role' => 'Panel Member 3', 'rate_lookup' => 'Panel Member'],
-                ['field' => 'defense_panelist4', 'role' => 'Panel Member 4', 'rate_lookup' => 'Panel Member'],
-            ];
-
-            $paymentsCreated = 0;
-
-            foreach ($panelistFields as $config) {
-                $fieldName = $config['field'];
-                $role = $config['role'];
-                $rateLookup = $config['rate_lookup'];
-                $panelistName = $this->$fieldName;
-
-                if (empty($panelistName)) {
-                    Log::info("Skipping empty field: {$fieldName}");
-                    continue;
-                }
-
-                Log::info('Processing panelist', [
-                    'field' => $fieldName,
-                    'name' => $panelistName,
-                    'role_to_store' => $role,
-                    'rate_lookup_type' => $rateLookup
-                ]);
-
-                // Find panelist by name - SIMPLIFIED since table only has 'name' column
-                $panelist = Panelist::where('name', 'LIKE', "%{$panelistName}%")->first();
-
-                if (!$panelist) {
-                    Log::warning('Panelist not found in database', [
-                        'name' => $panelistName,
-                        'field' => $fieldName
-                    ]);
-                    continue;
-                }
-
-                Log::info('Panelist found', [
-                    'panelist_id' => $panelist->id,
-                    'name' => $panelist->name
-                ]);
-
-                // Get payment rate using the lookup type
-                $rate = PaymentRate::where('program_level', $programLevel)
-                    ->where('defense_type', $this->defense_type)
-                    ->where('type', $rateLookup)
-                    ->first();
-
-                if (!$rate) {
-                    Log::warning('Payment rate not found', [
-                        'program_level' => $programLevel,
-                        'defense_type' => $this->defense_type,
-                        'rate_lookup_type' => $rateLookup,
-                        'available_rates' => PaymentRate::where('program_level', $programLevel)
+            // 1️⃣ CREATE HONORARIUM FOR ADVISER
+            if ($this->adviser_user_id) {
+                try {
+                    $adviser = User::find($this->adviser_user_id);
+                    
+                    if ($adviser) {
+                        // Get adviser rate
+                        $adviserRate = PaymentRate::where('program_level', $programLevel)
                             ->where('defense_type', $this->defense_type)
-                            ->pluck('type')->toArray()
+                            ->where('type', 'Adviser')
+                            ->first();
+
+                        if (!$adviserRate) {
+                            Log::warning('No adviser rate found', [
+                                'program_level' => $programLevel,
+                                'defense_type' => $this->defense_type
+                            ]);
+                        }
+
+                        // Find or create panelist record for adviser
+                        $adviserPanelist = Panelist::firstOrCreate(
+                            [
+                                'name' => trim($adviser->first_name . ' ' . $adviser->last_name),
+                                'email' => $adviser->email,
+                            ],
+                            [
+                                'role' => 'Adviser',
+                                'status' => 'Active',
+                            ]
+                        );
+
+                        $adviserPayment = HonorariumPayment::create([
+                            'defense_request_id' => $this->id,
+                            'panelist_id' => $adviserPanelist->id,
+                            'panelist_type' => 'Panelist',
+                            'role' => 'Adviser',
+                            'amount' => $adviserRate ? $adviserRate->amount : 0,
+                            'payment_date' => null,
+                            'status' => 'Unpaid',
+                        ]);
+
+                        $paymentsCreated[] = [
+                            'role' => 'Adviser',
+                            'name' => $adviserPanelist->name,
+                            'amount' => $adviserPayment->amount
+                        ];
+
+                        Log::info('Adviser honorarium payment created', [
+                            'defense_id' => $this->id,
+                            'adviser_name' => $adviserPanelist->name,
+                            'amount' => $adviserPayment->amount
+                        ]);
+                    }
+                } catch (\Exception $e) {
+                    Log::error('Failed to create adviser honorarium', [
+                        'defense_id' => $this->id,
+                        'error' => $e->getMessage()
                     ]);
-                    continue;
                 }
-
-                Log::info('Payment rate found', [
-                    'program_level' => $programLevel,
-                    'defense_type' => $this->defense_type,
-                    'rate_type' => $rateLookup,
-                    'amount' => $rate->amount
-                ]);
-
-                // Check if payment already exists
-                $existingPayment = HonorariumPayment::where('defense_request_id', $this->id)
-                    ->where('panelist_id', $panelist->id)
-                    ->where('role', $role)
-                    ->first();
-
-                if ($existingPayment) {
-                    Log::info('Payment already exists, skipping', [
-                        'payment_id' => $existingPayment->id
-                    ]);
-                    continue;
-                }
-
-                // Create honorarium payment
-                $payment = HonorariumPayment::create([
-                    'defense_request_id' => $this->id,
-                    'panelist_id' => $panelist->id,
-                    'panelist_type' => 'Panelist',
-                    'role' => $role,
-                    'amount' => $rate->amount,
-                    'payment_date' => null,
-                    'status' => 'Unpaid',
-                ]);
-
-                $paymentsCreated++;
-
-                Log::info('Honorarium payment created', [
-                    'payment_id' => $payment->id,
-                    'panelist' => $panelist->name,
-                    'role' => $role,
-                    'amount' => $rate->amount
-                ]);
             }
 
-            Log::info('Honorarium payments creation completed', [
+            // 2️⃣ CREATE HONORARIUM FOR PANEL CHAIR
+            if ($this->defense_chairperson) {
+                try {
+                    $chair = Panelist::where('name', $this->defense_chairperson)->first();
+                    
+                    if ($chair) {
+                        // Get panel chair rate
+                        $chairRate = PaymentRate::where('program_level', $programLevel)
+                            ->where('defense_type', $this->defense_type)
+                            ->where('type', 'Panel Chair')
+                            ->first();
+
+                        if (!$chairRate) {
+                            Log::warning('No panel chair rate found', [
+                                'program_level' => $programLevel,
+                                'defense_type' => $this->defense_type
+                            ]);
+                        }
+
+                        $chairPayment = HonorariumPayment::create([
+                            'defense_request_id' => $this->id,
+                            'panelist_id' => $chair->id,
+                            'panelist_type' => 'Panelist',
+                            'role' => 'Panel Chair',
+                            'amount' => $chairRate ? $chairRate->amount : 0,
+                            'payment_date' => null,
+                            'status' => 'Unpaid',
+                        ]);
+
+                        $paymentsCreated[] = [
+                            'role' => 'Panel Chair',
+                            'name' => $chair->name,
+                            'amount' => $chairPayment->amount
+                        ];
+
+                        Log::info('Panel Chair honorarium payment created', [
+                            'defense_id' => $this->id,
+                            'chair_name' => $chair->name,
+                            'amount' => $chairPayment->amount
+                        ]);
+                    } else {
+                        Log::warning('Panel chair not found', [
+                            'defense_id' => $this->id,
+                            'chair_name' => $this->defense_chairperson
+                        ]);
+                    }
+                } catch (\Exception $e) {
+                    Log::error('Failed to create chair honorarium', [
+                        'defense_id' => $this->id,
+                        'error' => $e->getMessage()
+                    ]);
+                }
+            }
+
+            // 3️⃣ CREATE HONORARIUM FOR ALL PANEL MEMBERS
+            $panelistFields = [
+                ['name' => $this->defense_panelist1, 'type' => 'Panel Member 1'],
+                ['name' => $this->defense_panelist2, 'type' => 'Panel Member 2'],
+                ['name' => $this->defense_panelist3, 'type' => 'Panel Member 3'],
+                ['name' => $this->defense_panelist4, 'type' => 'Panel Member 4'],
+            ];
+
+            foreach ($panelistFields as $panelistData) {
+                if (!$panelistData['name']) continue;
+
+                try {
+                    $panelist = Panelist::where('name', $panelistData['name'])->first();
+                    
+                    if ($panelist) {
+                        // Get panel member rate
+                        $memberRate = PaymentRate::where('program_level', $programLevel)
+                            ->where('defense_type', $this->defense_type)
+                            ->where('type', $panelistData['type'])
+                            ->first();
+
+                        if (!$memberRate) {
+                            Log::warning('No panel member rate found', [
+                                'program_level' => $programLevel,
+                                'defense_type' => $this->defense_type,
+                                'type' => $panelistData['type']
+                            ]);
+                        }
+
+                        $memberPayment = HonorariumPayment::create([
+                            'defense_request_id' => $this->id,
+                            'panelist_id' => $panelist->id,
+                            'panelist_type' => 'Panelist',
+                            'role' => 'Panel Member',
+                            'amount' => $memberRate ? $memberRate->amount : 0,
+                            'payment_date' => null,
+                            'status' => 'Unpaid',
+                        ]);
+
+                        $paymentsCreated[] = [
+                            'role' => 'Panel Member',
+                            'name' => $panelist->name,
+                            'amount' => $memberPayment->amount
+                        ];
+
+                        Log::info('Panel Member honorarium payment created', [
+                            'defense_id' => $this->id,
+                            'member_name' => $panelist->name,
+                            'amount' => $memberPayment->amount
+                        ]);
+                    } else {
+                        Log::warning('Panel member not found', [
+                            'defense_id' => $this->id,
+                            'member_name' => $panelistData['name']
+                        ]);
+                    }
+                } catch (\Exception $e) {
+                    Log::error('Failed to create member honorarium', [
+                        'defense_id' => $this->id,
+                        'panelist_name' => $panelistData['name'],
+                        'error' => $e->getMessage()
+                    ]);
+                }
+            }
+
+            Log::info('All honorarium payments created successfully', [
                 'defense_id' => $this->id,
-                'payments_created' => $paymentsCreated
+                'total_payments' => count($paymentsCreated),
+                'breakdown' => $paymentsCreated
             ]);
 
-            return $paymentsCreated;
-
         } catch (\Exception $e) {
-            Log::error('Failed to create honorarium payments', [
+            Log::error('Critical error in createHonorariumPayments', [
                 'defense_id' => $this->id,
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
             ]);
-            throw $e;
         }
     }
 
