@@ -34,7 +34,7 @@ export type DefenseRequestSummary = {
   amount?: number | null;
   reference_no?: string | null;
   coordinator?: string | null;
-  aa_verification_status?: 'pending' | 'verified' | 'rejected';
+  aa_verification_status?: 'pending' | 'ready_for_finance' | 'in_progress' | 'completed';
 };
 
 export type TableAllDefenseListProps = {
@@ -60,12 +60,15 @@ export type TableAllDefenseListProps = {
   totalCount?: number;
 };
 
-function getAaStatusBadge(status?: 'pending' | 'verified' | 'rejected') {
-  if (status === 'verified') {
-    return <Badge className="bg-green-100 text-green-700 border-green-200">Verified</Badge>;
+function getAaStatusBadge(status?: 'pending' | 'ready_for_finance' | 'in_progress' | 'completed') {
+  if (status === 'completed') {
+    return <Badge className="bg-green-100 text-green-700 border-green-200">Completed</Badge>;
   }
-  if (status === 'rejected') {
-    return <Badge className="bg-red-100 text-red-700 border-red-200">Rejected</Badge>;
+  if (status === 'ready_for_finance') {
+    return <Badge className="bg-blue-100 text-blue-700 border-blue-200">Ready for Finance</Badge>;
+  }
+  if (status === 'in_progress') {
+    return <Badge className="bg-amber-100 text-amber-700 border-amber-200">In Progress</Badge>;
   }
   return <Badge className="bg-yellow-100 text-yellow-700 border-yellow-200">Pending</Badge>;
 }
@@ -95,7 +98,7 @@ export default function TableAllDefenseList({
   const [confirmDialog, setConfirmDialog] = useState<{
     open: boolean;
     ids: number[];
-    action: 'verified' | 'rejected' | null;
+    action: 'pending' | 'ready_for_finance' | 'in_progress' | 'completed' | null;
   }>({ open: false, ids: [], action: null });
 
   const [isLoading, setIsLoading] = useState(false);
@@ -266,7 +269,7 @@ export default function TableAllDefenseList({
                       className="px-2 py-2 text-xs text-center align-middle sticky right-0 z-10 bg-background"
                       style={{ boxShadow: '-2px 0 4px -2px rgba(0,0,0,0.04)' }}
                     >
-                      {/* Approve button with CircleCheck icon */}
+                      {/* Mark as Ready for Finance */}
                       <Button
                         size="sm"
                         variant="outline"
@@ -274,12 +277,13 @@ export default function TableAllDefenseList({
                         onClick={e => {
                           e.stopPropagation();
                           if (r.aa_verification_id)
-                            setConfirmDialog({ open: true, ids: [r.aa_verification_id], action: 'verified' });
+                            setConfirmDialog({ open: true, ids: [r.aa_verification_id], action: 'ready_for_finance' });
                         }}
-                        disabled={r.aa_verification_status === 'verified'}
+                        disabled={r.aa_verification_status === 'completed'}
                       >
                         <CircleCheck className="h-4 w-4 text-emerald-600" />
                       </Button>
+                      {/* Mark as In Progress */}
                       <Button
                         size="sm"
                         variant="outline"
@@ -287,11 +291,11 @@ export default function TableAllDefenseList({
                         onClick={e => {
                           e.stopPropagation();
                           if (r.aa_verification_id)
-                            setConfirmDialog({ open: true, ids: [r.aa_verification_id], action: 'rejected' });
+                            setConfirmDialog({ open: true, ids: [r.aa_verification_id], action: 'in_progress' });
                         }}
-                        disabled={r.aa_verification_status === 'rejected'}
+                        disabled={r.aa_verification_status === 'completed'}
                       >
-                        <X className="h-4 w-4 text-red-600" />
+                        <AlertCircle className="h-4 w-4 text-amber-600" />
                       </Button>
                     </TableCell>
                   )}
@@ -317,8 +321,8 @@ export default function TableAllDefenseList({
           <DialogTitle>Confirm Status Change</DialogTitle>
           <DialogDescription>
             {confirmDialog.ids.length > 1
-              ? `Are you sure you want to set ${confirmDialog.ids.length} requests to ${confirmDialog.action}?`
-              : `Are you sure you want to set this request to ${confirmDialog.action}?`}
+              ? `Are you sure you want to set ${confirmDialog.ids.length} requests to ${confirmDialog.action?.replace('_', ' ')}?`
+              : `Are you sure you want to set this request to ${confirmDialog.action?.replace('_', ' ')}?`}
           </DialogDescription>
           <div className="flex justify-end gap-2 mt-4">
             <Button variant="ghost" onClick={() => setConfirmDialog({ open: false, ids: [], action: null })}>Cancel</Button>

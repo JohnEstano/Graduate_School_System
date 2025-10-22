@@ -26,7 +26,7 @@ class PaymentVerificationController extends Controller
     public function updateStatus(Request $request, $id)
     {
         $request->validate([
-            'status' => 'required|in:pending,verified,rejected',
+            'status' => 'required|in:pending,ready_for_finance,in_progress,completed',
             'remarks' => 'nullable|string',
         ]);
 
@@ -81,7 +81,7 @@ class PaymentVerificationController extends Controller
         $request->validate([
             'verification_ids' => 'required|array',
             'verification_ids.*' => 'integer|exists:aa_payment_verifications,id',
-            'status' => 'required|in:pending,verified,rejected',
+            'status' => 'required|in:pending,ready_for_finance,in_progress,completed',
         ]);
 
         $updated = AaPaymentVerification::whereIn('id', $request->verification_ids)

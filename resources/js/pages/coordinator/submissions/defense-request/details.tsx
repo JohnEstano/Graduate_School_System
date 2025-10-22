@@ -348,21 +348,9 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
           if (alive) {
             const allMembers = Array.isArray(data) ? data : [];
             
-            // FILTER OUT FACULTY - Only show panelists from panelists table
-            const panelistsOnly = allMembers.filter(
-              (m: PanelMemberOption) => 
-                m.type !== 'Faculty' && 
-                !m.id.startsWith('faculty-') &&
-                m.id.startsWith('panelist-') // Only include panelist- prefix
-            );
-            
-            console.log('Loaded panel members:', {
-              total: allMembers.length,
-              panelistsOnly: panelistsOnly.length,
-              sample: panelistsOnly.slice(0, 3)
-            });
-            
-            setPanelMembers(panelistsOnly);
+            // Keep all members (including faculty/advisers) so we can resolve adviser emails and other info.
+            // The assistant view uses the unfiltered list — coordinator should too.
+            setPanelMembers(allMembers);
             loaded = true;
           }
           break;
@@ -1064,22 +1052,26 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
                       { key: 'defense_panelist4', info: memberFor(panels.defense_panelist4 || request.defense_panelist4, 'Panel Member 4') },
                     ].map(r => {
                       const namePresent = !!(r.info.rawValue || (r.info.displayName && r.info.displayName !== '—'));
-                      const emailPresent = !!(r.info.email);
-                      const status = namePresent ? (emailPresent ? 'Assigned' : 'Pending confirmation') : '—';
+                      // const emailPresent = !!(r.info.email);
+                      // const status = namePresent ? (emailPresent ? 'Assigned' : 'Pending confirmation') : '—';
 
                       // Use the payment rates helper with correct type mapping
                       let rateType = r.info.role;
                       if (r.info.role === 'Chairperson') rateType = 'Panel Chair';
                       
                       const receivable = namePresent
-                          ? getMemberReceivableByProgramLevel(paymentRates, request.program_level, request.defense_type, rateType)
-                          : null;
+                        ? getMemberReceivableByProgramLevel(
+                            paymentRates,
+                            request.program_level || '',
+                            request.defense_type || '',
+                            rateType
+                          )
+                        : null;
 
                       return {
                           name: r.info.displayName,
                           email: r.info.email || '—',
                           role: r.info.role,
-                          status,
                           receivable,
                       };
                     });
@@ -1090,13 +1082,13 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
                         : v ?? '—';
 
                     return (
-                      <div className="rounded-md border overflow-x-auto">
-                        <Table>
+                      <div className="overflow-x-auto">
+                        <Table className="border-0">
                           <TableHeader>
                             <TableRow>
                               <TableHead className="min-w-[200px]">Name & Email</TableHead>
                               <TableHead className="min-w-[100px]">Role</TableHead>
-                              <TableHead className="min-w-[100px]">Status</TableHead>
+                              {/* <TableHead className="min-w-[100px]">Status</TableHead> */}
                               <TableHead className="min-w-[140px] text-right">Receivable</TableHead>
                             </TableRow>
                           </TableHeader>
@@ -1110,7 +1102,7 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
                                   </div>
                                 </TableCell>
                                 <TableCell className="text-xs">{r.role}</TableCell>
-                                <TableCell>
+                                {/* <TableCell>
                                   <Badge
                                     variant="secondary"
                                     className={cn(
@@ -1124,7 +1116,7 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
                                   >
                                     {r.status}
                                   </Badge>
-                                </TableCell>
+                                </TableCell> */}
                                 <TableCell className="text-right text-xs font-medium">{formatCurrency(r.receivable)}</TableCell>
                               </TableRow>
                             ))}
