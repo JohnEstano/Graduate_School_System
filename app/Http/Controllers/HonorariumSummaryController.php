@@ -104,7 +104,7 @@ class HonorariumSummaryController extends Controller
                     'defense_type' => $defense->defense_type ?? 'N/A',
                     'received_date' => $payment->payment_date,
                     'students' => [],
-                    'amount' => 0,
+                    'amount' => 0, // ✅ This is panelist's honorarium receivable
                 ];
             }
             
@@ -132,18 +132,19 @@ class HonorariumSummaryController extends Controller
                     [
                         'id' => $payment->id,
                         'payment_date' => $payment->payment_date ?? $defense->updated_at->format('m/d/Y'),
-                        'defense_date' => $defenseDate, // ✅ FIX: Add defense date
-                        'defense_type' => $defense->defense_type, // ✅ FIX: Add defense type
+                        'defense_date' => $defenseDate,
+                        'defense_type' => $defense->defense_type,
                         'defense_status' => $defense->workflow_state,
-                        'panelist_role' => $payment->role, // ✅ FIX: Add panelist role
-                        'amount' => (float)$payment->amount,
-                        'or_number' => $defense->reference_no ?? null, // ✅ FIX: Add OR number
+                        'panelist_role' => $payment->role,
+                        'panelist_honorarium' => (float)$payment->amount, // ✅ Panelist's share
+                        'amount' => (float)$defense->amount, // ✅ Full student payment
+                        'or_number' => $defense->reference_no ?? null,
                     ]
                 ]
             ];
             
-            // Sum total amount
-            $panelistsData[$key]['amount'] += (float)$payment->amount;
+            // Sum total panelist honorarium (their receivable)
+            $panelistsData[$key]['amount'] += (float)$payment->amount; // ✅ Sum panelist honorarium
         }
 
         $record = [
