@@ -125,26 +125,18 @@ class DefenseConflictService
 
                 foreach ($selectedWithRoles as $person => $currentRole) {
                     if (isset($otherPanelWithRoles[$person])) {
-<<<<<<< HEAD
-                        $studentName = trim($other->student_first_name . ' ' . $other->student_last_name);
-=======
                         // Get student name from relationship if exists
                         $studentName = 'Unknown Student';
                         if ($other->student) {
                             $studentName = trim($other->student->first_name . ' ' . $other->student->last_name);
                         }
->>>>>>> test-v1
                         $conflicts[] = [
                             'person' => $person,
                             'current_role' => $currentRole,
                             'conflicting_role' => $otherPanelWithRoles[$person],
                             'defense_id' => $other->id,
                             'time_range' => $other->formatted_time_range ?? $otherStart->format('g:i A') . ' - ' . $otherEnd->format('g:i A'),
-<<<<<<< HEAD
                             'student_name' => $studentName ?: 'Unknown Student'
-=======
-                            'student_name' => $studentName
->>>>>>> test-v1
                         ];
                     }
                 }
