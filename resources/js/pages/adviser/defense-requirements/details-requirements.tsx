@@ -19,7 +19,6 @@ import {
   UserCheck,
   Signature,
   ArrowRightLeft,
-  Info,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -582,7 +581,7 @@ export default function DetailsRequirementsPage(rawProps: any) {
             <Tabs value={tab} onValueChange={v => setTab(v as typeof tab)}>
               <TabsList className="h-8">
                 <TabsTrigger value="details" className="flex items-center gap-1 text-sm font-medium px-3">
-                  <Info className="h-4 w-4" /> Details
+                  <FileText className="h-4 w-4" /> Details
                 </TabsTrigger>
                 <TabsTrigger value="link-documents" className="flex items-center gap-1 text-sm font-medium px-3">
                   <FileText className="h-4 w-4" /> Link Documents
@@ -789,24 +788,24 @@ export default function DetailsRequirementsPage(rawProps: any) {
                     ].map(r => {
                       const namePresent = !!(r.info.rawValue || (r.info.displayName && r.info.displayName !== '—'));
                       const emailPresent = !!(r.info.email);
-                      // const status = namePresent ? (emailPresent ? 'Assigned' : 'Pending confirmation') : '—';
+                      const status = namePresent ? (emailPresent ? 'Assigned' : 'Pending confirmation') : '—';
+
                       return {
                         name: r.info.displayName,
                         email: r.info.email || '—',
                         role: r.info.role,
-                        // status,
+                        status,
                       };
                     });
 
                     return (
-                      // Removed border class from Table wrapper
-                      <div className="rounded-md overflow-x-auto">
+                      <div className="rounded-md border overflow-x-auto">
                         <Table>
                           <TableHeader>
                             <TableRow>
                               <TableHead className="min-w-[200px]">Name & Email</TableHead>
                               <TableHead className="min-w-[100px]">Role</TableHead>
-                              {/* Removed Status column */}
+                              <TableHead className="min-w-[100px]">Status</TableHead>
                             </TableRow>
                           </TableHeader>
                           <TableBody>
@@ -819,7 +818,21 @@ export default function DetailsRequirementsPage(rawProps: any) {
                                   </div>
                                 </TableCell>
                                 <TableCell className="text-xs">{r.role}</TableCell>
-                                {/* Removed Status cell */}
+                                <TableCell>
+                                  <Badge
+                                    variant="secondary"
+                                    className={cn(
+                                      "text-xs",
+                                      r.status === 'Assigned'
+                                        ? 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300'
+                                        : r.status === 'Pending confirmation'
+                                        ? 'bg-yellow-100 text-amber-700 dark:bg-yellow-900 dark:text-yellow-300'
+                                        : 'bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300'
+                                    )}
+                                  >
+                                    {r.status}
+                                  </Badge>
+                                </TableCell>
                               </TableRow>
                             ))}
                           </TableBody>
@@ -834,7 +847,11 @@ export default function DetailsRequirementsPage(rawProps: any) {
                   <h2 className="text-sm font-semibold mb-2 flex items-center gap-2">
                     <FileText className="h-4 w-4" /> Attachments
                   </h2>
-                 
+                  {missingDocs && (
+                    <div className="mb-2">
+                      <span className="text-xs text-rose-600 font-medium">{missingDocsAlertMsg}</span>
+                    </div>
+                  )}
                   <Separator />
                   <div className="space-y-2 text-sm mt-3">
                     {attachments
@@ -1129,7 +1146,13 @@ export default function DetailsRequirementsPage(rawProps: any) {
           </div>
         </div>
 
-     
+        <div className="text-[11px] text-muted-foreground">
+          Last updated by:{' '}
+          {request.last_status_updated_by || '—'}{' '}
+          {request.last_status_updated_at
+            ? `(${request.last_status_updated_at})`
+            : ''}
+        </div>
       </div>
 
       {/* Confirmation Dialog for Endorse/Reject/Retrieve */}

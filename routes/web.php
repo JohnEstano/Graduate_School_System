@@ -25,7 +25,7 @@ use App\Http\Controllers\ScheduleController;
 use App\Http\Controllers\ScheduleEventController;
 use App\Http\Controllers\DocumentTemplateController;
 use App\Http\Controllers\UserSignatureController;
-use AppHttp\Controllers\GeneratedDocumentController;
+use App\Http\Controllers\GeneratedDocumentController;
 use App\Http\Controllers\AdviserStudentController;
 use App\Http\Controllers\PanelistHonorariumSpecController;
 use App\Http\Controllers\CoordinatorAdviserController;

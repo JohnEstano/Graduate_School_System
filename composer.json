@@ -19,6 +19,7 @@
         "laravel/tinker": "^2.10.1",
         "pusher/pusher-php-server": "^7.2",
         "resend/resend-laravel": "^0.23.0",
+        "setasign/fpdf": "^1.8",
         "setasign/fpdi": "^2.6",
         "tightenco/ziggy": "^2.4"
     },

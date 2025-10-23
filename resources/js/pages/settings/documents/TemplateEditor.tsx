@@ -43,7 +43,7 @@ export default function TemplateEditorPage({ templateId, template }: Props) {
   ];
 
   const [pdfPages, setPdfPages] = useState<HTMLCanvasElement[]>([]);
-  const [fields, setFields] = useState<Field[]>(template?.fields || []);
+  const [fields, setFields] = useState<Field[]>([]);
   const [selectedPage, setSelectedPage] = useState(1);
   const [selectedField, setSelectedField] = useState<Field | null>(null);
   const [loading, setLoading] = useState(true);
@@ -58,14 +58,28 @@ export default function TemplateEditorPage({ templateId, template }: Props) {
     (async () => {
       setLoading(true);
       const meta = await fetch(`/api/document-templates/${templateId}`).then(r => r.json());
+      
+      // Validate and correct field types on load
+      const validatedFields = (meta.fields || []).map((field: Field) => {
+        // Ensure signature fields have correct type
+        if (field.key.includes('signature.') && field.type !== 'signature') {
+          console.warn(`Correcting field ${field.key} type from ${field.type} to signature`);
+          return { ...field, type: 'signature' as const };
+        }
+        return field;
+      });
+      setFields(validatedFields);
+      
       const url = `/storage/${meta.file_path}`.replace('/storage/storage', '/storage');
       console.log('PDF URL:', url);
+      console.log('Loaded fields:', validatedFields);
+      
       try {
         const pdf = await pdfjsLib.getDocument(url).promise;
         const canv: HTMLCanvasElement[] = [];
         for (let i = 1; i <= pdf.numPages; i++) {
           const pg = await pdf.getPage(i);
-          const vp = pg.getViewport({ scale: 1.05 });
+          const vp = pg.getViewport({ scale: 1.0 });
           const c = document.createElement('canvas');
           c.width = vp.width; c.height = vp.height;
           await pg.render({ canvasContext: c.getContext('2d')!, viewport: vp, canvas: c }).promise;
@@ -99,6 +113,17 @@ export default function TemplateEditorPage({ templateId, template }: Props) {
 
   async function save() {
     setSaving(true);
+    
+    // Validate and preserve field types before saving
+    const validatedFields = fields.map(field => {
+      // Ensure signature fields remain as signature type
+      if (field.key.includes('signature.') && field.type !== 'signature') {
+        console.warn(`Field ${field.key} should be signature type, correcting...`);
+        return { ...field, type: 'signature' as const };
+      }
+      return field;
+    });
+    
     await fetch(`/api/document-templates/${templateId}/fields`, {
       method: 'PUT',
       headers: {
@@ -106,7 +131,7 @@ export default function TemplateEditorPage({ templateId, template }: Props) {
         'X-CSRF-TOKEN': (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content || ''
       },
       body: JSON.stringify({
-        fields,
+        fields: validatedFields,
         fields_meta: {
           canvas_width: pdfPages[0]?.width,
           canvas_height: pdfPages[0]?.height,
@@ -114,6 +139,9 @@ export default function TemplateEditorPage({ templateId, template }: Props) {
       })
     });
     setSaving(false);
+    
+    // Update local state to match validated fields
+    setFields(validatedFields);
   }
 
   const handleFieldSelect = (field: Field) => {
@@ -179,6 +207,60 @@ export default function TemplateEditorPage({ templateId, template }: Props) {
 
           {/* Scrollable content area */}
           <div className="flex-1 overflow-y-auto p-6 space-y-6">
+            {/* Selected Field Editor */}
+            {selectedField && (
+              <div className="border rounded p-4 bg-blue-50 border-blue-300">
+                <div className="font-semibold mb-3 text-sm text-blue-900">Edit Selected Field</div>
+                <div className="space-y-3">
+                  <div>
+                    <label className="text-xs font-medium text-gray-700 block mb-1">Type</label>
+                    <select
+                      className="w-full border px-2 py-1 text-xs bg-white rounded"
+                      value={selectedField.type}
+                      onChange={e => handleFieldUpdate(selectedField.id, { type: e.target.value as any })}
+                    >
+                      <option value="text">Text</option>
+                      <option value="multiline">Multiline</option>
+                      <option value="signature">Signature</option>
+                    </select>
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="text-xs font-medium text-gray-700 block mb-1">Width</label>
+                      <input
+                        type="number"
+                        className="w-full border px-2 py-1 text-xs bg-white rounded"
+                        value={Math.round(selectedField.width)}
+                        onChange={e => handleFieldUpdate(selectedField.id, { width: Number(e.target.value) })}
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs font-medium text-gray-700 block mb-1">Height</label>
+                      <input
+                        type="number"
+                        className="w-full border px-2 py-1 text-xs bg-white rounded"
+                        value={Math.round(selectedField.height)}
+                        onChange={e => handleFieldUpdate(selectedField.id, { height: Number(e.target.value) })}
+                      />
+                    </div>
+                  </div>
+                  
+                  {selectedField.type === 'text' && (
+                    <div>
+                      <label className="text-xs font-medium text-gray-700 block mb-1">Font Size</label>
+                      <input
+                        type="number"
+                        className="w-full border px-2 py-1 text-xs bg-white rounded"
+                        value={selectedField.font_size || 11}
+                        onChange={e => handleFieldUpdate(selectedField.id, { font_size: Number(e.target.value) })}
+                      />
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+            
             {/* Fields List - Takes remaining space */}
             <div className="border rounded p-3 bg-white flex-1">
               <div className="font-semibold mb-2 text-sm">Fields on Page {selectedPage}</div>
@@ -234,8 +316,8 @@ export default function TemplateEditorPage({ templateId, template }: Props) {
           {/* Minimal position overlay - top right corner */}
           {(selectedField && currentFieldPosition) && (
             <div className="fixed top-4 right-4 z-50 bg-black/90 text-white text-xs font-mono px-3 py-2 rounded shadow-lg">
-              <div>X:{Math.round(currentFieldPosition.x)} Y:{Math.round(currentFieldPosition.y)}</div>
-              <div>W:{Math.round(currentFieldPosition.width)} H:{Math.round(currentFieldPosition.height)}</div>
+              <div>X: {Math.round(currentFieldPosition.x)} Y: {Math.round(currentFieldPosition.y)}</div>
+              <div>W: {Math.round(currentFieldPosition.width)} H: {Math.round(currentFieldPosition.height)}</div>
             </div>
           )}
           
