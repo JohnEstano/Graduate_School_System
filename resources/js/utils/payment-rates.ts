@@ -28,8 +28,15 @@ export function getMemberReceivableByProgramLevel(
 ): number | null {
   if (!programLevel || !defenseType || !role) return null;
 
-  const normalizedDefenseType = normalizeDefenseType(defenseType);
-  if (!normalizedDefenseType) return null;
+  // Map program level: Bachelors -> Masteral (for testing)
+  let mappedProgramLevel = programLevel;
+  if (programLevel.toLowerCase() === 'bachelors' || programLevel.toLowerCase() === 'bachelor') {
+    mappedProgramLevel = 'Masteral';
+  }
+  // Ensure Doctorate is properly cased
+  if (programLevel.toLowerCase() === 'doctorate') {
+    mappedProgramLevel = 'Doctorate';
+  }
 
   // Map role to exact payment rate type
   let rateType = role;
@@ -37,10 +44,14 @@ export function getMemberReceivableByProgramLevel(
     rateType = 'Panel Chair';
   }
 
+  // Normalize defense type for comparison (case-insensitive)
+  const normalizeForComparison = (s: string) => s.toLowerCase().trim();
+  const targetDefenseType = normalizeForComparison(defenseType);
+
   const rate = paymentRates.find(
     r =>
-      r.program_level === programLevel &&
-      r.defense_type === defenseType &&
+      r.program_level === mappedProgramLevel &&
+      normalizeForComparison(r.defense_type || '') === targetDefenseType &&
       r.type === rateType
   );
 

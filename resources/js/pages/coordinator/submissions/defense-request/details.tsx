@@ -883,6 +883,36 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
   // Tabs: "details" and "assign-schedule"
   const [tab, setTab] = useState<'details' | 'assign-schedule'>('details');
 
+  // Local helper to get receivable (matching AA logic)
+  function getMemberReceivable(role: string): number | null {
+    if (!request.program_level || !request.defense_type) return null;
+    
+    // Map role to payment rate type exactly as stored in DB
+    let rateType = '';
+    if (role === 'Adviser') {
+      rateType = 'Adviser';
+    } else {
+      // All panel members (chair, panelist 1-4) use "Panel Chair" rate
+      rateType = 'Panel Chair';
+    }
+    
+    // Normalize defense type for case-insensitive comparison
+    const normalizeDefenseType = (dt: string) => dt.toLowerCase().replace(/[^a-z]/g, '');
+    const targetDefenseType = normalizeDefenseType(request.defense_type);
+    
+    // Direct comparison with normalization
+    const rate = paymentRates.find(
+      r => {
+        const matchesProgram = r.program_level === request.program_level;
+        const matchesType = r.type === rateType;
+        const matchesDefense = normalizeDefenseType(r.defense_type || '') === targetDefenseType;
+        return matchesProgram && matchesType && matchesDefense;
+      }
+    );
+    
+    return rate ? Number(rate.amount) : null;
+  }
+
   const statusMap: Record<string, string> = {
     'submitted': 'Submitted',
     'adviser-approved': 'Endorsed by Adviser',
@@ -1146,21 +1176,9 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
                       { key: 'defense_panelist4', info: memberFor(panels.defense_panelist4 || request.defense_panelist4, 'Panel Member 4') },
                     ].map(r => {
                       const namePresent = !!(r.info.rawValue || (r.info.displayName && r.info.displayName !== '—'));
-                      // const emailPresent = !!(r.info.email);
-                      // const status = namePresent ? (emailPresent ? 'Assigned' : 'Pending confirmation') : '—';
-
-                      // Use the payment rates helper with correct type mapping
-                      let rateType = r.info.role;
-                      if (r.info.role === 'Chairperson') rateType = 'Panel Chair';
                       
-                      const receivable = namePresent
-                        ? getMemberReceivableByProgramLevel(
-                            paymentRates,
-                            request.program_level || '',
-                            request.defense_type || '',
-                            rateType
-                          )
-                        : null;
+                      // Use local function for receivables (matches AA logic)
+                      const receivable = namePresent ? getMemberReceivable(r.info.role) : null;
 
                       return {
                           name: r.info.displayName,

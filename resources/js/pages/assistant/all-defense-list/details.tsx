@@ -161,19 +161,24 @@ export default function Details({ defenseRequest: initialDefenseRequest }: Props
     // Map role to payment rate type exactly as stored in DB
     let rateType = '';
     if (role === 'Adviser') {
-        rateType = 'Adviser';
-    } else if (role === 'Chairperson' || role === 'Panel Chair') {
-        rateType = 'Panel Chair';
-    } else if (role === 'Panel Member') {
-        rateType = 'Panel Member 1'; // or 2, 3, 4 depending on position
+      rateType = 'Adviser';
     } else {
-        rateType = role; // fallback
+      // All panel members (chair, panelist 1-4) use "Panel Chair" rate
+      rateType = 'Panel Chair';
     }
     
+    // Normalize defense type for case-insensitive comparison
+    const normalizeDefenseType = (dt: string) => dt.toLowerCase().replace(/[^a-z]/g, '');
+    const targetDefenseType = normalizeDefenseType(details.defense_type);
+    
+    // Direct comparison with normalization
     const rate = paymentRates.find(
-        r => r.program_level === details.program_level && 
-             r.defense_type === details.defense_type && 
-             r.type === rateType
+      r => {
+        const matchesProgram = r.program_level === details.program_level;
+        const matchesType = r.type === rateType;
+        const matchesDefense = normalizeDefenseType(r.defense_type || '') === targetDefenseType;
+        return matchesProgram && matchesType && matchesDefense;
+      }
     );
     
     return rate ? Number(rate.amount) : null;
