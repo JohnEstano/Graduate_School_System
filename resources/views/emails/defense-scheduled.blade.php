@@ -188,15 +188,15 @@
         
         <div class="content">
             <div class="greeting">
-                Dear {{ $student->first_name }} {{ $student->last_name }},
+                Dear {{ $recipient->first_name }} {{ $recipient->last_name }},
             </div>
             
             <div class="success-badge">
-                🎉 Your {{ $defenseRequest->defense_type }} Defense is Now Scheduled!
+                🎉 Defense Schedule Notification - {{ $defenseRequest->defense_type }} Defense
             </div>
             
             <div class="message">
-                <p>Great news! Your defense schedule has been finalized. Please review the details below and mark your calendar.</p>
+                <p>This is to inform you that a defense schedule has been finalized. Please review the details below and mark your calendar.</p>
             </div>
             
             <div class="schedule-box">
@@ -224,6 +224,9 @@
             </div>
             
             <div class="info-box">
+                <div class="label">Student</div>
+                <div class="value">{{ $defenseRequest->first_name }} {{ $defenseRequest->last_name }} ({{ $defenseRequest->school_id }})</div>
+                
                 <div class="label">Defense Type</div>
                 <div class="value">{{ $defenseRequest->defense_type }} Defense</div>
                 

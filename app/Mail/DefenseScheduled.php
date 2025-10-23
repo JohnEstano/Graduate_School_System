@@ -16,11 +16,14 @@ class DefenseScheduled extends Mailable implements ShouldQueue
     use Queueable, SerializesModels;
 
     /**
-     * Create a new message instance.
+
+     * ISSUE #7: Updated to accept any user (student, adviser, or panel member)
+     * Note: $recipient can be a User model OR an object with email properties (for external panelists)
      */
     public function __construct(
         public DefenseRequest $defenseRequest,
-        public User $student
+        public object $recipient  // Changed from User to object to support panelists table
+
     ) {
         //
     }

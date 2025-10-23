@@ -208,13 +208,13 @@ export default function TableAllDefenseList({
                     <TableCell className="px-2 py-2 text-xs text-muted-foreground whitespace-nowrap align-middle">
                       {r.submitted_at
                         ? (() => {
-                            try {
-                              const d = new Date(r.submitted_at);
-                              return d.toLocaleString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
-                            } catch {
-                              return r.submitted_at;
-                            }
-                          })()
+                          try {
+                            const d = new Date(r.submitted_at);
+                            return d.toLocaleString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+                          } catch {
+                            return r.submitted_at;
+                          }
+                        })()
                         : '—'}
                     </TableCell>
                   )}

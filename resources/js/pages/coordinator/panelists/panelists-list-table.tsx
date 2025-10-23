@@ -10,6 +10,7 @@ import { Pencil, Trash2, Users, Mail, MessageCircle, RefreshCw, Loader2, User } 
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 
 type Props = {
   panelists: Panelist[];
@@ -48,12 +49,15 @@ export default function PanelistsListTable({
   const [viewPanelist, setViewPanelist] = useState<Panelist | null>(null);
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [assignmentsLoading, setAssignmentsLoading] = useState(false);
-  const [panelistTab] = useState<"assignments">("assignments");
+  const [panelistTab, setPanelistTab] = useState<"assignments" | "pending">("assignments");
+  const [pendingAssignments, setPendingAssignments] = useState<any[]>([]);
 
   const openView = (p: Panelist) => {
     setViewPanelist(p);
-    setAssignments(p.assignments ?? []);
+    setAssignments(p.assignments ?? []); // now includes program_level/type
+    setPanelistTab("assignments");
     setViewOpen(true);
+    axios.get(`/api/coordinator/panelists/${p.id}/pending`).then(r => setPendingAssignments(r.data)).catch(() => setPendingAssignments([]));
   };
 
   const refreshAssignments = async () => {
@@ -73,6 +77,7 @@ export default function PanelistsListTable({
     if (!viewOpen) {
       setViewPanelist(null);
       setAssignments([]);
+      setPendingAssignments([]);
     }
   }, [viewOpen]);
 
@@ -211,48 +216,88 @@ export default function PanelistsListTable({
           </DialogHeader>
 
           <div className="mt-4">
-            {/* Remove Tabs, TabsList, TabsTrigger for "pending", and TabsContent for "pending" */}
-            {/* Only show assignments */}
-            <div className="flex items-center justify-between mb-2">
-              <div className="font-semibold text-sm">Assigned Defenses</div>
-              <Button variant="outline" size="sm" className="ml-2" onClick={refreshAssignments} disabled={assignmentsLoading} title="Refresh defenses">
-                <RefreshCw className={`mr-1 h-4 w-4 ${assignmentsLoading ? "animate-spin" : ""}`} />
-                Refresh
-              </Button>
-            </div>
-            <div className="overflow-y-auto overflow-x-auto min-w=[400px] rounded bg-white dark:bg-zinc-900 px-2 py-2" style={{ height: "240px" }}>
-              {assignmentsLoading ? (
-                <div className="text-xs flex items-center justify-center h-full dark:text-zinc-300">
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Loading defenses...
-                </div>
-              ) : (assignments?.length ?? 0) === 0 ? (
-                <div className="text-gray-500 text-xs flex items-center justify-center h-full dark:text-gray-400">
-                  No defenses assigned to this panelist.
-                </div>
-              ) : (
-                <ul className="divide-y">
-                  {assignments!.map((a) => {
-                    // Prefer backend-computed receivable; fallback to client lookup
-                    const computed = a?.receivable != null && a.receivable !== '' ? Number(a.receivable as any) : null;
-                    const fallback = getPaymentRate(a?.program_level, (a as any)?.type ?? a?.role, a?.defense_type);
-                    const amount = computed ?? fallback;
+            <Tabs value={panelistTab} onValueChange={(v: string) => setPanelistTab(v as "assignments" | "pending")}>
+              <div className="flex items-center justify-between mb-2">
+                <TabsList>
+                  <TabsTrigger value="assignments">
+                    Assigned
+                    <span className="ml-2 px-2 py-0.5 rounded-full bg-zinc-100 dark:bg-zinc-700 text-zinc-700 dark:text-zinc-100 text-[11px] font-medium">
+                      {assignments?.length ?? 0}
+                    </span>
+                  </TabsTrigger>
+                  <TabsTrigger value="pending">
+                    Pending
+                    <span className="ml-2 px-2 py-0.5 rounded-full bg-zinc-100 dark:bg-zinc-700 text-zinc-700 dark:text-zinc-100 text-[11px] font-medium">
+                      {pendingAssignments?.length ?? 0}
+                    </span>
+                  </TabsTrigger>
+                </TabsList>
+                <Button variant="outline" size="sm" className="ml-2" onClick={refreshAssignments} disabled={assignmentsLoading} title="Refresh defenses">
+                  <RefreshCw className={`mr-1 h-4 w-4 ${assignmentsLoading ? "animate-spin" : ""}`} />
+                  Refresh
+                </Button>
+              </div>
 
-                    return (
-                      <li key={a!.id} className="py-3 px-2 flex items-start gap-3 text-sm">
-                        <div className="flex-1">
-                          <div className="font-medium text-sm">{a?.thesis_title ?? "Untitled Thesis"}</div>
-                          <div className="text-xs text-gray-600 dark:text-gray-300 mt-1">
-                            Role: <b className="mx-1">{a?.role ?? viewPanelist?.role ?? "-"}</b>
-                            • Type: <b className="mx-1">{normalizeDefenseType(a?.defense_type)}</b>
-                            • Receivable: <b className="mx-1">{amount != null ? `₱${amount.toLocaleString()}` : "-"}</b>
+              <TabsContent value="assignments">
+                <div className="overflow-y-auto overflow-x-auto min-w=[400px] rounded bg-white dark:bg-zinc-900 px-2 py-2" style={{ height: "240px" }}>
+                  {assignmentsLoading ? (
+                    <div className="text-xs flex items-center justify-center h-full dark:text-zinc-300">
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Loading defenses...
+                    </div>
+                  ) : (assignments?.length ?? 0) === 0 ? (
+                    <div className="text-gray-500 text-xs flex items-center justify-center h-full dark:text-gray-400">
+                      No defenses assigned to this panelist.
+                    </div>
+                  ) : (
+                    <ul className="divide-y">
+                      {assignments!.map((a) => {
+                        // Prefer backend-computed receivable; fallback to client lookup
+                        const computed = a?.receivable != null && a.receivable !== '' ? Number(a.receivable as any) : null;
+                        const fallback = getPaymentRate(a?.program_level, (a as any)?.type ?? a?.role, a?.defense_type);
+                        const amount = computed ?? fallback;
+
+                        return (
+                          <li key={a!.id} className="py-3 px-2 flex items-start gap-3 text-sm">
+                            <div className="flex-1">
+                              <div className="font-medium text-sm">{a?.thesis_title ?? "Untitled Thesis"}</div>
+                              <div className="text-xs text-gray-600 dark:text-gray-300 mt-1">
+                                Role: <b className="mx-1">{a?.role ?? viewPanelist?.role ?? "-"}</b>
+                                • Type: <b className="mx-1">{normalizeDefenseType(a?.defense_type)}</b>
+                                • Receivable: <b className="mx-1">{amount != null ? `₱${amount.toLocaleString()}` : "-"}</b>
+                              </div>
+                            </div>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  )}
+                </div>
+              </TabsContent>
+
+              <TabsContent value="pending">
+                <div className="overflow-y-auto overflow-x-auto min-w=[400px] rounded bg-white dark:bg-zinc-900 px-2 py-2" style={{ height: "240px" }}>
+                  {pendingAssignments.length === 0 ? (
+                    <div className="text-gray-500 text-xs flex items-center justify-center h-full dark:text-gray-400">
+                      No pending defenses for this panelist.
+                    </div>
+                  ) : (
+                    <ul className="divide-y">
+                      {pendingAssignments.map((a) => (
+                        <li key={a.id} className="py-3 px-2 flex items-start gap-3 text-sm">
+                          <div className="flex-1">
+                            <div className="font-medium text-sm">{a.thesis_title ?? "Untitled Thesis"}</div>
+                            <div className="text-xs text-gray-600 dark:text-gray-300 mt-1">
+                              Role: <b className="mx-1">{a.role ?? "-"}</b>
+                              • Type: <b className="mx-1">{normalizeDefenseType(a.defense_type)}</b>
+                            </div>
                           </div>
-                        </div>
-                      </li>
-                    );
-                  })}
-                </ul>
-              )}
-            </div>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              </TabsContent>
+            </Tabs>
           </div>
 
           <DialogFooter>

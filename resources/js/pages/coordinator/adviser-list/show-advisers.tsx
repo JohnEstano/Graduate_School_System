@@ -73,6 +73,8 @@ export default function ShowAdvisers() {
   const [studentEmail, setStudentEmail] = useState("");
   const [addStudentError, setAddStudentError] = useState("");
   const [addingStudent, setAddingStudent] = useState(false);
+  const [assignmentEmailConfirmOpen, setAssignmentEmailConfirmOpen] = useState(false);
+  const [pendingAssignment, setPendingAssignment] = useState<{ studentEmail: string } | null>(null);
 
   // New: Pending students state
   const [pendingStudents, setPendingStudents] = useState<Student[]>([]);
@@ -238,19 +240,40 @@ export default function ShowAdvisers() {
 
   const handleAddStudent = async () => {
     if (!studentEmail.trim() || !viewAdviser) return;
+    
+    // Show confirmation dialog
+    setPendingAssignment({ studentEmail: studentEmail.trim() });
+    setAssignmentEmailConfirmOpen(true);
+  };
+
+  const handleConfirmAssignment = async (sendEmail: boolean) => {
+    if (!pendingAssignment || !viewAdviser) return;
+    
     setAddingStudent(true);
     setAddStudentError("");
+    
     try {
       await axios.post(`/api/coordinator/advisers/${viewAdviser.id}/students`, {
-        email: studentEmail.trim(),
+        email: pendingAssignment.studentEmail,
+        send_email: sendEmail,
       });
-      // refresh pending list in the open view so coordinator sees it immediately
+      
       await fetchPendingStudents(viewAdviser.id);
       await fetchStudents(viewAdviser.id);
+      
       setAddStudentDialogOpen(false);
+      setAssignmentEmailConfirmOpen(false);
       setStudentEmail("");
+      setPendingAssignment(null);
+      
+      if (sendEmail) {
+        toast.success('Student assigned and email notification sent to adviser!');
+      } else {
+        toast.success('Student assigned successfully (no email sent)');
+      }
     } catch (err: any) {
       setAddStudentError(err.response?.data?.error || "Failed to add student.");
+      setAssignmentEmailConfirmOpen(false);
     } finally {
       setAddingStudent(false);
     }
@@ -311,7 +334,7 @@ export default function ShowAdvisers() {
               </Button>
             </DialogTrigger>
             <DialogContent>
-              <DialogHeader>show
+              <DialogHeader>
                 <DialogTitle>Register an Adviser</DialogTitle>
                 <DialogDescription>
                   Enter the adviser's name and email to add them under your coordination.
@@ -882,8 +905,64 @@ export default function ShowAdvisers() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
+      
+      {/* Student Assignment Confirmation Dialog */}
+      <Dialog open={assignmentEmailConfirmOpen} onOpenChange={setAssignmentEmailConfirmOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Mail className="h-5 w-5 text-amber-500" />
+              Send Assignment Notification?
+            </DialogTitle>
+            <DialogDescription className="pt-2 space-y-2">
+              <p>You are assigning a student to:</p>
+              <div className="bg-zinc-100 dark:bg-zinc-800 p-3 rounded-md space-y-1">
+                <p className="font-semibold text-zinc-900 dark:text-zinc-100">
+                  {viewAdviser?.first_name} {viewAdviser?.last_name}
+                </p>
+                <p className="text-sm text-zinc-600 dark:text-zinc-400">
+                  {viewAdviser?.email}
+                </p>
+              </div>
+              <p className="text-sm">
+                Student being assigned: <span className="font-medium">{pendingAssignment?.studentEmail}</span>
+              </p>
+              <p className="text-sm text-zinc-600 dark:text-zinc-400">
+                Would you like to send an email notification to the adviser?
+              </p>
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button
+              variant="outline"
+              onClick={() => handleConfirmAssignment(false)}
+              disabled={addingStudent}
+            >
+              Skip Email
+            </Button>
+            <Button
+              onClick={() => handleConfirmAssignment(true)}
+              disabled={addingStudent}
+              className="bg-amber-600 hover:bg-amber-700"
+            >
+              {addingStudent ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Assigning...
+                </>
+              ) : (
+                <>
+                  <Mail className="mr-2 h-4 w-4" />
+                  Send Email
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       <Toaster richColors position="bottom-right" />
     </div>
   );
+
 }
+

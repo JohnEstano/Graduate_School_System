@@ -1,13 +1,13 @@
 <?php
 
 
+
 use App\Http\Controllers\HonorariumSummaryController;
 use App\Http\Controllers\StudentRecordController;
 use App\Http\Controllers\EmailsController;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
-
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DefenseRequestController;
 use App\Http\Controllers\DefenseRequirementController;
@@ -40,6 +40,9 @@ use App\Http\Controllers\Assistant\DefenseBatchController;
 |--------------------------------------------------------------------------
 */
 Route::get('/', function () {
+    return Auth::check()
+        ? redirect()->route('dashboard')
+        : redirect()->route('login');
     return Auth::check()
         ? redirect()->route('dashboard')
         : redirect()->route('login');
@@ -78,6 +81,8 @@ Route::get('/test-upload-limits', function () {
 |--------------------------------------------------------------------------
 */
 Route::middleware(['auth', 'verified'])->group(function () {
+    Route::get('/api/coordinator/code', [CoordinatorAdviserController::class, 'getCoordinatorCode']);
+    Route::post('/api/adviser/register-with-coordinator-code', [\App\Http\Controllers\CoordinatorAdviserController::class, 'registerWithCode']);
     Route::get('/coordinator/defense-requests/all-defense-requests', [\App\Http\Controllers\DefenseRequestController::class, 'allForCoordinator'])->middleware('auth');
     Route::get('/api/coordinator/code', [CoordinatorAdviserController::class, 'getCoordinatorCode']);
     Route::post('/api/adviser/register-with-coordinator-code', [\App\Http\Controllers\CoordinatorAdviserController::class, 'registerWithCode']);
@@ -323,7 +328,8 @@ Route::get('/honorarium/individual-record/{programId}', [HonorariumSummaryContro
     Route::post(
         '/defense-requests/{defenseRequest}/complete',
         [DefenseRequestController::class, 'completeDefense']
-    )->name('defense-requests.complete');
+    )->name('defense-requests.complete')
+    ->middleware(['auth', 'verified']);
 
     /* Status / priority */
     Route::patch(
@@ -453,7 +459,7 @@ Route::get('/honorarium/individual-record/{programId}', [HonorariumSummaryContro
             ->name('defense.panel-members');
 
         Route::get('/defense-requests/{defenseRequest}/details', [CoordinatorDefenseController::class, 'details'])
-            ->name('coordinator.defense-requests.details');
+            ->name('defense-requests.details'); // <-- FIXED: was 'coordinator.defense-requests.details'
     });
 
     /* Profile */
@@ -582,7 +588,7 @@ if (file_exists(__DIR__ . '/settings.php'))
 Route::middleware(['auth'])->group(function () {
     Route::get('/api/adviser/students', [AdviserStudentController::class, 'index']);
     Route::post('/api/adviser/students', [AdviserStudentController::class, 'store']);
-    Route::post('/api/adviser/register-with-code', [AdviserStudentController::class, 'registerWithCode']);
+    Route::post('/api/adviser/register_with_code', [AdviserStudentController::class, 'registerWithCode']);
     Route::get('/api/adviser/code', [AdviserStudentController::class, 'getAdviserCode']);
     Route::delete('/api/adviser/students/{student}', [AdviserStudentController::class, 'destroy']);
 
@@ -742,8 +748,8 @@ Route::get('/assistant/all-defense-list/data', function () {
                 'amount' => $r->amount,
                 'reference_no' => $r->reference_no,
                 'coordinator' => $coordinator,
-                'aa_verification_status' => optional($r->aaVerification)->status ?? 'pending',
-                'aa_verification_id' => optional($r->aaVerification)->id,
+            'aa_verification_status' => optional($r->aaVerification)->status ?? 'pending',
+            'aa_verification_id' => optional($r->aaVerification)->id,
             ];
         });
 

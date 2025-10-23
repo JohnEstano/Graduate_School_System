@@ -14,6 +14,7 @@ return new class extends Migration
             $table->unsignedBigInteger('assigned_to')->nullable(); // AA user id
             $table->unsignedBigInteger('batch_id')->nullable();
             $table->enum('status', ['pending', 'ready_for_finance', 'in_progress', 'completed'])->default('pending');
+
             $table->text('remarks')->nullable();
             $table->timestamps();
 

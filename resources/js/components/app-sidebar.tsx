@@ -55,8 +55,6 @@ const studentNavItems: MainNavItem[] = [
         icon: CalendarFold,
 
     },
-    
-
 ];
 
 const coordinatorNavItems: MainNavItem[] = [
@@ -82,15 +80,13 @@ const coordinatorNavItems: MainNavItem[] = [
     },
     { title: 'Honorarium', href: '/honorarium', icon: DollarSign },
     { title: 'Student Records', href: '/student-records', icon: Users },
-     { title: 'Payment Rates', href: '/dean/payment-rates', icon: DollarSign },
+    { title: 'Payment Rates', href: '/dean/payment-rates', icon: DollarSign },
     { title: 'Schedules', href: '/schedules', icon: CalendarFold },
-   
 ];
 
 const assistantNavItems: MainNavItem[] = [
     { title: 'Dashboard', href: '/dashboard', icon: LayoutGrid },
     { title: 'Defense Requests', href: '/assistant/all-defense-list', icon: FileText }, 
-   
     {
         title: 'Applications',
         href: '/defense',
@@ -100,18 +96,10 @@ const assistantNavItems: MainNavItem[] = [
             { title: 'Payment Receipt', href: '/coordinator/compre-payment' },
         ],
     },
-    {
-        title: 'Honorarium Summary',
-        href: '/honorarium',
-        icon: DollarSign,
-        
-    },
-
-    
+    { title: 'Honorarium', href: '/honorarium', icon: DollarSign },
     { title: 'Student Records', href: '/student-records', icon: Users },
-     { title: 'Payment Rates', href: '/dean/payment-rates', icon: DollarSign },
+    { title: 'Payment Rates', href: '/dean/payment-rates', icon: DollarSign },
     { title: 'Schedules', href: '/schedules', icon: CalendarFold },
-    
 ];
 
 const facultyNavItems: MainNavItem[] = [
@@ -122,14 +110,9 @@ const facultyNavItems: MainNavItem[] = [
 const deanNavItems: MainNavItem[] = [
     { title: 'Dashboard', href: '/dashboard', icon: LayoutGrid },
     { title: 'Defense Requests', href: '/dean/defense-requests', icon: FileText },
-      {
-        title: 'Honorarium Summary',
-        href: '/honorarium',
-        icon: DollarSign,
-        
-    },
     { title: 'Schedules', href: '/schedules', icon: CalendarFold },
     { title: 'Payment Rates', href: '/dean/payment-rates', icon: DollarSign },
+    { title: 'Honorarium', href: '/honorarium', icon: DollarSign },
 ];
 
 const footerNavItems: NavItem[] = [];

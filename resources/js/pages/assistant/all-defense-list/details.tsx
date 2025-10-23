@@ -311,20 +311,24 @@ export default function Details({ defenseRequest: initialDefenseRequest }: Props
         },
       });
       
-      if (res.ok) {
+      const data = await res.json();
+      
+      if (res.ok && data.success) {
+        // ✅ UPDATE LOCAL STATE IMMEDIATELY
         setDetails({ 
           ...details, 
           status: 'Completed', 
           workflow_state: 'completed' 
         });
+        
         toast.success('Defense marked as completed and honorarium payments created!');
         
+        // ✅ REDIRECT AFTER 1.5 SECONDS
         setTimeout(() => {
           router.visit('/assistant/all-defense-list');
         }, 1500);
       } else {
-        const errorData = await res.json();
-        toast.error(errorData.error || 'Failed to mark as completed');
+        toast.error(data.error || 'Failed to mark as completed');
       }
     } catch (error) {
       console.error('Error marking as completed:', error);
@@ -371,6 +375,22 @@ export default function Details({ defenseRequest: initialDefenseRequest }: Props
                   <div className="text-2xl font-semibold">{details?.thesis_title}</div>
                   <div className="text-xs text-muted-foreground font-medium mt-0.5">Thesis Title</div>
                 </div>
+                {/* ADD STATUS BADGE HERE */}
+                <Badge
+                  variant="secondary"
+                  className={cn(
+                    "text-xs font-semibold px-3 py-1 h-fit",
+                    details?.status === 'Completed'
+                      ? 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300'
+                      : details?.status === 'Approved'
+                      ? 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300'
+                      : details?.status === 'Rejected'
+                      ? 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300'
+                      : 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300'
+                  )}
+                >
+                  {details?.status || 'Pending'}
+                </Badge>
               </div>
 
               {/* Info Grid */}

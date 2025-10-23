@@ -4,11 +4,13 @@ namespace App\Http\Controllers;
 
 use App\Models\Adviser;
 use App\Models\User;
+use App\Models\Notification;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\DB;  // ✅ ADD THIS LINE
 use App\Mail\AdviserInvitation;
 
 class CoordinatorAdviserController extends Controller
@@ -437,85 +439,126 @@ class CoordinatorAdviserController extends Controller
     // Assign an existing student (create pivot with status = 'pending')
     public function storeStudent(Request $request, $adviserId)
     {
-        $coordinator = $request->user();
-        $adviser = Adviser::where('coordinator_id', $coordinator->id)->findOrFail($adviserId);
+        try {
+            $coordinator = $request->user();
+            
+            // Find adviser
+            $adviser = Adviser::where('coordinator_id', $coordinator->id)->findOrFail($adviserId);
 
-        // enforce active adviser (linked user)
-        if (!$adviser->user_id && $adviser->email) {
-            $matchedUser = User::where('email', $adviser->email)->first();
-            if ($matchedUser) {
-                $adviser->user_id = $matchedUser->id;
-                $adviser->status = 'active';
-                $adviser->save();
+            // Validate request
+            $validated = $request->validate([
+                'student_id' => 'nullable|integer|exists:users,id',
+                'email' => 'nullable|email',
+                'send_email' => 'nullable|boolean',
+            ]);
+
+            $sendEmail = $validated['send_email'] ?? false;
+
+            // Find student
+            $student = null;
+            if (!empty($validated['student_id'])) {
+                $student = User::find($validated['student_id']);
+            } elseif (!empty($validated['email'])) {
+                $student = User::where('email', $validated['email'])->first();
+                if (!$student) {
+                    return response()->json(['error' => 'Student not found.'], 404);
+                }
+            } else {
+                return response()->json(['error' => 'student_id or email required.'], 422);
             }
-        }
 
-        if (!$adviser->user_id) {
-            return response()->json(['error' => 'Adviser must be active (linked to a User) before assigning students.'], 400);
-        }
-
-        $validated = $request->validate([
-            'student_id' => 'nullable|integer|exists:users,id',
-            'email' => 'nullable|email',
-        ]);
-
-        $student = null;
-        if (!empty($validated['student_id'])) {
-            $student = User::find($validated['student_id']);
-        } elseif (!empty($validated['email'])) {
-            $student = User::where('email', $validated['email'])->first();
-            if (!$student) {
-                return response()->json(['error' => 'Student not found.'], 404);
+            // Check if adviser has a user_id
+            if (!$adviser->user_id) {
+                // Try to link adviser to user
+                $matchedUser = User::where('email', $adviser->email)->first();
+                if ($matchedUser) {
+                    $adviser->user_id = $matchedUser->id;
+                    $adviser->status = 'active';
+                    $adviser->save();
+                } else {
+                    return response()->json(['error' => 'Adviser must be active (linked to a User) before assigning students.'], 400);
+                }
             }
-        } else {
-            return response()->json(['error' => 'student_id or email required.'], 422);
-        }
 
-        // Check if student is already assigned to ANY adviser (pending or accepted)
-        $alreadyAssigned = $student->advisers()
-            ->wherePivotIn('status', ['accepted', 'pending'])
-            ->exists();
+            $adviserUser = User::find($adviser->user_id);
 
-        if ($alreadyAssigned) {
-            return response()->json(['error' => 'This student is already assigned to another adviser.'], 409);
-        }
+            // Check if student is already assigned to ANY adviser
+            $alreadyAssigned = DB::table('adviser_student')
+                ->where('student_id', $student->id)
+                ->whereIn('status', ['accepted', 'pending'])
+                ->exists();
 
-        $adviserUser = User::find($adviser->user_id);
+            if ($alreadyAssigned) {
+                return response()->json(['error' => 'This student is already assigned to another adviser.'], 409);
+            }
 
-        // create pending pivot (syncWithoutDetaching to avoid wiping)
-        $adviserUser->advisedStudents()->syncWithoutDetaching([
-            $student->id => [
+            // Start transaction
+            DB::beginTransaction();
+
+            // Assign student with pending status
+            DB::table('adviser_student')->insert([
+                'adviser_id' => $adviserUser->id,
+                'student_id' => $student->id,
                 'status' => 'pending',
                 'requested_by' => $coordinator->id,
-            ]
-        ]);
-
-        // Send email notification to adviser about the new student assignment
-        try {
-            if ($adviserUser->email) {
-                Mail::to($adviserUser->email)
-                    ->send(new \App\Mail\StudentAssignedToAdviser($adviserUser, $student, $coordinator));
-                
-                Log::info('Student Assignment: Email sent to adviser', [
-                    'adviser_id' => $adviserUser->id,
-                    'adviser_email' => $adviserUser->email,
-                    'student_id' => $student->id,
-                    'student_name' => trim(($student->first_name ?? '') . ' ' . ($student->last_name ?? '')),
-                    'coordinator_id' => $coordinator->id
-                ]);
-            }
-        } catch (\Exception $e) {
-            Log::error('Student Assignment: Failed to send email to adviser', [
-                'adviser_id' => $adviserUser->id,
-                'adviser_email' => $adviserUser->email ?? 'N/A',
-                'student_id' => $student->id,
-                'error' => $e->getMessage()
+                'created_at' => now(),
+                'updated_at' => now(),
             ]);
-            // Don't fail the assignment if email fails
-        }
 
-        // return pending list after adding
-        return $this->pendingStudents($request, $adviserId);
+            // Create notification for adviser
+            Notification::create([
+                'user_id' => $adviserUser->id,
+                'type' => 'student_assigned',
+                'title' => 'New Student Assigned',
+                'message' => "Coordinator {$coordinator->first_name} {$coordinator->last_name} has assigned {$student->first_name} {$student->last_name} to you. Please review and accept/reject.",
+                'action_url' => '/adviser/pending-students',
+            ]);
+
+            // Create notification for student
+            Notification::create([
+                'user_id' => $student->id,
+                'type' => 'assigned_to_adviser',
+                'title' => 'Assigned to Adviser',
+                'message' => "You have been assigned to adviser {$adviserUser->first_name} {$adviserUser->last_name} by {$coordinator->first_name} {$coordinator->last_name}. Awaiting adviser's acceptance.",
+                'action_url' => '/dashboard',
+            ]);
+
+            DB::commit();
+
+            // Send email AFTER commit (don't fail if email fails)
+            if ($sendEmail) {
+                try {
+                    if ($adviserUser->email) {
+                        Mail::to($adviserUser->email)->send(new \App\Mail\StudentAssignedToAdviser($adviserUser, $student, $coordinator));
+                        Log::info('Student assignment email sent', ['adviser_email' => $adviserUser->email]);
+                    }
+                } catch (\Exception $e) {
+                    Log::error('Failed to send assignment email', [
+                        'adviser_email' => $adviserUser->email ?? 'N/A',
+                        'error' => $e->getMessage()
+                    ]);
+                }
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Student assigned successfully',
+            ]);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            
+            Log::error('storeStudent error', [
+                'adviser_id' => $adviserId ?? null,
+                'error' => $e->getMessage(),
+                'line' => $e->getLine(),
+                'file' => $e->getFile(),
+            ]);
+
+            return response()->json([
+                'error' => 'Failed to assign student: ' . $e->getMessage()
+            ], 500);
+        }
     }
 
     // Detach a student from adviser
