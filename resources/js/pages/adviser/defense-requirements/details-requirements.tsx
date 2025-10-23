@@ -29,6 +29,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
 import { cn } from '@/lib/utils';
+import EndorsementDialog from './endorsement-dialog';
 
 type DefenseRequestFull = {
   id: number;
@@ -139,6 +140,7 @@ export default function DetailsRequirementsPage(rawProps: any) {
     open: false,
     action: null,
   });
+  const [endorsementDialogOpen, setEndorsementDialogOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
   // For document linking form
@@ -599,7 +601,7 @@ export default function DetailsRequirementsPage(rawProps: any) {
             <Button
               size="sm"
               variant="outline"
-              onClick={() => setConfirm({ open: true, action: 'approve' })}
+              onClick={() => setEndorsementDialogOpen(true)}
               disabled={
                 isLoading ||
                 request.adviser_status === 'Approved' ||
@@ -1203,6 +1205,18 @@ export default function DetailsRequirementsPage(rawProps: any) {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Endorsement Dialog */}
+      <EndorsementDialog
+        open={endorsementDialogOpen}
+        onOpenChange={setEndorsementDialogOpen}
+        defenseRequest={request}
+        coordinatorName={coordinators.length > 0 ? coordinators[0].name : 'Coordinator'}
+        onEndorseComplete={() => {
+          // Reload the page or update the request state
+          router.reload();
+        }}
+      />
     </AppLayout>
   );
 }

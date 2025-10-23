@@ -25,6 +25,9 @@ Route::middleware('auth:sanctum')->group(function () {
     // Defense Requests API
     Route::patch('defense-requests/{defenseRequest}/status', [DefenseRequestController::class, 'updateStatus']);
     Route::patch('defense-requests/{defenseRequest}/priority', [DefenseRequestController::class, 'updatePriority']);
+    Route::patch('defense-requests/{defenseRequest}/adviser-status', [DefenseRequestController::class, 'updateAdviserStatus']);
+    Route::post('defense-requests/{defenseRequest}/upload-documents', [DefenseRequestController::class, 'uploadDocuments']);
+    Route::post('defense-requests/{defenseRequest}/upload-endorsement', [DefenseRequestController::class, 'uploadDocuments']);
     Route::patch('defense-requests/bulk-status', [DefenseRequestController::class, 'bulkUpdateStatus']);
     Route::patch('defense-requests/bulk-priority', [DefenseRequestController::class, 'bulkUpdatePriority']);
     // Lightweight pending count (polled by sidebar) – keep cheap & cache at controller level if needed
