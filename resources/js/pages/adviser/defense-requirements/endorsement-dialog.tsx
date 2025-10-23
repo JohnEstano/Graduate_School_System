@@ -27,6 +27,7 @@ interface EndorsementDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   defenseRequest: any;
+  coordinatorId?: number;
   coordinatorName?: string;
   onEndorseComplete?: () => void;
 }
@@ -37,6 +38,7 @@ export default function EndorsementDialog({
   open,
   onOpenChange,
   defenseRequest,
+  coordinatorId,
   coordinatorName = 'Coordinator',
   onEndorseComplete
 }: EndorsementDialogProps) {
@@ -57,6 +59,7 @@ export default function EndorsementDialog({
   // Upload states
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
   const uploadInputRef = useRef<HTMLInputElement>(null);
 
   const [templates, setTemplates] = useState<any[]>([]);
@@ -80,6 +83,7 @@ export default function EndorsementDialog({
       setGeneratedDocId(null);
       setCurrentTab('preview');
       setUploadedFile(null);
+      setIsDragging(false);
     }
   }, [open]);
 
@@ -178,18 +182,26 @@ export default function EndorsementDialog({
       const url = window.URL.createObjectURL(blob);
       setGeneratedPdfUrl(url);
       
-      // Also trigger download
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `endorsement_form_${defenseRequest.id}.pdf`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+      // Save the generated PDF as endorsement_form
+      const formData = new FormData();
+      formData.append('endorsement_form', blob, 'endorsement-form.pdf');
       
-      toast.success('Document generated and downloaded!');
+      const uploadRes = await fetch(`/api/defense-requests/${defenseRequest.id}/upload-endorsement`, {
+        method: 'POST',
+        headers: {
+          'X-CSRF-TOKEN': csrf()
+        },
+        body: formData
+      });
+
+      if (!uploadRes.ok) {
+        console.warn('Failed to save generated document to defense request');
+      }
+      
+      toast.success('Endorsement form generated successfully!');
     } catch (err) {
       console.error('Generate error:', err);
-      toast.error('Failed to generate document');
+      toast.error('Failed to generate endorsement form');
     } finally {
       setIsGenerating(false);
     }
@@ -266,6 +278,32 @@ export default function EndorsementDialog({
     toast.success('File selected. Click "Use This File" to continue.');
   }
 
+  function handleDragOver(e: React.DragEvent) {
+    e.preventDefault();
+    setIsDragging(true);
+  }
+
+  function handleDragLeave(e: React.DragEvent) {
+    e.preventDefault();
+    setIsDragging(false);
+  }
+
+  function handleDrop(e: React.DragEvent) {
+    e.preventDefault();
+    setIsDragging(false);
+
+    const file = e.dataTransfer.files?.[0];
+    if (!file) return;
+
+    if (!file.type.includes('pdf')) {
+      toast.error('Please upload a PDF file');
+      return;
+    }
+
+    setUploadedFile(file);
+    toast.success('File selected. Click "Use This File" to continue.');
+  }
+
   async function handleUseUploadedFile() {
     if (!uploadedFile || !defenseRequest?.id) return;
 
@@ -273,7 +311,6 @@ export default function EndorsementDialog({
     try {
       const formData = new FormData();
       formData.append('endorsement_form', uploadedFile);
-      formData.append('defense_request_id', defenseRequest.id.toString());
 
       const res = await fetch(`/api/defense-requests/${defenseRequest.id}/upload-endorsement`, {
         method: 'POST',
@@ -285,22 +322,26 @@ export default function EndorsementDialog({
 
       if (res.ok) {
         const data = await res.json();
-        setGeneratedPdfUrl(data.file_url);
-        toast.success('File uploaded successfully!');
+        // Create a blob URL for preview
+        const blob = new Blob([uploadedFile], { type: 'application/pdf' });
+        const url = window.URL.createObjectURL(blob);
+        setGeneratedPdfUrl(url);
+        toast.success('Endorsement form uploaded successfully!');
+        setCurrentTab('preview');
       } else {
-        toast.error('Failed to upload file');
+        toast.error('Failed to upload endorsement form');
       }
     } catch (err) {
       console.error('Upload error:', err);
-      toast.error('Failed to upload file');
+      toast.error('Failed to upload endorsement form');
     } finally {
       setIsUploading(false);
     }
   }
 
   async function handleFinalEndorse() {
-    if (!generatedPdfUrl && !uploadedFile) {
-      toast.error('Please generate or upload a document first');
+    if (!generatedPdfUrl) {
+      toast.error('Please generate or upload an endorsement form first');
       return;
     }
 
@@ -311,19 +352,26 @@ export default function EndorsementDialog({
 
     setIsEndorsing(true);
     try {
-      const res = await fetch(`/api/defense-requests/${defenseRequest.id}/adviser-status`, {
+      const payload: any = {
+        adviser_status: 'Approved'
+      };
+
+      // Include coordinator_user_id if provided
+      if (coordinatorId) {
+        payload.coordinator_user_id = coordinatorId;
+      }
+
+      const res = await fetch(`/adviser/defense-requirements/${defenseRequest.id}/adviser-status`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
           'X-CSRF-TOKEN': csrf()
         },
-        body: JSON.stringify({
-          adviser_status: 'Approved'
-        })
+        body: JSON.stringify(payload)
       });
 
       if (res.ok) {
-        toast.success('Request endorsed successfully!');
+        toast.success(`Request endorsed successfully and forwarded to ${coordinatorName}!`);
         onOpenChange(false);
         onEndorseComplete?.();
       } else {
@@ -360,15 +408,15 @@ export default function EndorsementDialog({
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-[95vw] w-[1400px] h-[90vh] p-0 gap-0 flex flex-col">
-          <div className="flex flex-1 overflow-hidden">
+        <DialogContent className="max-w-full w-[90vw] h-[90vh] p-0 gap-0 flex flex-col overflow-hidden">
+          <div className="flex flex-1 min-h-0">
             {/* Sidebar */}
-            <div className="w-64 border-r bg-muted/30 flex flex-col">
-              <div className="p-6 pb-4">
+            <div className="w-72 border-r bg-muted/30 flex flex-col shrink-0">
+              <div className="p-6 pb-4 shrink-0">
                 <DialogHeader>
                   <DialogTitle className="text-lg">Endorse Request</DialogTitle>
                   <DialogDescription className="text-xs mt-2">
-                    Generate and review the endorsement form
+                    Review and endorse the defense request
                   </DialogDescription>
                 </DialogHeader>
               </div>
@@ -376,8 +424,8 @@ export default function EndorsementDialog({
               <Separator />
 
               {/* Scrollable middle section */}
-              <ScrollArea className="flex-1 px-6">
-                <div className="space-y-6 py-4">
+              <ScrollArea className="flex-1 min-h-0">
+                <div className="px-6 py-4 space-y-6">
                   <nav className="space-y-1">
                     <Button
                       variant={currentTab === 'preview' ? 'secondary' : 'ghost'}
@@ -426,46 +474,13 @@ export default function EndorsementDialog({
                       <div className="font-semibold">{coordinatorName}</div>
                     </div>
                   </div>
-
-                  <Separator />
-
-                  {/* Status Indicators */}
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2 text-xs">
-                      {activeSignature ? (
-                        <>
-                          <Check className="h-4 w-4 text-green-600" />
-                          <span className="text-green-600">Signature Ready</span>
-                        </>
-                      ) : (
-                        <>
-                          <AlertCircle className="h-4 w-4 text-amber-600" />
-                          <span className="text-amber-600">No Signature</span>
-                        </>
-                      )}
-                    </div>
-                    
-                    <div className="flex items-center gap-2 text-xs">
-                      {generatedPdfUrl ? (
-                        <>
-                          <Check className="h-4 w-4 text-green-600" />
-                          <span className="text-green-600">Document Ready</span>
-                        </>
-                      ) : (
-                        <>
-                          <AlertCircle className="h-4 w-4 text-amber-600" />
-                          <span className="text-amber-600">No Document</span>
-                        </>
-                      )}
-                    </div>
-                  </div>
                 </div>
               </ScrollArea>
 
               <Separator />
 
               {/* Footer with Endorse Button */}
-              <div className="p-6 pt-4">
+              <div className="p-6 pt-4 shrink-0">
                 <Button
                   className="w-full"
                   size="lg"
@@ -488,9 +503,9 @@ export default function EndorsementDialog({
             </div>
 
             {/* Main Content */}
-            <div className="flex-1 flex flex-col">
+            <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
               <ScrollArea className="flex-1">
-                <div className="p-6">
+                <div className="p-8 max-w-5xl mx-auto">
                   {/* Generating State */}
                   {isGenerating && (
                     <div className="flex flex-col items-center justify-center h-[600px] space-y-4">
@@ -518,16 +533,23 @@ export default function EndorsementDialog({
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => window.open(generatedPdfUrl, '_blank')}
+                            onClick={() => {
+                              if (generatedPdfUrl.startsWith('blob:')) {
+                                window.URL.revokeObjectURL(generatedPdfUrl);
+                              }
+                              setGeneratedPdfUrl(null);
+                              handleGenerateDocument();
+                            }}
+                            disabled={isGenerating}
                           >
-                            <Download className="mr-2 h-4 w-4" />
-                            Download
+                            <Loader2 className={`mr-2 h-4 w-4 ${isGenerating ? 'animate-spin' : ''}`} />
+                            Regenerate
                           </Button>
                         )}
                       </div>
 
                       {generatedPdfUrl ? (
-                        <div className="border rounded-lg overflow-hidden" style={{ height: '600px' }}>
+                        <div className="border rounded-lg overflow-hidden" style={{ height: '700px' }}>
                           <iframe
                             src={generatedPdfUrl}
                             className="w-full h-full"
@@ -649,11 +671,21 @@ export default function EndorsementDialog({
                         </AlertDescription>
                       </Alert>
 
-                      <div className="border-2 border-dashed rounded-lg p-8 text-center space-y-4">
-                        <Upload className="h-12 w-12 mx-auto text-muted-foreground" />
+                      <div 
+                        className={`border-2 border-dashed rounded-lg p-12 text-center space-y-4 transition-colors ${
+                          isDragging ? 'border-primary bg-primary/5' : 'border-muted-foreground/25'
+                        }`}
+                        onDragOver={handleDragOver}
+                        onDragLeave={handleDragLeave}
+                        onDrop={handleDrop}
+                      >
+                        <Upload className="h-16 w-16 mx-auto text-muted-foreground" />
                         <div>
-                          <p className="text-sm font-medium">
-                            {uploadedFile ? uploadedFile.name : 'No file selected'}
+                          <p className="text-base font-medium">
+                            {uploadedFile ? uploadedFile.name : 'Drag and drop your PDF here'}
+                          </p>
+                          <p className="text-sm text-muted-foreground mt-2">
+                            or click to browse
                           </p>
                           <p className="text-xs text-muted-foreground mt-1">
                             PDF files only, max 10MB
@@ -668,8 +700,10 @@ export default function EndorsementDialog({
                         />
                         <Button
                           variant="outline"
+                          size="lg"
                           onClick={() => uploadInputRef.current?.click()}
                         >
+                          <FileText className="mr-2 h-4 w-4" />
                           Choose File
                         </Button>
                       </div>

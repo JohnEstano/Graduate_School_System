@@ -99,7 +99,7 @@ export default function DetailsRequirementsPage(rawProps: any) {
   const requestProp: DefenseRequestFull | null = props.defenseRequest || null;
   const userRole: string = props.userRole || '';
 
-  const [tab, setTab] = useState<'details' | 'link-documents'>('details');
+  const [tab, setTab] = useState<'details' | 'upload-certificate'>('details');
 
   const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Dashboard', href: '/dashboard' },
@@ -136,22 +136,17 @@ export default function DetailsRequirementsPage(rawProps: any) {
   }
 
   const [request, setRequest] = useState<DefenseRequestFull>(requestProp);
-  const [confirm, setConfirm] = useState<{ open: boolean; action: 'approve' | 'reject' | 'retrieve' | null }>({
+  const [confirm, setConfirm] = useState<{ open: boolean; action: 'reject' | 'retrieve' | null }>({
     open: false,
     action: null,
   });
   const [endorsementDialogOpen, setEndorsementDialogOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
-  // For document linking form
+  // For AI Detection Certificate upload
   const [aiDetectionCertFile, setAiDetectionCertFile] = useState<File | null>(null);
-  const [endorsementFormFile, setEndorsementFormFile] = useState<File | null>(null);
   const [aiDetectionCertUploading, setAiDetectionCertUploading] = useState(false);
-  const [endorsementFormUploading, setEndorsementFormUploading] = useState(false);
-  const [autoGenerating, setAutoGenerating] = useState(false);
-
   const aiDetectionInputRef = useRef<HTMLInputElement>(null);
-  const endorsementInputRef = useRef<HTMLInputElement>(null);
 
   function csrf() {
     return (
@@ -160,49 +155,19 @@ export default function DetailsRequirementsPage(rawProps: any) {
     );
   }
 
-  // --- Add state for missing docs alert ---
-  const [missingDocsAlert, setMissingDocsAlert] = useState<string | null>(null);
-
-  // --- Approve/Reject/Retrieve logic ---
-  async function handleStatusChange(action: 'approve' | 'reject' | 'retrieve') {
+  // --- Reject/Retrieve logic (Approve is handled by endorsement dialog) ---
+  async function handleStatusChange(action: 'reject' | 'retrieve') {
     if (!request.id) return;
 
-    // Restrict Endorse if required documents are missing
-    if (action === 'approve') {
-      if (!request.ai_detection_certificate || !request.endorsement_form) {
-        setMissingDocsAlert(
-          'You must upload both the AI Detection Certificate and Endorsement Form before endorsing this request.'
-        );
-        setConfirm({ open: false, action: null });
-        toast.error('You must upload both the AI Detection Certificate and Endorsement Form before endorsing.');
-        return;
-      }
-      // Restrict Endorse if no coordinator relationship exists
-      if (!coordinators.length || !coordinators[0].id) {
-        setMissingDocsAlert(
-          'You must have a coordinator linked before you can endorse this request.'
-        );
-        setConfirm({ open: false, action: null });
-        toast.error('You must have a coordinator linked before you can endorse.');
-        return;
-      }
-    }
-
     setIsLoading(true);
-    setMissingDocsAlert(null);
 
     // Map action to new adviser_status value
     let newAdviserStatus: string = 'Pending';
-    if (action === 'approve') newAdviserStatus = 'Approved';
-    else if (action === 'reject') newAdviserStatus = 'Rejected';
+    if (action === 'reject') newAdviserStatus = 'Rejected';
     else if (action === 'retrieve') newAdviserStatus = 'Pending';
 
     try {
       const payload: any = { adviser_status: newAdviserStatus };
-      // Only include coordinator_user_id when approving and a coordinator is available
-      if (action === 'approve' && coordinators.length > 0 && coordinators[0].id) {
-        payload.coordinator_user_id = coordinators[0].id;
-      }
 
       const res = await fetchWithCsrfRetry(`/adviser/defense-requirements/${request.id}/adviser-status`, {
         method: 'PATCH',
@@ -384,26 +349,20 @@ export default function DetailsRequirementsPage(rawProps: any) {
     return { event, desc, from, to, created, userName };
   }
 
-  // Handle document submission for the "Link Documents" tab
-  async function handleDocumentsSubmit(e: React.FormEvent<HTMLFormElement>) {
+  // Handle AI Detection Certificate upload
+  async function handleAiCertificateSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (!request.id) return;
-    if (!aiDetectionCertFile && !endorsementFormFile) {
-      toast.error('Please select at least one document to upload.');
+    if (!aiDetectionCertFile) {
+      toast.error('Please select a file to upload.');
       return;
     }
 
     const formData = new FormData();
-    if (aiDetectionCertFile) {
-      formData.append('ai_detection_certificate', aiDetectionCertFile);
-    }
-    if (endorsementFormFile) {
-      formData.append('endorsement_form', endorsementFormFile);
-    }
+    formData.append('ai_detection_certificate', aiDetectionCertFile);
 
     try {
-      if (aiDetectionCertFile) setAiDetectionCertUploading(true);
-      if (endorsementFormFile) setEndorsementFormUploading(true);
+      setAiDetectionCertUploading(true);
 
       const res = await fetchWithCsrfRetry(`/adviser/defense-requirements/${request.id}/documents`, {
         method: 'POST',
@@ -414,93 +373,17 @@ export default function DetailsRequirementsPage(rawProps: any) {
         setRequest(r => ({
           ...r,
           ai_detection_certificate: data.ai_detection_certificate || r.ai_detection_certificate,
-          endorsement_form: data.endorsement_form || r.endorsement_form,
-          advisers_endorsement: data.advisers_endorsement || r.advisers_endorsement,
         }));
         setAiDetectionCertFile(null);
-        setEndorsementFormFile(null);
-        toast.success('Documents uploaded successfully.');
+        if (aiDetectionInputRef.current) aiDetectionInputRef.current.value = '';
+        toast.success('AI Detection Certificate uploaded successfully.');
       } else {
-        toast.error(data?.error || 'Failed to upload documents.');
+        toast.error(data?.error || 'Failed to upload certificate.');
       }
     } catch {
-      toast.error('Network error uploading documents.');
+      toast.error('Network error uploading certificate.');
     } finally {
       setAiDetectionCertUploading(false);
-      setEndorsementFormUploading(false);
-    }
-  }
-
-  // Add state for templates
-  const [templates, setTemplates] = useState<any[]>([]);
-  const [templatesLoading, setTemplatesLoading] = useState(true);
-
-  useEffect(() => {
-    setTemplatesLoading(true);
-    fetch('/api/document-templates')
-      .then(r => r.json())
-      .then(setTemplates)
-      .finally(() => setTemplatesLoading(false));
-  }, []);
-
-  // Helper to get template name by defense type
-  function getTemplateNameForDefenseType(defenseType: string) {
-    if (/proposal/i.test(defenseType)) return "Endorsement Form (Proposal)";
-    if (/prefinal/i.test(defenseType)) return "Endorsement Form (Prefinal)";
-    if (/final/i.test(defenseType)) return "Endorsement (Final)";
-    return null;
-  }
-
-  // Auto Generate handler
-  async function handleAutoGenerate() {
-    setAutoGenerating(true);
-    toast.loading("Generating document...");
-    const templateName = getTemplateNameForDefenseType(request.defense_type || "");
-    if (templatesLoading) {
-      toast.error("Templates are still loading. Please wait.");
-      setAutoGenerating(false);
-      return;
-    }
-    const template = templates.find(t => t.name === templateName);
-    if (!template) {
-      toast.error("No template found for this defense type.");
-      setAutoGenerating(false);
-      return;
-    }
-    try {
-      const res = await fetch("/api/generate-document", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Accept": "application/pdf",
-          "X-CSRF-TOKEN": csrf(),
-        },
-        body: JSON.stringify({
-          template_id: template.id,
-          defense_request_id: request.id,
-          fields: {},
-        }),
-      });
-      if (!res.ok) {
-        toast.error("Failed to generate document.");
-        setAutoGenerating(false);
-        return;
-      }
-      const blob = await res.blob();
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = 'endorsement_form.pdf';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(url);
-      toast.success("Endorsement Form generated and downloaded!");
-    } catch (e) {
-      toast.error("Network error generating document.");
-    } finally {
-      setAutoGenerating(false);
-      toast.dismiss();
     }
   }
 
@@ -517,18 +400,6 @@ export default function DetailsRequirementsPage(rawProps: any) {
     if (status === 'Rejected') return 'Rejected';
     return status || '—';
   }
-
-  // Always show missing docs alert if not linked
-  const missingDocs =
-    !request.ai_detection_certificate || !request.endorsement_form;
-  const missingDocsAlertMsg = !request.ai_detection_certificate && !request.endorsement_form
-    ? "*You haven't uploaded the AI Detection Certificate and Endorsement Form yet."
-    : !request.ai_detection_certificate
-      ? "*You haven't uploaded the AI Detection Certificate yet."
-      : !request.endorsement_form
-        ? "*You haven't uploaded the Endorsement Form yet."
-        : null;
-
 
   const coordinators = props.coordinators ?? [];
   const loadingCoordinators = false; // No need to fetch, already loaded
@@ -585,17 +456,11 @@ export default function DetailsRequirementsPage(rawProps: any) {
                 <TabsTrigger value="details" className="flex items-center gap-1 text-sm font-medium px-3">
                   <FileText className="h-4 w-4" /> Details
                 </TabsTrigger>
-                <TabsTrigger value="link-documents" className="flex items-center gap-1 text-sm font-medium px-3">
-                  <FileText className="h-4 w-4" /> Link Documents
+                <TabsTrigger value="upload-certificate" className="flex items-center gap-1 text-sm font-medium px-3">
+                  <FileText className="h-4 w-4" /> Upload AI Certificate
                 </TabsTrigger>
               </TabsList>
             </Tabs>
-            {/* Always show missing docs alert here, regardless of tab */}
-            {missingDocs && (
-              <span className="ml-4 text-xs text-rose-600 font-medium">
-                {missingDocsAlertMsg}
-              </span>
-            )}
           </div>
           <div className="flex gap-2">
             <Button
@@ -849,11 +714,6 @@ export default function DetailsRequirementsPage(rawProps: any) {
                   <h2 className="text-sm font-semibold mb-2 flex items-center gap-2">
                     <FileText className="h-4 w-4" /> Attachments
                   </h2>
-                  {missingDocs && (
-                    <div className="mb-2">
-                      <span className="text-xs text-rose-600 font-medium">{missingDocsAlertMsg}</span>
-                    </div>
-                  )}
                   <Separator />
                   <div className="space-y-2 text-sm mt-3">
                     {attachments
@@ -923,9 +783,9 @@ export default function DetailsRequirementsPage(rawProps: any) {
                 {/* Remove old Committee (read-only summary) section */}
               </TabsContent>
 
-              {/* LINK DOCUMENTS TAB */}
-              <TabsContent value="link-documents" className="space-y-5">
-                <form onSubmit={handleDocumentsSubmit} className="space-y-5">
+              {/* UPLOAD AI CERTIFICATE TAB */}
+              <TabsContent value="upload-certificate" className="space-y-5">
+                <form onSubmit={handleAiCertificateSubmit} className="space-y-5">
                   {/* AI Detection Certificate Section */}
                   <div className={sectionClass + " text-sm"}>
                     <h2 className="text-sm font-semibold flex items-center gap-2">
@@ -987,101 +847,22 @@ export default function DetailsRequirementsPage(rawProps: any) {
                       </div>
                     </div>
                   </div>
-
-                  {/* Endorsement Form Section */}
-                  <div className={sectionClass + " text-sm"}>
-                    <h2 className="text-sm font-semibold flex items-center gap-2">
-                      <FileText className="h-5 w-5" /> Endorsement Form
-                    </h2>
-                    <Separator />
-                    <div className="flex flex-col gap-3 mt-2">
-                      <div className="grid w-full max-w-sm items-center gap-1.5">
-                        <label
-                          htmlFor="endorsement-upload"
-                          className="block text-xs font-medium text-zinc-700 dark:text-zinc-200"
-                        >
-                          Upload Endorsement Form
-                        </label>
-                        {request.endorsement_form && !endorsementFormFile ? (
-                          <div className="flex items-center gap-2 w-full">
-                            <Input
-                              type="text"
-                              value={request.endorsement_form.split('/').pop() || ''}
-                              disabled
-                              className="flex-1 bg-zinc-100 text-zinc-700 cursor-default"
-                            />
-                            <Button
-                              type="button"
-                              size="icon"
-                              variant="ghost"
-                              className="h-7 w-7"
-                              onClick={() => {
-                                setRequest(r => ({ ...r, endorsement_form: undefined }));
-                                if (endorsementInputRef.current) endorsementInputRef.current.value = "";
-                              }}
-                              title="Remove linked file"
-                            >
-                              <XCircle className="h-4 w-4 text-black" />
-                            </Button>
-                          </div>
-                        ) : (
-                          <div className="flex items-center gap-2">
-                            <input
-                              id="endorsement-upload"
-                              ref={endorsementInputRef}
-                              type="file"
-                              accept=".pdf,.jpg,.jpeg,.png"
-                              className="flex-1 text-xs file:bg-rose-500 file:text-white file:rounded file:border-0 file:px-3 file:py-1.5 file:text-xs file:font-semibold file:cursor-pointer"
-                              style={{ maxWidth: 220 }}
-                              onChange={e => setEndorsementFormFile(e.target.files?.[0] || null)}
-                              disabled={endorsementFormUploading}
-                            />
-                          </div>
-                        )}
-                        <div className="text-xs text-muted-foreground mt-1">
-                          {endorsementFormFile
-                            ? `Selected: ${endorsementFormFile.name}`
-                            : null}
-                        </div>
-                        {/* Auto Generate button on a separate row */}
-                        <div className="mt-2">
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            onClick={handleAutoGenerate}
-                            disabled={endorsementFormUploading || autoGenerating || templatesLoading}
-                          >
-                            {autoGenerating || templatesLoading ? (
-                              <span className="flex items-center gap-2">
-                                <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
-                                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
-                                </svg>
-                                Generating...
-                              </span>
-                            ) : (
-                              "Auto Generate"
-                            )}
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
                   <div className="flex justify-end">
                     <Button
                       type="submit"
                       className="gap-2 bg-rose-500 hover:bg-rose-600 text-white"
-                      disabled={aiDetectionCertUploading || endorsementFormUploading}
+                      disabled={aiDetectionCertUploading || !aiDetectionCertFile}
                     >
-                      {aiDetectionCertUploading || endorsementFormUploading ? (
+                      {aiDetectionCertUploading ? (
                         <span>Uploading...</span>
                       ) : (
-                        <span>Submit Documents</span>
+                        <span>Upload Certificate</span>
                       )}
                     </Button>
                   </div>
                 </form>
               </TabsContent>
+
             </Tabs>
           </div>
 
@@ -1157,42 +938,20 @@ export default function DetailsRequirementsPage(rawProps: any) {
         </div>
       </div>
 
-      {/* Confirmation Dialog for Endorse/Reject/Retrieve */}
+      {/* Confirmation Dialog for Reject/Retrieve */}
       <Dialog open={confirm.open} onOpenChange={o => { if (!o) setConfirm({ open: false, action: null }); }}>
         <DialogContent>
           <DialogTitle>Confirm Action</DialogTitle>
           <DialogDescription>
-            {confirm.action === 'approve'
-              ? 'Please review before endorsing.'
-              : 'Apply this status change?'}
+            Apply this status change?
           </DialogDescription>
           <div className="mt-3 text-sm space-y-3">
             <p>
               Set request to{' '}
               <span className="font-semibold">
-                {confirm.action === 'approve'
-                  ? 'Endorsed'
-                  : confirm.action === 'reject'
-                    ? 'Rejected'
-                    : 'Pending'}
+                {confirm.action === 'reject' ? 'Rejected' : 'Pending'}
               </span>?
             </p>
-            {confirm.action === 'approve' && coordinators.length > 0 && (
-              <div className="text-xs text-muted-foreground">
-                This will be sent to your coordinator: <span className="font-semibold">{coordinators[0].name}</span>
-              </div>
-            )}
-            {confirm.action === 'approve' && (
-              <div className="flex flex-col items-center gap-3 rounded-md border bg-muted/40 p-5">
-                <div className="rounded-full bg-primary/10 p-4">
-                  <Signature className="h-14 w-14 text-primary" />
-                </div>
-                <p className="text-center text-sm leading-relaxed">
-                  Endorsing this defense request authorizes the use of your signature
-                  on the official defense documents.
-                </p>
-              </div>
-            )}
           </div>
           <div className="flex justify-end gap-2 mt-4">
             <Button variant="ghost" onClick={() => setConfirm({ open: false, action: null })}>Cancel</Button>
@@ -1211,10 +970,26 @@ export default function DetailsRequirementsPage(rawProps: any) {
         open={endorsementDialogOpen}
         onOpenChange={setEndorsementDialogOpen}
         defenseRequest={request}
+        coordinatorId={coordinators.length > 0 ? coordinators[0].id : undefined}
         coordinatorName={coordinators.length > 0 ? coordinators[0].name : 'Coordinator'}
-        onEndorseComplete={() => {
-          // Reload the page or update the request state
-          router.reload();
+        onEndorseComplete={async () => {
+          // Fetch updated request data
+          try {
+            const res = await fetch(`/api/defense-requests/${request.id}`, {
+              headers: { Accept: 'application/json' }
+            });
+            if (res.ok) {
+              const data = await res.json();
+              setRequest(data);
+              toast.success('Status updated successfully!');
+            } else {
+              // Fallback to reload if API fails
+              router.reload();
+            }
+          } catch {
+            // Fallback to reload on error
+            router.reload();
+          }
         }}
       />
     </AppLayout>

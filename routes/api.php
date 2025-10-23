@@ -23,6 +23,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::patch('panelists/bulk-status', [PanelistController::class, 'bulkUpdateStatus'])->name('api.panelists.bulk-status');
 
     // Defense Requests API
+    Route::get('defense-requests/{defenseRequest}', [DefenseRequestController::class, 'apiShow']);
     Route::patch('defense-requests/{defenseRequest}/status', [DefenseRequestController::class, 'updateStatus']);
     Route::patch('defense-requests/{defenseRequest}/priority', [DefenseRequestController::class, 'updatePriority']);
     Route::patch('defense-requests/{defenseRequest}/adviser-status', [DefenseRequestController::class, 'updateAdviserStatus']);
