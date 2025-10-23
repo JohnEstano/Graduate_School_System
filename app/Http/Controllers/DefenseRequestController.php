@@ -720,8 +720,30 @@ class DefenseRequestController extends Controller
         $force = $data['force'] ?? false;
         $originalState = $defenseRequest->workflow_state;
 
+        // Initialize snapshot variables (needed for all status changes)
+        $previousSchedule = null;
+        $previousPanels = null;
+
         // If approving, optionally save panels/schedule first (atomic)
         if ($target === 'Approved') {
+            // Capture snapshots BEFORE any changes (only if re-approving)
+            if ($defenseRequest->coordinator_status === 'Approved') {
+                $previousSchedule = [
+                    'scheduled_date' => $defenseRequest->scheduled_date,
+                    'scheduled_time' => $defenseRequest->scheduled_time,
+                    'scheduled_end_time' => $defenseRequest->scheduled_end_time,
+                    'defense_venue' => $defenseRequest->defense_venue,
+                ];
+                
+                $previousPanels = [
+                    'defense_chairperson' => $defenseRequest->defense_chairperson,
+                    'defense_panelist1' => $defenseRequest->defense_panelist1,
+                    'defense_panelist2' => $defenseRequest->defense_panelist2,
+                    'defense_panelist3' => $defenseRequest->defense_panelist3,
+                    'defense_panelist4' => $defenseRequest->defense_panelist4,
+                ];
+            }
+
             // If panels payload provided, validate basic assignment rules via service
             $conflictService = new \App\Services\DefenseConflictService();
             if (isset($data['panels'])) {
@@ -862,6 +884,36 @@ class DefenseRequestController extends Controller
             $defenseRequest->last_status_updated_at = now();
             $defenseRequest->last_status_updated_by = $user->id;
 
+            // Store snapshots for change detection
+            // On first approval: Store current values as snapshot for future comparisons
+            // On re-approval: Store old values (captured before changes) for change detection
+            if ($target === 'Approved') {
+                if ($previousSchedule || $previousPanels) {
+                    // Re-approval: store the OLD values we captured
+                    $defenseRequest->previous_schedule_snapshot = $previousSchedule;
+                    $defenseRequest->previous_panels_snapshot = $previousPanels;
+                } else {
+                    // First approval: store CURRENT values for future comparison
+                    $defenseRequest->previous_schedule_snapshot = [
+                        'scheduled_date' => $defenseRequest->scheduled_date,
+                        'scheduled_time' => $defenseRequest->scheduled_time,
+                        'scheduled_end_time' => $defenseRequest->scheduled_end_time,
+                        'defense_venue' => $defenseRequest->defense_venue,
+                    ];
+                    $defenseRequest->previous_panels_snapshot = [
+                        'defense_chairperson' => $defenseRequest->defense_chairperson,
+                        'defense_panelist1' => $defenseRequest->defense_panelist1,
+                        'defense_panelist2' => $defenseRequest->defense_panelist2,
+                        'defense_panelist3' => $defenseRequest->defense_panelist3,
+                        'defense_panelist4' => $defenseRequest->defense_panelist4,
+                    ];
+                }
+            } elseif ($target === 'Pending') {
+                // Clear snapshots when retrieving (back to pending)
+                $defenseRequest->previous_schedule_snapshot = null;
+                $defenseRequest->previous_panels_snapshot = null;
+            }
+
             // --- Add workflow history entry ---
             $hist = $defenseRequest->workflow_history ?? [];
             $hist[] = [
@@ -918,6 +970,49 @@ class DefenseRequestController extends Controller
                 'student_email' => $student?->email,
                 'adviser_id' => $adviser?->id,
                 'adviser_email' => $adviser?->email,
+            ]);
+
+            // If status is Rejected, send rejection email and return
+            if ($status === 'Rejected') {
+                Log::info('Sending rejection email to student');
+                if ($student && $student->email) {
+                    Mail::to($student->email)->send(new DefenseRequestRejected(
+                        $defenseRequest,
+                        $student,
+                        'coordinator',
+                        $defenseRequest->coordinator_comment ?? 'Please review and resubmit your defense request.'
+                    ));
+                    Log::info('Rejection email sent to student');
+                } else {
+                    Log::warning('Student email skipped for rejection', [
+                        'has_student' => !!$student,
+                        'has_email' => $student?->email
+                    ]);
+                }
+                return;
+            }
+
+            // Detect changes for re-approval
+            $prev = $defenseRequest;
+            $scheduleChanged = $prev->previous_schedule_snapshot && (
+                $prev->previous_schedule_snapshot['scheduled_date'] !== $prev->scheduled_date ||
+                $prev->previous_schedule_snapshot['scheduled_time'] !== $prev->scheduled_time ||
+                $prev->previous_schedule_snapshot['scheduled_end_time'] !== $prev->scheduled_end_time ||
+                $prev->previous_schedule_snapshot['defense_venue'] !== $prev->defense_venue
+            );
+            
+            $panelsChanged = $prev->previous_panels_snapshot && (
+                $prev->previous_panels_snapshot['defense_chairperson'] !== $prev->defense_chairperson ||
+                $prev->previous_panels_snapshot['defense_panelist1'] !== $prev->defense_panelist1 ||
+                $prev->previous_panels_snapshot['defense_panelist2'] !== $prev->defense_panelist2 ||
+                $prev->previous_panels_snapshot['defense_panelist3'] !== $prev->defense_panelist3 ||
+                $prev->previous_panels_snapshot['defense_panelist4'] !== $prev->defense_panelist4
+            );
+            
+            Log::info('Change detection', [
+                'is_reapproval' => !!$prev->previous_schedule_snapshot,
+                'schedule_changed' => $scheduleChanged,
+                'panels_changed' => $panelsChanged
             ]);
             
             // Get all panel members by name (they're stored as names, not IDs)
@@ -995,11 +1090,11 @@ class DefenseRequestController extends Controller
                 Log::info('Sending email to student', ['email' => $student->email]);
                 Mail::to($student->email)->send(new DefenseScheduled(
                     $defenseRequest,
-                    $student
+                    $student,
+                    $scheduleChanged || $panelsChanged ? ['schedule' => $scheduleChanged, 'panels' => $panelsChanged] : null
                 ));
                 Log::info('Student email sent');
-                // Add delay to respect Resend's rate limit (2 requests/second)
-                usleep(500000); // 500ms delay
+                usleep(500000);
             } else {
                 Log::warning('Student email skipped', [
                     'has_student' => !!$student,
@@ -1012,11 +1107,11 @@ class DefenseRequestController extends Controller
                 Log::info('Sending email to adviser', ['email' => $adviser->email]);
                 Mail::to($adviser->email)->send(new DefenseScheduled(
                     $defenseRequest,
-                    $adviser
+                    $adviser,
+                    $scheduleChanged || $panelsChanged ? ['schedule' => $scheduleChanged, 'panels' => $panelsChanged] : null
                 ));
                 Log::info('Adviser email sent');
-                // Add delay to respect Resend's rate limit (2 requests/second)
-                usleep(500000); // 500ms delay
+                usleep(500000);
             } else {
                 Log::warning('Adviser email skipped', [
                     'has_adviser' => !!$adviser,
@@ -1025,12 +1120,10 @@ class DefenseRequestController extends Controller
             }
 
             // Send email to each panel member
-            // Add delay between sends to respect Resend's rate limit (2 requests/second)
             foreach ($panelMembers as $index => $member) {
                 if ($member && $member->email) {
-                    // Add 500ms delay between emails (except for the first one)
                     if ($index > 0) {
-                        usleep(500000); // 500ms = 0.5 seconds
+                        usleep(500000);
                     }
                     
                     Log::info('Sending email to panel member', [
@@ -1039,7 +1132,8 @@ class DefenseRequestController extends Controller
                     ]);
                     Mail::to($member->email)->send(new DefenseScheduled(
                         $defenseRequest,
-                        $member
+                        $member,
+                        $scheduleChanged || $panelsChanged ? ['schedule' => $scheduleChanged, 'panels' => $panelsChanged] : null
                     ));
                     Log::info('Panel member email sent');
                 } else {
@@ -1665,6 +1759,8 @@ class DefenseRequestController extends Controller
             // Create notification for coordinator when adviser endorses
             if ($defenseRequest->coordinator_user_id) {
                 \Log::info('updateAdviserStatus: Creating coordinator notification');
+                $coordinator = User::find($defenseRequest->coordinator_user_id);
+                
                 Notification::create([
                     'user_id' => $defenseRequest->coordinator_user_id,
                     'type' => 'defense_endorsed',
@@ -1673,6 +1769,13 @@ class DefenseRequestController extends Controller
                     'action_url' => route('coordinator.defense-requests.details', $defenseRequest->id),
                 ]);
                 \Log::info('updateAdviserStatus: Coordinator notification created');
+                
+                // Send email to coordinator
+                if ($coordinator && $coordinator->email) {
+                    \Log::info('updateAdviserStatus: Sending email to coordinator', ['email' => $coordinator->email]);
+                    Mail::to($coordinator->email)->send(new DefenseRequestAssignedToCoordinator($defenseRequest));
+                    \Log::info('updateAdviserStatus: Coordinator email sent');
+                }
             }
             
             // Also notify the student that their defense was endorsed

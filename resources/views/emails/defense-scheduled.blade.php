@@ -27,6 +27,9 @@
             padding: 30px 20px;
             text-align: center;
         }
+        .header-update {
+            background: linear-gradient(135deg, #f59e0b 0%, #fbbf24 100%);
+        }
         .header h1 {
             margin: 0;
             font-size: 24px;
@@ -181,8 +184,18 @@
 </head>
 <body>
     <div class="container">
-        <div class="header">
-            <h1>📅 Your Defense Has Been Scheduled!</h1>
+        <div class="header {{ $changes ? 'header-update' : '' }}">
+            <h1>
+                @if($changes && $changes['schedule'] && $changes['panels'])
+                    🔄 Defense Rescheduled & Panel Updated!
+                @elseif($changes && $changes['schedule'])
+                    � Defense Rescheduled!
+                @elseif($changes && $changes['panels'])
+                    👥 Defense Panel Updated!
+                @else
+                    �📅 Your Defense Has Been Scheduled!
+                @endif
+            </h1>
             <p>Graduate School System</p>
         </div>
         
@@ -191,13 +204,34 @@
                 Dear {{ $recipient->first_name }} {{ $recipient->last_name }},
             </div>
             
-            <div class="success-badge">
-                🎉 Defense Schedule Notification - {{ $defenseRequest->defense_type }} Defense
-            </div>
-            
-            <div class="message">
-                <p>This is to inform you that a defense schedule has been finalized. Please review the details below and mark your calendar.</p>
-            </div>
+            @if($changes)
+                <div class="success-badge" style="background: #fef3c7; border-color: #f59e0b; color: #92400e;">
+                    ⚠️ Important Update - {{ $defenseRequest->defense_type }} Defense
+                    @if($changes['schedule'] && $changes['panels'])
+                        has been rescheduled and the panel has been updated
+                    @elseif($changes['schedule'])
+                        has been rescheduled
+                    @elseif($changes['panels'])
+                        panel has been updated
+                    @endif
+                </div>
+                <div class="message">
+                    <p><strong>Your defense details have been modified.</strong> Please review the updated information below:</p>
+                    @if($changes['schedule'])
+                        <p>• <strong>Schedule changed:</strong> New date, time, or venue</p>
+                    @endif
+                    @if($changes['panels'])
+                        <p>• <strong>Panel updated:</strong> Defense panel members have been changed or added</p>
+                    @endif
+                </div>
+            @else
+                <div class="success-badge">
+                    🎉 Defense Schedule Notification - {{ $defenseRequest->defense_type }} Defense
+                </div>
+                <div class="message">
+                    <p>This is to inform you that a defense schedule has been finalized. Please review the details below and mark your calendar.</p>
+                </div>
+            @endif
             
             <div class="schedule-box">
                 <div class="date">

@@ -129,6 +129,12 @@ export default function DetailsRequirementsPage(rawProps: any) {
   }
 
   const [request, setRequest] = useState<DefenseRequestFull>(requestProp);
+  
+  // Sync request state when prop changes (fixes stale data after uploads/actions)
+  useEffect(() => {
+    setRequest(requestProp);
+  }, [requestProp]);
+  
   const [confirm, setConfirm] = useState<{ open: boolean; action: 'approve' | 'reject' | 'retrieve' | null }>({
     open: false,
     action: null,
