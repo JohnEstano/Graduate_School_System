@@ -23,6 +23,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::patch('panelists/bulk-status', [PanelistController::class, 'bulkUpdateStatus'])->name('api.panelists.bulk-status');
 
     // Defense Requests API
+    // Specific routes first (before generic patterns)
+    Route::get('defense-requests/count', [DefenseRequestController::class, 'count']);
     Route::get('defense-requests/{defenseRequest}', [DefenseRequestController::class, 'apiShow']);
     Route::patch('defense-requests/{defenseRequest}/status', [DefenseRequestController::class, 'updateStatus']);
     Route::patch('defense-requests/{defenseRequest}/priority', [DefenseRequestController::class, 'updatePriority']);
@@ -31,8 +33,6 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('defense-requests/{defenseRequest}/upload-endorsement', [DefenseRequestController::class, 'uploadDocuments']);
     Route::patch('defense-requests/bulk-status', [DefenseRequestController::class, 'bulkUpdateStatus']);
     Route::patch('defense-requests/bulk-priority', [DefenseRequestController::class, 'bulkUpdatePriority']);
-    // Lightweight pending count (polled by sidebar) – keep cheap & cache at controller level if needed
-    Route::get('defense-requests/count', [DefenseRequestController::class, 'count']);
 
     // Notifications API
     // Route::get('notifications', [NotificationController::class, 'index']);

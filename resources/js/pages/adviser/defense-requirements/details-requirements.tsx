@@ -960,19 +960,31 @@ export default function DetailsRequirementsPage(rawProps: any) {
         coordinatorName={coordinators.length > 0 ? coordinators[0].name : 'Coordinator'}
         onEndorseComplete={async () => {
           // Fetch updated request data
+          console.log('🔄 onEndorseComplete called, fetching updated data...');
           try {
-            const res = await fetch(`/api/defense-requests/${request.id}`, {
+            const res = await fetch(`/api/defense-request/${request.id}`, {
               headers: { Accept: 'application/json' }
             });
+            console.log('📡 API Response status:', res.status);
+            
             if (res.ok) {
               const data = await res.json();
-              setRequest(data);
-              toast.success('Status updated successfully!');
+              console.log('✅ Updated defense request data:', data);
+              console.log('🎯 New adviser_status:', data.adviser_status);
+              console.log('🎯 New workflow_state:', data.workflow_state);
+              
+              // Force a new object reference to ensure React detects the change
+              setRequest({...data});
+              
+              toast.success('Endorsement submitted successfully!');
             } else {
+              const errorText = await res.text();
+              console.error('❌ API request failed:', res.statusText, errorText);
               // Fallback to reload if API fails
               router.reload();
             }
-          } catch {
+          } catch (error) {
+            console.error('💥 Error fetching updated data:', error);
             // Fallback to reload on error
             router.reload();
           }

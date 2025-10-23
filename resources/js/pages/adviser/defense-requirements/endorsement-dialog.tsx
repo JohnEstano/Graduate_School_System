@@ -371,9 +371,19 @@ export default function EndorsementDialog({
       });
 
       if (res.ok) {
-        toast.success(`Request endorsed successfully and forwarded to ${coordinatorName}!`);
+        const data = await res.json();
+        
+        console.log('✅ Endorsement successful, updating parent...');
+        
+        // WAIT for callback to complete FIRST before closing dialog
+        if (onEndorseComplete) {
+          await onEndorseComplete();
+        }
+        
+        // Then close dialog AFTER update is done
         onOpenChange(false);
-        onEndorseComplete?.();
+        
+        toast.success(`Request endorsed successfully and forwarded to ${coordinatorName}!`);
       } else {
         const error = await res.json();
         toast.error(error.message || 'Failed to endorse request');
