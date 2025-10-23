@@ -396,7 +396,7 @@ function ShowAllRequestsInner({ defenseRequests: initial, onStatusChange }: Show
         setDefenseRequests(prev =>
           prev.map(r =>
             verificationIds.includes(r.aa_verification_id ?? -1)
-              ? { ...r, aa_verification_status: status }
+              ? ({ ...r, aa_verification_status: status } as DefenseRequestSummary)
               : r
           )
         );
@@ -537,7 +537,7 @@ function ShowAllRequestsInner({ defenseRequests: initial, onStatusChange }: Show
         setDefenseRequests(prev =>
           prev.map(r =>
             verificationIds.includes(r.aa_verification_id ?? -1)
-              ? { ...r, aa_verification_status: confirmAction === 'approve' ? 'verified' : 'rejected' }
+              ? ({ ...r, aa_verification_status: confirmAction === 'approve' ? 'verified' : 'rejected' } as unknown as DefenseRequestSummary)
               : r
           )
         );
