@@ -666,13 +666,13 @@ export default function DetailsRequirementsPage(rawProps: any) {
                     });
 
                     return (
-                      <div className="rounded-md border overflow-x-auto">
+                      <div className="rounded-md  overflow-x-auto">
                         <Table>
                           <TableHeader>
                             <TableRow>
                               <TableHead className="min-w-[200px]">Name & Email</TableHead>
                               <TableHead className="min-w-[100px]">Role</TableHead>
-                              <TableHead className="min-w-[100px]">Status</TableHead>
+                            
                             </TableRow>
                           </TableHeader>
                           <TableBody>
@@ -685,21 +685,7 @@ export default function DetailsRequirementsPage(rawProps: any) {
                                   </div>
                                 </TableCell>
                                 <TableCell className="text-xs">{r.role}</TableCell>
-                                <TableCell>
-                                  <Badge
-                                    variant="secondary"
-                                    className={cn(
-                                      "text-xs",
-                                      r.status === 'Assigned'
-                                        ? 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300'
-                                        : r.status === 'Pending confirmation'
-                                        ? 'bg-yellow-100 text-amber-700 dark:bg-yellow-900 dark:text-yellow-300'
-                                        : 'bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300'
-                                    )}
-                                  >
-                                    {r.status}
-                                  </Badge>
-                                </TableCell>
+                              
                               </TableRow>
                             ))}
                           </TableBody>
