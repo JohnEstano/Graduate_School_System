@@ -63,7 +63,20 @@ interface Props {
 const breadcrumbs: BreadcrumbItem[] = [{ title: "Honorarium Summary", href: "/honorarium" }];
 
 export default function Show({ record, panelists: initialPanelists }: Props) {
-  const [panelists, setPanelists] = useState<Panelist[]>(initialPanelists);
+  const withAmounts = initialPanelists.map((p) => {
+    const total = (p.students || []).reduce(
+      (sum, s) =>
+        sum +
+        (s.payments || []).reduce(
+          (pSum, pay) => pSum + Number(pay.amount || 0),
+          0
+        ),
+      0
+    );
+    return { ...p, amount: total };
+  });
+
+  const [panelists, setPanelists] = useState<Panelist[]>(withAmounts);
 
   // Modal state
   const [selectedPanelist, setSelectedPanelist] = useState<Panelist | null>(null);
@@ -81,7 +94,7 @@ export default function Show({ record, panelists: initialPanelists }: Props) {
               {record.program} • Last updated{" "}
               {record.date_edited
                 ? new Date(record.date_edited).toLocaleDateString()
-                : "N/A"}
+                : new Date().toLocaleDateString()}
             </p>
           </div>
         </div>
@@ -97,7 +110,6 @@ export default function Show({ record, panelists: initialPanelists }: Props) {
                 <TableRow>
                   <TableHead className="w-[40%] px-1 py-2">Panelist Name</TableHead>
                   <TableHead className="w-[20%] px-1 py-2 text-center">Receivable</TableHead>
-                  <TableHead className="w-[20%] px-1 py-2 text-center">Action</TableHead>
                 </TableRow>
               </TableHeader>
                 <TableBody>
@@ -114,15 +126,7 @@ export default function Show({ record, panelists: initialPanelists }: Props) {
                         <TableCell className="px-1 py-2 text-center">
                           ₱ {panelist.amount.toLocaleString()}
                         </TableCell>
-                        <TableCell className="px-1 py-2 text-center">
-                          <div className="flex justify-center">
-                            <PDFDownloadButton
-                              record={record}
-                              panelists={[panelist]}
-                              onClick={(e) => e.stopPropagation()}
-                            />
-                          </div>
-                        </TableCell>
+                        
                       </TableRow>
                     ))
                   ) : (
@@ -148,3 +152,6 @@ export default function Show({ record, panelists: initialPanelists }: Props) {
     </AppLayout>
   );
 }
+
+
+

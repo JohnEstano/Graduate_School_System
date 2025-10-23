@@ -50,4 +50,10 @@ class PaymentRecord extends Model
     {
         return $this->belongsTo(PanelistRecord::class);
     }
+
+    // Alias for easier access
+    public function panelist()
+    {
+        return $this->belongsTo(PanelistRecord::class, 'panelist_record_id');
+    }
 }

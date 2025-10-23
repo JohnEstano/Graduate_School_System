@@ -148,71 +148,23 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
 
 
+        // HONORARIUM ROUTES
 
+        // Page 1 - List all programs
+        Route::get('/honorarium', [HonorariumSummaryController::class, 'index'])
+            ->name('honorarium.index');
 
+        // Page 2 - Show individual program details (panelists, etc.)
+        Route::get('/honorarium/individual-record/{programId}', [HonorariumSummaryController::class, 'show'])
+            ->name('honorarium.individual-record');
 
+        // Download program PDF
+        Route::get('/honorarium/{programId}/download-pdf', [HonorariumSummaryController::class, 'downloadProgramPdf'])
+            ->name('honorarium.downloadPDF');
 
-
-
-
-
-
-
-
-
-    // HONORARIUM ROUTES
-    // Page 1 - List all programs
-
-
-
-    
-Route::get('/honorarium/individual-record/{programId}', [HonorariumSummaryController::class, 'show'])
-    ->name('honorarium.individual-record');
-
-
-    Route::get('/honorarium', [HonorariumSummaryController::class, 'index']) 
-        ->name('honorarium.index'); 
-
-    Route::get('/honorarium/individual-record/{programId}', [HonorariumSummaryController::class, 'show'])
-        ->name('honorarium-record.show');
-    
-    // Download CSV for a program
-    // API route
-    Route::get('/api/honorarium/{programId}/download-pdf', [HonorariumSummaryController::class, 'downloadPdfApi']);
-
-    // Web route
-    Route::get('/honorarium/{programId}/download-pdf', [HonorariumSummaryController::class, 'downloadProgramPdf'])
-        ->name('honorarium.downloadPDF');
-
-    // For program filter
-    Route::get('/student-records/program/{program}', [StudentRecordController::class, 'getByProgram'])
-        ->name('student-records.getByProgram');
-
-    // For DOCX download
-    Route::get('/student-records/{id}/download-docs', [StudentRecordController::class, 'downloadDocs'])
-        ->name('student-records.downloadDocs');
-
-
-
-
-
-    
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+        // Download individual panelist PDF
+        Route::get('/honorarium/panelist/{panelistId}/download-pdf', [HonorariumSummaryController::class, 'downloadPanelistPdf'])
+            ->name('honorarium.panelist.downloadPDF');
 
 
 
@@ -222,20 +174,14 @@ Route::get('/honorarium/individual-record/{programId}', [HonorariumSummaryContro
 
     //student-records route
     Route::get('/student-records', [StudentRecordController::class, 'index'])->name('student-records.index');
+    Route::get('/student-records/program/{programId}', [StudentRecordController::class, 'showProgramStudents'])->name('student-records.program.show');
     Route::get('/student-records/{id}', [StudentRecordController::class, 'show'])->name('student-records.show');
+    Route::get('/student-records/{id}/download-pdf', [StudentRecordController::class, 'downloadPdf'])->name('student-records.downloadPdf');
     Route::put('/student-records/{studentRecord}', [StudentRecordController::class, 'update'])->name('student-records.update');
     Route::delete('/student-records/{studentRecord}', [StudentRecordController::class, 'destroy'])->name('student-records.destroy');
     
     Route::get('/payments/{id}/download-pdf', [StudentRecordController::class, 'downloadPdf'])
         ->name('payments.downloadPdf');
-
-
-
-
-
-
-
-
 
 
 

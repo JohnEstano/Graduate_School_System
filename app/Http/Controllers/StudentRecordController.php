@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\StudentRecord;
+use App\Models\ProgramRecord;
 use App\Models\DefenseRequest;
 use App\Models\PaymentRecord;
 use App\Models\HonorariumPayment;
@@ -15,37 +16,157 @@ use Illuminate\Support\Facades\DB;
 
 class StudentRecordController extends Controller
 {
+    // Display all programs (first page)
     public function index(Request $request)
     {
-        $records = StudentRecord::query()
+        $records = ProgramRecord::orderBy('date_edited', 'desc')->get();
+
+        return Inertia::render('student-records/Index', [
+            'records' => $records
+        ]);
+    }
+
+    // Display students under a specific program (second page)
+    public function showProgramStudents(Request $request, $programId)
+    {
+        $program = ProgramRecord::findOrFail($programId);
+        
+        $students = StudentRecord::where('program_record_id', $programId)
+            ->with(['payments.panelist']) // Eager load payments with panelist info
             ->when($request->input('search'), function ($query, $search) {
                 $query->where('first_name', 'like', "%{$search}%")
                       ->orWhere('middle_name', 'like', "%{$search}%")
                       ->orWhere('last_name', 'like', "%{$search}%")
                       ->orWhere('student_id', 'like', "%{$search}%");
             })
-            ->orderBy('created_at', 'desc')
-            ->paginate(10)
+            ->orderBy('last_name', 'asc')
+            ->paginate(15)
             ->withQueryString();
 
-        // Transform to group by actual defense requests
-        $records->getCollection()->transform(function ($student) {
-            // Get all completed defense requests for this student
-            $defenseRequests = DefenseRequest::where('school_id', $student->student_id)
-                ->where('workflow_state', 'completed')
-                ->orderBy('scheduled_date', 'desc')
-                ->get();
-
-            // Map each defense to its payment breakdown
-            $student->payments = $defenseRequests->map(function ($defense) use ($student) {
-                return $this->buildDefensePaymentData($defense, $student);
-            })->values();
-
-            return $student;
+        // Transform payments to include panelist breakdown
+        $students->getCollection()->transform(function ($student) {
+            // Group payments by defense details to consolidate
+            $groupedPayments = [];
+            
+            // Store original payments to iterate
+            $originalPayments = $student->payments;
+            
+            foreach ($originalPayments as $payment) {
+                // Create a unique key for this defense (date + type)
+                $defenseDate = $student->defense_date ? date('Y-m-d', strtotime($student->defense_date)) : null;
+                $key = $defenseDate . '_' . $student->defense_type;
+                
+                if (!isset($groupedPayments[$key])) {
+                    $groupedPayments[$key] = [
+                        'id' => $payment->id,
+                        'defense_date' => $defenseDate,
+                        'defense_type' => $student->defense_type,
+                        'defense_status' => $payment->defense_status,
+                        'or_number' => $student->or_number,
+                        'payment_date' => $payment->payment_date ? date('Y-m-d', strtotime($payment->payment_date)) : null,
+                        'amount' => 0,
+                        'panelists' => []
+                    ];
+                }
+                
+                // Add to total amount
+                $groupedPayments[$key]['amount'] += floatval($payment->amount);
+                
+                // Add panelist info
+                if ($payment->panelist) {
+                    $groupedPayments[$key]['panelists'][] = [
+                        'name' => trim("{$payment->panelist->pfirst_name} {$payment->panelist->pmiddle_name} {$payment->panelist->plast_name}"),
+                        'role' => $payment->panelist->role,
+                        'amount' => $payment->amount
+                    ];
+                }
+            }
+            
+            // Add REC FEE, SCHOOL SHARE, and calculate TOTAL for each payment
+            foreach ($groupedPayments as &$payment) {
+                $panelistTotal = floatval($payment['amount']);
+                
+                // Determine REC FEE and SCHOOL SHARE based on defense type and program
+                $recFee = 0;
+                $schoolShare = 0;
+                
+                // Check if program is Masteral or Doctorate
+                // DBM = Doctor in Business Management (Doctorate)
+                // PHDED = PhD in Education (Doctorate)
+                $isDoctorate = str_starts_with($student->program, 'DBM') || 
+                               str_starts_with($student->program, 'PHDED') ||
+                               stripos($student->program, 'Doctor') !== false || 
+                               stripos($student->program, 'Doctorate') !== false ||
+                               stripos($student->program, 'PhD') !== false;
+                $isMasteral = !$isDoctorate; // Everything else is Masteral
+                
+                if ($payment['defense_type'] === 'Proposal') {
+                    if ($isMasteral) {
+                        $recFee = 2200.00;
+                        $schoolShare = 450.00;
+                    } elseif ($isDoctorate) {
+                        $recFee = 2200.00;
+                        $schoolShare = 950.00;
+                    }
+                } elseif ($payment['defense_type'] === 'Pre-final' || $payment['defense_type'] === 'Pre-Final') {
+                    if ($isMasteral) {
+                        $recFee = 800.00;
+                        $schoolShare = 1280.00;
+                    } elseif ($isDoctorate) {
+                        $recFee = 800.00;
+                        $schoolShare = 2040.00;
+                    }
+                } elseif ($payment['defense_type'] === 'Final') {
+                    if ($isMasteral) {
+                        $recFee = 0.00;  // Dash in the image means 0
+                        $schoolShare = 0.00;  // Dash in the image means 0
+                    } elseif ($isDoctorate) {
+                        $recFee = 0.00;  // Dash in the image means 0
+                        $schoolShare = 1000.00;
+                    }
+                }
+                
+                // Always add REC FEE to panelists array (show even if 0)
+                $payment['panelists'][] = [
+                    'name' => '-',
+                    'role' => 'REC FEE',
+                    'amount' => $recFee > 0 ? number_format($recFee, 2, '.', '') : '-'
+                ];
+                
+                // Always add SCHOOL SHARE to panelists array (show even if 0)
+                $payment['panelists'][] = [
+                    'name' => '-',
+                    'role' => 'SCHOOL SHARE',
+                    'amount' => $schoolShare > 0 ? number_format($schoolShare, 2, '.', '') : '-'
+                ];
+                
+                // Calculate grand total
+                $grandTotal = $panelistTotal + $recFee + $schoolShare;
+                
+                // Update the amount to show grand total (what student actually pays)
+                $payment['amount'] = $grandTotal;
+                
+                // Store breakdown totals
+                $payment['panelist_total'] = $panelistTotal;
+                $payment['rec_fee'] = $recFee;
+                $payment['school_share'] = $schoolShare;
+                $payment['grand_total'] = $grandTotal;
+            }
+            
+            // Format student dates
+            $student->defense_date = $student->defense_date ? date('Y-m-d', strtotime($student->defense_date)) : null;
+            $student->payment_date = $student->payment_date ? date('Y-m-d', strtotime($student->payment_date)) : null;
+            
+            // Convert to array to avoid Laravel collection serialization issues
+            $studentArray = $student->toArray();
+            $studentArray['payments'] = array_values($groupedPayments);
+            
+            return $studentArray;
         });
 
-        return Inertia::render('student-records/Index', [
-            'records' => $records,
+        return Inertia::render('student-records/program-students', [
+            'program' => $program,
+            'students' => $students,
             'filters' => $request->only(['search'])
         ]);
     }
@@ -221,9 +342,132 @@ class StudentRecordController extends Controller
         ];
     }
 
-    public function downloadPdf($id)
+    public function downloadPdf(Request $request, $id)
     {
-        // Existing PDF download logic
-        return response()->json(['message' => 'PDF download not yet implemented']);
+        $student = StudentRecord::with(['payments.panelist', 'program'])->findOrFail($id);
+        $paymentId = $request->query('payment_id');
+        
+        // Get the specific payment or all payments
+        $payments = $student->payments;
+        
+        // Group payments like in showProgramStudents
+        $groupedPayments = [];
+        
+        foreach ($payments as $payment) {
+            $defenseDate = $student->defense_date ? date('Y-m-d', strtotime($student->defense_date)) : null;
+            $key = $defenseDate . '_' . $student->defense_type;
+            
+            if (!isset($groupedPayments[$key])) {
+                $groupedPayments[$key] = [
+                    'id' => $payment->id,
+                    'defense_date' => $defenseDate,
+                    'defense_type' => $student->defense_type,
+                    'defense_status' => $payment->defense_status,
+                    'or_number' => $student->or_number,
+                    'payment_date' => $payment->payment_date ? date('Y-m-d', strtotime($payment->payment_date)) : null,
+                    'amount' => 0,
+                    'panelists' => []
+                ];
+            }
+            
+            $groupedPayments[$key]['amount'] += floatval($payment->amount);
+            
+            if ($payment->panelist) {
+                $groupedPayments[$key]['panelists'][] = [
+                    'name' => trim("{$payment->panelist->pfirst_name} {$payment->panelist->pmiddle_name} {$payment->panelist->plast_name}"),
+                    'role' => $payment->panelist->role,
+                    'amount' => $payment->amount
+                ];
+            }
+        }
+        
+        // Add fees
+        foreach ($groupedPayments as &$payment) {
+            $panelistTotal = floatval($payment['amount']);
+            
+            $isDoctorate = str_starts_with($student->program, 'DBM') || 
+                           str_starts_with($student->program, 'PHDED') ||
+                           stripos($student->program, 'Doctor') !== false || 
+                           stripos($student->program, 'Doctorate') !== false ||
+                           stripos($student->program, 'PhD') !== false;
+            $isMasteral = !$isDoctorate;
+            
+            $recFee = 0;
+            $schoolShare = 0;
+            
+            if ($payment['defense_type'] === 'Proposal') {
+                if ($isMasteral) {
+                    $recFee = 2200.00;
+                    $schoolShare = 450.00;
+                } elseif ($isDoctorate) {
+                    $recFee = 2200.00;
+                    $schoolShare = 950.00;
+                }
+            } elseif ($payment['defense_type'] === 'Pre-final' || $payment['defense_type'] === 'Pre-Final') {
+                if ($isMasteral) {
+                    $recFee = 800.00;
+                    $schoolShare = 1280.00;
+                } elseif ($isDoctorate) {
+                    $recFee = 800.00;
+                    $schoolShare = 2040.00;
+                }
+            } elseif ($payment['defense_type'] === 'Final') {
+                if ($isMasteral) {
+                    $recFee = 0.00;
+                    $schoolShare = 0.00;
+                } elseif ($isDoctorate) {
+                    $recFee = 0.00;
+                    $schoolShare = 1000.00;
+                }
+            }
+            
+            $grandTotal = $panelistTotal + $recFee + $schoolShare;
+            $payment['amount'] = $grandTotal;
+            $payment['grand_total'] = $grandTotal;
+            $payment['rec_fee'] = $recFee;
+            $payment['school_share'] = $schoolShare;
+            $payment['panelist_total'] = $panelistTotal;
+        }
+        
+        // Find the specific payment if payment_id is provided
+        $targetPayment = null;
+        if ($paymentId) {
+            foreach ($groupedPayments as $payment) {
+                if ($payment['id'] == $paymentId) {
+                    $targetPayment = $payment;
+                    break;
+                }
+            }
+        } else {
+            $targetPayment = reset($groupedPayments);
+        }
+        
+        // Get program name from relationship
+        $programName = $student->program()->first()->name ?? $student->program;
+        
+        // Prepare data for the blade template
+        $data = [
+            'student_name' => strtoupper("{$student->first_name} {$student->middle_name} {$student->last_name}"),
+            'program' => $student->program,
+            'program_name' => $programName,
+            'defense_type' => $targetPayment['defense_type'] ?? '',
+            'defense_mode' => $student->defense_mode ?? 'Onsite', // Default to Onsite if not set
+            'defense_date' => $targetPayment['defense_date'] ?? '',
+            'or_number' => $targetPayment['or_number'] ?? '',
+            'panelists' => $targetPayment['panelists'] ?? [],
+            'rec_fee' => $targetPayment['rec_fee'] ?? 0,
+            'school_share' => $targetPayment['school_share'] ?? 0,
+            'grand_total' => $targetPayment['grand_total'] ?? 0,
+            'today_date' => now()->format('F d, Y'),
+        ];
+        
+        // Render the blade view to HTML
+        $html = view('pdfs.payment-summary', $data)->render();
+        
+        // Use dompdf to generate PDF
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadHTML($html);
+        $pdf->setPaper('A4', 'portrait');
+        
+        return $pdf->download("payment_receipt_{$student->student_id}.pdf");
     }
 }

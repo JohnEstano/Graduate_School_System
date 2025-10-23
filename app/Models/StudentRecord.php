@@ -56,7 +56,7 @@ class StudentRecord extends Model
             'student_id', 
             'panelist_id'
         )
-        ->withPivot('role', 'amount')
+        ->withPivot('role')
         ->withTimestamps();
     }
 }
