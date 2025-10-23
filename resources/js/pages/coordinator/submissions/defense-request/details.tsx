@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
@@ -114,12 +114,22 @@ export type DefenseRequestFull = {
   adviser_status?: string;
   coordinator_status?: string;
   program_level?: string; // "Masteral" | "Doctorate" from server
-  submitted_at?: string; // ADD THIS
-  coordinator?: {       // ADD THIS
+  submitted_at?: string;
+  coordinator?: {
     id: number;
     name: string;
     email: string;
   } | null;
+  attachments?: {
+    advisers_endorsement?: string;
+    rec_endorsement?: string;
+    proof_of_payment?: string;
+    manuscript_proposal?: string;
+    similarity_index?: string;
+    avisee_adviser_attachment?: string;
+    ai_detection_certificate?: string;
+    endorsement_form?: string;
+  };
 };
 
 // add: local type for payment rate to avoid cross-file type conflicts
@@ -746,14 +756,14 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
 
   // Attachments (show all, including manuscript, similarity, avisee, etc.)
   const attachments = [
-    { label: "Adviser’s Endorsement", url: resolveFileUrl(request.advisers_endorsement) },
-    { label: 'REC Endorsement', url: resolveFileUrl(request.rec_endorsement) },
-    { label: 'Proof of Payment', url: resolveFileUrl(request.proof_of_payment) },
-    { label: 'Manuscript', url: resolveFileUrl(request.manuscript_proposal) },
-    { label: 'Similarity Index', url: resolveFileUrl(request.similarity_index) },
-    { label: 'Avisee-Adviser File', url: resolveFileUrl(request.avisee_adviser_attachment) },
-    { label: 'AI Detection Certificate', url: resolveFileUrl(request.ai_detection_certificate) },
-    { label: 'Endorsement Form', url: resolveFileUrl(request.endorsement_form) },
+    { label: "Adviser’s Endorsement", url: resolveFileUrl(request.attachments?.advisers_endorsement || request.advisers_endorsement) },
+    { label: 'REC Endorsement', url: resolveFileUrl(request.attachments?.rec_endorsement || request.rec_endorsement) },
+    { label: 'Proof of Payment', url: resolveFileUrl(request.attachments?.proof_of_payment || request.proof_of_payment) },
+    { label: 'Manuscript', url: resolveFileUrl(request.attachments?.manuscript_proposal || request.manuscript_proposal) },
+    { label: 'Similarity Index', url: resolveFileUrl(request.attachments?.similarity_index || request.similarity_index) },
+    { label: 'Avisee-Adviser File', url: resolveFileUrl(request.attachments?.avisee_adviser_attachment || request.avisee_adviser_attachment) },
+    { label: 'AI Detection Certificate', url: resolveFileUrl(request.attachments?.ai_detection_certificate || request.ai_detection_certificate) },
+    { label: 'Endorsement Form', url: resolveFileUrl(request.attachments?.endorsement_form || request.endorsement_form) },
   ];
 
   // Helper for workflow history rendering robustness
