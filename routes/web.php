@@ -68,6 +68,216 @@ Route::get('/test-upload-limits', function () {
     ]);
 });
 
+// Test route to preview all email layouts
+Route::get('/test-email-layouts', function () {
+    $emails = [
+        'adviser-invitation' => 'Adviser Invitation',
+        'defense-approved' => 'Defense Approved',
+        'defense-rejected' => 'Defense Rejected',
+        'defense-scheduled' => 'Defense Scheduled',
+        'defense-scheduled-student' => 'Defense Scheduled (Student)',
+        'defense-scheduled-adviser' => 'Defense Scheduled (Adviser)',
+        'defense-panel-invitation' => 'Defense Panel Invitation',
+        'defense-assigned-coordinator' => 'Defense Assigned to Coordinator',
+        'defense-submitted' => 'Defense Submitted',
+        'document-submitted' => 'Document Submitted',
+        'student-accepted-by-adviser' => 'Student Accepted by Adviser',
+        'student-rejected-by-adviser' => 'Student Rejected by Adviser',
+        'student-assigned-to-adviser' => 'Student Assigned to Adviser',
+        'welcome-mail' => 'Welcome Mail',
+    ];
+    
+    $html = '<html><head><title>Email Layout Previews</title>';
+    $html .= '<style>body{font-family:Arial,sans-serif;margin:40px;background:#f5f5f5;}';
+    $html .= 'h1{color:#333;}ul{list-style:none;padding:0;}';
+    $html .= 'li{margin:10px 0;}a{display:block;padding:15px;background:white;';
+    $html .= 'text-decoration:none;color:#dc2626;border-radius:5px;box-shadow:0 2px 4px rgba(0,0,0,0.1);';
+    $html .= 'transition:all 0.3s;}a:hover{background:#dc2626;color:white;transform:translateX(5px);}</style>';
+    $html .= '</head><body><h1>📧 Email Layout Previews</h1><ul>';
+    
+    foreach ($emails as $key => $label) {
+        $html .= "<li><a href='/test-email-layout/{$key}'>{$label}</a></li>";
+    }
+    
+    $html .= '</ul></body></html>';
+    return $html;
+});
+
+Route::get('/test-email-layout/{template}', function ($template) {
+    // Sample data for different email templates
+    $data = match($template) {
+        'adviser-invitation' => [
+            'adviserName' => 'Dr. Juan Dela Cruz',
+            'coordinatorName' => 'Dr. Maria Santos',
+        ],
+        'defense-approved' => [
+            'student' => (object)[
+                'first_name' => 'John',
+                'middle_name' => 'Michael',
+                'last_name' => 'Doe',
+                'school_id' => '2023-12345',
+            ],
+            'defenseRequest' => (object)[
+                'id' => 1,
+                'thesis_title' => 'Machine Learning Applications in Healthcare',
+                'defense_type' => 'Proposal Defense',
+                'program' => 'Master of Science in Computer Science',
+            ],
+            'approvedBy' => 'adviser',
+            'comment' => 'Your defense request looks good. Please proceed with scheduling.',
+        ],
+        'defense-rejected' => [
+            'student' => (object)[
+                'first_name' => 'John',
+                'middle_name' => 'Michael',
+                'last_name' => 'Doe',
+                'school_id' => '2023-12345',
+            ],
+            'defenseRequest' => (object)[
+                'id' => 1,
+                'thesis_title' => 'Machine Learning Applications in Healthcare',
+                'defense_type' => 'Proposal Defense',
+                'program' => 'Master of Science in Computer Science',
+            ],
+            'rejectedBy' => 'coordinator',
+            'rejectionReason' => 'Please revise your methodology section and resubmit the requirements.',
+        ],
+        'defense-scheduled', 'defense-scheduled-student', 'defense-scheduled-adviser' => [
+            'recipient' => (object)[
+                'first_name' => 'John',
+                'last_name' => 'Doe',
+            ],
+            'defenseRequest' => (object)[
+                'id' => 1,
+                'first_name' => 'John',
+                'middle_name' => 'Michael',
+                'last_name' => 'Doe',
+                'school_id' => '2023-12345',
+                'thesis_title' => 'Machine Learning Applications in Healthcare',
+                'defense_type' => 'Proposal Defense',
+                'program' => 'Master of Science in Computer Science',
+                'defense_adviser' => 'Dr. Juan Dela Cruz',
+                'defense_chairperson' => 'Dr. Jane Smith',
+                'defense_panelist1' => 'Dr. Robert Johnson',
+                'defense_panelist2' => 'Dr. Emily Brown',
+                'defense_panelist3' => 'Dr. Michael Wilson',
+                'defense_panelist4' => null,
+                'scheduled_date' => \Carbon\Carbon::parse('2025-11-15'),
+                'scheduled_time' => '2:00 PM',
+                'scheduled_end_time' => '4:00 PM',
+                'defense_mode' => 'Face to Face',
+                'defense_venue' => 'Graduate School Conference Room A',
+            ],
+            'changes' => null,
+        ],
+        'defense-panel-invitation' => [
+            'panelistName' => 'Jane Smith',
+            'role' => 'chair',
+            'studentName' => 'John Michael Doe',
+            'defenseTitle' => 'Machine Learning Applications in Healthcare',
+            'adviserName' => 'Dr. Juan Dela Cruz',
+            'defenseDate' => '2025-11-15',
+            'defenseTime' => '2:00 PM',
+            'defenseEndTime' => '4:00 PM',
+            'defenseMode' => 'Face to Face',
+            'defenseVenue' => 'Graduate School Conference Room A',
+            'otherPanels' => [
+                (object)['name' => 'Dr. Robert Johnson', 'role' => 'Panelist'],
+                (object)['name' => 'Dr. Emily Brown', 'role' => 'Panelist'],
+            ],
+        ],
+        'defense-assigned-coordinator' => [
+            'coordinatorName' => 'Dr. Maria Santos',
+            'studentName' => 'John Michael Doe',
+            'adviserName' => 'Dr. Juan Dela Cruz',
+            'defenseRequest' => (object)[
+                'school_id' => '2023-12345',
+                'program' => 'Master of Science in Computer Science',
+                'thesis_title' => 'Machine Learning Applications in Healthcare',
+                'defense_type' => 'Proposal Defense',
+                'created_at' => \Carbon\Carbon::parse('2025-10-24 10:30:00'),
+            ],
+        ],
+        'defense-submitted' => [
+            'adviser' => (object)[
+                'first_name' => 'Juan',
+                'middle_name' => 'Santos',
+                'last_name' => 'Dela Cruz',
+            ],
+            'defenseRequest' => (object)[
+                'id' => 1,
+                'first_name' => 'John',
+                'middle_name' => 'Michael',
+                'last_name' => 'Doe',
+                'school_id' => '2023-12345',
+                'program' => 'Master of Science in Computer Science',
+                'defense_type' => 'Proposal Defense',
+                'thesis_title' => 'Machine Learning Applications in Healthcare',
+                'submitted_at' => \Carbon\Carbon::parse('2025-10-24 10:30:00'),
+            ],
+        ],
+        'document-submitted' => [
+            'teacher' => (object)[
+                'first_name' => 'Jane',
+                'last_name' => 'Smith',
+            ],
+            'student' => (object)[
+                'first_name' => 'John',
+                'middle_name' => 'Michael',
+                'last_name' => 'Doe',
+                'school_id' => '2023-12345',
+                'program' => 'Master of Science in Computer Science',
+            ],
+            'documentType' => 'Thesis Manuscript',
+            'documentUrl' => url('/documents/1'),
+        ],
+        'student-accepted-by-adviser' => [
+            'studentFullName' => 'John Michael Doe',
+            'adviserFullName' => 'Dr. Juan Dela Cruz',
+            'adviserEmail' => 'juan.delacruz@uic.edu.ph',
+            'adviserProgram' => 'Computer Science Department',
+        ],
+        'student-rejected-by-adviser' => [
+            'studentFullName' => 'John Michael Doe',
+            'adviserFullName' => 'Dr. Juan Dela Cruz',
+            'adviserEmail' => 'juan.delacruz@uic.edu.ph',
+            'coordinatorName' => 'Dr. Maria Santos',
+            'coordinatorEmail' => 'maria.santos@uic.edu.ph',
+        ],
+        'student-assigned-to-adviser' => [
+            'adviserName' => 'Juan Dela Cruz',
+            'coordinatorName' => 'Dr. Maria Santos',
+            'studentName' => 'John Michael Doe',
+            'studentEmail' => 'john.doe@uic.edu.ph',
+            'studentProgram' => 'Master of Science in Computer Science',
+        ],
+        'welcome-mail' => [
+            'name' => 'John Doe',
+            'email' => 'john.doe@uic.edu.ph',
+        ],
+        default => [],
+    };
+    
+    try {
+        return view("emails.{$template}", $data);
+    } catch (\Exception $e) {
+        // Try alternative naming conventions
+        $alternatives = [
+            'welcome-mail' => 'WelcomeMail',
+        ];
+        
+        if (isset($alternatives[$template])) {
+            try {
+                return view("emails.{$alternatives[$template]}", $data);
+            } catch (\Exception $e2) {
+                return response("<h1>Email template not found</h1><p>Template: emails.{$template}</p><p>Error: {$e2->getMessage()}</p><p><a href='/test-email-layouts'>← Back to list</a></p>", 404);
+            }
+        }
+        
+        return response("<h1>Email template not found</h1><p>Template: emails.{$template}</p><p>Error: {$e->getMessage()}</p><p><a href='/test-email-layouts'>← Back to list</a></p>", 404);
+    }
+});
+
 /*
 |--------------------------------------------------------------------------
 | Authenticated + Verified
