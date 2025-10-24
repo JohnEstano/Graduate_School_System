@@ -835,16 +835,8 @@ function ShowAllRequestsInner({ defenseRequests: initial, onStatusChange }: Show
           </div>
         </div>
 
-        {/* SHADCN Tabs for Masteral/Doctorate */}
-        <div className="mb-2">
-          <Tabs value={programTab} onValueChange={v => setProgramTab(v as any)}>
-            <TabsList>
-              <TabsTrigger value="All">All</TabsTrigger>
-              <TabsTrigger value="Masteral">Masteral</TabsTrigger>
-              <TabsTrigger value="Doctorate">Doctorate</TabsTrigger>
-            </TabsList>
-          </Tabs>
-        </div>
+     
+       
 
         {/* Table and bulk bar */}
         {selected.length > 0 && (

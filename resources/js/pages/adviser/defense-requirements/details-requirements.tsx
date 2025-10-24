@@ -19,6 +19,7 @@ import {
   UserCheck,
   Signature,
   ArrowRightLeft,
+  Info,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -454,7 +455,7 @@ export default function DetailsRequirementsPage(rawProps: any) {
             <Tabs value={tab} onValueChange={v => setTab(v as typeof tab)}>
               <TabsList className="h-8">
                 <TabsTrigger value="details" className="flex items-center gap-1 text-sm font-medium px-3">
-                  <FileText className="h-4 w-4" /> Details
+                  <Info className="h-4 w-4" /> Details
                 </TabsTrigger>
                 <TabsTrigger value="upload-certificate" className="flex items-center gap-1 text-sm font-medium px-3">
                   <FileText className="h-4 w-4" /> Upload AI Declaration Form
@@ -470,6 +471,7 @@ export default function DetailsRequirementsPage(rawProps: any) {
               disabled={
                 isLoading ||
                 request.adviser_status === 'Approved' ||
+                request.coordinator_status === 'Approved' ||
                 !coordinators.length || !coordinators[0].id // Disable if no coordinator
               }
             >
@@ -480,7 +482,11 @@ export default function DetailsRequirementsPage(rawProps: any) {
               size="sm"
               variant="outline"
               onClick={() => setConfirm({ open: true, action: 'reject' })}
-              disabled={isLoading || request.adviser_status === 'Rejected'}
+              disabled={
+                isLoading || 
+                request.adviser_status === 'Rejected' ||
+                request.coordinator_status === 'Approved' // Disable if coordinator already approved
+              }
             >
               <XCircle className="h-4 w-4 mr-1 text-red-600" />
               Reject
@@ -489,7 +495,11 @@ export default function DetailsRequirementsPage(rawProps: any) {
               size="sm"
               variant="outline"
               onClick={() => setConfirm({ open: true, action: 'retrieve' })}
-              disabled={isLoading || request.adviser_status === 'Pending'}
+              disabled={
+                isLoading || 
+                request.adviser_status === 'Pending' ||
+                request.coordinator_status === 'Approved' // Disable if coordinator already approved
+              }
             >
               <CircleArrowLeft className="h-4 w-4 mr-1 text-blue-600" />
               Retrieve
@@ -915,13 +925,7 @@ export default function DetailsRequirementsPage(rawProps: any) {
           </div>
         </div>
 
-        <div className="text-[11px] text-muted-foreground">
-          Last updated by:{' '}
-          {request.last_status_updated_by || '—'}{' '}
-          {request.last_status_updated_at
-            ? `(${request.last_status_updated_at})`
-            : ''}
-        </div>
+        
       </div>
 
       {/* Confirmation Dialog for Reject/Retrieve */}
