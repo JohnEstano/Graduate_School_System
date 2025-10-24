@@ -2223,10 +2223,19 @@ class DefenseRequestController extends Controller
                     'name' => $member['name']
                 ]);
 
+                // Map role to payment rate type
+                // All panel members (chair and panelists) use "Panel Chair" rate
+                $rateType = ($member['role'] === 'Adviser') ? 'Adviser' : 'Panel Chair';
+
+                Log::info('completeDefense: Mapped rate type', [
+                    'original_role' => $member['role'],
+                    'rate_type' => $rateType
+                ]);
+
                 // Get rate for this role
                 $rate = \App\Models\PaymentRate::where('program_level', $programLevel)
                     ->where('defense_type', $defenseRequest->defense_type)
-                    ->where('type', $member['role'])
+                    ->where('type', $rateType)
                     ->first();
 
                 if (!$rate) {
