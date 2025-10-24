@@ -278,6 +278,17 @@ Route::get('/test-email-layout/{template}', function ($template) {
     }
 });
 
+
+use Illuminate\Support\Facades\Mail;
+
+Route::get('/test-mail', function () {
+    Mail::raw('This is a test email to Mailpit!', function ($message) {
+        $message->to('test@example.com')
+                ->subject('Hello Mailpit!');
+    });
+    return 'Email sent!';
+});
+
 /*
 |--------------------------------------------------------------------------
 | Authenticated + Verified
