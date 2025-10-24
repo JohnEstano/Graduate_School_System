@@ -292,7 +292,7 @@ export default function CoordinatorDashboard() {
                     </div>
 
                     {/* Tabs - Mobile Responsive */}
-                    <div className="w-full max-w-screen-xl mx-auto px-4 md:px-7">
+                    <div className="w-full px-4 md:px-7">
                         <Tabs value={tab} onValueChange={setTab} className="">
                             <TabsList className="mb-2 ">
                                 <TabsTrigger value="overview" className="flex-1 ">Overview</TabsTrigger>
@@ -302,7 +302,7 @@ export default function CoordinatorDashboard() {
                             {/* Overview Tab */}
                             <TabsContent value="overview" className="w-full">
                                 {/* Metric Cards - Mobile Optimized */}
-                                <div className="w-full max-w-screen-xl mx-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-4 px-0 mb-4 md:mb-6">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-4 px-0 mb-4 md:mb-6">
                                     {metrics.map((metric, idx) => (
                                         <Card
                                             key={idx}
@@ -347,7 +347,7 @@ export default function CoordinatorDashboard() {
 
                             {/* Analytics Tab - Mobile Responsive */}
                             <TabsContent value="analytics" className="w-full">
-                                <div className="w-full max-w-screen-xl mx-auto grid grid-cols-1 gap-4 mb-4 md:mb-6">
+                                <div className="grid grid-cols-1 gap-4 mb-4 md:mb-6">
                                     <DefenseCountLineChart />
                                     {/* Add more analytics widgets here later */}
                                 </div>
