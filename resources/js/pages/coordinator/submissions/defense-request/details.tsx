@@ -290,7 +290,7 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
   // Build breadcrumbs, use thesis title (truncated) instead of id
   const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Dashboard', href: '/dashboard' },
-    { title: 'Defense Requests', href: '/defense-request' }
+    { title: 'Defense Requests', href: '/coordinator/defense-requests' }
   ];
   if (requestProp?.id) {
     const thesisForCrumb =
@@ -314,7 +314,7 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
           </p>
           <Button
             variant="outline"
-            onClick={() => router.visit('/defense-request')}
+            onClick={() => router.visit('/coordinator/defense-requests')}
           >
             Back to list
           </Button>

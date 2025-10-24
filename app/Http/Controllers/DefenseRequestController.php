@@ -1284,6 +1284,7 @@ class DefenseRequestController extends Controller
             });
         }
 
+
         $rows = $query
             ->orderByRaw("FIELD(workflow_state,'adviser-approved','coordinator-review','coordinator-approved','panels-assigned','scheduled','completed','coordinator-rejected')")
             ->orderBy('adviser_reviewed_at', 'desc')
@@ -1303,8 +1304,29 @@ class DefenseRequestController extends Controller
                 'scheduled_date',
                 'defense_mode',
                 'defense_venue',
-                'panels_assigned_at'
+                'panels_assigned_at',
+                'adviser_user_id',
+                'defense_adviser'
             ])->map(function ($r) {
+                // Adviser name: prefer adviserUser if present, else defense_adviser
+                $adviser = null;
+                if (isset($r->adviser_user_id) && $r->adviser_user_id) {
+                    $adviserUser = \App\Models\User::find($r->adviser_user_id);
+                    if ($adviserUser) {
+                        $adviser = trim(($adviserUser->first_name ?? '') . ' ' . ($adviserUser->last_name ?? ''));
+                    }
+                }
+                if (!$adviser) {
+                    $adviser = $r->defense_adviser ?? null;
+                }
+
+                // AA Status: get from AaPaymentVerification if exists
+                $aaStatus = null;
+                $aaVerification = \App\Models\AaPaymentVerification::where('defense_request_id', $r->id)->latest()->first();
+                if ($aaVerification) {
+                    $aaStatus = $aaVerification->status;
+                }
+
                 return [
                     'id' => $r->id,
                     'first_name' => $r->first_name,
@@ -1317,6 +1339,8 @@ class DefenseRequestController extends Controller
                     'status' => $r->status,
                     'scheduled_date' => $r->scheduled_date?->format('Y-m-d'),
                     'defense_mode' => $r->defense_mode,
+                    'adviser' => $adviser,
+                    'aa_status' => $aaStatus,
                 ];
             });
 
@@ -1868,7 +1892,27 @@ class DefenseRequestController extends Controller
             ->get();
 
         // Map to summary format expected by frontend
+
         $result = $defenseRequests->map(function ($r) {
+            // Adviser name: prefer adviserUser if present, else defense_adviser
+            $adviser = null;
+            if ($r->adviser_user_id) {
+                $adviserUser = \App\Models\User::find($r->adviser_user_id);
+                if ($adviserUser) {
+                    $adviser = trim(($adviserUser->first_name ?? '') . ' ' . ($adviserUser->last_name ?? ''));
+                }
+            }
+            if (!$adviser) {
+                $adviser = $r->defense_adviser ?? null;
+            }
+
+            // AA Status: get from AaPaymentVerification if exists
+            $aaStatus = null;
+            $aaVerification = \App\Models\AaPaymentVerification::where('defense_request_id', $r->id)->latest()->first();
+            if ($aaVerification) {
+                $aaStatus = $aaVerification->status;
+            }
+
             return [
                 'id' => $r->id,
                 'first_name' => $r->first_name,
@@ -1886,6 +1930,8 @@ class DefenseRequestController extends Controller
                 'last_status_updated_by' => $r->last_status_updated_by,
                 'last_status_updated_at' => $r->last_status_updated_at,
                 'workflow_state' => $r->workflow_state,
+                'adviser' => $adviser,
+                'aa_status' => $aaStatus,
             ];
         });
 

@@ -34,11 +34,11 @@ const studentNavItems: MainNavItem[] = [
             { title: 'Defense Requirements', href: '/defense-requirements' },
         ],
     },
-    {
-        title: 'My Documents', // <-- Add this block
-        href: '/student/documents',
-        icon: FileText,
-    },
+    //{
+      //  title: 'My Documents', // <-- Add this block
+        //href: '/student/documents',
+       // icon: FileText,
+  //  },
     {
         title: 'Academic Records',
         href: '/academic-records',
