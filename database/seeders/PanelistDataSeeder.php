@@ -64,6 +64,8 @@ class PanelistDataSeeder extends Seeder
         'Aquino', 'Santiago', 'Domingo', 'Bernardo', 'Castro', 'Santiago'
     ];
 
+    private $usedStudentIds = [];
+
     public function run()
     {
         // Clear existing data first
@@ -72,6 +74,9 @@ class PanelistDataSeeder extends Seeder
         DB::table('panelist_student_records')->delete();
         StudentRecord::query()->delete();
         PanelistRecord::query()->delete();
+
+        // Reset used student IDs
+        $this->usedStudentIds = [];
 
         // Get all programs
         $programs = ProgramRecord::all();
@@ -109,6 +114,12 @@ class PanelistDataSeeder extends Seeder
                 $defenseType = ['Proposal', 'Pre-Final', 'Final'][array_rand(['Proposal', 'Pre-Final', 'Final'])];
                 $defenseDate = $this->generateDefenseDate($defenseType);
                 $paymentDate = date('Y-m-d', strtotime($defenseDate . ' -7 days'));
+                
+                // Determine defense status based on defense date (past = Completed, future = Not Completed)
+                $defenseStatus = strtotime($defenseDate) < time() ? 'Completed' : 'Not Completed';
+
+                // Generate unique student ID
+                $studentId = $this->generateUniqueStudentId();
 
                 $student = StudentRecord::create([
                     'program_record_id' => $program->id,
@@ -118,7 +129,7 @@ class PanelistDataSeeder extends Seeder
                     'gender' => rand(0, 1) ? 'Male' : 'Female',
                     'program' => $program->program,
                     'school_year' => '2024-2025',
-                    'student_id' => '2024' . str_pad(rand(10000, 99999), 5, '0', STR_PAD_LEFT),
+                    'student_id' => $studentId,
                     'course_section' => 'Regular',
                     'birthdate' => date('Y-m-d', strtotime('-' . rand(28, 45) . ' years')),
                     'academic_status' => 'Active',
@@ -137,7 +148,7 @@ class PanelistDataSeeder extends Seeder
                     'panelist_record_id' => $adviser->id,
                     'school_year' => '2024-2025',
                     'payment_date' => $paymentDate,
-                    'defense_status' => $defenseType,
+                    'defense_status' => $defenseStatus,
                     'amount' => $this->feeBreakdown[$programLevel][$defenseType]['Adviser'],
                 ]);
 
@@ -150,7 +161,7 @@ class PanelistDataSeeder extends Seeder
                     'panelist_record_id' => $chair->id,
                     'school_year' => '2024-2025',
                     'payment_date' => $paymentDate,
-                    'defense_status' => $defenseType,
+                    'defense_status' => $defenseStatus,
                     'amount' => $this->feeBreakdown[$programLevel][$defenseType]['Panel Chair'],
                 ]);
 
@@ -169,7 +180,7 @@ class PanelistDataSeeder extends Seeder
                         'panelist_record_id' => $member->id,
                         'school_year' => '2024-2025',
                         'payment_date' => $paymentDate,
-                        'defense_status' => $defenseType,
+                        'defense_status' => $defenseStatus,
                         'amount' => $this->feeBreakdown[$programLevel][$defenseType]['Panel Member'],
                     ]);
                 }
@@ -223,5 +234,15 @@ class PanelistDataSeeder extends Seeder
             // Final: Recent (last 1-2 months)
             return date('Y-m-d', strtotime('-' . rand(7, 60) . ' days'));
         }
+    }
+
+    private function generateUniqueStudentId()
+    {
+        do {
+            $studentId = '2024' . str_pad(rand(10000, 99999), 5, '0', STR_PAD_LEFT);
+        } while (in_array($studentId, $this->usedStudentIds) || StudentRecord::where('student_id', $studentId)->exists());
+        
+        $this->usedStudentIds[] = $studentId;
+        return $studentId;
     }
 }
