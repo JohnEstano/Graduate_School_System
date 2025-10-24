@@ -112,9 +112,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('/payment-verifications/batch', [PaymentVerificationController::class, 'addToBatch'])->name('aa.payment-verifications.batch');
         Route::get('/payment-batch/{batchId}/export', [PaymentVerificationController::class, 'exportBatch'])->name('aa.payment-batch.export');
         Route::post('/payment-verifications/bulk-update', [PaymentVerificationController::class, 'bulkUpdateStatus']);
-
-
     });
+
+    // AA Verification Status Update by Defense Request ID (for details page)
+    Route::post('/assistant/aa-verification/{defenseRequestId}/status', [PaymentVerificationController::class, 'updateStatusByDefenseRequest'])
+        ->name('assistant.aa-verification.update-status');
 
     Route::get('/assistant/defense-batches', [\App\Http\Controllers\Assistant\DefenseBatchController::class, 'index']);
     Route::post('/assistant/defense-batches', [\App\Http\Controllers\Assistant\DefenseBatchController::class, 'store']);

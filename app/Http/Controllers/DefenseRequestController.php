@@ -2151,6 +2151,20 @@ class DefenseRequestController extends Controller
             $defenseRequest->last_status_updated_at = now();
             $defenseRequest->last_status_updated_by = $user->id;
 
+            // Update or create AA verification record and set to completed
+            $aaVerification = \App\Models\AaPaymentVerification::firstOrCreate(
+                ['defense_request_id' => $defenseRequest->id],
+                ['assigned_to' => $user->id, 'status' => 'pending']
+            );
+            $aaVerification->status = 'completed';
+            $aaVerification->assigned_to = $user->id;
+            $aaVerification->save();
+
+            Log::info('completeDefense: AA verification updated', [
+                'aa_verification_id' => $aaVerification->id,
+                'status' => $aaVerification->status
+            ]);
+
             // Add workflow history
             $hist = $defenseRequest->workflow_history ?? [];
             $hist[] = [

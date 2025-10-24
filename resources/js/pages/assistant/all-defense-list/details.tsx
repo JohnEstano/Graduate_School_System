@@ -17,6 +17,11 @@ import {
   Users,
   ArrowLeft,
   CheckCircle,
+  DollarSign,
+  Hourglass,
+  Banknote,
+  CircleCheck,
+  ArrowRight,
 } from 'lucide-react';
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from '@/components/ui/button';
@@ -68,6 +73,8 @@ type DefenseRequestDetails = {
     name: string;
     email: string;
   } | null;
+  aa_verification_status?: 'pending' | 'ready_for_finance' | 'in_progress' | 'paid' | 'completed';
+  aa_verification_id?: number | null;
 };
 
 type PaymentRateRow = {
@@ -304,7 +311,7 @@ export default function Details({ defenseRequest: initialDefenseRequest }: Props
     return '';
   }
 
-  // Mark as Completed handler
+  // Mark as Completed handler - Updates BOTH defense status AND AA status
   async function handleMarkCompleted() {
     if (!details) return;
     try {
@@ -319,11 +326,12 @@ export default function Details({ defenseRequest: initialDefenseRequest }: Props
       const data = await res.json();
       
       if (res.ok && data.success) {
-        // ✅ UPDATE LOCAL STATE IMMEDIATELY
+        // ✅ UPDATE LOCAL STATE IMMEDIATELY - both defense status AND AA status
         setDetails({ 
           ...details, 
           status: 'Completed', 
-          workflow_state: 'completed' 
+          workflow_state: 'completed',
+          aa_verification_status: 'completed'
         });
         
         toast.success('Defense marked as completed and honorarium payments created!');
@@ -338,6 +346,47 @@ export default function Details({ defenseRequest: initialDefenseRequest }: Props
     } catch (error) {
       console.error('Error marking as completed:', error);
       toast.error('Error marking as completed');
+    }
+  }
+
+  // Update AA Status only
+  async function handleUpdateAAStatus(newStatus: 'ready_for_finance' | 'in_progress' | 'paid' | 'completed') {
+    if (!details) return;
+    try {
+      const verificationId = details.aa_verification_id;
+      
+      const res = await fetch(`/assistant/aa-verification/${details.id}/status`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRF-TOKEN': (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content || '',
+        },
+        body: JSON.stringify({ status: newStatus }),
+      });
+      
+      const data = await res.json();
+      
+      if (res.ok && data.success) {
+        setDetails({ 
+          ...details, 
+          aa_verification_status: newStatus,
+          aa_verification_id: data.aa_verification_id
+        });
+        
+        const statusLabels = {
+          ready_for_finance: 'Ready for Finance',
+          in_progress: 'In Progress',
+          paid: 'Paid',
+          completed: 'Completed'
+        };
+        
+        toast.success(`AA status updated to ${statusLabels[newStatus]}`);
+      } else {
+        toast.error(data.error || 'Failed to update AA status');
+      }
+    } catch (error) {
+      console.error('Error updating AA status:', error);
+      toast.error('Error updating AA status');
     }
   }
 
@@ -356,17 +405,53 @@ export default function Details({ defenseRequest: initialDefenseRequest }: Props
               <ArrowLeft className="h-4 w-4" />
             </Button>
           </div>
-          {details?.status !== 'Completed' && (
+          <div className="flex items-center gap-2 flex-wrap">
+            {/* AA Status Update Buttons - Always show all, disable based on status */}
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => handleUpdateAAStatus('ready_for_finance')}
+              disabled={details?.aa_verification_status === 'completed' || details?.aa_verification_status === 'ready_for_finance'}
+              className="gap-2"
+            >
+              <ArrowRight className="h-4 w-4 text-blue-600" />
+              Ready for Finance
+            </Button>
+            
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => handleUpdateAAStatus('in_progress')}
+              disabled={details?.aa_verification_status === 'completed' || details?.aa_verification_status === 'in_progress'}
+              className="gap-2"
+            >
+              <Hourglass className="h-4 w-4 text-amber-600" />
+              In Progress
+            </Button>
+            
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => handleUpdateAAStatus('paid')}
+              disabled={details?.aa_verification_status === 'completed' || details?.aa_verification_status === 'paid'}
+              className="gap-2"
+            >
+              <Banknote className="h-4 w-4 text-emerald-600" />
+              Paid
+            </Button>
+            
+            {/* Mark as Completed - Updates both statuses */}
             <Button
               size="sm"
               variant="outline"
               onClick={handleMarkCompleted}
+              disabled={details?.aa_verification_status === 'completed'}
               className="gap-2"
             >
-              <CheckCircle className="h-4 w-4 text-green-600" />
+              <CircleCheck className="h-4 w-4 text-green-600" />
               Mark as Completed
             </Button>
-          )}
+          </div>
         </div>
 
         <div className="grid md:grid-cols-3 gap-8">
@@ -380,21 +465,36 @@ export default function Details({ defenseRequest: initialDefenseRequest }: Props
                   <div className="text-2xl font-semibold">{details?.thesis_title}</div>
                   <div className="text-xs text-muted-foreground font-medium mt-0.5">Thesis Title</div>
                 </div>
-                {/* ADD STATUS BADGE HERE */}
+                {/* AA STATUS BADGE - Primary status display */}
                 <Badge
                   variant="secondary"
                   className={cn(
-                    "text-xs font-semibold px-3 py-1 h-fit",
-                    details?.status === 'Completed'
-                      ? 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300'
-                      : details?.status === 'Approved'
+                    "text-xs font-semibold px-3 py-1 h-fit flex items-center gap-1.5",
+                    details?.aa_verification_status === 'completed'
                       ? 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300'
-                      : details?.status === 'Rejected'
-                      ? 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300'
+                      : details?.aa_verification_status === 'paid'
+                      ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300'
+                      : details?.aa_verification_status === 'ready_for_finance'
+                      ? 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300'
+                      : details?.aa_verification_status === 'in_progress'
+                      ? 'bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300'
                       : 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300'
                   )}
                 >
-                  {details?.status || 'Pending'}
+                  {details?.aa_verification_status === 'completed' && <CircleCheck className="h-3.5 w-3.5" />}
+                  {details?.aa_verification_status === 'paid' && <Banknote className="h-3.5 w-3.5" />}
+                  {details?.aa_verification_status === 'ready_for_finance' && <DollarSign className="h-3.5 w-3.5" />}
+                  {details?.aa_verification_status === 'in_progress' && <Hourglass className="h-3.5 w-3.5" />}
+                  {!details?.aa_verification_status && <Clock className="h-3.5 w-3.5" />}
+                  {details?.aa_verification_status === 'completed'
+                    ? 'Completed'
+                    : details?.aa_verification_status === 'paid'
+                    ? 'Paid'
+                    : details?.aa_verification_status === 'ready_for_finance'
+                    ? 'Ready for Finance'
+                    : details?.aa_verification_status === 'in_progress'
+                    ? 'In Progress'
+                    : 'Pending'}
                 </Badge>
               </div>
 
@@ -471,23 +571,21 @@ export default function Details({ defenseRequest: initialDefenseRequest }: Props
                   <Separator className="my-2" />
                 </div>
 
-                {/* Expected Amount */}
+                {/* Amount */}
                 <div>
-                  <div className="text-xs text-muted-foreground mb-1">Expected Amount</div>
-                  <div className="font-medium text-sm">
-                    {details?.expected_rate 
-                      ? new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' }).format(details.expected_rate)
-                      : '—'}
-                  </div>
-                </div>
-
-                {/* Amount Paid */}
-                <div>
-                  <div className="text-xs text-muted-foreground mb-1">Amount Paid</div>
+                  <div className="text-xs text-muted-foreground mb-1">Amount</div>
                   <div className="font-medium text-sm">
                     {details?.amount 
                       ? new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' }).format(details.amount)
                       : '—'}
+                  </div>
+                </div>
+
+                {/* Reference No */}
+                <div>
+                  <div className="text-xs text-muted-foreground mb-1">Reference No.</div>
+                  <div className="font-medium text-sm">
+                    {details?.reference_no || '—'}
                   </div>
                 </div>
 

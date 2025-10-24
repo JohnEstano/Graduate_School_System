@@ -2,7 +2,7 @@ import { Button } from '@/components/ui/button';
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/table';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
-import { CheckCircle, XCircle, Clock } from 'lucide-react';
+import { CheckCircle, XCircle, Clock, DollarSign, Banknote, Hourglass, CircleCheck } from 'lucide-react';
 import { format } from 'date-fns';
 import { router } from '@inertiajs/react';
 
@@ -24,7 +24,7 @@ export type DefenseRequestSummary = {
   last_status_updated_at?: string;
   workflow_state?: string;
   adviser?: string;
-  aa_status?: string;
+  aa_status?: 'pending' | 'ready_for_finance' | 'in_progress' | 'paid' | 'completed' | null;
 };
 
 export type TableDefenseRequestsProps = {
@@ -42,6 +42,25 @@ export type TableDefenseRequestsProps = {
   hideActions?: boolean;
   hideSelect?: boolean;
 };
+
+function getAaStatusBadge(status?: 'pending' | 'ready_for_finance' | 'in_progress' | 'paid' | 'completed' | null) {
+  if (!status) {
+    return <Badge className="bg-gray-100 text-gray-600 border-gray-200 flex items-center gap-1">—</Badge>;
+  }
+  if (status === 'completed') {
+    return <Badge className="bg-green-100 text-green-700 border-green-200 flex items-center gap-1"><CircleCheck className="h-3 w-3" />Completed</Badge>;
+  }
+  if (status === 'paid') {
+    return <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200 flex items-center gap-1"><Banknote className="h-3 w-3" />Paid</Badge>;
+  }
+  if (status === 'ready_for_finance') {
+    return <Badge className="bg-blue-100 text-blue-700 border-blue-200 flex items-center gap-1"><DollarSign className="h-3 w-3" />Ready for Finance</Badge>;
+  }
+  if (status === 'in_progress') {
+    return <Badge className="bg-amber-100 text-amber-700 border-amber-200 flex items-center gap-1"><Hourglass className="h-3 w-3" />In Progress</Badge>;
+  }
+  return <Badge className="bg-yellow-100 text-yellow-700 border-yellow-200 flex items-center gap-1"><Clock className="h-3 w-3" />Pending</Badge>;
+}
 
 export default function TableDefenseRequests({
   paged,
@@ -148,8 +167,9 @@ export default function TableDefenseRequests({
                   )}
                   {/* AA Status: Placeholder, replace with actual value if available */}
                     {/* AA Status: Show actual value if available, fallback to '—' */}
+                    {/* AA Status: Show actual value if available, fallback to '—' */}
                     <TableCell className="px-2 py-2 text-xs whitespace-nowrap text-center align-middle">
-                      {r.aa_status && r.aa_status.trim() !== '' ? r.aa_status : '—'}
+                      {getAaStatusBadge(r.aa_status)}
                   </TableCell>
                 </TableRow>
               );
