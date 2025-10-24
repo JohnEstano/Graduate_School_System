@@ -667,6 +667,11 @@ Route::post('/adviser/defense-requirements/{id}/endorsement-form', function ($id
 /* Document Generation API */
 Route::post('/api/generate-document', [GeneratedDocumentController::class, 'generateDocument']);
 
+/* Upload Endorsement Form (Web route for session auth) */
+Route::post('/api/defense-requests/{defenseRequest}/upload-endorsement', [DefenseRequestController::class, 'uploadDocuments'])
+    ->middleware('auth')
+    ->name('api.defense-requests.upload-endorsement');
+
 /* Update Adviser Status for Defense Requirements */
 Route::patch('/adviser/defense-requirements/{defenseRequest}/adviser-status', [\App\Http\Controllers\DefenseRequestController::class, 'updateAdviserStatus'])
     ->name('adviser.defense-requirements.update-adviser-status');

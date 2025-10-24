@@ -182,23 +182,7 @@ export default function EndorsementDialog({
       const url = window.URL.createObjectURL(blob);
       setGeneratedPdfUrl(url);
       
-      // Save the generated PDF as endorsement_form
-      const formData = new FormData();
-      formData.append('endorsement_form', blob, 'endorsement-form.pdf');
-      
-      const uploadRes = await fetch(`/api/defense-requests/${defenseRequest.id}/upload-endorsement`, {
-        method: 'POST',
-        headers: {
-          'X-CSRF-TOKEN': csrf()
-        },
-        body: formData
-      });
-
-      if (!uploadRes.ok) {
-        console.warn('Failed to save generated document to defense request');
-      }
-      
-      toast.success('Endorsement form generated successfully!');
+      toast.success('Endorsement form generated successfully! Review and click "Endorse" to submit.');
     } catch (err) {
       console.error('Generate error:', err);
       toast.error('Failed to generate endorsement form');
@@ -309,28 +293,12 @@ export default function EndorsementDialog({
 
     setIsUploading(true);
     try {
-      const formData = new FormData();
-      formData.append('endorsement_form', uploadedFile);
-
-      const res = await fetch(`/api/defense-requests/${defenseRequest.id}/upload-endorsement`, {
-        method: 'POST',
-        headers: {
-          'X-CSRF-TOKEN': csrf()
-        },
-        body: formData
-      });
-
-      if (res.ok) {
-        const data = await res.json();
-        // Create a blob URL for preview
-        const blob = new Blob([uploadedFile], { type: 'application/pdf' });
-        const url = window.URL.createObjectURL(blob);
-        setGeneratedPdfUrl(url);
-        toast.success('Endorsement form uploaded successfully!');
-        setCurrentTab('preview');
-      } else {
-        toast.error('Failed to upload endorsement form');
-      }
+      // Create a blob URL for preview
+      const blob = new Blob([uploadedFile], { type: 'application/pdf' });
+      const url = window.URL.createObjectURL(blob);
+      setGeneratedPdfUrl(url);
+      toast.success('Endorsement form uploaded successfully! Review and click "Endorse" to submit.');
+      setCurrentTab('preview');
     } catch (err) {
       console.error('Upload error:', err);
       toast.error('Failed to upload endorsement form');
@@ -352,6 +320,93 @@ export default function EndorsementDialog({
 
     setIsEndorsing(true);
     try {
+      console.log('🚀 Starting endorsement process...');
+      
+      // STEP 1: Ensure endorsement form is uploaded/saved to database
+      let endorsementFormSaved = false;
+      
+      // Check if we have an uploaded file to save
+      if (uploadedFile) {
+        console.log('📤 Uploading user-selected file:', uploadedFile.name);
+        
+        const formData = new FormData();
+        formData.append('endorsement_form', uploadedFile);
+
+        const uploadRes = await fetch(`/api/defense-requests/${defenseRequest.id}/upload-endorsement`, {
+          method: 'POST',
+          headers: {
+            'X-CSRF-TOKEN': csrf(),
+            'Accept': 'application/json'
+          },
+          body: formData
+        });
+
+        console.log('📥 Upload response status:', uploadRes.status);
+        
+        if (uploadRes.ok) {
+          const uploadData = await uploadRes.json();
+          console.log('✅ Upload successful:', uploadData);
+          endorsementFormSaved = true;
+        } else {
+          const errorText = await uploadRes.text();
+          console.error('❌ Upload failed:', uploadRes.status, errorText);
+          toast.error('Failed to save endorsement form: ' + uploadRes.statusText);
+          setIsEndorsing(false);
+          return;
+        }
+      } else if (generatedPdfUrl) {
+        console.log('📤 Uploading generated PDF blob...');
+        
+        // If we have a generated PDF (blob), convert it and upload
+        try {
+          const response = await fetch(generatedPdfUrl);
+          const blob = await response.blob();
+          
+          console.log('📦 Blob created:', blob.type, blob.size, 'bytes');
+          
+          const formData = new FormData();
+          formData.append('endorsement_form', blob, 'endorsement-form.pdf');
+
+          const uploadRes = await fetch(`/api/defense-requests/${defenseRequest.id}/upload-endorsement`, {
+            method: 'POST',
+            headers: {
+              'X-CSRF-TOKEN': csrf(),
+              'Accept': 'application/json'
+            },
+            body: formData
+          });
+
+          console.log('📥 Upload response status:', uploadRes.status);
+
+          if (uploadRes.ok) {
+            const uploadData = await uploadRes.json();
+            console.log('✅ Upload successful:', uploadData);
+            endorsementFormSaved = true;
+          } else {
+            const errorText = await uploadRes.text();
+            console.error('❌ Upload failed:', uploadRes.status, errorText);
+            toast.error('Failed to save endorsement form: ' + uploadRes.statusText);
+            setIsEndorsing(false);
+            return;
+          }
+        } catch (err) {
+          console.error('❌ Error saving generated PDF:', err);
+          toast.error('Failed to save endorsement form');
+          setIsEndorsing(false);
+          return;
+        }
+      }
+
+      if (!endorsementFormSaved) {
+        console.error('❌ No endorsement form was saved');
+        toast.error('Failed to save endorsement form');
+        setIsEndorsing(false);
+        return;
+      }
+
+      console.log('✅ Endorsement form saved successfully, updating adviser status...');
+
+      // STEP 2: Update adviser status to approved
       const payload: any = {
         adviser_status: 'Approved'
       };
@@ -360,6 +415,8 @@ export default function EndorsementDialog({
       if (coordinatorId) {
         payload.coordinator_user_id = coordinatorId;
       }
+
+      console.log('📤 Updating adviser status with payload:', payload);
 
       const res = await fetch(`/adviser/defense-requirements/${defenseRequest.id}/adviser-status`, {
         method: 'PATCH',
@@ -370,10 +427,11 @@ export default function EndorsementDialog({
         body: JSON.stringify(payload)
       });
 
+      console.log('📥 Adviser status update response:', res.status);
+
       if (res.ok) {
         const data = await res.json();
-        
-        console.log('✅ Endorsement successful, updating parent...');
+        console.log('✅ Endorsement successful:', data);
         
         // WAIT for callback to complete FIRST before closing dialog
         if (onEndorseComplete) {
@@ -386,10 +444,11 @@ export default function EndorsementDialog({
         toast.success(`Request endorsed successfully and forwarded to ${coordinatorName}!`);
       } else {
         const error = await res.json();
+        console.error('❌ Adviser status update failed:', error);
         toast.error(error.message || 'Failed to endorse request');
       }
     } catch (err) {
-      console.error('Endorse error:', err);
+      console.error('❌ Endorse error:', err);
       toast.error('Failed to endorse request');
     } finally {
       setIsEndorsing(false);

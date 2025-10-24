@@ -1703,20 +1703,36 @@ class DefenseRequestController extends Controller
 
     public function uploadDocuments(Request $request, DefenseRequest $defenseRequest)
     {
+        \Log::info('uploadDocuments called', [
+            'defense_request_id' => $defenseRequest->id,
+            'has_ai_certificate' => $request->hasFile('ai_detection_certificate'),
+            'has_endorsement_form' => $request->hasFile('endorsement_form'),
+            'all_files' => $request->allFiles(),
+        ]);
+
         $data = [];
         if ($request->hasFile('ai_detection_certificate')) {
             $file = $request->file('ai_detection_certificate');
             $path = $file->store('defense_documents', 'public');
             $defenseRequest->ai_detection_certificate = '/storage/' . $path;
             $data['ai_detection_certificate'] = $defenseRequest->ai_detection_certificate;
+            \Log::info('AI certificate uploaded', ['path' => $path]);
         }
         if ($request->hasFile('endorsement_form')) {
             $file = $request->file('endorsement_form');
             $path = $file->store('defense_documents', 'public');
             $defenseRequest->endorsement_form = '/storage/' . $path;
             $data['endorsement_form'] = $defenseRequest->endorsement_form;
+            \Log::info('Endorsement form uploaded', ['path' => $path]);
         }
+        
         $defenseRequest->save();
+        
+        \Log::info('uploadDocuments saved', [
+            'defense_request_id' => $defenseRequest->id,
+            'endorsement_form' => $defenseRequest->endorsement_form,
+            'data' => $data
+        ]);
 
         return response()->json($data);
     }

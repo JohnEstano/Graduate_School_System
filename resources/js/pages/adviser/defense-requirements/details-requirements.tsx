@@ -143,7 +143,7 @@ export default function DetailsRequirementsPage(rawProps: any) {
   const [endorsementDialogOpen, setEndorsementDialogOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
-  // For AI Detection Certificate upload
+  // For AI Declaration Form upload
   const [aiDetectionCertFile, setAiDetectionCertFile] = useState<File | null>(null);
   const [aiDetectionCertUploading, setAiDetectionCertUploading] = useState(false);
   const aiDetectionInputRef = useRef<HTMLInputElement>(null);
@@ -230,14 +230,14 @@ export default function DetailsRequirementsPage(rawProps: any) {
     return `/storage/${url.replace(/^\/?storage\//, '')}`;
   }
 
-  // Attachments
+    // Attachments
   const attachments = [
-    { label: "Adviser’s Endorsement", url: resolveFileUrl(request.advisers_endorsement) },
+    { label: "Adviser's Endorsement", url: resolveFileUrl(request.advisers_endorsement) },
     { label: 'REC Endorsement', url: resolveFileUrl(request.rec_endorsement) },
     { label: 'Proof of Payment', url: resolveFileUrl(request.proof_of_payment) },
     { label: 'Reference No.', url: request.reference_no }, // Not a file, keep as is
     { label: 'Manuscript', url: resolveFileUrl(request.manuscript_proposal) },
-    { label: 'Similarity Index', url: resolveFileUrl(request.similarity_index) },
+    { label: 'Similarity Form', url: resolveFileUrl(request.similarity_index) },
     { label: 'Avisee-Adviser File', url: resolveFileUrl(request.avisee_adviser_attachment) },
   ];
 
@@ -349,7 +349,7 @@ export default function DetailsRequirementsPage(rawProps: any) {
     return { event, desc, from, to, created, userName };
   }
 
-  // Handle AI Detection Certificate upload
+  // Handle AI Declaration Form upload
   async function handleAiCertificateSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (!request.id) return;
@@ -376,12 +376,12 @@ export default function DetailsRequirementsPage(rawProps: any) {
         }));
         setAiDetectionCertFile(null);
         if (aiDetectionInputRef.current) aiDetectionInputRef.current.value = '';
-        toast.success('AI Detection Certificate uploaded successfully.');
+        toast.success('AI Declaration Form uploaded successfully.');
       } else {
-        toast.error(data?.error || 'Failed to upload certificate.');
+        toast.error(data?.error || 'Failed to upload declaration form.');
       }
     } catch {
-      toast.error('Network error uploading certificate.');
+      toast.error('Network error uploading declaration form.');
     } finally {
       setAiDetectionCertUploading(false);
     }
@@ -457,7 +457,7 @@ export default function DetailsRequirementsPage(rawProps: any) {
                   <FileText className="h-4 w-4" /> Details
                 </TabsTrigger>
                 <TabsTrigger value="upload-certificate" className="flex items-center gap-1 text-sm font-medium px-3">
-                  <FileText className="h-4 w-4" /> Upload AI Certificate
+                  <FileText className="h-4 w-4" /> Upload AI Declaration Form
                 </TabsTrigger>
               </TabsList>
             </Tabs>
@@ -703,7 +703,7 @@ export default function DetailsRequirementsPage(rawProps: any) {
                   <Separator />
                   <div className="space-y-2 text-sm mt-3">
                     {attachments
-                      .filter(a => a.label !== 'AI Detection Certificate' && a.label !== 'Endorsement Form')
+                      .filter(a => a.label !== 'AI Declaration Form' && a.label !== 'Endorsement Form')
                       .map(a =>
                         a.url ? (
                           <a
@@ -724,7 +724,7 @@ export default function DetailsRequirementsPage(rawProps: any) {
 
                     <div className="flex items-center gap-2 px-3 py-2 rounded-md border bg-white dark:bg-zinc-900">
                       <FileText className="h-4 w-4" />
-                      <span className="font-medium">AI Detection Certificate</span>
+                      <span className="font-medium">AI Declaration Form</span>
                       {request.ai_detection_certificate ? (
                         <a
                           href={request.ai_detection_certificate}
@@ -769,13 +769,13 @@ export default function DetailsRequirementsPage(rawProps: any) {
                 {/* Remove old Committee (read-only summary) section */}
               </TabsContent>
 
-              {/* UPLOAD AI CERTIFICATE TAB */}
+              {/* UPLOAD AI DECLARATION FORM TAB */}
               <TabsContent value="upload-certificate" className="space-y-5">
                 <form onSubmit={handleAiCertificateSubmit} className="space-y-5">
-                  {/* AI Detection Certificate Section */}
+                  {/* AI Declaration Form Section */}
                   <div className={sectionClass + " text-sm"}>
                     <h2 className="text-sm font-semibold flex items-center gap-2">
-                      <FileText className="h-5 w-5" /> AI Detection Certificate
+                      <FileText className="h-5 w-5" /> AI Declaration Form
                     </h2>
                     <Separator />
                     <div className="flex flex-col gap-3 mt-2">
@@ -784,7 +784,7 @@ export default function DetailsRequirementsPage(rawProps: any) {
                           htmlFor="ai-detection-upload"
                           className="block text-xs font-medium text-zinc-700 dark:text-zinc-200"
                         >
-                          Upload Certificate
+                          Upload Declaration Form
                         </label>
                         {request.ai_detection_certificate && !aiDetectionCertFile ? (
                           <div className="flex items-center gap-2 w-full">
@@ -842,7 +842,7 @@ export default function DetailsRequirementsPage(rawProps: any) {
                       {aiDetectionCertUploading ? (
                         <span>Uploading...</span>
                       ) : (
-                        <span>Upload Certificate</span>
+                        <span>Upload Declaration Form</span>
                       )}
                     </Button>
                   </div>
