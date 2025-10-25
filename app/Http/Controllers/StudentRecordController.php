@@ -82,49 +82,31 @@ class StudentRecordController extends Controller
                 }
             }
             
+            // Determine program level (Masteral or Doctorate)
+            $isDoctorate = str_starts_with($student->program, 'DBM') || 
+                           str_starts_with($student->program, 'PHDED') ||
+                           stripos($student->program, 'Doctor') !== false || 
+                           stripos($student->program, 'Doctorate') !== false ||
+                           stripos($student->program, 'PhD') !== false;
+            $programLevel = $isDoctorate ? 'Doctorate' : 'Masteral';
+            
             // Add REC FEE, SCHOOL SHARE, and calculate TOTAL for each payment
             foreach ($groupedPayments as &$payment) {
                 $panelistTotal = floatval($payment['amount']);
                 
-                // Determine REC FEE and SCHOOL SHARE based on defense type and program
-                $recFee = 0;
-                $schoolShare = 0;
+                // Get REC FEE and SCHOOL SHARE from payment_rates table
+                $recFeeRate = PaymentRate::where('program_level', $programLevel)
+                    ->where('defense_type', $payment['defense_type'])
+                    ->where('type', 'REC Fee')
+                    ->first();
                 
-                // Check if program is Masteral or Doctorate
-                // DBM = Doctor in Business Management (Doctorate)
-                // PHDED = PhD in Education (Doctorate)
-                $isDoctorate = str_starts_with($student->program, 'DBM') || 
-                               str_starts_with($student->program, 'PHDED') ||
-                               stripos($student->program, 'Doctor') !== false || 
-                               stripos($student->program, 'Doctorate') !== false ||
-                               stripos($student->program, 'PhD') !== false;
-                $isMasteral = !$isDoctorate; // Everything else is Masteral
+                $schoolShareRate = PaymentRate::where('program_level', $programLevel)
+                    ->where('defense_type', $payment['defense_type'])
+                    ->where('type', 'School Share')
+                    ->first();
                 
-                if ($payment['defense_type'] === 'Proposal') {
-                    if ($isMasteral) {
-                        $recFee = 2200.00;
-                        $schoolShare = 450.00;
-                    } elseif ($isDoctorate) {
-                        $recFee = 2200.00;
-                        $schoolShare = 950.00;
-                    }
-                } elseif ($payment['defense_type'] === 'Pre-final' || $payment['defense_type'] === 'Pre-Final') {
-                    if ($isMasteral) {
-                        $recFee = 800.00;
-                        $schoolShare = 1280.00;
-                    } elseif ($isDoctorate) {
-                        $recFee = 800.00;
-                        $schoolShare = 2040.00;
-                    }
-                } elseif ($payment['defense_type'] === 'Final') {
-                    if ($isMasteral) {
-                        $recFee = 0.00;  // Dash in the image means 0
-                        $schoolShare = 0.00;  // Dash in the image means 0
-                    } elseif ($isDoctorate) {
-                        $recFee = 0.00;  // Dash in the image means 0
-                        $schoolShare = 1000.00;
-                    }
-                }
+                $recFee = $recFeeRate ? floatval($recFeeRate->amount) : 0;
+                $schoolShare = $schoolShareRate ? floatval($schoolShareRate->amount) : 0;
                 
                 // Always add REC FEE to panelists array (show even if 0)
                 $payment['panelists'][] = [
@@ -381,45 +363,31 @@ class StudentRecordController extends Controller
             }
         }
         
+        // Determine program level
+        $isDoctorate = str_starts_with($student->program, 'DBM') || 
+                       str_starts_with($student->program, 'PHDED') ||
+                       stripos($student->program, 'Doctor') !== false || 
+                       stripos($student->program, 'Doctorate') !== false ||
+                       stripos($student->program, 'PhD') !== false;
+        $programLevel = $isDoctorate ? 'Doctorate' : 'Masteral';
+        
         // Add fees
         foreach ($groupedPayments as &$payment) {
             $panelistTotal = floatval($payment['amount']);
             
-            $isDoctorate = str_starts_with($student->program, 'DBM') || 
-                           str_starts_with($student->program, 'PHDED') ||
-                           stripos($student->program, 'Doctor') !== false || 
-                           stripos($student->program, 'Doctorate') !== false ||
-                           stripos($student->program, 'PhD') !== false;
-            $isMasteral = !$isDoctorate;
+            // Get REC FEE and SCHOOL SHARE from payment_rates table
+            $recFeeRate = PaymentRate::where('program_level', $programLevel)
+                ->where('defense_type', $payment['defense_type'])
+                ->where('type', 'REC Fee')
+                ->first();
             
-            $recFee = 0;
-            $schoolShare = 0;
+            $schoolShareRate = PaymentRate::where('program_level', $programLevel)
+                ->where('defense_type', $payment['defense_type'])
+                ->where('type', 'School Share')
+                ->first();
             
-            if ($payment['defense_type'] === 'Proposal') {
-                if ($isMasteral) {
-                    $recFee = 2200.00;
-                    $schoolShare = 450.00;
-                } elseif ($isDoctorate) {
-                    $recFee = 2200.00;
-                    $schoolShare = 950.00;
-                }
-            } elseif ($payment['defense_type'] === 'Pre-final' || $payment['defense_type'] === 'Pre-Final') {
-                if ($isMasteral) {
-                    $recFee = 800.00;
-                    $schoolShare = 1280.00;
-                } elseif ($isDoctorate) {
-                    $recFee = 800.00;
-                    $schoolShare = 2040.00;
-                }
-            } elseif ($payment['defense_type'] === 'Final') {
-                if ($isMasteral) {
-                    $recFee = 0.00;
-                    $schoolShare = 0.00;
-                } elseif ($isDoctorate) {
-                    $recFee = 0.00;
-                    $schoolShare = 1000.00;
-                }
-            }
+            $recFee = $recFeeRate ? floatval($recFeeRate->amount) : 0;
+            $schoolShare = $schoolShareRate ? floatval($schoolShareRate->amount) : 0;
             
             $grandTotal = $panelistTotal + $recFee + $schoolShare;
             $payment['amount'] = $grandTotal;
