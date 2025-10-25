@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Defense Request Approved</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <style>
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif,
@@ -129,7 +130,7 @@
             <span class="header-title">Graduate School System</span>
         </div>
 
-        <h1>Defense Request Approved</h1>
+        <h1>Defense Request Approved!</h1>
 
         <div class="content">
             <p class="message">
@@ -156,7 +157,7 @@
 
             @if ($comment)
                 <div class="comment-box">
-                    <p><strong>{{ ucfirst($approvedBy) }}'s Comments:</strong></p>
+                    <p><strong> <i class="fa-solid fa-comment"></i> {{ ucfirst($approvedBy) }}'s Comments:</strong></p>
                     <p style="margin: 0; font-style: italic;">{{ $comment }}</p>
                 </div>
             @endif
