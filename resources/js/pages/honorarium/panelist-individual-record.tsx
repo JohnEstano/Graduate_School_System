@@ -45,6 +45,8 @@ interface Student {
   defense_date?: string; 
   defense_type?: string;  
   payments: Payment[];
+  // role assigned to this panelist for this student (from pivot)
+  assigned_role?: string | null;
 }
 
 interface PanelistRecord {
@@ -76,16 +78,18 @@ export default function PanelistIndividualRecord({ panelist, onClose }: Props) {
   };
 
   const getRoleBadgeColor = (role: string) => {
-    switch (role) {
-      case 'Adviser':
-        return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300 border-blue-200';
-      case 'Panel Chair':
-        return 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300 border-purple-200';
-      case 'Panel Member':
-        return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300 border-green-200';
-      default:
-        return 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300 border-gray-200';
+    // role may be a comma-separated summary (e.g. "Adviser, Panel Member")
+    if (!role) return 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300 border-gray-200';
+    if (role.includes('Adviser')) {
+      return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300 border-blue-200';
     }
+    if (role.includes('Panel Chair')) {
+      return 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300 border-purple-200';
+    }
+    if (role.includes('Panel Member')) {
+      return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300 border-green-200';
+    }
+    return 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300 border-gray-200';
   };
 
   const getDefenseTypeBadge = (type: string) => {
@@ -112,10 +116,10 @@ export default function PanelistIndividualRecord({ panelist, onClose }: Props) {
             </DialogTitle>
             <DialogDescription className="flex items-center gap-2 text-base mt-1">
               <Badge className={`${getRoleBadgeColor(panelist.role)} font-medium`}>
-                {panelist.role}
+                Total: 
               </Badge>
               <span className="text-sm text-gray-600 dark:text-gray-400">
-                • Total: ₱{totalHonorarium.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                ₱ {totalHonorarium.toLocaleString('en-US', { minimumFractionDigits: 2 })}
               </span>
             </DialogDescription>
           </div>
@@ -168,6 +172,11 @@ export default function PanelistIndividualRecord({ panelist, onClose }: Props) {
                             <span className="text-xs text-gray-500 dark:text-gray-400">
                               {student.course_section || "Regular"} • {student.school_year || "2024-2025"}
                             </span>
+                            {student.assigned_role && (
+                              <Badge className={`${getRoleBadgeColor(student.assigned_role)} text-xs`}>
+                                {student.assigned_role}
+                              </Badge>
+                            )}
                             <Badge className={`${getDefenseTypeBadge(payment.defense_type || student.defense_type || 'N/A')} text-xs`}>
                               {payment.defense_type || student.defense_type || 'N/A'}
                             </Badge>

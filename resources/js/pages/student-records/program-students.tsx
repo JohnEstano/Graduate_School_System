@@ -118,10 +118,8 @@ export default function ProgramStudents({ program, students, filters }: ProgramS
           <Table className="min-w-full text-sm">
             <TableHeader className="sticky top-0 bg-white dark:bg-[#121212] z-10 shadow-sm">
               <TableRow>
-                <TableHead className="w-[40%] px-4 py-2">Student Name</TableHead>
-                <TableHead className="w-[30%] px-4 py-2 text-center">Program / Section</TableHead>
-                <TableHead className="w-[30%] px-4 py-2 text-center">Academic Status</TableHead>
-              </TableRow>
+                  <TableHead className="w-full px-4 py-2">Student Name</TableHead>
+                </TableRow>
             </TableHeader>
             <TableBody>
               {students.data.length > 0 ? (
@@ -131,31 +129,25 @@ export default function ProgramStudents({ program, students, filters }: ProgramS
                     className="hover:bg-muted/50 cursor-pointer"
                     onClick={() => openIndividualRecord(record)}
                   >
-                    <TableCell className="flex items-center space-x-4 px-4 py-3">
-                      <Avatar className="h-10 w-10 flex-shrink-0 bg-blue-100 text-blue-600 dark:bg-blue-900 dark:text-blue-300">
-                        <AvatarFallback>{record.first_name.charAt(0)}</AvatarFallback>
-                      </Avatar>
-                      <div>
-                        <div className="font-medium">
-                          {record.first_name} {record.middle_name ? record.middle_name.charAt(0) + '.' : ''} {record.last_name}
+                      <TableCell className="flex items-center space-x-4 px-4 py-3 w-full">
+                        <Avatar className="h-10 w-10 flex-shrink-0 bg-blue-100 text-blue-600 dark:bg-blue-900 dark:text-blue-300">
+                          <AvatarFallback>{record.first_name.charAt(0)}</AvatarFallback>
+                        </Avatar>
+                        <div>
+                          <div className="font-medium">
+                            {record.first_name} {record.middle_name ? record.middle_name.charAt(0) + '.' : ''} {record.last_name}
+                          </div>
+                          <div className="text-sm text-muted-foreground">{record.student_id}</div>
                         </div>
-                        <div className="text-sm text-muted-foreground">{record.student_id}</div>
-                      </div>
-                    </TableCell>
-                    <TableCell className="px-4 py-3 text-center">
-                      {record.program} / {record.course_section || "-"}
-                    </TableCell>
-                    <TableCell className="px-4 py-3 text-center">
-                      {record.academic_status || "-"}
-                    </TableCell>
+                      </TableCell>
                   </TableRow>
                 ))
               ) : (
-                <TableRow>
-                  <TableCell colSpan={3} className="h-24 text-center">
-                    No students found.
-                  </TableCell>
-                </TableRow>
+                  <TableRow>
+                    <TableCell colSpan={1} className="h-24 text-center">
+                      No students found.
+                    </TableCell>
+                  </TableRow>
               )}
             </TableBody>
           </Table>

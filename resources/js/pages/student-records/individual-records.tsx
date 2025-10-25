@@ -132,14 +132,10 @@ export default function IndividualRecord({ record, onClose }: IndividualRecordPr
                       </div>
 
                       <div>
-                        <p className="text-sm text-gray-500">Course & Section</p>
-                        <p className="font-medium">{record.course_section || '-'}</p>
-                        <p className="text-sm text-gray-500 mt-4">Birthdate</p>
+                        <p className="text-sm text-gray-500">Birthdate</p>
                         <p className="font-medium">
                           {record.birthdate ? new Date(record.birthdate).toLocaleDateString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit' }) : '-'}
                         </p>
-                        <p className="text-sm text-gray-500 mt-4">Academic Status</p>
-                        <p className="font-medium">{record.academic_status || '-'}</p>
                       </div>
                     </div>
                   </div>

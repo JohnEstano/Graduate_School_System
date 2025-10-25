@@ -166,6 +166,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('/honorarium/panelist/{panelistId}/download-pdf', [HonorariumSummaryController::class, 'downloadPanelistPdf'])
             ->name('honorarium.panelist.downloadPDF');
 
+        // Download individual panelist CSV (includes per-assignment role)
+        Route::get('/honorarium/panelist/{panelistId}/download-csv', [HonorariumSummaryController::class, 'downloadPanelistCsv'])
+            ->name('honorarium.panelist.downloadCSV');
+
 
 
 

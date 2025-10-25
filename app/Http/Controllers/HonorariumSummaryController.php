@@ -12,6 +12,49 @@ use Barryvdh\DomPDF\Facade\Pdf;
 
 class HonorariumSummaryController extends Controller
 {
+
+    /**
+     * Normalize free-text pivot role values to canonical role names.
+     * Accepts common variations and returns one of: 'Adviser', 'Panel Chair', 'Panel Member'.
+     * If input is null/empty, returns null.
+     */
+    private function normalizeRole(?string $role): ?string
+    {
+        if (!$role) return null;
+
+        $r = trim(strtolower($role));
+
+        // common variants
+        if (str_contains($r, 'advis') || str_contains($r, 'advisor')) {
+            return 'Adviser';
+        }
+
+        if (str_contains($r, 'chair')) {
+            return 'Panel Chair';
+        }
+
+        if (str_contains($r, 'member') || str_contains($r, 'panel member') || str_contains($r, 'panelist')) {
+            return 'Panel Member';
+        }
+
+        // fallback: try to map exact known words
+        $map = [
+            'adviser' => 'Adviser',
+            'advisor' => 'Adviser',
+            'panel chair' => 'Panel Chair',
+            'chair' => 'Panel Chair',
+            'panel member' => 'Panel Member',
+            'member' => 'Panel Member',
+            'panelist' => 'Panel Member',
+        ];
+
+        foreach ($map as $k => $v) {
+            if ($r === $k) return $v;
+        }
+
+        // If unknown, capitalize words and return as-is (but keep it predictable)
+        return ucwords($r);
+    }
    public function index(Request $request)
     {
         $records = ProgramRecord::query()
@@ -36,44 +79,52 @@ public function show($programId)
     ])->findOrFail($programId);
 
     // Format panelists data with students and payments
-    $panelists = $record->panelists->map(function($panelist) {
-        return [
-            'id' => $panelist->id,
-            'pfirst_name' => $panelist->pfirst_name,
-            'pmiddle_name' => $panelist->pmiddle_name ?? '',
-            'plast_name' => $panelist->plast_name,
-            'role' => $panelist->role,
-            'defense_type' => 'Proposal', // Default value since column doesn't exist in DB
-            'received_date' => $panelist->received_date ? date('Y-m-d', strtotime($panelist->received_date)) : null,
-            'students' => $panelist->students->map(function($student) use ($panelist) {
-                return [
-                    'id' => $student->id,
-                    'first_name' => $student->first_name,
-                    'middle_name' => $student->middle_name ?? '',
-                    'last_name' => $student->last_name,
-                    'program' => $student->program,
-                    'course_section' => $student->course_section ?? 'Regular',
-                    'school_year' => $student->school_year ?? '2024-2025',
-                    'defense_date' => $student->defense_date ? date('Y-m-d', strtotime($student->defense_date)) : null,
-                    'defense_type' => $student->defense_type ?? 'N/A',
-                    'or_number' => $student->or_number ?? 'N/A',
-                    'payments' => $student->payments->where('panelist_record_id', $panelist->id)->map(function($payment) use ($student, $panelist) {
-                        return [
-                            'id' => $payment->id,
-                            'payment_date' => $payment->payment_date ? date('Y-m-d', strtotime($payment->payment_date)) : null,
-                            'defense_status' => $payment->defense_status ?? 'N/A',
-                            'amount' => (float) $payment->amount,
-                            // Include student data in payment for easier access in frontend
-                            'defense_date' => $student->defense_date ? date('Y-m-d', strtotime($student->defense_date)) : null,
-                            'defense_type' => $student->defense_type ?? 'N/A',
-                            'or_number' => $student->or_number ?? 'N/A',
-                            'panelist_role' => $panelist->role,
-                        ];
-                    })->values()
-                ];
-            })
-        ];
-    });
+        $panelists = $record->panelists->map(function($panelist) {
+            // derive roles from pivot assignments (panelist may have different roles per student)
+            $roles = $panelist->students->pluck('pivot.role')->filter()->map(fn($r) => $this->normalizeRole($r))->filter()->unique()->values()->all();
+            $roleSummary = count($roles) === 1 ? $roles[0] : (count($roles) > 1 ? implode(', ', $roles) : ($this->normalizeRole($panelist->role) ?? 'N/A'));
+
+            return [
+                'id' => $panelist->id,
+                'pfirst_name' => $panelist->pfirst_name,
+                'pmiddle_name' => $panelist->pmiddle_name ?? '',
+                'plast_name' => $panelist->plast_name,
+                // role now summarized from assignments; keep original role fallback
+                'role' => $roleSummary,
+                'defense_type' => 'Proposal', // Default value since column doesn't exist in DB
+                'received_date' => $panelist->received_date ? date('Y-m-d', strtotime($panelist->received_date)) : null,
+                'students' => $panelist->students->map(function($student) use ($panelist) {
+                    $assigned = $this->normalizeRole($student->pivot->role ?? null);
+                    return [
+                        'id' => $student->id,
+                        'first_name' => $student->first_name,
+                        'middle_name' => $student->middle_name ?? '',
+                        'last_name' => $student->last_name,
+                        'program' => $student->program,
+                        'course_section' => $student->course_section ?? 'Regular',
+                        'school_year' => $student->school_year ?? '2024-2025',
+                        'defense_date' => $student->defense_date ? date('Y-m-d', strtotime($student->defense_date)) : null,
+                        'defense_type' => $student->defense_type ?? 'N/A',
+                        'or_number' => $student->or_number ?? 'N/A',
+                        // include assigned role for this student from pivot (normalized)
+                        'assigned_role' => $assigned,
+                        'payments' => $student->payments->where('panelist_record_id', $panelist->id)->map(function($payment) use ($student, $assigned) {
+                            return [
+                                'id' => $payment->id,
+                                'payment_date' => $payment->payment_date ? date('Y-m-d', strtotime($payment->payment_date)) : null,
+                                'defense_status' => $payment->defense_status ?? 'N/A',
+                                'amount' => (float) $payment->amount,
+                                // Include student data in payment for easier access in frontend
+                                'defense_date' => $student->defense_date ? date('Y-m-d', strtotime($student->defense_date)) : null,
+                                'defense_type' => $student->defense_type ?? 'N/A',
+                                'or_number' => $student->or_number ?? 'N/A',
+                                'panelist_role' => $assigned,
+                            ];
+                        })->values()
+                    ];
+                })
+            ];
+        });
   
     return Inertia::render('honorarium/individual-record', [
         'record'    => $record,
@@ -248,6 +299,10 @@ public function downloadCSV(ProgramRecord $record)
             // Get program name
             $programName = $panelist->program->name ?? 'Office of the Dean of Graduate School';
 
+            // Derive role summary from pivot-assigned roles (panelist may have different roles per student)
+            $roles = $panelist->students->pluck('pivot.role')->filter()->map(fn($r) => $this->normalizeRole($r))->filter()->unique()->values()->all();
+            $roleSummary = count($roles) === 1 ? $roles[0] : (count($roles) > 1 ? implode(', ', $roles) : ($this->normalizeRole($panelist->role) ?? 'N/A'));
+
             // Prepare student payments data
             $students = [];
             $totalHonorarium = 0;
@@ -261,7 +316,9 @@ public function downloadCSV(ProgramRecord $record)
                         'defense_type' => $student->defense_type ?? 'N/A',
                         'defense_date' => $student->defense_date ? date('F d, Y', strtotime($student->defense_date)) : '-',
                         'or_number' => $student->or_number ?? 'N/A',
-                        'amount' => floatval($payment->amount)
+                        'amount' => floatval($payment->amount),
+                        // include the assigned role for this student (normalized from pivot)
+                        'assigned_role' => $this->normalizeRole($student->pivot->role ?? null),
                     ];
                     
                     $totalHonorarium += floatval($payment->amount);
@@ -271,7 +328,7 @@ public function downloadCSV(ProgramRecord $record)
             // Prepare data for view
             $data = [
                 'panelist_name' => strtoupper(trim("{$panelist->pfirst_name} {$panelist->pmiddle_name} {$panelist->plast_name}")),
-                'role' => $panelist->role,
+                'role' => $roleSummary,
                 'program_name' => $programName,
                 'students' => $students,
                 'total_honorarium' => $totalHonorarium,
@@ -296,6 +353,44 @@ public function downloadCSV(ProgramRecord $record)
                 'message' => $e->getMessage()
             ], 500);
         }
+    }
+
+    /**
+     * Download a CSV for a single panelist including per-assignment role
+     */
+    public function downloadPanelistCsv(Request $request, $panelistId)
+    {
+        $panelist = \App\Models\PanelistRecord::with(['students.payments', 'program'])->findOrFail($panelistId);
+
+        $filename = trim($panelist->plast_name . '_panelist_payments.csv');
+
+        $headers = [
+            'Content-Type' => 'text/csv',
+            'Content-Disposition' => "attachment; filename=\"$filename\"",
+        ];
+
+        $callback = function () use ($panelist) {
+            $handle = fopen('php://output', 'w');
+            fputcsv($handle, ['Student Name', 'Assigned Role', 'Defense Type', 'Defense Date', 'OR Number', 'Amount']);
+
+            foreach ($panelist->students as $student) {
+                $payment = $student->payments->where('panelist_record_id', $panelist->id)->first();
+                if (!$payment) continue;
+
+                fputcsv($handle, [
+                    trim("{$student->first_name} {$student->middle_name} {$student->last_name}"),
+                    $this->normalizeRole($student->pivot->role ?? '') ?? '',
+                    $student->defense_type ?? 'N/A',
+                    $student->defense_date ? date('Y-m-d', strtotime($student->defense_date)) : '',
+                    $student->or_number ?? '',
+                    $payment->amount,
+                ]);
+            }
+
+            fclose($handle);
+        };
+
+        return response()->stream($callback, 200, $headers);
     }
 }
 

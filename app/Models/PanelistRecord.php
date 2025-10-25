@@ -31,6 +31,8 @@ class PanelistRecord extends Model
 
     public function students()
     {
-        return $this->belongsToMany(StudentRecord::class, 'panelist_student_records', 'panelist_id', 'student_id');
+        return $this->belongsToMany(StudentRecord::class, 'panelist_student_records', 'panelist_id', 'student_id')
+            ->withPivot('role')
+            ->withTimestamps();
     }
 }

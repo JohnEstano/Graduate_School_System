@@ -64,8 +64,8 @@ export default function Index({ records }: { records: ProgramRecord[] }) {
             <Table className="min-w-full text-sm">
               <TableHeader className="sticky top-0 bg-white dark:bg-[#121212] z-10">
                 <TableRow>
-                  <TableHead className="w-[70%] px-1 py-2">Program</TableHead>
-                  <TableHead className="w-[30%] px-1 py-2 text-center">Date Edited</TableHead>
+                  <TableHead className="w-[70%] px-4 py-2">Program</TableHead>
+                  <TableHead className="w-[30%] px-4 py-2 text-center">Date Edited</TableHead>
                 </TableRow>
               </TableHeader>
 
@@ -77,7 +77,7 @@ export default function Index({ records }: { records: ProgramRecord[] }) {
                       className="hover:bg-muted/50 cursor-pointer"
                       onClick={() => handleViewRecordsClick(record)}
                     >
-                      <TableCell className="flex items-center space-x-4 px-1 py-2">
+                      <TableCell className="flex items-center space-x-4 px-4 py-3">
                         <Avatar className="h-10 w-10 flex-shrink-0 bg-blue-100 text-blue-600 dark:bg-blue-900 dark:text-blue-300">
                           <AvatarFallback>{record.program.charAt(0)}</AvatarFallback>
                         </Avatar>
@@ -90,7 +90,7 @@ export default function Index({ records }: { records: ProgramRecord[] }) {
                         </div>
                       </TableCell>
 
-                      <TableCell className="px-1 py-2 text-center">
+                      <TableCell className="px-4 py-3 text-center">
                         {record.date_edited
                           ? new Date(record.date_edited).toLocaleDateString()
                           : new Date().toLocaleDateString()}

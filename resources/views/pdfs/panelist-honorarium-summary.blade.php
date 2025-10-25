@@ -331,11 +331,12 @@
           <thead>
             <tr>
               <th style="width: 5%;">#</th>
-              <th style="width: 30%;">Student Name</th>
-              <th style="width: 15%;">Defense Type</th>
+              <th style="width: 28%;">Student Name</th>
+              <th style="width: 15%;">Role</th>
+              <th style="width: 12%;">Defense Type</th>
               <th style="width: 15%;">Defense Date</th>
               <th style="width: 20%;">OR Number</th>
-              <th style="width: 15%;" class="amount-cell">Amount</th>
+              <th style="width: 5%;" class="amount-cell">Amount</th>
             </tr>
           </thead>
           <tbody>
@@ -343,6 +344,7 @@
             <tr>
               <td>{{ $index + 1 }}</td>
               <td>{{ strtoupper($student['name']) }}</td>
+              <td>{{ $student['assigned_role'] ?? 'N/A' }}</td>
               <td>{{ $student['defense_type'] }}</td>
               <td>{{ $student['defense_date'] }}</td>
               <td>{{ $student['or_number'] }}</td>
