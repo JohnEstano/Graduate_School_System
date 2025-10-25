@@ -180,7 +180,7 @@
             <span class="header-title">Graduate School System</span>
         </div>
 
-        <h1>Defense Panel Invitation</h1>
+        <h1>Defense Panel Invitation!</h1>
 
         <div class="content">
             <p class="message">

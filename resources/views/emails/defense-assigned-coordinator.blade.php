@@ -154,7 +154,7 @@
             <span class="header-title">Graduate School System</span>
         </div>
 
-        <h1>New Defense Request Assigned</h1>
+        <h1>New Defense Request Assigned!</h1>
 
         <div class="content">
             <p class="message">

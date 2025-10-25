@@ -166,7 +166,7 @@
             <span class="header-title">Graduate School System</span>
         </div>
 
-        <h1>New Student Assignment</h1>
+        <h1>New Student Assignment!</h1>
 
         <div class="content">
             <p class="message">
