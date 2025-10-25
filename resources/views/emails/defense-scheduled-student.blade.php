@@ -84,6 +84,30 @@
             margin-bottom: 10px;
         }
 
+        .prepare-box {
+            background-color: #f3f4f6;
+            padding: 20px;
+            margin: 20px 0;
+        }
+
+        .prepare-box h3 {
+            font-size: 16px;
+            font-weight: bold;
+            margin-top: 0;
+            margin-bottom: 15px;
+            color: #333;
+        }
+
+        .prepare-box ul {
+            margin: 0;
+            padding-left: 20px;
+        }
+
+        .prepare-box li {
+            margin-bottom: 8px;
+            color: #333;
+        }
+
         .schedule-box {
             background-color: #f3f4f6;
             padding: 20px;
@@ -226,8 +250,8 @@
                 </div>
             @endif
 
-            <div class="info-box">
-                <h2>What to Expect & How to Prepare</h2>
+            <div class="prepare-box">
+                <h3>What to Expect & How to Prepare</h3>
                 <ul>
                     <li>Review your thesis/dissertation thoroughly, especially methodology and findings</li>
                     <li>Prepare a brief presentation (typically 15-20 minutes) summarizing your work</li>

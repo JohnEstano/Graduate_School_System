@@ -157,7 +157,7 @@
                     <i class="fas fa-calendar-alt"></i> {{ $defenseRequest->scheduled_date->format('l, F j, Y') }}
                 </div>
                 <div class="time">
-                    <i class="fas fa-clock"></i> {{ $defenseRequest->scheduled_time }} - {{ $defenseRequest->scheduled_end_time }}
+                    <i class="fa-regular fa-clock"></i>  {{ $defenseRequest->scheduled_time }} - {{ $defenseRequest->scheduled_end_time }}
                 </div>
                 @if($defenseRequest->defense_mode)
                     <span class="mode-badge">

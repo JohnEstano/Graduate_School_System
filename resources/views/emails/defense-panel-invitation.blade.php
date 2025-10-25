@@ -4,236 +4,220 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Defense Panel Invitation</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <style>
         body {
-            margin: 0;
-            padding: 0;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-            background-color: #f5f5f5;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif,
+                'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol';
             line-height: 1.6;
-        }
-        .email-container {
+            color: #333;
             max-width: 600px;
             margin: 0 auto;
+            padding: 20px;
+            background-color: #f4f4f4;
+        }
+
+        .container {
             background-color: #ffffff;
+            padding: 30px;
         }
+
         .header {
-            background: linear-gradient(135deg, #991B1B 0%, #7F1D1D 100%);
-            padding: 40px 30px;
-            text-align: center;
-        }
-        .logo {
-            width: 80px;
-            height: 80px;
-            margin: 0 auto 20px;
-        }
-        .header h1 {
-            color: #ffffff;
-            margin: 0;
-            font-size: 28px;
-            font-weight: 600;
-        }
-        .header p {
-            color: #FEE2E2;
-            margin: 10px 0 0 0;
-            font-size: 16px;
-        }
-        .content {
-            padding: 40px 30px;
-        }
-        .greeting {
-            font-size: 18px;
-            color: #374151;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
             margin-bottom: 20px;
         }
-        .message {
-            color: #6B7280;
-            margin-bottom: 30px;
-            font-size: 16px;
+
+        .logo {
+            max-width: 50px;
+            height: auto;
         }
+
+        .header-title {
+            color: #FF4B64;
+            font-size: 14px;
+            font-weight: bold;
+        }
+
+        h1 {
+            font-size: 32px;
+            font-weight: bold;
+            margin-top: 0;
+            margin-bottom: 50px;
+        }
+
+        .content {
+            margin-bottom: 30px;
+        }
+
+        .message {
+            font-size: 16px;
+            line-height: 1.8;
+            margin-bottom: 32px;
+        }
+
         .role-badge {
             display: inline-block;
-            background: linear-gradient(135deg, #991B1B 0%, #7F1D1D 100%);
+            background-color: #FF4B64;
             color: #ffffff;
-            padding: 8px 16px;
-            border-radius: 20px;
+            padding: 10px 20px;
+            text-align: center;
+            font-weight: bold;
             font-size: 14px;
-            font-weight: 600;
             text-transform: uppercase;
             letter-spacing: 1px;
-            margin: 10px 0 20px 0;
+            margin: 20px 0;
+            margin-bottom: 5px;
         }
-        .defense-details {
-            background-color: #FEF2F2;
-            border-left: 4px solid #991B1B;
+
+        .info-box {
+            border: 1px solid #e5e7eb;
             padding: 20px;
-            margin: 30px 0;
-            border-radius: 4px;
+            margin: 20px 0;
         }
-        .defense-details h2 {
-            color: #991B1B;
-            margin: 0 0 15px 0;
-            font-size: 20px;
-            font-weight: 600;
+
+        .info-box h2 {
+            font-size: 18px;
+            font-weight: bold;
+            margin-top: 0;
+            margin-bottom: 15px;
+            color: #333;
         }
-        .detail-row {
-            display: flex;
-            margin-bottom: 12px;
-            padding-bottom: 12px;
-            border-bottom: 1px solid #FEE2E2;
-        }
-        .detail-row:last-child {
-            margin-bottom: 0;
-            padding-bottom: 0;
-            border-bottom: none;
-        }
-        .detail-label {
-            font-weight: 600;
-            color: #991B1B;
-            min-width: 140px;
+
+        .info-box .label {
+            font-weight: bold;
+            color: #666;
+            margin-top: 12px;
+            margin-bottom: 4px;
             font-size: 14px;
         }
-        .detail-value {
-            color: #374151;
-            font-size: 14px;
+
+        .info-box .value {
+            color: #333;
+            margin-bottom: 8px;
+            font-size: 16px;
         }
+
         .panel-section {
             margin-top: 20px;
             padding-top: 20px;
-            border-top: 2px solid #FEE2E2;
+            border-top: 1px solid #e5e7eb;
         }
+
         .panel-section h3 {
-            color: #991B1B;
-            margin: 0 0 15px 0;
             font-size: 16px;
-            font-weight: 600;
+            font-weight: bold;
+            margin-top: 0;
+            margin-bottom: 15px;
+            color: #333;
         }
+
         .panel-member {
-            background-color: #ffffff;
-            padding: 10px 15px;
+            background-color: #f9fafb;
+            padding: 12px 15px;
             margin-bottom: 8px;
-            border-radius: 4px;
-            border: 1px solid #FEE2E2;
+            border-left: 3px solid #FF4B64;
         }
+
         .panel-member-name {
             font-weight: 600;
-            color: #374151;
-            font-size: 14px;
+            color: #333;
+            font-size: 15px;
         }
+
         .panel-member-role {
-            color: #991B1B;
+            color: #FF4B64;
             font-size: 12px;
-            font-weight: 500;
+            font-weight: 600;
             text-transform: uppercase;
             letter-spacing: 0.5px;
+            margin-top: 4px;
         }
-        .info-box {
-            background-color: #EFF6FF;
-            border-left: 4px solid #3B82F6;
-            padding: 15px;
+
+        .responsibilities-box {
+            background-color: #f3f4f6;
+            padding: 20px;
             margin: 20px 0;
-            border-radius: 4px;
         }
-        .info-box h3 {
-            color: #1E40AF;
-            margin: 0 0 10px 0;
+
+        .responsibilities-box h3 {
             font-size: 16px;
-            font-weight: 600;
+            font-weight: bold;
+            margin-top: 0;
+            margin-bottom: 15px;
+            color: #333;
         }
-        .info-box ul {
+
+        .responsibilities-box ul {
             margin: 0;
             padding-left: 20px;
-            color: #1E3A8A;
         }
-        .info-box li {
-            margin-bottom: 5px;
+
+        .responsibilities-box li {
+            margin-bottom: 8px;
+            color: #333;
         }
+
         .footer {
-            background-color: #F9FAFB;
-            padding: 30px;
             text-align: center;
-            border-top: 1px solid #E5E7EB;
+            margin-top: 30px;
+            padding-top: 20px;
+            font-size: 12px;
+            color: #6b7280;
         }
-        .footer p {
-            color: #6B7280;
-            margin: 5px 0;
-            font-size: 14px;
-        }
-        .footer-divider {
-            border: none;
-            border-top: 1px solid #E5E7EB;
-            margin: 20px 0;
+
+        .footer .logo {
+            max-width: 60px;
+            margin-bottom: 10px;
         }
     </style>
 </head>
 <body>
-    <div class="email-container">
-        <!-- Header -->
+    <div class="container">
         <div class="header">
-            <div class="logo">
-                <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-                    <circle cx="50" cy="50" r="45" fill="#ffffff" opacity="0.2"/>
-                    <path d="M30 40 L30 70 L40 70 L40 40 Z M50 40 L50 70 L70 70 L70 60 L60 60 L60 55 L70 55 L70 45 L60 45 L60 40 Z" fill="#ffffff"/>
-                </svg>
-            </div>
-            <h1>Panel Invitation</h1>
-            <p>Thesis/Dissertation Defense</p>
+            <img src="{{ asset('gss-uic-logo-v2.png') }}" alt="UIC Graduate School Logo" class="logo">
+            <span class="header-title">Graduate School System</span>
         </div>
 
-        <!-- Content -->
-        <div class="content">
-            <div class="greeting">
-                Dear Prof. {{ $panelistName }},
-            </div>
+        <h1>Defense Panel Invitation</h1>
 
-            <div class="message">
-                <p>You are cordially invited to serve on the defense panel for a graduate student at the University of the Immaculate Conception Graduate School. Your expertise and insights would be invaluable to this academic evaluation.</p>
-            </div>
+        <div class="content">
+            <p class="message">
+                <strong>Dear Prof. {{ $panelistName }},</strong>
+            </p>
+            <p class="message">
+                You are cordially invited to serve on the defense panel for a graduate student at the University of the Immaculate Conception Graduate School. Your expertise and insights would be invaluable to this academic evaluation.
+            </p>
 
             <div style="text-align: center;">
-                <span class="role-badge">{{ strtoupper($role) }}</span>
+                <span class="role-badge"> <i class="fa-solid fa-user"></i> {{ strtoupper($role) }}</span>
             </div>
 
-            <!-- Defense Details -->
-            <div class="defense-details">
+            <div class="info-box">
                 <h2>Defense Details</h2>
                 
-                <div class="detail-row">
-                    <div class="detail-label">Student:</div>
-                    <div class="detail-value"><strong>{{ $studentName }}</strong></div>
-                </div>
+                <div class="label">Student</div>
+                <div class="value">{{ $studentName }}</div>
                 
-                <div class="detail-row">
-                    <div class="detail-label">Defense Title:</div>
-                    <div class="detail-value"><strong>{{ $defenseTitle }}</strong></div>
-                </div>
+                <div class="label">Defense Title</div>
+                <div class="value" style="font-style: italic;">{{ $defenseTitle }}</div>
                 
-                <div class="detail-row">
-                    <div class="detail-label">Adviser:</div>
-                    <div class="detail-value"><strong>{{ $adviserName }}</strong></div>
-                </div>
+                <div class="label">Adviser</div>
+                <div class="value">{{ $adviserName }}</div>
                 
-                <div class="detail-row">
-                    <div class="detail-label">Date:</div>
-                    <div class="detail-value"><strong>{{ \Carbon\Carbon::parse($defenseDate)->format('F j, Y (l)') }}</strong></div>
-                </div>
+                <div class="label">Date</div>
+                <div class="value"><i class="fas fa-calendar-alt"></i> {{ \Carbon\Carbon::parse($defenseDate)->format('l, F j, Y') }}</div>
                 
-                <div class="detail-row">
-                    <div class="detail-label">Time:</div>
-                    <div class="detail-value"><strong>{{ \Carbon\Carbon::parse($defenseTime)->format('g:i A') }} - {{ \Carbon\Carbon::parse($defenseEndTime)->format('g:i A') }}</strong></div>
-                </div>
+                <div class="label">Time</div>
+                <div class="value"><i class="fas fa-clock"></i> {{ \Carbon\Carbon::parse($defenseTime)->format('g:i A') }} - {{ \Carbon\Carbon::parse($defenseEndTime)->format('g:i A') }}</div>
                 
-                <div class="detail-row">
-                    <div class="detail-label">Mode:</div>
-                    <div class="detail-value"><strong>{{ ucfirst($defenseMode) }}</strong></div>
-                </div>
+                <div class="label">Mode</div>
+                <div class="value">{{ ucfirst($defenseMode) }}</div>
                 
-                <div class="detail-row">
-                    <div class="detail-label">Venue:</div>
-                    <div class="detail-value"><strong>{{ $defenseVenue }}</strong></div>
-                </div>
+                <div class="label">Venue</div>
+                <div class="value"><i class="fas fa-map-marker-alt"></i> {{ $defenseVenue }}</div>
 
-                <!-- Panel Section -->
                 @if(count($otherPanels) > 0)
                 <div class="panel-section">
                     <h3>Other Panel Members</h3>
@@ -247,9 +231,8 @@
                 @endif
             </div>
 
-            <!-- Role Description -->
-            <div class="info-box">
-                <h3>📌 Your Role as {{ ucfirst($role) }}</h3>
+            <div class="responsibilities-box">
+                <h3><i class="fa-regular fa-user"></i> Your Role as {{ ucfirst($role) }}</h3>
                 <ul>
                     @if($role === 'chair')
                         <li>Preside over the defense proceedings</li>
@@ -267,20 +250,26 @@
                 </ul>
             </div>
 
-            <div class="message">
-                <p>Please confirm your availability for this defense at your earliest convenience. If you are unable to attend or have any concerns, kindly inform the Graduate School office immediately.</p>
-                <p>Thank you for your service to the academic community and your contribution to maintaining the quality of graduate education at UIC.</p>
-            </div>
+            <p class="message" style="font-size: 14px; color: #6b7280;">
+                Please confirm your availability for this defense at your earliest convenience. If you are unable to attend or have any concerns, kindly inform the Graduate School office immediately.
+            </p>
+            <p class="message" style="font-size: 14px; color: #6b7280;">
+                Thank you for your service to the academic community and your contribution to maintaining the quality of graduate education at UIC.
+            </p>
         </div>
+    </div>
 
-        <!-- Footer -->
-        <div class="footer">
-            <p><strong>University of the Immaculate Conception</strong></p>
-            <p>Graduate School</p>
-            <hr class="footer-divider">
-            <p>This is an automated invitation. Please do not reply to this email.</p>
-            <p>For assistance or to confirm attendance, contact the Graduate School office.</p>
-        </div>
+    <div class="footer">
+        <img src="{{ asset('gss-uic-logo-v2.png') }}" alt="UIC Graduate School Logo" class="logo">
+        <p>
+            <strong>University of the Immaculate Conception</strong><br>
+            Graduate School Office<br>
+            Father Selga St., Davao City, Philippines 8000
+        </p>
+        <p style="margin-top: 15px;">
+            This is an automated message from the Graduate School System. Please do not
+            reply to this email.
+        </p>
     </div>
 </body>
 </html>
