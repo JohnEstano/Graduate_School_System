@@ -240,6 +240,8 @@ class DefenseRequestController extends Controller
             'recEndorsement' => 'required|file|mimes:pdf,doc,docx,jpg,jpeg,png|max:204800',
             'proofOfPayment' => 'required|file|mimes:pdf,doc,docx,jpg,jpeg,png|max:204800',
             'referenceNo' => 'required|string|max:100',
+            'paymentDate' => 'required|date',
+            'amount' => 'required|numeric|min:0',
             'avisee_adviser_attachment' => "nullable|file|mimes:pdf,doc,docx,jpg,jpeg,png|max:204800",
         ]);
 
@@ -264,6 +266,8 @@ class DefenseRequestController extends Controller
                 'rec_endorsement' => $data['recEndorsement'] ?? null,
                 'proof_of_payment' => $data['proofOfPayment'] ?? null,
                 'reference_no' => $data['referenceNo'] ?? null,
+                'payment_date' => $data['paymentDate'] ?? null,
+                'amount' => $data['amount'] ?? null,
                 'submitted_by' => Auth::id(),
                 'status' => 'Pending',
                 'priority' => 'Medium',
@@ -2186,113 +2190,22 @@ class DefenseRequestController extends Controller
                 'new_workflow_state' => $defenseRequest->workflow_state
             ]);
 
-            // 🎉 AUTOMATICALLY CREATE HONORARIUM PAYMENTS
-            Log::info('completeDefense: Creating honorarium payments', [
-                'defense_id' => $defenseRequest->id,
-                'program' => $defenseRequest->program,
-                'defense_type' => $defenseRequest->defense_type
-            ]);
-
-            // Get program level
-            $programLevel = \App\Helpers\ProgramLevel::getLevel($defenseRequest->program);
-
-            Log::info('completeDefense: Program level determined', [
-                'program' => $defenseRequest->program,
-                'program_level' => $programLevel
-            ]);
-
-            // Create payments for each committee member
-            $members = [
-                ['role' => 'Adviser', 'name' => $defenseRequest->defense_adviser],
-                ['role' => 'Panel Chair', 'name' => $defenseRequest->defense_chairperson],
-                ['role' => 'Panel Member 1', 'name' => $defenseRequest->defense_panelist1],
-                ['role' => 'Panel Member 2', 'name' => $defenseRequest->defense_panelist2],
-                ['role' => 'Panel Member 3', 'name' => $defenseRequest->defense_panelist3],
-                ['role' => 'Panel Member 4', 'name' => $defenseRequest->defense_panelist4],
-            ];
-
-            $paymentsCreated = 0;
-            foreach ($members as $member) {
-                if (empty($member['name'])) {
-                    Log::debug('completeDefense: Skipping empty member', ['role' => $member['role']]);
-                    continue;
-                }
-
-                Log::info('completeDefense: Processing member', [
-                    'role' => $member['role'],
-                    'name' => $member['name']
-                ]);
-
-                // Map role to payment rate type
-                // All panel members (chair and panelists) use "Panel Chair" rate
-                $rateType = ($member['role'] === 'Adviser') ? 'Adviser' : 'Panel Chair';
-
-                Log::info('completeDefense: Mapped rate type', [
-                    'original_role' => $member['role'],
-                    'rate_type' => $rateType
-                ]);
-
-                // Get rate for this role
-                $rate = \App\Models\PaymentRate::where('program_level', $programLevel)
-                    ->where('defense_type', $defenseRequest->defense_type)
-                    ->where('type', $rateType)
-                    ->first();
-
-                if (!$rate) {
-                    Log::warning('completeDefense: No payment rate found', [
-                        'program_level' => $programLevel,
-                        'defense_type' => $defenseRequest->defense_type,
-                        'role' => $member['role']
-                    ]);
-                    continue;
-                }
-
-                Log::info('completeDefense: Rate found', [
-                    'role' => $member['role'],
-                    'amount' => $rate->amount
-                ]);
-
-                // Try to find panelist by name
-                $panelist = \App\Models\Panelist::where('name', $member['name'])->first();
-
-                // Create honorarium payment
-                $payment = \App\Models\HonorariumPayment::create([
-                    'defense_request_id' => $defenseRequest->id,
-                    'panelist_id' => $panelist?->id,
-                    'panelist_name' => $member['name'],
-                    'role' => $member['role'],
-                    'amount' => $rate->amount,
-                    'payment_status' => 'pending',
-                    'defense_date' => $defenseRequest->scheduled_date,
-                    'student_name' => trim($defenseRequest->first_name . ' ' . $defenseRequest->last_name),
-                    'program' => $defenseRequest->program,
-                    'defense_type' => $defenseRequest->defense_type,
-                ]);
-
-                Log::info('completeDefense: Payment created', [
-                    'payment_id' => $payment->id,
-                    'role' => $member['role'],
-                    'amount' => $rate->amount
-                ]);
-
-                $paymentsCreated++;
-            }
+            // HonorariumPayments are now created by AaPaymentVerificationObserver when status = 'ready_for_finance'
+            // This ensures payments are created at the right time in the workflow
 
             DB::commit();
 
             Log::info('completeDefense: Success', [
-                'defense_id' => $defenseRequest->id,
-                'payments_created' => $paymentsCreated
+                'defense_id' => $defenseRequest->id
             ]);
 
             return response()->json([
                 'success' => true,
-                'message' => 'Defense marked as completed and honorarium payments created.',
+                'message' => 'Defense marked as completed.',
                 'defense' => [
                     'id' => $defenseRequest->id,
                     'workflow_state' => $defenseRequest->workflow_state,
-                    'status' => $defenseRequest->status,
-                    'payments_count' => $paymentsCreated
+                    'status' => $defenseRequest->status
                 ]
             ]);
 

@@ -79,7 +79,25 @@ public function show($programId)
     ])->findOrFail($programId);
 
     // Format panelists data with students and payments
-        $panelists = $record->panelists->map(function($panelist) {
+    // Filter out advisers - only show Panel Chair and Panel Members
+    $panelists = $record->panelists
+        ->filter(function($panelist) {
+            // Get roles from pivot assignments
+            $roles = $panelist->students->pluck('pivot.role')->filter()->map(fn($r) => $this->normalizeRole($r))->filter()->unique()->values()->all();
+            
+            // Include this panelist only if they have Panel Chair or Panel Member roles
+            // Exclude if they only have Adviser role
+            foreach ($roles as $role) {
+                if ($role === 'Panel Chair' || $role === 'Panel Member') {
+                    return true;
+                }
+            }
+            
+            // Also check panelist's own role field as fallback
+            $normalizedRole = $this->normalizeRole($panelist->role ?? '');
+            return $normalizedRole === 'Panel Chair' || $normalizedRole === 'Panel Member';
+        })
+        ->map(function($panelist) {
             // derive roles from pivot assignments (panelist may have different roles per student)
             $roles = $panelist->students->pluck('pivot.role')->filter()->map(fn($r) => $this->normalizeRole($r))->filter()->unique()->values()->all();
             $roleSummary = count($roles) === 1 ? $roles[0] : (count($roles) > 1 ? implode(', ', $roles) : ($this->normalizeRole($panelist->role) ?? 'N/A'));

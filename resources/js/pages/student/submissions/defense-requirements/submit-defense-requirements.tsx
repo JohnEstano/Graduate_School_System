@@ -2,6 +2,7 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
 import { Separator } from '@/components/ui/separator';
 
 import React, { useRef, useState, useEffect } from 'react';
@@ -25,7 +26,8 @@ import {
     AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { usePage } from '@inertiajs/react';
-import { Check, Paperclip, AlertCircle } from 'lucide-react';
+import { Check, Paperclip, AlertCircle, CalendarIcon } from 'lucide-react';
+import { format } from "date-fns";
 
 
 type FacultyUser = {
@@ -179,10 +181,11 @@ export default function SubmitDefenseRequirements({ onFinish, open, onOpenChange
         rec_endorsement: File | null;
         proof_of_payment: File | null;
         reference_no: string;
+        payment_date: Date | null;
         manuscript_proposal: File | null;
         similarity_index: File | null;
         avisee_adviser_attachment: File | null;
-        amount: string; // <-- Add this line
+        amount: string;
     }>({
         first_name: user.first_name || '',
         middle_name: user.middle_name || '',
@@ -197,10 +200,11 @@ export default function SubmitDefenseRequirements({ onFinish, open, onOpenChange
         rec_endorsement: null,
         proof_of_payment: null,
         reference_no: '',
+        payment_date: null,
         manuscript_proposal: null,
         similarity_index: null,
         avisee_adviser_attachment: null,
-        amount: '', // <-- Add this line
+        amount: '',
     });
 
     const [openDialog, setOpenDialog] = useState(false);
@@ -244,7 +248,7 @@ export default function SubmitDefenseRequirements({ onFinish, open, onOpenChange
         }
 
         // Normalize defense type for comparison - match exact case from database
-        const normalizedDefenseType = data.defense_type; // Keep original case: "Proposal", "Prefinal", "Final"
+        const normalizedDefenseType = data.defense_type; // Keep original case: "Proposal", "Pre-final", "Final"
 
         console.log('Payment calculation:', {
             program: data.program,
@@ -309,7 +313,28 @@ export default function SubmitDefenseRequirements({ onFinish, open, onOpenChange
     }
 
     function handleSubmit() {
+        // Transform data to match backend expectations
+        const formData = {
+            firstName: data.first_name,
+            middleName: data.middle_name,
+            lastName: data.last_name,
+            schoolId: data.school_id,
+            program: data.program,
+            thesisTitle: data.thesis_title,
+            defenseAdviser: data.adviser,
+            defenseType: data.defense_type,
+            recEndorsement: data.rec_endorsement,
+            proofOfPayment: data.proof_of_payment,
+            referenceNo: data.reference_no,
+            paymentDate: data.payment_date ? format(data.payment_date, "yyyy-MM-dd") : null,
+            amount: data.amount,
+            manuscriptProposal: data.manuscript_proposal,
+            similarityIndex: data.similarity_index,
+            aviseeAdviserAttachment: data.avisee_adviser_attachment,
+        };
+
         post(route('defense-requirements.store'), {
+            data: formData,
             forceFormData: true,
             onSuccess: () => {
                 window.location.reload(); // Refresh the page after successful submission
@@ -343,12 +368,13 @@ export default function SubmitDefenseRequirements({ onFinish, open, onOpenChange
         if (!data.similarity_index) return false;
         if (!data.proof_of_payment) return false;
         if (!data.reference_no.trim()) return false;
+        if (!data.payment_date) return false;
         if (data.amount === '' || data.amount === null || data.amount === undefined) return false; // Amount must be calculated
 
         if (data.defense_type === 'Proposal') {
             if (!data.avisee_adviser_attachment) return false;
         }
-        if (data.defense_type === 'Prefinal' || data.defense_type === 'Final') {
+        if (data.defense_type === 'Pre-final' || data.defense_type === 'Final') {
             if (!data.rec_endorsement) return false;
         }
         return true;
@@ -478,7 +504,7 @@ export default function SubmitDefenseRequirements({ onFinish, open, onOpenChange
                         <div className="flex gap-2 mb-2">
                             {[
                                 { value: "Proposal", label: "Proposal" },
-                                { value: "Prefinal", label: "Prefinal" },
+                                { value: "Pre-final", label: "Pre-final" },
                                 { value: "Final", label: "Final" },
                             ].map(option => (
                                 <button
@@ -523,7 +549,7 @@ export default function SubmitDefenseRequirements({ onFinish, open, onOpenChange
                           
                         </p>
                         <div className="space-y-4">
-                            {(data.defense_type === 'Prefinal' || data.defense_type === 'Final') && (
+                            {(data.defense_type === 'Pre-final' || data.defense_type === 'Final') && (
                                 <div>
                                     <Label className="text-xs">
                                         REC Endorsement <span className="text-rose-500">*</span>
@@ -675,6 +701,21 @@ export default function SubmitDefenseRequirements({ onFinish, open, onOpenChange
                             </div>
                             <div>
                                 <Label className="text-xs mb-1">
+                                    Payment Date <span className="text-rose-500">*</span>
+                                </Label>
+                                <Input
+                                    type="date"
+                                    value={data.payment_date ? format(data.payment_date, "yyyy-MM-dd") : ""}
+                                    onChange={e => {
+                                        const val = e.target.value;
+                                        setData('payment_date', val ? new Date(val) : null);
+                                    }}
+                                    className="h-8 text-sm w-full"
+                                    required
+                                />
+                            </div>
+                            <div>
+                                <Label className="text-xs mb-1">
                                     Reference No. <span className="text-rose-500">*</span>
                                 </Label>
                                 <Input
@@ -727,7 +768,7 @@ export default function SubmitDefenseRequirements({ onFinish, open, onOpenChange
                         <div>
                             <div className="mb-1 font-semibold text-rose-700">Document Uploads</div>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-1">
-                                {(data.defense_type === 'Prefinal' || data.defense_type === 'Final') && (
+                                {(data.defense_type === 'Pre-final' || data.defense_type === 'Final') && (
                                     <div>
                                         <span className="font-medium">REC Endorsement:</span> {data.rec_endorsement?.name || <span className="text-muted-foreground">—</span>}
                                     </div>
@@ -754,6 +795,9 @@ export default function SubmitDefenseRequirements({ onFinish, open, onOpenChange
                                 </div>
                                 <div>
                                     <span className="font-medium">Reference No.:</span> {data.reference_no}
+                                </div>
+                                <div>
+                                    <span className="font-medium">Payment Date:</span> {data.payment_date ? format(data.payment_date, "PPP") : <span className="text-muted-foreground">—</span>}
                                 </div>
                                 <div>
                                     <span className="font-medium">Amount:</span>
