@@ -118,6 +118,9 @@ class StudentRecordSyncService
                 ]);
             }
 
+            // Update program's date_edited after all records are synced
+            $programRecord->update(['date_edited' => now()]);
+
             DB::commit();
             Log::info('Sync completed successfully', ['defense_id' => $defenseRequest->id]);
 
