@@ -81,6 +81,7 @@ export default function DeanDashboard() {
     const [panelistsCount, setPanelistsCount] = useState<number>(0);
     const [advisersCount, setAdvisersCount] = useState<number>(0);
     const [assignedProgramsCount, setAssignedProgramsCount] = useState<number>(0);
+    const [pendingHonorariumsCount, setPendingHonorariumsCount] = useState<number>(0);
 
     const [selectedDay, setSelectedDay] = useState<number>(new Date().getDay());
 
@@ -146,6 +147,14 @@ export default function DeanDashboard() {
                 setAssignedProgramsCount(Array.isArray(data) ? data.length : 0);
             })
             .catch(() => setAssignedProgramsCount(0));
+
+        // Fetch pending honorariums count
+        fetch('/api/dean/pending-honorariums', {
+            headers: { 'Accept': 'application/json' }
+        })
+            .then(res => res.ok ? res.json() : { pending_count: 0 })
+            .then((data) => setPendingHonorariumsCount(data.pending_count ?? 0))
+            .catch(() => setPendingHonorariumsCount(0));
     }, []);
 
     const todaysSchedules = getTodaysSchedules(allRequests);
@@ -168,7 +177,7 @@ export default function DeanDashboard() {
         },
         {
             title: "Pending Honorariums",
-            value: 7, // Replace with real value if available
+            value: pendingHonorariumsCount,
             description: "Honorariums not yet processed",
             icon: <BadgeDollarSign className="size-5 text-rose-400" />,
             iconTheme: "bg-rose-100 text-rose-600 dark:bg-rose-900 dark:text-rose-300",

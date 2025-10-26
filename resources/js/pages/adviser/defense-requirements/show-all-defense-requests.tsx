@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import dayjs from 'dayjs';
-import { Paperclip, Search, CheckCircle, XCircle, CircleArrowLeft, Trash2, Printer, X, Signature, Filter, CirclePlus, File, Users, ArrowRightLeft } from "lucide-react";
+import { Paperclip, Search, X, CirclePlus } from "lucide-react";
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
 import { Input } from "@/components/ui/input";
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/table';
@@ -45,48 +45,6 @@ function getDisplayName(req: DefenseRequest) {
     return `${req.first_name} ${middleInitial}${req.last_name}`;
 }
 
-function AttachmentLinks(req: DefenseRequest) {
-    const files = [
-        { key: 'manuscript_proposal', label: 'Manuscript' },
-        { key: 'similarity_index', label: 'Similarity' },
-        { key: 'rec_endorsement', label: 'REC Endorsement' },
-        { key: 'proof_of_payment', label: 'Proof of Payment' },
-        { key: 'advisers_endorsement', label: 'Adviser Endorsement' },
-        { key: 'avisee_adviser_attachment', label: 'Avisee-Adviser File' },
-    ];
-    return (
-        <TooltipProvider>
-            <div className="flex gap-1">
-                {files.map(f =>
-                    req[f.key as keyof DefenseRequest] ? (
-                        <Tooltip key={f.key}>
-                            <TooltipTrigger asChild>
-                                <a
-                                    href={`/storage/${req[f.key as keyof DefenseRequest]}`}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="group"
-                                    onClick={e => e.stopPropagation()}
-                                >
-                                    <span className="inline-flex items-center justify-center rounded bg-rose-500 hover:bg-rose-600 transition-colors w-7 h-7">
-                                        <Paperclip className="h-4 w-4 text-white" />
-                                    </span>
-                                </a>
-                            </TooltipTrigger>
-                            <TooltipContent
-                                side="top"
-                                className="text-xs bg-black text-white border-none shadow-lg"
-                            >
-                                {f.label}
-                            </TooltipContent>
-                        </Tooltip>
-                    ) : null
-                )}
-            </div>
-        </TooltipProvider>
-    );
-}
-
 type Coordinator = {
     name: string;
     email: string;
@@ -104,14 +62,10 @@ export default function ShowAllDefenseRequests({
     description?: string;
 }) {
     const [search, setSearch] = useState("");
-    const [selected, setSelected] = useState<number[]>([]);
-    const [bulkAction, setBulkAction] = useState<null | 'approve' | 'reject' | 'retrieve'>(null);
-    const [confirmBulkDelete, setConfirmBulkDelete] = useState(false);
-    const [priorityFilter, setPriorityFilter] = useState<string[]>([]);
+    const [adviserStatusFilter, setAdviserStatusFilter] = useState<string[]>([]);
+    const [coordinatorStatusFilter, setCoordinatorStatusFilter] = useState<string[]>([]);
     const [typeFilter, setTypeFilter] = useState<string[]>([]);
-    const [filtersOpen, setFiltersOpen] = useState<false | 'priority' | 'type'>(false);
-    const [processing, setProcessing] = useState(false);
-    const [confirmAction, setConfirmAction] = useState<null | 'approve' | 'reject'>(null);
+    const [filtersOpen, setFiltersOpen] = useState<false | 'adviserStatus' | 'coordinatorStatus' | 'type'>(false);
 
     // Filtered requests by search and filters
     const filteredRequests = defenseRequests.filter(req => {
@@ -119,108 +73,11 @@ export default function ShowAllDefenseRequests({
         const thesis = req.thesis_title?.toLowerCase() || "";
         const q = search.toLowerCase();
         let match = name.includes(q) || thesis.includes(q);
-        if (priorityFilter.length) match = match && priorityFilter.includes(req.priority || '');
+        if (adviserStatusFilter.length) match = match && adviserStatusFilter.includes(req.adviser_status || '');
+        if (coordinatorStatusFilter.length) match = match && coordinatorStatusFilter.includes(req.coordinator_status || '');
         if (typeFilter.length) match = match && typeFilter.includes(req.defense_type || '');
         return match;
     });
-
-    // Bulk select helpers
-    const headerChecked = selected.length === filteredRequests.length && filteredRequests.length > 0;
-    const toggleSelectAll = () =>
-        setSelected(headerChecked ? [] : filteredRequests.map(r => r.id));
-    const toggleSelectOne = (id: number) =>
-        setSelected(selected.includes(id) ? selected.filter(x => x !== id) : [...selected, id]);
-
-    // Print handler
-    function handleBulkPrint() {
-        const rows = defenseRequests.filter(r => selected.includes(r.id));
-        const w = window.open('', '', 'height=900,width=1200');
-        if (!w) return;
-        w.document.write(`
-          <html>
-            <head>
-              <title>Print Selected</title>
-              <style>
-                body{font-family:Arial;padding:32px}
-                h1{font-size:18px;margin:0 0 16px}
-                table{border-collapse:collapse;width:100%}
-                th,td{border:1px solid #ccc;padding:6px 8px;font-size:12px;text-align:left}
-              </style>
-            </head>
-            <body>
-              <h1>Defense Requests</h1>
-              <table>
-                <thead><tr><th>ID</th><th>Title</th><th>Presenter</th><th>Type</th><th>Status</th></tr></thead>
-                <tbody>
-                  ${rows.map(r => `<tr>
-                    <td>${r.id}</td>
-                    <td>${r.thesis_title}</td>
-                    <td>${r.first_name} ${r.last_name}</td>
-                    <td>${r.defense_type}</td>
-                    <td>${r.adviser_status === 'Approved' ? 'Endorsed' : (r.adviser_status || '—')}</td>
-                  </tr>`).join('')}
-                </tbody>
-              </table>
-              <script>window.print()</script>
-            </body>
-          </html>
-        `);
-        w.document.close();
-    }
-
-    // Bulk approve/reject handler
-    const handleBulkAction = async (action: 'approve' | 'reject' | 'retrieve') => {
-        setProcessing(true);
-        const toastId = toast.loading(
-            action === 'approve'
-                ? 'Approving selected...'
-                : action === 'reject'
-                ? 'Rejecting selected...'
-                : 'Retrieving selected...'
-        );
-        try {
-            let url = '';
-            if (action === 'approve') url = '/defense-requests/bulk-approve';
-            else if (action === 'reject') url = '/defense-requests/bulk-reject';
-            else if (action === 'retrieve') url = '/defense-requests/bulk-retrieve';
-
-            await axios.post(url, { ids: selected });
-            toast.success(
-                action === 'approve'
-                    ? "Requests approved and sent to your coordinator!"
-                    : action === 'reject'
-                    ? "Requests rejected."
-                    : "Requests retrieved for review.",
-                { id: toastId }
-            );
-            setSelected([]);
-            setConfirmAction(null);
-            setBulkAction(null);
-            window.location.reload();
-        } catch (e: any) {
-            toast.error(e.response?.data?.error || `Bulk ${action} failed.`, { id: toastId });
-        } finally {
-            setProcessing(false);
-        }
-    };
-
-    // Bulk delete handler (replace with your actual API logic)
-    const handleBulkDelete = async () => {
-        setConfirmBulkDelete(false);
-        setSelected([]);
-    };
-
-    // Table columns config (like coordinator)
-    const columns = {
-        title: true,
-        presenter: true,
-        adviser: true,
-        program: true,
-        type: true,
-        submitted_at: true,
-        adviser_status: true,
-        coordinator_status: true,
-    };
 
     return (
         <div className="flex flex-col flex-1 w-full min-h-[90vh] gap-2  pr-3 pl-0 relative overflow-x-hidden">
@@ -229,8 +86,8 @@ export default function ShowAllDefenseRequests({
                 {/* Title & Description */}
                 <div className="flex flex-row items-center justify-between w-full p-3 border-b border-border bg-white dark:bg-zinc-900">
                     <div className="flex items-center gap-2">
-                        <div className="h-10 w-10 flex items-center justify-center rounded-full bg-blue-500/10 dark:bg-blue-900/30 border border-blue-500 dark:border-blue-400">
-                            <File className="h-5 w-5 text-blue-400 dark:text-blue-300" />
+                        <div className="h-10 w-10 flex items-center justify-center rounded-full bg-rose-500/10 dark:bg-rose-900/30 border border-rose-500 dark:border-rose-400">
+                            <Paperclip className="h-5 w-5 text-rose-400 dark:text-rose-300" />
                         </div>
                         <div>
                             <span className="text-base font-semibold text-zinc-900 dark:text-zinc-100">
@@ -253,36 +110,70 @@ export default function ShowAllDefenseRequests({
                             onChange={e => setSearch(e.target.value)}
                             className="max-w-xs text-sm h-8"
                         />
-                        {/* Priority filter */}
-                        <Popover open={filtersOpen === 'priority'} onOpenChange={o => setFiltersOpen(o ? 'priority' : false)}>
+                        {/* Adviser Status filter */}
+                        <Popover open={filtersOpen === 'adviserStatus'} onOpenChange={o => setFiltersOpen(o ? 'adviserStatus' : false)}>
                             <PopoverTrigger asChild>
                                 <Button
                                     variant="outline"
                                     className="h-8 px-3 rounded-md border-dashed text-xs flex items-center gap-1"
                                 >
                                     <CirclePlus className="h-4 w-4 mr-1" />
-                                    Priority
-                                    {priorityFilter.length > 0 && (
+                                    Adviser Status
+                                    {adviserStatusFilter.length > 0 && (
                                         <span className="ml-1 px-2 py-0.5 rounded-full text-xs bg-muted">
-                                            {priorityFilter.length > 1 ? `${priorityFilter.length} selected` : priorityFilter[0]}
+                                            {adviserStatusFilter.length > 1 ? `${adviserStatusFilter.length} selected` : adviserStatusFilter[0]}
                                         </span>
                                     )}
                                 </Button>
                             </PopoverTrigger>
                             <PopoverContent className="w-44 p-1" side="bottom" align="start">
-                                {['Low', 'Medium', 'High'].map(p => (
+                                {['Pending', 'Endorsed', 'Rejected'].map(s => (
                                     <div
-                                        key={p}
+                                        key={s}
                                         onClick={() =>
-                                            setPriorityFilter(fp => fp.includes(p) ? fp.filter(x => x !== p) : [...fp, p])
+                                            setAdviserStatusFilter(fs => fs.includes(s) ? fs.filter(x => x !== s) : [...fs, s])
                                         }
                                         className="flex items-center gap-2 p-2 rounded hover:bg-muted cursor-pointer"
                                     >
-                                        <Checkbox checked={priorityFilter.includes(p)} />
-                                        <span className="text-sm">{p}</span>
+                                        <Checkbox checked={adviserStatusFilter.includes(s)} />
+                                        <span className="text-sm">{s}</span>
                                     </div>
                                 ))}
-                                <Button size="sm" variant="ghost" className="w-full mt-2" onClick={() => setPriorityFilter([])}>
+                                <Button size="sm" variant="ghost" className="w-full mt-2" onClick={() => setAdviserStatusFilter([])}>
+                                    Clear
+                                </Button>
+                            </PopoverContent>
+                        </Popover>
+                        {/* Coordinator Status filter */}
+                        <Popover open={filtersOpen === 'coordinatorStatus'} onOpenChange={o => setFiltersOpen(o ? 'coordinatorStatus' : false)}>
+                            <PopoverTrigger asChild>
+                                <Button
+                                    variant="outline"
+                                    className="h-8 px-3 rounded-md border-dashed text-xs flex items-center gap-1"
+                                >
+                                    <CirclePlus className="h-4 w-4 mr-1" />
+                                    Coordinator Status
+                                    {coordinatorStatusFilter.length > 0 && (
+                                        <span className="ml-1 px-2 py-0.5 rounded-full text-xs bg-muted">
+                                            {coordinatorStatusFilter.length > 1 ? `${coordinatorStatusFilter.length} selected` : coordinatorStatusFilter[0]}
+                                        </span>
+                                    )}
+                                </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-44 p-1" side="bottom" align="start">
+                                {['Pending', 'Approved', 'Rejected'].map(s => (
+                                    <div
+                                        key={s}
+                                        onClick={() =>
+                                            setCoordinatorStatusFilter(fs => fs.includes(s) ? fs.filter(x => x !== s) : [...fs, s])
+                                        }
+                                        className="flex items-center gap-2 p-2 rounded hover:bg-muted cursor-pointer"
+                                    >
+                                        <Checkbox checked={coordinatorStatusFilter.includes(s)} />
+                                        <span className="text-sm">{s}</span>
+                                    </div>
+                                ))}
+                                <Button size="sm" variant="ghost" className="w-full mt-2" onClick={() => setCoordinatorStatusFilter([])}>
                                     Clear
                                 </Button>
                             </PopoverContent>
@@ -322,13 +213,14 @@ export default function ShowAllDefenseRequests({
                             </PopoverContent>
                         </Popover>
                         {/* Reset button */}
-                        {(priorityFilter.length > 0 || typeFilter.length > 0 || search.trim()) && (
+                        {(adviserStatusFilter.length > 0 || coordinatorStatusFilter.length > 0 || typeFilter.length > 0 || search.trim()) && (
                             <Button
                                 variant="ghost"
                                 size="sm"
                                 className="h-8 px-3 flex items-center gap-1"
                                 onClick={() => {
-                                    setPriorityFilter([]);
+                                    setAdviserStatusFilter([]);
+                                    setCoordinatorStatusFilter([]);
                                     setTypeFilter([]);
                                     setSearch('');
                                 }}
@@ -348,39 +240,22 @@ export default function ShowAllDefenseRequests({
                                 <Table className="min-w-[900px] w-full text-sm table-auto">
                                     <TableHeader>
                                         <TableRow>
-                                            <TableHead className="w-[40px] px-3 py-2">
-                                                <Checkbox
-                                                    checked={headerChecked}
-                                                    onCheckedChange={toggleSelectAll}
-                                                    aria-label="Select all"
-                                                />
-                                            </TableHead>
                                             <TableHead className="px-3 py-2 min-w-[220px] whitespace-nowrap">Thesis Title</TableHead>
                                             <TableHead className="px-3 py-2 min-w-[120px] whitespace-nowrap">Presenter</TableHead>
                                             <TableHead className="px-3 py-2 min-w-[100px] whitespace-nowrap">Program</TableHead>
                                             <TableHead className="px-3 py-2 min-w-[130px] text-center whitespace-nowrap">Submitted</TableHead>
-                                            <TableHead className="px-3 py-2 min-w-[180px] whitespace-nowrap">Attachments</TableHead>
                                             <TableHead className="px-3 py-2 min-w-[120px] text-center whitespace-nowrap">Adviser Status</TableHead>
                                             <TableHead className="px-3 py-2 min-w-[120px] text-center whitespace-nowrap">Coordinator Status</TableHead>
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
                                         {filteredRequests.map(req => {
-                                            const isSelected = selected.includes(req.id);
                                             return (
                                                 <TableRow
                                                     key={req.id}
                                                     className="hover:bg-muted/40 cursor-pointer"
                                                     onClick={() => router.visit(`/adviser/defense-requirements/${req.id}/details`)}
                                                 >
-                                                    <TableCell className="px-3 py-2 align-middle">
-                                                        <Checkbox
-                                                            checked={isSelected}
-                                                            onCheckedChange={() => toggleSelectOne(req.id)}
-                                                            className="action-btn"
-                                                            onClick={e => e.stopPropagation()}
-                                                        />
-                                                    </TableCell>
                                                     {/* Type badge before thesis title */}
                                                     <TableCell className="px-3 py-2 font-medium truncate leading-tight align-middle whitespace-nowrap max-w-[260px]" title={req.thesis_title}>
                                                         {req.defense_type && (
@@ -398,9 +273,6 @@ export default function ShowAllDefenseRequests({
                                                         {req.created_at
                                                             ? dayjs(req.created_at).format('YYYY-MM-DD hh:mm A')
                                                             : '—'}
-                                                    </TableCell>
-                                                    <TableCell className="px-3 py-2 max-w-[180px] truncate align-middle">
-                                                        <AttachmentLinks {...req} />
                                                     </TableCell>
                                                     <TableCell className="px-3 py-2 text-xs whitespace-nowrap text-center align-middle">
                                                         <Badge
@@ -437,7 +309,7 @@ export default function ShowAllDefenseRequests({
                                         })}
                                         {filteredRequests.length === 0 && (
                                             <TableRow>
-                                                <TableCell colSpan={8} className="text-center py-10 text-muted-foreground">
+                                                <TableCell colSpan={6} className="text-center py-10 text-muted-foreground">
                                                     No defense requests found.
                                                 </TableCell>
                                             </TableRow>
@@ -449,115 +321,6 @@ export default function ShowAllDefenseRequests({
                     </div>
                 </div>
             </div>
-            {/* --- Floating Bulk Action Bar --- */}
-            {selected.length > 0 && (
-                <div className="fixed left-1/2 z-30 -translate-x-1/2 bottom-4 md:bottom-6 flex items-center gap-1 bg-white border border-border shadow-lg rounded-lg px-4 py-1 text-xs animate-in fade-in slide-in-from-bottom-2 dark:bg-muted dark:text-muted-foreground dark:border-border">
-                    <span className="font-semibold min-w-[70px] text-center">{selected.length} selected</span>
-                    <div className="flex gap-1">
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            className="px-3 py-1 h-7 w-auto text-xs flex items-center gap-1"
-                            onClick={() => setConfirmAction('approve')}
-                            aria-label="Approve"
-                            disabled={processing}
-                        >
-                            <CheckCircle size={13} className="text-green-500" />
-                            <span className="hidden sm:inline">Approve</span>
-                        </Button>
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            className="px-3 py-1 h-7 w-auto text-xs flex items-center gap-1"
-                            onClick={() => setConfirmAction('reject')}
-                            aria-label="Reject"
-                            disabled={processing}
-                        >
-                            <XCircle size={13} className="text-red-500" />
-                            <span className="hidden sm:inline">Reject</span>
-                        </Button>
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            className="px-3 py-1 h-7 w-auto text-xs flex items-center gap-1"
-                            onClick={() => setBulkAction('retrieve')}
-                            aria-label="Retrieve"
-                        >
-                            <CircleArrowLeft size={13} className="text-blue-500" />
-                            <span className="hidden sm:inline">Retrieve</span>
-                        </Button>
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            className="px-3 py-1 h-7 w-auto text-xs flex items-center gap-1"
-                            onClick={() => setConfirmBulkDelete(true)}
-                            aria-label="Delete"
-                        >
-                            <Trash2 size={13} />
-                            <span className="hidden sm:inline">Delete</span>
-                        </Button>
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            className="px-3 py-1 h-7 w-auto text-xs flex items-center gap-1"
-                            onClick={handleBulkPrint}
-                            aria-label="Print"
-                        >
-                            <Printer size={13} />
-                            <span className="hidden sm:inline">Print</span>
-                        </Button>
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            className="px-1 py-1 h-7 w-auto text-xs flex items-center"
-                            onClick={() => setSelected([])}
-                            aria-label="Clear selection"
-                        >
-                            <X size={14} />
-                        </Button>
-                    </div>
-                </div>
-            )}
-            {/* --- Confirmation Dialog --- */}
-            <Dialog open={!!confirmAction} onOpenChange={v => !processing && setConfirmAction(null)}>
-                <DialogContent>
-                    <DialogHeader>
-                        <DialogTitle>
-                            {confirmAction === 'approve'
-                                ? "Approve selected requests?"
-                                : "Reject selected requests?"}
-                        </DialogTitle>
-                        {confirmAction === 'approve' && coordinator && (
-                            <div className="mt-2 text-xs text-muted-foreground">
-                                These requests will be forwarded to your coordinator: <span className="font-semibold">{coordinator.name}</span>
-                            </div>
-                        )}
-                    </DialogHeader>
-                    <div className="text-sm mb-2">
-                        {confirmAction === 'approve'
-                            ? "Are you sure you want to approve and forward these requests to your coordinator?"
-                            : "Are you sure you want to reject these requests? This cannot be undone."}
-                    </div>
-                    <DialogFooter>
-                        <Button
-                            variant="outline"
-                            onClick={() => setConfirmAction(null)}
-                            disabled={processing}
-                        >
-                            Cancel
-                        </Button>
-                        <Button
-                            onClick={() => handleBulkAction(confirmAction!)}
-                            disabled={processing}
-                            className="bg-rose-500 hover:bg-rose-600 text-white"
-                        >
-                            {processing
-                                ? (confirmAction === 'approve' ? "Approving..." : "Rejecting...")
-                                : (confirmAction === 'approve' ? "Approve" : "Reject")}
-                        </Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
             {/* --- End Confirmation Dialog --- */}
         </div>
     );

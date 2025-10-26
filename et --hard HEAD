@@ -1,0 +1,2184 @@
+[33mcommit d3d36f19da5b932036522960f33a0a6797131e16[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mtest-v3-clone[m[33m, [m[1;31morigin/test-v3-clone[m[33m)[m
+Author: JohnEstano <jestano_230000001603@uic.edu.ph>
+Date:   Thu Oct 23 20:12:19 2025 +0800
+
+    Checkpoint
+
+[33mcommit b7ed46cc66537fe085e8ad9061562fd467207eae[m
+Merge: 9fd9191 9011ab0
+Author: JohnEstano <jestano_230000001603@uic.edu.ph>
+Date:   Thu Oct 23 18:30:30 2025 +0800
+
+    Merged fix
+
+[33mcommit 9fd9191dfd1eed4b06f10b946bb6b7dedddc4f00[m
+Author: JohnEstano <jestano_230000001603@uic.edu.ph>
+Date:   Thu Oct 23 08:21:03 2025 +0800
+
+    Initial
+
+[33mcommit 9011ab05c8d31812b4ae0b7f38098f7902ab2b57[m[33m ([m[1;31morigin/test-v1[m[33m, [m[1;31morigin/safe-checkpoint-v5[m[33m, [m[1;32mtest-v1[m[33m, [m[1;32msafe-checkpoint-v5[m[33m)[m
+Author: Geoffrey Diapz <145132976+yyerf@users.noreply.github.com>
+Date:   Wed Oct 22 22:13:00 2025 +0800
+
+    production ready v3 (fixed real-time system and email notifications)
+
+[33mcommit c0f2a0ef39b9a7b4ff2cf5dcf6416160dd70d2f5[m[33m ([m[1;31morigin/test-v3[m[33m, [m[1;32mtest-v3[m[33m)[m
+Author: JohnEstano <jestano_230000001603@uic.edu.ph>
+Date:   Wed Oct 22 21:55:41 2025 +0800
+
+    fixed the aa workflow
+
+[33mcommit ada2c781701f462bfbb3614690003edca6ea14e7[m
+Author: JohnEstano <jestano_230000001603@uic.edu.ph>
+Date:   Wed Oct 22 20:52:12 2025 +0800
+
+    Fixed
+
+[33mcommit f8d26f92d071b8c1f1ea0caed812c47b858f5bab[m[33m ([m[1;31morigin/safe-checkpoint-v4[m[33m, [m[1;32msafe-checkpoint-v4[m[33m)[m
+Author: JohnEstano <jestano_230000001603@uic.edu.ph>
+Date:   Wed Oct 22 19:48:59 2025 +0800
+
+    Fixed the student records
+
+[33mcommit 8695f8f668777bc62febfc71f216d406053a9576[m
+Author: JohnEstano <jestano_230000001603@uic.edu.ph>
+Date:   Wed Oct 22 19:34:07 2025 +0800
+
+    Checkpoint
+
+[33mcommit 54ddb2c04405e6da51394cbddb87a63367e043cf[m
+Author: JohnEstano <jestano_230000001603@uic.edu.ph>
+Date:   Wed Oct 22 16:52:03 2025 +0800
+
+    Fixed final for the honorarium summary
+
+[33mcommit fe336e9d736d7ef1023f4c91534f8f80ca20ebf8[m
+Author: JohnEstano <jestano_230000001603@uic.edu.ph>
+Date:   Wed Oct 22 16:41:16 2025 +0800
+
+    Fixed the honorarium summary
+
+[33mcommit 1e413bf7f2d5f55378c33419aa46afd38d2c55af[m
+Author: Geoffrey Diapz <145132976+yyerf@users.noreply.github.com>
+Date:   Wed Oct 22 14:26:39 2025 +0800
+
+    updated composer
+
+[33mcommit b35b5f198ba0798ec27da2f22834148ff26f2fb2[m
+Author: Geoffrey Diapz <145132976+yyerf@users.noreply.github.com>
+Date:   Wed Oct 22 14:26:14 2025 +0800
+
+    ready for prod (added email sending confirmation)
+
+[33mcommit ee1094bb1fb47bdbd935045a723fa4fba33a9c8e[m
+Author: JohnEstano <jestano_230000001603@uic.edu.ph>
+Date:   Wed Oct 22 05:02:25 2025 +0800
+
+    Fixed routes
+
+[33mcommit 49efd3ed163c752a0f8a9164c1e5b318e10c15f8[m
+Author: JohnEstano <jestano_230000001603@uic.edu.ph>
+Date:   Wed Oct 22 04:53:03 2025 +0800
+
+    checkpoint
+
+[33mcommit 4557c7f07f341d607e7f2e6cda7e20b66836d81e[m
+Author: JohnEstano <jestano_230000001603@uic.edu.ph>
+Date:   Wed Oct 22 03:09:17 2025 +0800
+
+    Fixed
+
+[33mcommit 5c24aeddc16db3bb940b17904c342fc2ed6702d7[m
+Author: JohnEstano <jestano_230000001603@uic.edu.ph>
+Date:   Tue Oct 21 23:07:28 2025 +0800
+
+    Initial
+
+[33mcommit 9e882a7e5e70fb7702a54eb0d7ac4342af90ebc3[m[33m ([m[1;31morigin/test-v2[m[33m, [m[1;32mtest-v2[m[33m)[m
+Author: JohnEstano <jestano_230000001603@uic.edu.ph>
+Date:   Tue Oct 21 22:10:56 2025 +0800
+
+    Fixed
+
+[33mcommit ec0f1e677b527b940ef8522cb79b4494206af33b[m[33m ([m[1;31morigin/dashboard/honorarium[m[33m, [m[1;32mdashboard/honorarium[m[33m)[m
+Author: JNQuez <jquezada_230000000642@uic.edu.ph>
+Date:   Tue Oct 21 22:04:38 2025 +0800
+
+    new: 21/10/25
+    
+    new update
+
+[33mcommit 71701c2f23362de5e276e878a5e72e68752cb861[m
+Merge: 81509e0 cb958e3
+Author: JohnEstano <jestano_230000001603@uic.edu.ph>
+Date:   Tue Oct 21 14:31:59 2025 +0800
+
+    Merge branch 'test-v1' of https://github.com/JohnEstano/Graduate_School_System into test-v1
+    
+    :exit
+    
+    :q
+    :qw
+    the commit.
+    
+    :exit
+    
+    :qw
+    :exit
+    
+    qqq
+    
+    qqweq
+    wsdas
+    d
+    
+    exit
+    :exit
+
+[33mcommit 81509e0517d31502bc6f405bd717adef607e2df1[m
+Author: JohnEstano <jestano_230000001603@uic.edu.ph>
+Date:   Tue Oct 21 14:31:38 2025 +0800
+
+    Fixed
+
+[33mcommit cb958e37e2685ecebfa3fb72f829f76f6b5463f0[m
+Author: Geoffrey Diapz <145132976+yyerf@users.noreply.github.com>
+Date:   Tue Oct 21 13:06:43 2025 +0800
+
+    prod ready
+
+[33mcommit e0739d70ed7fc9fcd92ef31045028975df8ba2a1[m
+Author: Geoffrey Diapz <145132976+yyerf@users.noreply.github.com>
+Date:   Tue Oct 21 13:06:33 2025 +0800
+
+    prod ready
+
+[33mcommit 67c6f69233e5e6905514839d850e6e9a706b8cff[m
+Author: Geoffrey Diapz <145132976+yyerf@users.noreply.github.com>
+Date:   Tue Oct 21 13:06:24 2025 +0800
+
+    prod ready
+
+[33mcommit 40ac06efeca38075ddf6b1a4c85092f47e9775ea[m
+Author: Geoffrey Diapz <145132976+yyerf@users.noreply.github.com>
+Date:   Mon Oct 20 21:49:45 2025 +0800
+
+    aligned the system theme to the email template
+
+[33mcommit 47064c300890169d73a06ac896f5d8fd91875229[m
+Author: Geoffrey Diapz <145132976+yyerf@users.noreply.github.com>
+Date:   Mon Oct 20 21:48:55 2025 +0800
+
+    fixed mobile view bugs and responsiveness
+
+[33mcommit bc266e9ded16a1c0062f5f7375408def7e6f8bb8[m
+Author: Geoffrey Diapz <145132976+yyerf@users.noreply.github.com>
+Date:   Mon Oct 20 21:48:10 2025 +0800
+
+    fixed controllers and email routes
+
+[33mcommit 30e8284899269f03323a399f53ad05bc7f22377e[m
+Author: Geoffrey Diapz <145132976+yyerf@users.noreply.github.com>
+Date:   Mon Oct 20 21:47:46 2025 +0800
+
+    added email routes
+    
+    added email notifications
+
+[33mcommit f600fc7421ec87ddebf9d88258d22e9caf22a4e2[m
+Merge: 7d4bb02 92b4729
+Author: JohnEstano <jestano_230000001603@uic.edu.ph>
+Date:   Mon Oct 20 18:59:06 2025 +0800
+
+    Merge branch 'test-v1' of https://github.com/JohnEstano/Graduate_School_System into test-v1
+
+[33mcommit 7d4bb0214efbf399406dc16beb95f75f8ac1a367[m
+Author: JohnEstano <jestano_230000001603@uic.edu.ph>
+Date:   Mon Oct 20 18:57:46 2025 +0800
+
+    Fixed
+
+[33mcommit 92b47293f71fd24dec3ef6bb765b446fa5b74a6f[m
+Merge: 876ec8a 7d53fc2
+Author: Geoffrey Diapz <145132976+yyerf@users.noreply.github.com>
+Date:   Mon Oct 20 18:35:36 2025 +0800
+
+    Merge branch 'test-v1' of https://github.com/JohnEstano/Graduate_School_System into test-v1
+
+[33mcommit 876ec8ae7f3ed019cbc2d9b844dcb58e69e50ff7[m
+Author: Geoffrey Diapz <145132976+yyerf@users.noreply.github.com>
+Date:   Mon Oct 20 18:35:09 2025 +0800
+
+    fixed coordinator and email routes
+
+[33mcommit 1384916fe11e9f6f2f920e7642e27116806866d3[m
+Author: JohnEstano <jestano_230000001603@uic.edu.ph>
+Date:   Mon Oct 20 18:22:48 2025 +0800
+
+    Added payment recievables for each panelists
+
+[33mcommit 7d53fc2ccff58c44a26d32aac42d7656b2856bd3[m
+Author: JohnEstano <jestano_230000001603@uic.edu.ph>
+Date:   Mon Oct 20 16:02:32 2025 +0800
+
+    Fixed
+
+[33mcommit fe188febf0dd4eedd29774ecadad428fd6044204[m
+Author: JohnEstano <jestano_230000001603@uic.edu.ph>
+Date:   Mon Oct 20 03:26:38 2025 +0800
+
+    Fixed
+
+[33mcommit b3b539675aa47ef7c2ce2059599831b2ce388482[m
+Author: JohnEstano <jestano_230000001603@uic.edu.ph>
+Date:   Mon Oct 20 01:40:38 2025 +0800
+
+    Fixed
+
+[33mcommit 05f7f927adc94a938053d2c06f975a6df1d0f8dd[m
+Author: JohnEstano <jestano_230000001603@uic.edu.ph>
+Date:   Sun Oct 19 05:50:42 2025 +0800
+
+    Fixed the coordinator showing records on other coordinator, restricted access for adviser records
+
+[33mcommit f23edb7f577351c97782ed929a3c4118d174a701[m
+Author: JohnEstano <jestano_230000001603@uic.edu.ph>
+Date:   Sun Oct 19 04:31:34 2025 +0800
+
+    Added restriction when adding a student that has an assigned adviser
+
+[33mcommit b4662ee84ee8ec936e2b3fec635b4b038baca914[m
+Author: JohnEstano <jestano_230000001603@uic.edu.ph>
+Date:   Sun Oct 19 03:12:58 2025 +0800
+
+    Added My Students and Dfense Requirement for all user roles
+
+[33mcommit ef4a92cc00cb94d484dc11203df8ddada75d8dc3[m
+Author: JohnEstano <jestano_230000001603@uic.edu.ph>
+Date:   Sun Oct 19 01:36:51 2025 +0800
+
+    Fixed
+
+[33mcommit ea9563d9690d190e5d742c1a404956accf443754[m
+Author: JohnEstano <jestano_230000001603@uic.edu.ph>
+Date:   Sat Oct 18 18:19:17 2025 +0800
+
+    Fixed dashboards metrics
+
+[33mcommit 0a65b6f99ca00d21e387b7504bb2f7daff4ddddb[m
+Author: JohnEstano <jestano_230000001603@uic.edu.ph>
+Date:   Sat Oct 18 17:49:09 2025 +0800
+
+    Fixed coordinator dashboard
+
+[33mcommit 289c9d9d836d04f2e59912018bbfe0e6fbc73ed5[m
+Author: JohnEstano <jestano_230000001603@uic.edu.ph>
+Date:   Sat Oct 18 16:54:06 2025 +0800
+
+    fixed
+
+[33mcommit 237acf7d4887d4005a32006a57b9fe8094fe3159[m
+Author: JohnEstano <jestano_230000001603@uic.edu.ph>
+Date:   Sat Oct 18 06:05:40 2025 +0800
+
+    idk
+
+[33mcommit a10733ba0e8b617ef096e365d262f8a3c075723a[m
+Author: JohnEstano <jestano_230000001603@uic.edu.ph>
+Date:   Sat Oct 18 04:37:10 2025 +0800
+
+    Fixed
+
+[33mcommit e1082059928b90943aa1f41db890883e0ad6dd14[m
+Author: JohnEstano <jestano_230000001603@uic.edu.ph>
+Date:   Sat Oct 18 04:02:38 2025 +0800
+
+    fixed
+
+[33mcommit fc0b39cd4ad0cc545dab94bc8b88bd0a7bc6fc3a[m
+Author: JohnEstano <jestano_230000001603@uic.edu.ph>
+Date:   Sat Oct 18 03:57:09 2025 +0800
+
+    Added and fixed workflow for the advisers-student link relationship
+
+[33mcommit e4e458dae5c7ec040fcbb85e9ecf3d8dcd9f5dfb[m
+Author: JohnEstano <jestano_230000001603@uic.edu.ph>
+Date:   Thu Oct 16 23:14:58 2025 +0800
+
+    Fixed
+
+[33mcommit 3699bb3e7befeab8bed09566e51eec5ff02955c5[m
+Author: JohnEstano <jestano_230000001603@uic.edu.ph>
+Date:   Wed Oct 15 23:42:41 2025 +0800
+
+    Added and fixed the advisers-student-coordinator-relationship
+
+[33mcommit 7b6db0634fb1497c5f4c5cddca62adb20ce43f04[m
+Author: JohnEstano <jestano_230000001603@uic.edu.ph>
+Date:   Wed Oct 15 21:33:46 2025 +0800
+
+    Added roles on the sidebar
+
+[33mcommit c0bb4e73b2fbd15b884e4ff5d6a365970f39ca95[m
+Author: Geoffrey Diapz <145132976+yyerf@users.noreply.github.com>
+Date:   Wed Oct 15 00:21:02 2025 +0800
+
+    fixed the interia bug and the New User bug
+
+[33mcommit 820dcffddb5549fcfe6ff8702b27da096df3f839[m
+Merge: d481d45 5053cb9
+Author: Arial12 <jestano_230000001603@uic.edu.ph>
+Date:   Tue Oct 14 21:01:38 2025 +0800
+
+    Merge pull request #55 from JohnEstano/defense-requests/finances-management
+    
+    Defense requests/finances management
+
+[33mcommit 5053cb9cc871165aa94e12abdd82bf9fc78f4f8c[m[33m ([m[1;31morigin/defense-requests/finances-management[m[33m, [m[1;32mdefense-requests/finances-management[m[33m)[m
+Author: JohnEstano <jestano_230000001603@uic.edu.ph>
+Date:   Tue Oct 14 21:00:38 2025 +0800
+
+    Fixed
+
+[33mcommit d481d45aa748331acee7e449cc65218839cb95bb[m
+Author: Geoffrey Diapz <145132976+yyerf@users.noreply.github.com>
+Date:   Tue Oct 14 15:03:49 2025 +0800
+
+    latest
+
+[33mcommit 4470aae6bbe736ed0cab59ce570d7a8fad8b4220[m
+Author: JohnEstano <jestano_230000001603@uic.edu.ph>
+Date:   Tue Oct 14 00:28:55 2025 +0800
+
+    Added batches system
+
+[33mcommit 1e849cb52de0912723ad230529a6c15f874fed0a[m
+Author: JohnEstano <jestano_230000001603@uic.edu.ph>
+Date:   Mon Oct 13 21:28:12 2025 +0800
+
+    Added the AA verification
+
+[33mcommit 1bbdde959658e005c881704e3f2d2fad763db60d[m
+Author: JohnEstano <jestano_230000001603@uic.edu.ph>
+Date:   Mon Oct 13 03:18:41 2025 +0800
+
+    Added Finance & Payments tab
+
+[33mcommit 6195b6f72501d12e9a2c68b2d13452b6c49a4852[m
+Author: JohnEstano <jestano_230000001603@uic.edu.ph>
+Date:   Mon Oct 13 00:13:32 2025 +0800
+
+    Fixed sidebar overflowing
+
+[33mcommit 2d8935914d026699b3bc3494841460a3f50452b6[m
+Author: JohnEstano <jestano_230000001603@uic.edu.ph>
+Date:   Sat Oct 11 23:03:53 2025 +0800
+
+    Fixed the graduate school rates
+
+[33mcommit 2e034010f0a670444862602bf23fe0091870675b[m
+Merge: 43f6809 f418424
+Author: Geoffrey Diapz <145132976+yyerf@users.noreply.github.com>
+Date:   Sat Oct 11 17:21:53 2025 +0800
+
+    Merge branch 'test-v1' of https://github.com/JohnEstano/Graduate_School_System into test-v1
+
+[33mcommit 43f68099f4740dfbb1534ccb33adecf40bceebb2[m
+Author: Geoffrey Diapz <145132976+yyerf@users.noreply.github.com>
+Date:   Sat Oct 11 17:21:37 2025 +0800
+
+    fixed the email route bugs and the db error
+
+[33mcommit 54433f04bef6f7be92e5b389219d4cbd664fc278[m
+Author: JohnEstano <jestano_230000001603@uic.edu.ph>
+Date:   Sat Oct 11 15:17:14 2025 +0800
+
+    payment validation
+
+[33mcommit e68a298f8779b384e22939b35e8f8b118b03230d[m
+Author: JohnEstano <jestano_230000001603@uic.edu.ph>
+Date:   Sat Oct 11 02:28:03 2025 +0800
+
+    AA added workflow defense requests listings, added Payment Validation, Added payment input amount on student submission
+
+[33mcommit e48facf5a105a0e257b0278bfebc0e3d1767cf0c[m
+Author: JohnEstano <jestano_230000001603@uic.edu.ph>
+Date:   Sat Oct 11 01:19:55 2025 +0800
+
+    Latest push
+
+[33mcommit 43b2cd15d0b9acd1bf040d056133f06b46c9d7af[m
+Author: JohnEstano <jestano_230000001603@uic.edu.ph>
+Date:   Fri Oct 10 18:41:54 2025 +0800
+
+    fixed
+
+[33mcommit f418424fef08578727f50e87343685e24925b45a[m
+Author: JohnEstano <jestano_230000001603@uic.edu.ph>
+Date:   Fri Oct 10 15:25:38 2025 +0800
+
+    student workflow updated: dashboard, my documents
+
+[33mcommit 6fb970ea69442c15fefe66b29893e6bed44a7575[m[33m ([m[1;31morigin/safe-checkpoint-v2[m[33m, [m[1;32msafe-checkpoint-v2[m[33m)[m
+Author: JohnEstano <jestano_230000001603@uic.edu.ph>
+Date:   Fri Oct 10 00:37:48 2025 +0800
+
+    Fixed
+
+[33mcommit 88af8eb0c81dbe257e1abf8f70c8576c75219252[m
+Author: JohnEstano <jestano_230000001603@uic.edu.ph>
+Date:   Fri Oct 10 00:27:07 2025 +0800
+
+    Cleaned errors after merge
+
+[33mcommit 539bc139a209a8b1991f145ab962e5d65a6a8c85[m
+Merge: 0d8ce3b 697dddb
+Author: Arial12 <jestano_230000001603@uic.edu.ph>
+Date:   Fri Oct 10 00:07:59 2025 +0800
+
+    Merge pull request #54 from JohnEstano/_dev_develop_v2
+    
+    Merging document templates and _dev_develop update
+
+[33mcommit 697dddbc01e65018cf6c965b46a023d2cfb34f1a[m[33m ([m[1;31morigin/_dev_develop_v2[m[33m)[m
+Merge: 3136fe4 0d8ce3b
+Author: Arial12 <jestano_230000001603@uic.edu.ph>
+Date:   Fri Oct 10 00:07:38 2025 +0800
+
+    Merge branch 'safe-checkpoint-v2' into _dev_develop_v2
+
+[33mcommit 0d8ce3bce2e95240a563be933895050d9e33a409[m[33m ([m[1;31morigin/defense-requests/document-template[m[33m, [m[1;32mdefense-requests/document-template[m[33m)[m
+Author: JohnEstano <jestano_230000001603@uic.edu.ph>
+Date:   Thu Oct 9 23:24:15 2025 +0800
+
+    Fixed
+
+[33mcommit 2bb1e67d7f517f7d618fd4b7d59e93c2ba7f7f08[m
+Author: JohnEstano <jestano_230000001603@uic.edu.ph>
+Date:   Thu Oct 9 21:56:16 2025 +0800
+
+    Fixed
+
+[33mcommit 072fccc43b449c76b550cc166018b09aba974ce2[m
+Author: JohnEstano <jestano_230000001603@uic.edu.ph>
+Date:   Thu Oct 9 16:18:49 2025 +0800
+
+    Fixed defense requirement student view final fix, Adviser disappearing, Attachment not found, etc
+
+[33mcommit 35aae5c22112440362c85c21ad0eb80a0dd0d084[m
+Author: JohnEstano <jestano_230000001603@uic.edu.ph>
+Date:   Wed Oct 8 21:41:39 2025 +0800
+
+    Added dashboard metrics
+
+[33mcommit 7293258930add61b91551b2c90ae76c8b98d771e[m
+Author: JohnEstano <jestano_230000001603@uic.edu.ph>
+Date:   Tue Oct 7 22:31:04 2025 +0800
+
+    Adding in stuff on the AA and Dean
+
+[33mcommit 3136fe4f80343e8706d41b387829b62667235988[m
+Author: Geoffrey Diapz <145132976+yyerf@users.noreply.github.com>
+Date:   Mon Oct 6 21:14:31 2025 +0800
+
+    with email notifications and added coordinator assignment
+
+[33mcommit af61770c6e3e0b056c04ff1b82876c0d6cbd0406[m
+Author: JohnEstano <jestano_230000001603@uic.edu.ph>
+Date:   Mon Oct 6 16:15:42 2025 +0800
+
+    Fixed
+
+[33mcommit d5a7167070cc736b2b332bc639ae5953a3390d22[m
+Author: JNQuez <jquezada_230000000642@uic.edu.ph>
+Date:   Mon Oct 6 13:50:48 2025 +0800
+
+    For new uopdate
+    
+    For new uopdate
+    -added a blade
+
+[33mcommit 88147c914e0bc5d55868431d168a17927c2c339a[m
+Author: JohnEstano <jestano_230000001603@uic.edu.ph>
+Date:   Mon Oct 6 13:45:19 2025 +0800
+
+    Tried to fix the merging honorarium and defense requests but got confused and I scrapped it for now
+
+[33mcommit f4b763abf9140fbd1892c845351bc4a0b58fd263[m
+Author: JohnEstano <jestano_230000001603@uic.edu.ph>
+Date:   Mon Oct 6 01:49:43 2025 +0800
+
+    Latest fix update on details.tsx and details-requirements.tsx
+
+[33mcommit 0ddada8751aa061d2d08f448d49c033fa5b0c569[m
+Author: JohnEstano <jestano_230000001603@uic.edu.ph>
+Date:   Sun Oct 5 00:26:57 2025 +0800
+
+    Latest fix for document template generation
+
+[33mcommit a6fe8f3a31b42667ab9fa04c3f7faabfe9965cc6[m
+Author: JohnEstano <jestano_230000001603@uic.edu.ph>
+Date:   Sun Oct 5 00:19:39 2025 +0800
+
+    Fixed document template
+
+[33mcommit b4e041daadc079134a9fd725e22a10e08a6caa5f[m
+Author: JohnEstano <jestano_230000001603@uic.edu.ph>
+Date:   Sat Oct 4 23:25:11 2025 +0800
+
+    Fixed all the logic in the adviser and coordinator on managing defense requests
+
+[33mcommit d7ad523e3823d5d6aa3991133628e8f07b9dc979[m
+Author: JohnEstano <jestano_230000001603@uic.edu.ph>
+Date:   Fri Oct 3 23:40:14 2025 +0800
+
+    Fixed the routes
+
+[33mcommit 7c3ad50af6904dcf8d11091934a90825d3d1a87d[m
+Author: JohnEstano <jestano_230000001603@uic.edu.ph>
+Date:   Fri Oct 3 23:19:08 2025 +0800
+
+    asdasd
+
+[33mcommit ed68cc61aa12ea69868a6bc3d688a39f921ea415[m
+Merge: fbfb16a d4a713e
+Author: Arial12 <jestano_230000001603@uic.edu.ph>
+Date:   Fri Oct 3 22:02:11 2025 +0800
+
+    Merge pull request #50 from JohnEstano/dashboard/honorarium
+    
+    Dashboard/honorarium
+
+[33mcommit d4a713eda05132bc5e59a9fbf74f79a8850ecac7[m
+Merge: 15ff2e9 fbfb16a
+Author: Arial12 <jestano_230000001603@uic.edu.ph>
+Date:   Fri Oct 3 22:00:37 2025 +0800
+
+    Merge branch 'defense-requests/document-template' into dashboard/honorarium
+
+[33mcommit fbfb16a0ebc0aae93a5dd18bcef9872148ad84bc[m
+Author: JohnEstano <jestano_230000001603@uic.edu.ph>
+Date:   Fri Oct 3 21:50:12 2025 +0800
+
+    Removed duplicates of the routes
+
+[33mcommit d985937d2e13b1ce8b203ad56251ad2cce2b486a[m
+Author: JohnEstano <jestano_230000001603@uic.edu.ph>
+Date:   Fri Oct 3 21:16:19 2025 +0800
+
+    Fixed the schedules
+
+[33mcommit 7d48f61650c0be6517b9398f232150180383a458[m
+Author: JohnEstano <jestano_230000001603@uic.edu.ph>
+Date:   Fri Oct 3 00:35:31 2025 +0800
+
+    Fixed the routes for Adviser Approving
+
+[33mcommit 3b59496559683e61e6a7ae74facf220794684d1d[m
+Author: JohnEstano <jestano_230000001603@uic.edu.ph>
+Date:   Fri Oct 3 00:07:00 2025 +0800
+
+    Routes and Stuff
+
+[33mcommit da6f2e184bff6a9550a65eebf24def84892bbe6a[m
+Author: JohnEstano <jestano_230000001603@uic.edu.ph>
+Date:   Thu Oct 2 22:51:40 2025 +0800
+
+    Completed Coordinator-Adviser relationship
+
+[33mcommit c11452aea659c4b26d7ebfcea9f0dd67200192c5[m
+Author: JohnEstano <jestano_230000001603@uic.edu.ph>
+Date:   Thu Oct 2 22:23:30 2025 +0800
+
+    Added relationship Coordinator-Adviser
+
+[33mcommit 9aa1599597fcfa686a643139343aac9a83d27783[m
+Author: JohnEstano <jestano_230000001603@uic.edu.ph>
+Date:   Thu Oct 2 14:45:47 2025 +0800
+
+    Added advisee-adviser file attachement input for defense requirements submissions
+
+[33mcommit 2a68ac83bde96673895531e502a26c417c989f57[m
+Author: JohnEstano <jestano_230000001603@uic.edu.ph>
+Date:   Thu Oct 2 13:42:36 2025 +0800
+
+    Fixed the Defense requests details.tsx
+
+[33mcommit 6195adadbb522c292ff3eabd7fff13ff0b102ab4[m
+Author: JohnEstano <jestano_230000001603@uic.edu.ph>
+Date:   Thu Oct 2 11:24:30 2025 +0800
+
+    Fixed defense requests
+
+[33mcommit 115fb241fdbf9c00aaec2afc9b646221c40b9e14[m
+Author: JohnEstano <jestano_230000001603@uic.edu.ph>
+Date:   Thu Oct 2 08:41:11 2025 +0800
+
+    Panelists receivables
+
+[33mcommit 7bcbc8591c20d7e7b31444a424f31c2a30cbe1f0[m
+Author: JohnEstano <jestano_230000001603@uic.edu.ph>
+Date:   Wed Oct 1 20:19:13 2025 +0800
+
+    Document Template
+
+[33mcommit dbf9d3ecb58e7b30e4d01f7be1b68675c2ecd64c[m
+Author: JohnEstano <jestano_230000001603@uic.edu.ph>
+Date:   Mon Sep 29 20:08:56 2025 +0800
+
+    Initial
+
+[33mcommit f735d224fd58ff19f1be774043f271afd8341ab2[m[33m ([m[1;32m_dev_develop[m[33m)[m
+Author: JohnEstano <jestano_230000001603@uic.edu.ph>
+Date:   Mon Sep 29 16:15:58 2025 +0800
+
+    Fixed the document templates
+
+[33mcommit 15b4a63360d24d2c6203992061d91f1ba29de088[m
+Author: JohnEstano <jestano_230000001603@uic.edu.ph>
+Date:   Mon Sep 29 15:26:42 2025 +0800
+
+    Fixed some stuff
+
+[33mcommit a44e3ab379d258506918b3a9182b4f1f3688b637[m
+Author: JohnEstano <jestano_230000001603@uic.edu.ph>
+Date:   Mon Sep 29 13:35:51 2025 +0800
+
+    Fixed signatures
+
+[33mcommit 44007f772286583718f7bbb87ace9d67c3757cb8[m
+Author: JohnEstano <jestano_230000001603@uic.edu.ph>
+Date:   Mon Sep 29 12:03:47 2025 +0800
+
+    Esignature
+
+[33mcommit e0a10c791d1618a0ff7288946aaf523b0007835e[m
+Author: Geoffrey Diapz <145132976+yyerf@users.noreply.github.com>
+Date:   Mon Sep 29 11:57:42 2025 +0800
+
+    added superAd
+
+[33mcommit 31a0686233f64d2b764e45d581676c0c494ca1c2[m
+Author: JohnEstano <jestano_230000001603@uic.edu.ph>
+Date:   Mon Sep 29 01:30:19 2025 +0800
+
+    Added and fixed the E-signature implementation
+
+[33mcommit 1dafaf8dba578ec72dacc4461d4376331c307917[m
+Author: JohnEstano <jestano_230000001603@uic.edu.ph>
+Date:   Mon Sep 29 00:02:01 2025 +0800
+
+    Fixed buttons
+
+[33mcommit f29e4f4fea66c5d6aab3d97b5e8f32d4919b4886[m
+Author: JNQuez <jquezada_230000000642@uic.edu.ph>
+Date:   Sun Sep 28 22:46:32 2025 +0800
+
+    updated ui/and backend code
+    
+    -updated UI
+    -added seeder for programs
+    -
+
+[33mcommit 82bc3f0b06bcc430d903c983f2904e99719d61ae[m
+Author: JohnEstano <jestano_230000001603@uic.edu.ph>
+Date:   Sun Sep 28 16:56:19 2025 +0800
+
+    Fixed the defense requirement submission
+
+[33mcommit 76a3ca458b7acf875dcc8f7ca09b5346f3412e43[m
+Author: JohnEstano <jestano_230000001603@uic.edu.ph>
+Date:   Sun Sep 28 16:00:10 2025 +0800
+
+    Fixed layout
+
+[33mcommit f2c660e93c308da27ef50e8184caced1fb7afa96[m
+Author: JohnEstano <jestano_230000001603@uic.edu.ph>
+Date:   Sun Sep 28 15:58:18 2025 +0800
+
+    Added adviser code, reset button and auto accept
+
+[33mcommit fdbfa7a6d1a357571a7f24854162cadde8e418c0[m
+Author: JohnEstano <jestano_230000001603@uic.edu.ph>
+Date:   Sun Sep 28 15:34:59 2025 +0800
+
+    Fixed the profile settings
+
+[33mcommit 1ab10d44f512af30068f3a30250fd242783a8263[m
+Author: JohnEstano <jestano_230000001603@uic.edu.ph>
+Date:   Sun Sep 28 13:28:44 2025 +0800
+
+    Added students list table, student-adviser relationship, and shareable link code
+
+[33mcommit 6f04d6d23826f6d06541b2a0b2cee4d36336c83b[m
+Author: JohnEstano <jestano_230000001603@uic.edu.ph>
+Date:   Sun Sep 28 10:22:59 2025 +0800
+
+    Fixed the Schedule Calendar
+
+[33mcommit 6901ad87b08ac1d735cfb15f344f410ed3a3e3d4[m
+Author: JohnEstano <jestano_230000001603@uic.edu.ph>
+Date:   Sun Sep 28 01:36:03 2025 +0800
+
+    Schedule page
+
+[33mcommit 57f53dfeb9bcb2117208abb9803be85cbaa9f3fe[m
+Author: JohnEstano <jestano_230000001603@uic.edu.ph>
+Date:   Sat Sep 27 22:58:34 2025 +0800
+
+    Fixed calendar darkmode
+
+[33mcommit 699a06bb0acc01fe18c038142981df5ce6a589ce[m
+Author: JohnEstano <jestano_230000001603@uic.edu.ph>
+Date:   Sat Sep 27 22:40:38 2025 +0800
+
+    Fixed calendar dark mode
+
+[33mcommit 0a3e28f6edd3352e58d272b11e03d58878ef2804[m
+Author: JohnEstano <jestano_230000001603@uic.edu.ph>
+Date:   Sat Sep 27 22:31:35 2025 +0800
+
+    Fixed calendar
+
+[33mcommit 462c2ae2eaf6116c571c73a8a8bc5d486ef28184[m
+Author: JohnEstano <jestano_230000001603@uic.edu.ph>
+Date:   Sat Sep 27 14:20:41 2025 +0800
+
+    Fixed profiles
+
+[33mcommit 89200733a71ff01b1f4ce7bcdb87618035684838[m
+Author: JohnEstano <jestano_230000001603@uic.edu.ph>
+Date:   Thu Sep 25 22:04:11 2025 +0800
+
+    Drag and Drop schedules
+
+[33mcommit e68cd38450583a20fcda205e3ba98ee9e406696a[m
+Author: JohnEstano <jestano_230000001603@uic.edu.ph>
+Date:   Thu Sep 25 20:52:00 2025 +0800
+
+    Fixed the dashboard
+
+[33mcommit c1af63e427b946a858265d4f63c808ae8427d2c2[m
+Author: JohnEstano <jestano_230000001603@uic.edu.ph>
+Date:   Tue Sep 23 14:51:56 2025 +0800
+
+    Fixed the build error
+
+[33mcommit 48115a0e307ea71c95ab13dc5db6558b8c47c5a0[m
+Author: JohnEstano <jestano_230000001603@uic.edu.ph>
+Date:   Tue Sep 23 14:45:50 2025 +0800
+
+    removed gitignore
+
+[33mcommit 39aad97cf1177a6d3738a39e97cf0b5945d343c3[m
+Author: JohnEstano <jestano_230000001603@uic.edu.ph>
+Date:   Tue Sep 23 14:42:17 2025 +0800
+
+    Fixed
+
+[33mcommit e0970b7a61cf29e53b7e645198924d81d96f58b2[m
+Author: JohnEstano <jestano_230000001603@uic.edu.ph>
+Date:   Tue Sep 23 14:40:59 2025 +0800
+
+    New
+
+[33mcommit 5c2197bc9e6bd67138326d0eff8099eb384632f3[m
+Author: JohnEstano <jestano_230000001603@uic.edu.ph>
+Date:   Tue Sep 23 00:11:23 2025 +0800
+
+    Schedules fixed, weekly-events-schedule-widget fixed
+
+[33mcommit b2a729a2f64fc0959830520db2c3f13ad70b5b20[m
+Author: JohnEstano <jestano_230000001603@uic.edu.ph>
+Date:   Mon Sep 22 21:36:11 2025 +0800
+
+    Fixed Schedules page, route /schedules, Day, Week, Month view
+
+[33mcommit e50160e3c477c83add050c3faf154f4b34666105[m
+Author: JohnEstano <jestano_230000001603@uic.edu.ph>
+Date:   Sun Sep 21 18:19:49 2025 +0800
+
+    Defense requirement row collapse trigger fix
+
+[33mcommit 0f672f17ba1b91595000449b9938a3803fd1b857[m
+Author: JohnEstano <jestano_230000001603@uic.edu.ph>
+Date:   Sun Sep 21 16:17:01 2025 +0800
+
+    Fixed the defense requirement, defense requests, workflow history
+
+[33mcommit 8761bf2b7382f8ce7dc9bdb7dc1e50b7f71e1b2b[m
+Author: JohnEstano <jestano_230000001603@uic.edu.ph>
+Date:   Sun Sep 21 14:26:04 2025 +0800
+
+    - fixed the Academic Records
+    - fixed the dashboard
+    - fixed the Defense Requeirement/ Enhanced UI
+    - FIXED progress bar on defense requirement
+    - added unsubmit button on defense requirement (condition: the requirement submitted is still pending or is under adviser review if false then the unsubmit button is disabled)
+    - fixed the progress bar to show exactly the status of the defense requirement
+    - fixed the defense request details.tsx
+    - fixed the scheduling
+    - combobox for the assigning of the Panelists
+
+[33mcommit 2f0156c36ce6378bc1613f5ead8396fe4440ddf7[m
+Author: JohnEstano <jestano_230000001603@uic.edu.ph>
+Date:   Sun Sep 14 00:23:56 2025 +0800
+
+    Sidebar
+
+[33mcommit 15ff2e9b1b1e8a3cfac1d9a25e574d5abbc98bc3[m[33m ([m[1;31morigin/honorarium/honorarium-summary[m[33m)[m
+Author: JNQuez <jquezada_230000000642@uic.edu.ph>
+Date:   Wed Sep 10 15:48:34 2025 +0800
+
+    Added Controller, Models, update the interface, and add migration.
+    
+    added controller and model for both honorarium and student record.
+    Migrate database create_program_records_table, create_student_records_table, and create_payment_records_table.
+    Merge the honorarium summary and generate report (sidebar).
+    Routes added.
+
+[33mcommit c438a17abe878c57162eb0d5cb9ea1d90a285193[m
+Author: JohnEstano <jestano_230000001603@uic.edu.ph>
+Date:   Tue Sep 9 13:07:47 2025 +0800
+
+    Fixes
+
+[33mcommit 4302f74d09a379fdfadaa582a0109f499dfdfca0[m
+Author: JohnEstano <jestano_230000001603@uic.edu.ph>
+Date:   Mon Sep 8 00:15:47 2025 +0800
+
+    Fixing Coordinator DEFENSE MANAGEMENT AND DEFENSE REQUEST
+
+[33mcommit 5eba8e48ba2f97ec9a4e8ca0da13667887048209[m
+Merge: d8a63a7 96b9039
+Author: Arial12 <jestano_230000001603@uic.edu.ph>
+Date:   Sun Sep 7 21:38:42 2025 +0800
+
+    Merge pull request #47 from JohnEstano/develop
+    
+    Develop
+
+[33mcommit 96b90397da47bbbe3b138e21b91c243de3aafbea[m[33m ([m[1;31morigin/develop[m[33m, [m[1;32mdevelop[m[33m)[m
+Merge: 6ab3af5 d8a63a7
+Author: Arial12 <jestano_230000001603@uic.edu.ph>
+Date:   Sun Sep 7 21:38:10 2025 +0800
+
+    Merge branch '_dev_develop' into develop
+
+[33mcommit d8a63a7989665898b92f0bfc2c609f2629cabb35[m
+Author: JohnEstano <jestano_230000001603@uic.edu.ph>
+Date:   Sun Sep 7 20:55:43 2025 +0800
+
+    initial_dev
+
+[33mcommit 43292cd0c23ac8665b5072b0cb454535c4547641[m[33m ([m[1;31morigin/dev[m[33m, [m[1;32mdev[m[33m)[m
+Author: Geoffrey Diapz <145132976+yyerf@users.noreply.github.com>
+Date:   Sun Sep 7 19:49:50 2025 +0800
+
+    for debugging
+
+[33mcommit e038b220fbb6ae99e5d08daaf9f50569420b14f0[m
+Author: Geoffrey Diapz <145132976+yyerf@users.noreply.github.com>
+Date:   Sun Sep 7 19:49:17 2025 +0800
+
+    fix and added dashboards
+
+[33mcommit 86085445aba63f3cdd8bc8d769d897b99c9ff1de[m
+Author: Geoffrey Diapz <145132976+yyerf@users.noreply.github.com>
+Date:   Sun Sep 7 19:49:07 2025 +0800
+
+    new api's
+
+[33mcommit ae21c9b5c3cf92a5a775a3d926279b08e4f1a570[m
+Author: Geoffrey Diapz <145132976+yyerf@users.noreply.github.com>
+Date:   Sun Sep 7 19:48:57 2025 +0800
+
+    fix and added dashboards
+
+[33mcommit 42e5bb9af449c038140ea13fa0e68c49e598cb99[m
+Author: Geoffrey Diapz <145132976+yyerf@users.noreply.github.com>
+Date:   Sun Sep 7 19:48:52 2025 +0800
+
+    fix and added dashboards
+
+[33mcommit 9e219f48fbf35e1b5dc97380116c98853dace266[m
+Author: Geoffrey Diapz <145132976+yyerf@users.noreply.github.com>
+Date:   Sun Sep 7 19:48:31 2025 +0800
+
+    updated htaccess
+
+[33mcommit 2d8ed38b8413cbe86165b2b76c7d22d47ff64373[m
+Author: Geoffrey Diapz <145132976+yyerf@users.noreply.github.com>
+Date:   Sun Sep 7 19:48:04 2025 +0800
+
+    for file handling
+
+[33mcommit 2bd7ab1212599bdc960aca3813f1261bfef51dee[m
+Author: Geoffrey Diapz <145132976+yyerf@users.noreply.github.com>
+Date:   Sun Sep 7 19:47:50 2025 +0800
+
+    fix student
+
+[33mcommit d391849065c907fa4d97566f89001a210421fa36[m
+Author: Geoffrey Diapz <145132976+yyerf@users.noreply.github.com>
+Date:   Sun Sep 7 19:47:24 2025 +0800
+
+    for debugging
+
+[33mcommit e669891024f7c9b99a49e3192e6fe8bb6e00b0f6[m
+Author: Geoffrey Diapz <145132976+yyerf@users.noreply.github.com>
+Date:   Sun Sep 7 19:47:16 2025 +0800
+
+    migrations
+
+[33mcommit dc52eda82b25ed66cf26d8473ec4fedba7ff4c26[m
+Author: Geoffrey Diapz <145132976+yyerf@users.noreply.github.com>
+Date:   Sun Sep 7 19:47:10 2025 +0800
+
+    new migrations
+
+[33mcommit aea08e978dbb26df5c8cbc83202f089ce7ad154f[m
+Author: Geoffrey Diapz <145132976+yyerf@users.noreply.github.com>
+Date:   Sun Sep 7 19:47:03 2025 +0800
+
+    new migrations
+
+[33mcommit b39b3defca2e7e54d9feb5aabff25ec3c2887274[m
+Author: Geoffrey Diapz <145132976+yyerf@users.noreply.github.com>
+Date:   Sun Sep 7 19:46:53 2025 +0800
+
+    created config
+
+[33mcommit a8338eda7805efe7513ea3ee4b43563cf40768a7[m
+Author: Geoffrey Diapz <145132976+yyerf@users.noreply.github.com>
+Date:   Sun Sep 7 19:46:36 2025 +0800
+
+    for debugging
+
+[33mcommit a6cf0a5367f342d98a173ae4b4605fd3bbad0aca[m
+Author: Geoffrey Diapz <145132976+yyerf@users.noreply.github.com>
+Date:   Sun Sep 7 19:46:25 2025 +0800
+
+    added provider
+
+[33mcommit e8b38170d3c07437c33af2fe0a314bb89afb42c5[m
+Author: Geoffrey Diapz <145132976+yyerf@users.noreply.github.com>
+Date:   Sun Sep 7 19:46:11 2025 +0800
+
+    deleted
+
+[33mcommit 56e99d07a93342ab5e914370383acd43242406c1[m
+Author: Geoffrey Diapz <145132976+yyerf@users.noreply.github.com>
+Date:   Sun Sep 7 19:46:06 2025 +0800
+
+    fixed and added sin the services
+
+[33mcommit 551c64707a4573a9139f206bdfe559c5550abba6[m
+Author: Geoffrey Diapz <145132976+yyerf@users.noreply.github.com>
+Date:   Sun Sep 7 19:45:48 2025 +0800
+
+    for large file request
+
+[33mcommit 09923747b1370ecd2c0119b20cd926fc41e7ea8d[m
+Author: Geoffrey Diapz <145132976+yyerf@users.noreply.github.com>
+Date:   Sun Sep 7 19:45:08 2025 +0800
+
+    added scheduling
+
+[33mcommit 6cf2fb1e4d270ff7d4a310716693951dfd18397a[m
+Author: Geoffrey Diapz <145132976+yyerf@users.noreply.github.com>
+Date:   Sun Sep 7 19:44:42 2025 +0800
+
+    fixed and added controllers
+
+[33mcommit 6ab3af5c7552f8c27e51b2e08c8d15970671b896[m
+Merge: 254fc0c c3e7996
+Author: Arial12 <jestano_230000001603@uic.edu.ph>
+Date:   Sun Sep 7 19:24:56 2025 +0800
+
+    Merge pull request #46 from JohnEstano/compre-exam
+    
+    Compre exam
+
+[33mcommit c3e7996887cf5794488ef1f17f9e7a90c9087c26[m
+Merge: 42ca072 254fc0c
+Author: Arial12 <jestano_230000001603@uic.edu.ph>
+Date:   Sun Sep 7 19:24:24 2025 +0800
+
+    Merge branch 'develop' into compre-exam
+
+[33mcommit 254fc0c009486cb20c71531c5a32f9da6ad17a76[m
+Merge: 097ce38 68ee9a2
+Author: Arial12 <jestano_230000001603@uic.edu.ph>
+Date:   Sun Sep 7 19:17:40 2025 +0800
+
+    Merge pull request #45 from JohnEstano/defense-request/defense-tracking
+    
+    Defense request/defense tracking
+
+[33mcommit 42ca072efd61c04246d9551fdd46dae16c30203b[m
+Author: Nash Golosino <ngolosino_230000002598@uic.edu.ph>
+Date:   Sun Sep 7 18:43:02 2025 +0800
+
+    Updated payment table
+
+[33mcommit d7308a33e4ed5d53402b400c1eb68a7491791dda[m
+Author: Nash Golosino <ngolosino_230000002598@uic.edu.ph>
+Date:   Sun Sep 7 17:13:21 2025 +0800
+
+    Comprehensive exam tables, controllers, models, pages, seeders, and routes
+
+[33mcommit 68ee9a2b774e4a08098c7582b156bfcf8c09940b[m[33m ([m[1;31morigin/defense-request/defense-tracking[m[33m, [m[1;32mdefense-request/defense-tracking[m[33m)[m
+Author: JohnEstano <jestano_230000001603@uic.edu.ph>
+Date:   Fri Sep 5 11:45:19 2025 +0800
+
+    Fixed quick actions
+
+[33mcommit 1b3e1ad6bb3f1ce769c36d1d5dc33a8ea232b4f4[m
+Author: Geoffrey Diapz <145132976+yyerf@users.noreply.github.com>
+Date:   Fri Sep 5 11:33:27 2025 +0800
+
+    updated
+
+[33mcommit 3148f762724e76dc4903959871e529bc3529eb84[m
+Author: Geoffrey Diapz <145132976+yyerf@users.noreply.github.com>
+Date:   Fri Sep 5 11:33:21 2025 +0800
+
+    fixed some issues
+
+[33mcommit 3aab87b29e7c881f54b2fa4cadb4fb4da77574b4[m
+Author: Geoffrey Diapz <145132976+yyerf@users.noreply.github.com>
+Date:   Fri Sep 5 11:32:54 2025 +0800
+
+    enricher api
+
+[33mcommit 91587092675fecc8aefd3e655869e92a3c1b2bc5[m
+Author: Geoffrey Diapz <145132976+yyerf@users.noreply.github.com>
+Date:   Fri Sep 5 11:32:38 2025 +0800
+
+    new migrations
+
+[33mcommit f5b14959760b88b6e2418bffa4f9dbca1e5c986b[m
+Author: Geoffrey Diapz <145132976+yyerf@users.noreply.github.com>
+Date:   Fri Sep 5 11:32:30 2025 +0800
+
+    updated user.php
+
+[33mcommit 51938c394e1454cf0ee37a70ee77c807f83c48c8[m
+Author: Geoffrey Diapz <145132976+yyerf@users.noreply.github.com>
+Date:   Fri Sep 5 11:32:19 2025 +0800
+
+    roles
+
+[33mcommit 463de75201dbabe4ee7a03f34d9f899d5d2873f2[m
+Author: Geoffrey Diapz <145132976+yyerf@users.noreply.github.com>
+Date:   Fri Sep 5 11:32:10 2025 +0800
+
+    added faculty
+
+[33mcommit 3a8834bf1329c071e25183ebc417d949bbce2997[m
+Author: Geoffrey Diapz <145132976+yyerf@users.noreply.github.com>
+Date:   Fri Sep 5 11:31:58 2025 +0800
+
+    added routes
+
+[33mcommit 8cf639f7cd24caa9bc2fc15411d59b17334d9b27[m
+Author: Geoffrey Diapz <145132976+yyerf@users.noreply.github.com>
+Date:   Fri Sep 5 11:31:41 2025 +0800
+
+    added legacy for testing
+    
+    disabled oauth for testing
+
+[33mcommit 7fcc23c1431c684cf7409aa7f88989a205ff74e4[m
+Author: Geoffrey Diapz <145132976+yyerf@users.noreply.github.com>
+Date:   Fri Sep 5 11:30:39 2025 +0800
+
+    added google oauth
+
+[33mcommit 8a9a75b2e330a723959e750d1ab694ff8ff1bf65[m
+Author: JohnEstano <jestano_230000001603@uic.edu.ph>
+Date:   Fri Sep 5 00:11:02 2025 +0800
+
+    Fixed the dashboard for student dashboard
+
+[33mcommit 8b4d6a822e3f5c48c17678fa94e5ab5c8b2a1d59[m
+Author: JohnEstano <jestano_230000001603@uic.edu.ph>
+Date:   Thu Sep 4 20:59:45 2025 +0800
+
+    Fixed Dashboard
+
+[33mcommit fc1a930460642a321545410d0f33cb5bd1cc2250[m
+Author: Geoffrey Diapz <145132976+yyerf@users.noreply.github.com>
+Date:   Thu Sep 4 02:03:28 2025 +0800
+
+    updated placeholder
+
+[33mcommit 13e70b23a2a0b6269be57d8f75ae4625014a271a[m
+Author: Geoffrey Diapz <145132976+yyerf@users.noreply.github.com>
+Date:   Thu Sep 4 01:55:54 2025 +0800
+
+    check point # 2
+    
+    ready for testing in dev
+
+[33mcommit dbbd66bb8de124eedfdd0d740007536db60ba6ce[m
+Author: Geoffrey Diapz <145132976+yyerf@users.noreply.github.com>
+Date:   Thu Sep 4 01:54:45 2025 +0800
+
+    deleted message
+
+[33mcommit 671259e8acf2e90708369ff4c96941d03aad9c8a[m
+Author: Geoffrey Diapz <145132976+yyerf@users.noreply.github.com>
+Date:   Thu Sep 4 01:54:07 2025 +0800
+
+    deleted message
+
+[33mcommit 06c4bbda4d53cfbc8027cebc0694fe97d747598b[m
+Merge: 7082bc9 2e18d42
+Author: Arial12 <jestano_230000001603@uic.edu.ph>
+Date:   Tue Sep 2 13:51:53 2025 +0800
+
+    Merge pull request #44 from JohnEstano/defense-request/defense-tracking
+    
+    Defense request/defense tracking
+
+[33mcommit 2e18d42cc8a7f609b612d60ae0a5cb5c61300aa4[m
+Author: JohnEstano <jestano_230000001603@uic.edu.ph>
+Date:   Tue Sep 2 13:50:48 2025 +0800
+
+    defense table
+
+[33mcommit cdd7ea09f68a9c2a8c5e254b7eb1ed565bb3d4c6[m
+Author: JohnEstano <jestano_230000001603@uic.edu.ph>
+Date:   Wed Aug 27 14:13:56 2025 +0800
+
+    Added Tabs list on defense request and defense requirements
+
+[33mcommit 98be22c9f9af908a8607d871b9f692cd4ce7e8c4[m
+Author: JohnEstano <jestano_230000001603@uic.edu.ph>
+Date:   Sun Aug 24 17:03:54 2025 +0800
+
+    Added logic for the Defense Requirements and Defense Requests
+
+[33mcommit 6bbe9c5af3e3246807668167cf78a94c4b8994b4[m
+Author: JohnEstano <jestano_230000001603@uic.edu.ph>
+Date:   Fri Aug 22 01:31:12 2025 +0800
+
+    Added defense requirements and Advisers sending defense request
+
+[33mcommit 13baae0031f079718b15e333892e311e2124b7e2[m
+Author: JohnEstano <jestano_230000001603@uic.edu.ph>
+Date:   Thu Aug 21 17:32:58 2025 +0800
+
+    feat: implement card-style radio group for defense_type selection and ensure defense_type is validated and saved in DefenseRequirementController
+
+[33mcommit 7082bc9f5d4eb6df82283fbdf52a4ba478ae78f1[m[33m ([m[1;32mmain[m[33m)[m
+Author: JohnEstano <jestano_230000001603@uic.edu.ph>
+Date:   Mon Aug 11 00:24:29 2025 +0800
+
+    README
+
+[33mcommit 0454e91b16fe4f8359af4933b3af8cb3b0c8d933[m
+Author: JohnEstano <jestano_230000001603@uic.edu.ph>
+Date:   Mon Aug 11 00:23:44 2025 +0800
+
+    README
+
+[33mcommit dbeb4a785202093fcc0a542558d59eaf53d39d94[m
+Author: JohnEstano <jestano_230000001603@uic.edu.ph>
+Date:   Mon Aug 11 00:02:53 2025 +0800
+
+    README file
+
+[33mcommit 11fab0cc067350ae8b16d65a324955ed862329af[m
+Author: JohnEstano <jestano_230000001603@uic.edu.ph>
+Date:   Mon Aug 11 00:00:07 2025 +0800
+
+    README file
+
+[33mcommit f211f4ce5955f95527394ca9ba7048e846d48c64[m
+Merge: 5048903 097ce38
+Author: Arial12 <jestano_230000001603@uic.edu.ph>
+Date:   Sun Aug 10 23:47:16 2025 +0800
+
+    Merge pull request #43 from JohnEstano/develop
+    
+    Develop
+
+[33mcommit 097ce3890c3ee6534f16238d15a2efa420eba32e[m
+Merge: 94bfcb3 9a0a9df
+Author: Arial12 <jestano_230000001603@uic.edu.ph>
+Date:   Sun Aug 10 23:46:53 2025 +0800
+
+    Merge pull request #42 from JohnEstano/defense-request/schedules
+    
+    Added README and Fixed Database Seeder (Populates 50 students and defense requests each) 2 AAs, 10 Coordinators, and 1 Dean
+
+[33mcommit 9a0a9df9fc7d057844f103f03ddc448f371d500e[m[33m ([m[1;31morigin/defense-request/schedules[m[33m)[m
+Author: JohnEstano <jestano_230000001603@uic.edu.ph>
+Date:   Sun Aug 10 23:46:08 2025 +0800
+
+    Added README and Fixed Database Seeder (Populates 50 students and defense requests each) 2 AAs, 10 Coordinators, and 1 Dean
+
+[33mcommit 94bfcb35183bb20e512f091d9adf145786246a8a[m
+Merge: ec7ed91 91fcf93
+Author: Arial12 <jestano_230000001603@uic.edu.ph>
+Date:   Sun Aug 10 20:31:49 2025 +0800
+
+    Merge pull request #41 from JohnEstano/defense-request/schedules
+    
+    Defense request/schedules
+
+[33mcommit 91fcf9364307832f59fc0479efde586a6fd2337c[m
+Author: JohnEstano <jestano_230000001603@uic.edu.ph>
+Date:   Sun Aug 10 20:19:04 2025 +0800
+
+    Scheduler Navigation
+
+[33mcommit 20fb4bac7c9274bed53eac100d6e7523e49b4608[m
+Author: JohnEstano <jestano_230000001603@uic.edu.ph>
+Date:   Sun Aug 10 19:51:53 2025 +0800
+
+    Date Scheduler: /schedules, floating card details, date details, defense-requests scheduled details
+
+[33mcommit ec7ed91b088befa591ce4b01f20ae91cbf959505[m
+Merge: 55ca66c c671ebd
+Author: Arial12 <jestano_230000001603@uic.edu.ph>
+Date:   Sun Aug 10 14:37:37 2025 +0800
+
+    Merge pull request #40 from JohnEstano/defense-request/defense-tracking
+    
+    Pagination fixed
+
+[33mcommit c671ebdde075a12be0c2401d1c202c07978a50e2[m
+Author: JohnEstano <jestano_230000001603@uic.edu.ph>
+Date:   Sun Aug 10 14:35:22 2025 +0800
+
+    Pagination fixed
+
+[33mcommit 50489036f13e519bf7491db8f9aba4cb10318738[m
+Merge: 17008df 55ca66c
+Author: Arial12 <jestano_230000001603@uic.edu.ph>
+Date:   Sun Aug 10 13:40:26 2025 +0800
+
+    Merge pull request #38 from JohnEstano/develop
+    
+    Develop
+
+[33mcommit 55ca66cb3237e89ec747399e7148e8c9db90c91b[m
+Merge: 65061d8 2bd2386
+Author: Arial12 <jestano_230000001603@uic.edu.ph>
+Date:   Sun Aug 10 13:39:48 2025 +0800
+
+    Merge pull request #37 from JohnEstano/defense-request/defense-tracking
+    
+    Defense request/defense tracking
+
+[33mcommit 2bd2386d152557f1471a030ec5e5ac9903ec910b[m
+Author: JohnEstano <jestano_230000001603@uic.edu.ph>
+Date:   Sun Aug 10 13:22:49 2025 +0800
+
+    Pending, Rejected, Approved Tabs: Cards grid on Approved tab
+
+[33mcommit c008729f6f212022fb1d3d86776e6bf983a20417[m
+Author: JohnEstano <jestano_230000001603@uic.edu.ph>
+Date:   Sun Aug 10 03:09:38 2025 +0800
+
+    Fixed details dialog layout
+
+[33mcommit 412b5f35f0d9c8101d1d158eba0b72f28e56e62b[m
+Author: w1 <tperalta_230000001926@uic.edu.ph>
+Date:   Sun Aug 10 02:18:21 2025 +0800
+
+    Refactor record modal UI and code conventions
+    
+    Updated dialog and table sizing, padding, and styling conventions for improved consistency and readability. Cleaned up comments and adjusted icon sizes for better UI alignment. No functional changes to modal logic.
+
+[33mcommit f8e287a3ea8bea465ed7475c93dcf4611b516fb0[m
+Author: JohnEstano <jestano_230000001603@uic.edu.ph>
+Date:   Sun Aug 10 02:11:28 2025 +0800
+
+    Updated defense request table: Added Tabs, Fixed Bulk Options, Fixed dynamic counts, Added Column defense_type
+
+[33mcommit 8fd8d200670762f66e648f9a4abdb3df27ab38b4[m
+Author: w1 <tperalta_230000001926@uic.edu.ph>
+Date:   Sun Aug 10 01:57:59 2025 +0800
+
+    Refactor honorarium summary to use program categories
+    
+    Removed add/remove program modal functionality and refactored the honorarium summary page to use static program lists grouped by category (Doctorate, Masters). Filtering is now by year and category instead of program acronym. Updated record modal to use new program data structure and improved panelist management logic.
+
+[33mcommit f3e4c97977400456ec208704d5825f64ef46edea[m
+Merge: 873069a 65061d8
+Author: JohnEstano <jestano_230000001603@uic.edu.ph>
+Date:   Sat Aug 9 22:12:58 2025 +0800
+
+    Merge remote-tracking branch 'origin/develop' into defense-request/defense-tracking
+
+[33mcommit 17008df5304d858128cdea4b97dc19a208c57625[m[33m ([m[1;31morigin/beta-testing-develop[m[33m)[m
+Merge: ecc1292 65061d8
+Author: Arial12 <jestano_230000001603@uic.edu.ph>
+Date:   Sat Aug 9 22:12:30 2025 +0800
+
+    Merge pull request #36 from JohnEstano/develop
+    
+    Develop
+
+[33mcommit 873069a016fd30f2abe05cbd93f041b7d6472343[m
+Author: JohnEstano <jestano_230000001603@uic.edu.ph>
+Date:   Sat Aug 9 22:07:08 2025 +0800
+
+    Bug fixes
+
+[33mcommit 65061d8f42153f6e3342e0606d47e6809ce1f0dc[m
+Author: JohnEstano <jestano_230000001603@uic.edu.ph>
+Date:   Fri Aug 8 21:43:39 2025 +0800
+
+    Added floating hover options
+
+[33mcommit 1fb9bac32968d61e4dd4e06442a7b0353a6d765e[m
+Author: w1 <tperalta_230000001926@uic.edu.ph>
+Date:   Fri Aug 8 14:25:48 2025 +0800
+
+    Improve panelist modal UX and table styling
+    
+    Added unsaved changes confirmation to AddPanelistModal and refactored input handling for better state management. Updated IndividualRecordModal table and button styles for improved consistency and readability.
+
+[33mcommit 58462bd45f9bdaaab00aa04e8e745346190e21f0[m
+Author: w1 <tperalta_230000001926@uic.edu.ph>
+Date:   Fri Aug 8 07:25:04 2025 +0800
+
+    Improve honorarium summary table UI and UX
+    
+    Replaces image avatars with Avatar components for consistent UI, updates table layout and styling for better readability, sorts records by most recent edit, and conditionally renders pagination controls only when needed. Also updates sample data dates and refines button styles for improved usability.
+
+[33mcommit 27cb207d34750a3820988ec062674562ab113393[m
+Author: w1 <tperalta_230000001926@uic.edu.ph>
+Date:   Thu Aug 7 18:42:04 2025 +0800
+
+    Add panelist modal and pagination to honorarium records
+    
+    Introduces a reusable pagination UI component and an AddPanelistModal for adding new panelists. Updates the record modal to support editing, adding, and removing panelists with pagination for large lists. Also refactors form layouts in modal-add.tsx for improved alignment.
+
+[33mcommit 6613f9f0d30acb8eec415c2c7d0fd1cd1366dddf[m
+Merge: ed611ef 810ee25
+Author: Arial12 <jestano_230000001603@uic.edu.ph>
+Date:   Thu Aug 7 17:31:54 2025 +0800
+
+    Merge pull request #35 from JohnEstano/notifications
+    
+    Notifications
+
+[33mcommit 810ee258eadb6e36b867a1bdbe578e704a285b75[m[33m ([m[1;31morigin/notifications[m[33m, [m[1;32mnotifications[m[33m)[m
+Author: JohnEstano <jestano_230000001603@uic.edu.ph>
+Date:   Thu Aug 7 17:25:53 2025 +0800
+
+    Fixes
+
+[33mcommit b23804ed06060c43c05a27f714e1bb3f271bf6d2[m
+Author: w1 <tperalta_230000001926@uic.edu.ph>
+Date:   Thu Aug 7 14:55:42 2025 +0800
+
+    Add individual record modal for honorarium summary
+    
+    - Introduced IndividualRecordModal to display honorarium details for each program.
+    - Updated Index.tsx to support viewing individual program records via modal, including state management and action handlers.
+    + record-modal.tsx
+    ++ Index.tsx
+
+[33mcommit 1ab6fbab31a1a9d3c64abb71efd60d29a7186d5f[m[33m ([m[1;31morigin/honorarium/honorarium-summary-test[m[33m)[m
+Author: wde11 <tperalta_230000001926@uic.edu.ph>
+Date:   Thu Aug 7 01:28:03 2025 +0800
+
+    Add command palette and search input UI components
+    
+    Introduces new Command and SearchInput UI components using cmdk and lucide-react. Updates dialog to support optional close button and improves overlay styling. Refactors honorarium summary page to use new search and filter UI, and integrates add/remove program modals. Updates @radix-ui/react-dialog and adds cmdk dependency.
+    
+    Files added:
+    
+    -search-input.tsx
+    -modal-add.tsx
+    -modal-remove.tsx
+    -command.tsx
+    
+    Updated index.tsx
+    applied shadcn components to UI
+
+[33mcommit a418d55b5b2558c80a33282448c7c20e1fc74e47[m[33m ([m[1;32mdatabase/supabase[m[33m)[m
+Author: JohnEstano <jestano_230000001603@uic.edu.ph>
+Date:   Wed Aug 6 19:15:01 2025 +0800
+
+    Added notifications badge, notification count, real time notifications, notifications layout, notifications dynamics, read and unread message
+
+[33mcommit 32952a6cd850cf65d16416f092ce4656f3fdc979[m
+Merge: 7de24b4 ecc1292
+Author: JohnEstano <jestano_230000001603@uic.edu.ph>
+Date:   Tue Aug 5 14:34:37 2025 +0800
+
+    Merge remote-tracking branch 'origin/main' into notifications
+
+[33mcommit 7de24b467613eff5d05a1f0f0627a533e02eda90[m
+Merge: 0b6165b 4fa9d54
+Author: JohnEstano <jestano_230000001603@uic.edu.ph>
+Date:   Tue Aug 5 14:31:25 2025 +0800
+
+    Merge remote-tracking branch 'origin/main' into notifications
+
+[33mcommit ecc1292420b040ce8b02b261113d0f63f1b3ccbc[m
+Merge: a63884f ed611ef
+Author: Arial12 <jestano_230000001603@uic.edu.ph>
+Date:   Tue Aug 5 14:30:46 2025 +0800
+
+    Merge pull request #34 from JohnEstano/develop
+    
+    Develop
+
+[33mcommit ed611ef2e40ad4e6e0c21add9ce2cddf59c2ef33[m
+Merge: 3e0c31c b006528
+Author: Arial12 <jestano_230000001603@uic.edu.ph>
+Date:   Tue Aug 5 14:28:54 2025 +0800
+
+    Merge pull request #33 from JohnEstano/defense-request/defense-tracking
+    
+    Defense request/defense tracking
+
+[33mcommit b006528b99d342300967199fcb09b93be2b51ca4[m
+Author: JohnEstano <jestano_230000001603@uic.edu.ph>
+Date:   Tue Aug 5 14:25:24 2025 +0800
+
+    Fixed everything
+
+[33mcommit a63884f3c68e0576fe8923c5c7fbb890ac717c22[m
+Merge: 4fa9d54 3e0c31c
+Author: Arial12 <jestano_230000001603@uic.edu.ph>
+Date:   Tue Aug 5 14:00:28 2025 +0800
+
+    Merge pull request #32 from JohnEstano/develop
+    
+    Develop
+
+[33mcommit 00e81c581df9a21cd10cd46cbe5c1d973fa81177[m
+Author: JohnEstano <jestano_230000001603@uic.edu.ph>
+Date:   Tue Aug 5 13:09:01 2025 +0800
+
+    Fixed
+
+[33mcommit b9cdd7cb969183e092abd702c38589e92ef0b0fc[m
+Author: wde11 <tperalta_230000001926@uic.edu.ph>
+Date:   Mon Aug 4 16:34:49 2025 +0800
+
+    Update title to Honorarium Summray
+    
+    -Change from Honorarium Submission to Honorarium Summary
+    -Changes made in index.tsx > honorarium-summary
+
+[33mcommit 98d77f2c9e72c2dd3ef7e555c03885683a837fa6[m
+Author: JohnEstano <jestano_230000001603@uic.edu.ph>
+Date:   Mon Aug 4 09:01:03 2025 +0800
+
+    Added Last Updated column on the defense request table
+
+[33mcommit 8d90d45b1c871a5ece9f7416a86a74f46ab01ac1[m
+Author: JohnEstano <jestano_230000001603@uic.edu.ph>
+Date:   Sun Aug 3 23:57:31 2025 +0800
+
+    Fixed
+
+[33mcommit 1b3177371695254ca712f647e97f841f7486da97[m
+Author: JohnEstano <jestano_230000001603@uic.edu.ph>
+Date:   Sun Aug 3 23:19:33 2025 +0800
+
+    Fixed
+
+[33mcommit 31af842253ee1dd9e6c87a558b8309247fa97939[m
+Author: JohnEstano <jestano_230000001603@uic.edu.ph>
+Date:   Sun Aug 3 11:47:45 2025 +0800
+
+    Disabled bulk options
+
+[33mcommit 3f323ea92ea57efd6f738fe7e514d132e7327fd1[m
+Author: JohnEstano <jestano_230000001603@uic.edu.ph>
+Date:   Sun Aug 3 11:31:24 2025 +0800
+
+    Added print bulk
+
+[33mcommit d83d84954d35bdb0cf30bde8ccabc6fecb7e0c57[m
+Author: JohnEstano <jestano_230000001603@uic.edu.ph>
+Date:   Sun Aug 3 11:23:55 2025 +0800
+
+    Fixed bulk status updates
+
+[33mcommit 765a4b74463c4f3c898ae3defda3da4850e40be1[m
+Author: JohnEstano <jestano_230000001603@uic.edu.ph>
+Date:   Sat Aug 2 18:25:35 2025 +0800
+
+    Fixed bulk status update
+
+[33mcommit d797786bffa663ad97e6e343ceab63df287f0bcb[m
+Author: JohnEstano <jestano_230000001603@uic.edu.ph>
+Date:   Fri Aug 1 12:15:00 2025 +0800
+
+    Fixed defense request filters: Status and Priority
+
+[33mcommit 3e0c31c32354fdaf7adb82bb0d3aadef32515e1b[m
+Author: JohnEstano <jestano_230000001603@uic.edu.ph>
+Date:   Thu Jul 31 21:53:20 2025 +0800
+
+    Fixed visual bugs
+
+[33mcommit b23a6c4212b7e00aee0a952fdef7f78adafc2802[m
+Author: w1 <tperalta_230000001926@uic.edu.ph>
+Date:   Thu Jul 31 14:00:24 2025 +0800
+
+    Update package-lock.json
+
+[33mcommit a7e7d8da09ec9d2e6da23a4f7a40ca08b8fd1c3a[m
+Merge: 70dfc67 c8730d2
+Author: Arial12 <jestano_230000001603@uic.edu.ph>
+Date:   Wed Jul 30 21:14:48 2025 +0800
+
+    Merge pull request #30 from JohnEstano/honorarium/honorarium-summary
+    
+    Honorarium/honorarium summary
+
+[33mcommit c8730d267fe78a5797ea90b8f16b459d7c1a07a9[m
+Merge: 454e59f 70dfc67
+Author: Arial12 <jestano_230000001603@uic.edu.ph>
+Date:   Wed Jul 30 21:14:35 2025 +0800
+
+    Merge branch 'develop' into honorarium/honorarium-summary
+
+[33mcommit 70dfc67ad76dd8e9dee96de668f9d0352cb73d46[m
+Author: JohnEstano <jestano_230000001603@uic.edu.ph>
+Date:   Wed Jul 30 21:10:59 2025 +0800
+
+    Retrieve
+
+[33mcommit 31d4d65160755054959eddd0ee6f05f4a1486509[m
+Author: JohnEstano <jestano_230000001603@uic.edu.ph>
+Date:   Wed Jul 30 21:09:26 2025 +0800
+
+    Sidebar fix honorarium
+
+[33mcommit 658de54f2800591b9877cb00e7b99120a735503e[m
+Merge: 53fc582 e1a35e8
+Author: JohnEstano <jestano_230000001603@uic.edu.ph>
+Date:   Wed Jul 30 20:51:38 2025 +0800
+
+    Fixed
+
+[33mcommit e1a35e8a2b01a55ae0e97692e8107011e50da248[m
+Merge: 019c0b6 f61eeec
+Author: Arial12 <jestano_230000001603@uic.edu.ph>
+Date:   Tue Jul 29 15:18:20 2025 +0800
+
+    Merge pull request #28 from JohnEstano/messages
+    
+    Messages
+
+[33mcommit f61eeec208cf554611e3f29c50c00e06c1dfd117[m[33m ([m[1;31morigin/messages[m[33m)[m
+Merge: e2ac383 019c0b6
+Author: Arial12 <jestano_230000001603@uic.edu.ph>
+Date:   Tue Jul 29 15:18:10 2025 +0800
+
+    Merge branch 'develop' into messages
+
+[33mcommit e2ac3835d86df9cdfb08cb9ea899e9ac8c4cdb73[m
+Author: Geoffrey Diapz <145132976+yyerf@users.noreply.github.com>
+Date:   Tue Jul 29 15:11:02 2025 +0800
+
+    v 1.0
+    
+    messaging
+
+[33mcommit 019c0b6785ed717f77e0667cc1cc57bb2b08fe0d[m
+Merge: 7efbd7e 318d681
+Author: Arial12 <jestano_230000001603@uic.edu.ph>
+Date:   Tue Jul 29 15:06:10 2025 +0800
+
+    Merge pull request #27 from JohnEstano/notifications
+    
+    Merge pull request #26 from JohnEstano/develop
+
+[33mcommit 318d6810d43ba8eaa767654d930c164107999a55[m
+Merge: 0b6165b 7efbd7e
+Author: Arial12 <jestano_230000001603@uic.edu.ph>
+Date:   Tue Jul 29 14:36:13 2025 +0800
+
+    Merge pull request #26 from JohnEstano/develop
+    
+    Merge pull request #24 from JohnEstano/notifications
+
+[33mcommit 53fc582ce12831a8a5d9b935d6d9f94f36b51fb7[m
+Author: JohnEstano <jestano_230000001603@uic.edu.ph>
+Date:   Tue Jul 29 13:44:47 2025 +0800
+
+    CHanges
+
+[33mcommit 5a59d249c42e56d22d051f14c77b15f8a5e3af74[m
+Author: JohnEstano <jestano_230000001603@uic.edu.ph>
+Date:   Tue Jul 29 13:32:48 2025 +0800
+
+    Edited
+
+[33mcommit 7efbd7e65d2d27ca1516e752f128c1e6e76b08fa[m
+Merge: 47a7c7a 0b6165b
+Author: Arial12 <jestano_230000001603@uic.edu.ph>
+Date:   Mon Jul 28 21:58:38 2025 +0800
+
+    Merge pull request #24 from JohnEstano/notifications
+    
+    Notifications
+
+[33mcommit 0b6165b6a414bf998a49ab5b54c5d9aa3066474b[m
+Author: JohnEstano <jestano_230000001603@uic.edu.ph>
+Date:   Mon Jul 28 21:55:05 2025 +0800
+
+    search
+
+[33mcommit 2cf7fd1dc50670ad9910e2afa986a00b197756a8[m
+Author: JohnEstano <jestano_230000001603@uic.edu.ph>
+Date:   Mon Jul 28 21:53:56 2025 +0800
+
+    Fixed
+
+[33mcommit 5bd9dc74c768e8f28180cacf1885dbae30f736f6[m
+Merge: 73f1b36 47a7c7a
+Author: JohnEstano <jestano_230000001603@uic.edu.ph>
+Date:   Mon Jul 28 12:44:25 2025 +0800
+
+    Merge remote-tracking branch 'origin/develop' into notifications
+
+[33mcommit 73f1b36998a77629d11405389fd6704af086c587[m
+Author: JohnEstano <jestano_230000001603@uic.edu.ph>
+Date:   Mon Jul 28 12:44:01 2025 +0800
+
+    Changes
+
+[33mcommit 47a7c7a37f0df8e55044b98aa6871d28a9d8b047[m
+Author: JohnEstano <jestano_230000001603@uic.edu.ph>
+Date:   Mon Jul 28 12:42:53 2025 +0800
+
+    sfsd
+
+[33mcommit 4fa9d54be9bb134fdc8000f87df75a790f731e18[m
+Merge: 8ba1f8b 113ce42
+Author: Arial12 <jestano_230000001603@uic.edu.ph>
+Date:   Mon Jul 28 11:45:21 2025 +0800
+
+    Merge pull request #22 from JohnEstano/develop
+    
+    Fixed
+
+[33mcommit 113ce42f16159e41b81fcecde7487ba44e8bbf33[m
+Author: JohnEstano <jestano_230000001603@uic.edu.ph>
+Date:   Mon Jul 28 11:43:40 2025 +0800
+
+    Fixed
+
+[33mcommit 8ba1f8bb1c484bc0820c899b503986a3888105db[m
+Merge: b625a26 bf7d6ca
+Author: Arial12 <jestano_230000001603@uic.edu.ph>
+Date:   Sun Jul 27 16:24:39 2025 +0800
+
+    Merge pull request #21 from JohnEstano/develop
+    
+    Added badge counter for defense request
+
+[33mcommit bf7d6caf2e36902cf5dde93a1a819d1853e723f9[m
+Author: JohnEstano <jestano_230000001603@uic.edu.ph>
+Date:   Sun Jul 27 16:23:42 2025 +0800
+
+    Fixed
+
+[33mcommit 495ed18ec6ecb2ebb02d9becc0b19ede7762e05b[m
+Author: JohnEstano <jestano_230000001603@uic.edu.ph>
+Date:   Sun Jul 27 16:10:36 2025 +0800
+
+    Added badge counter for defense request
+
+[33mcommit 454e59fd30474b668cea0c241ef3522e78334d9a[m[33m ([m[1;32mhonorarium/honorarium-summary[m[33m)[m
+Author: wde11 <tperalta_230000001926@uic.edu.ph>
+Date:   Sun Jul 27 10:30:54 2025 +0800
+
+    -Changed position of add/remove button
+    
+    -Change the position of the edit, add, remove buttons at the top right corner
+    - Add background color for these buttons.
+
+[33mcommit b625a2617110c0ce6162b01779fb51d139b9cfe1[m
+Merge: b1ba14a 125bbf8
+Author: Arial12 <jestano_230000001603@uic.edu.ph>
+Date:   Sun Jul 27 02:19:24 2025 +0800
+
+    Merge pull request #20 from JohnEstano/develop
+    
+    Develop
+
+[33mcommit 125bbf81912aa37ffd1b5c78e67c9bb896fca8a3[m
+Author: JohnEstano <jestano_230000001603@uic.edu.ph>
+Date:   Sun Jul 27 02:17:24 2025 +0800
+
+    Added defense-tracking
+
+[33mcommit 168fb46abc485fd6448b1b8aa5eb99148e6602cf[m
+Author: JohnEstano <jestano_230000001603@uic.edu.ph>
+Date:   Sun Jul 27 02:10:17 2025 +0800
+
+    Added defense-tracking
+
+[33mcommit cabe8e5b4e12298df9799698384f5d67825b254c[m
+Merge: 26ec0bd 9f96cce
+Author: JohnEstano <jestano_230000001603@uic.edu.ph>
+Date:   Sun Jul 27 00:34:44 2025 +0800
+
+    Resolve merge: confirm deletion of show-all-requests.tsx
+
+[33mcommit 26ec0bd51e588db8d4330b25a3e4f9386f3d079f[m
+Merge: b345291 dedc3ea
+Author: JohnEstano <jestano_230000001603@uic.edu.ph>
+Date:   Sun Jul 27 00:27:50 2025 +0800
+
+    Mits gooerge branch 'develop' of https://github.com/JohnEstano/Graduate_School_System into develop
+
+[33mcommit dedc3eaedaf195c56048f6f3123ea95150c7a8c7[m
+Merge: 23e2381 f225614
+Author: Arial12 <jestano_230000001603@uic.edu.ph>
+Date:   Sun Jul 27 00:19:30 2025 +0800
+
+    Merge pull request #17 from JohnEstano/defense-request/defense-tracking
+    
+    Defense request/defense tracking
+
+[33mcommit b3452916ca08497413e16ddcde560cfd5650a031[m
+Merge: 23e2381 f225614
+Author: JohnEstano <jestano_230000001603@uic.edu.ph>
+Date:   Sun Jul 27 00:15:52 2025 +0800
+
+    Resolve merge conflicts between develop and defense-request/defense-tracking
+
+[33mcommit 23e2381528156984b36de2321b6718c506e7121a[m
+Merge: 383300b 91fae43
+Author: JohnEstano <jestano_230000001603@uic.edu.ph>
+Date:   Sun Jul 27 00:13:04 2025 +0800
+
+    Remove defense-request submissions directory
+
+[33mcommit f225614d0a46e7ba45d9c801190fedd971244aa5[m
+Author: JohnEstano <jestano_230000001603@uic.edu.ph>
+Date:   Sun Jul 27 00:02:37 2025 +0800
+
+    Update student defense request page to remove ShowAllRequests traces
+
+[33mcommit 48d19fd1e0cc11a2af0c1a151ec5e9e508b9f985[m
+Merge: dc5b0ea 383300b
+Author: JohnEstano <jestano_230000001603@uic.edu.ph>
+Date:   Sat Jul 26 23:55:38 2025 +0800
+
+    Remove defense-request submissions folder
+
+[33mcommit dc5b0eadd395dfef250f8b9ac6c9e303b49081f9[m
+Author: JohnEstano <jestano_230000001603@uic.edu.ph>
+Date:   Sat Jul 26 23:31:36 2025 +0800
+
+    Completed defense request tracking
+
+[33mcommit 0775fb0e63d474c4ff165d04c3ce3d085e56ca31[m
+Author: w1 <tperalta_230000001926@uic.edu.ph>
+Date:   Sat Jul 26 17:19:29 2025 +0800
+
+    Update Index.tsx (+Additions; Honorarium Summary)
+    
+    -Added Edit feature (add, remove programs)
+    - Improve filter data
+    - Added more dummy data
+    - Front-end
+    - No back-end yet
+
+[33mcommit 972e0e151fc5d87e076e202ab1695c56b8ede3c1[m
+Author: JohnEstano <jestano_230000001603@uic.edu.ph>
+Date:   Sat Jul 26 13:44:41 2025 +0800
+
+    Added filter buttons Status & Priority, Added functional updates on the status and ppriority
+
+[33mcommit fddaaf43635fadbdfb3085f255b082d4424bb672[m
+Author: w1 <tperalta_230000001926@uic.edu.ph>
+Date:   Thu Jul 24 14:56:11 2025 +0800
+
+    Update Index.tsx (Change Layout)
+    
+    - Table design
+    - Columns name changed: Program, Recently Opened, Time last Opened, Date Opened, Actions.
+    - Apply icons
+    - Sync dark-mode-white-mode
+    - Revise filter and search bar
+
+[33mcommit 05a76000042cb4423192dee7865de9a7742274de[m
+Author: w1 <tperalta_230000001926@uic.edu.ph>
+Date:   Thu Jul 24 13:38:00 2025 +0800
+
+    Removed +features
+    
+    -Removed HonorariumController.php, InformationTechnology.tsx, and Nursing.tsx
+    -Change index.tsx
+    -Change index.d.ts
+    -Removed honorarium reoutes in web.php
+
+[33mcommit 694046467d1ad5dbc29124a3bbfa586a601e236b[m
+Author: wde11 <tperalta_230000001926@uic.edu.ph>
+Date:   Thu Jul 24 07:42:45 2025 +0800
+
+    +Additions
+    
+    - HonorariumController
+    -Updated InformationTechnology.tsx
+    -Added Nursing.tsx
+    -Updated Index.tsx
+    -Added code into index.d.ts
+
+[33mcommit e4d1332e834001275edb64d01dff0f1dc919e4fa[m
+Author: JohnEstano <jestano_230000001603@uic.edu.ph>
+Date:   Thu Jul 24 00:19:54 2025 +0800
+
+    Data table for the Coordinator, Track defense requests
+
+[33mcommit ee09ea8bb26fd8150aef3121da3fa6cec29ef6b1[m
+Author: w1 <tperalta_230000001926@uic.edu.ph>
+Date:   Wed Jul 23 20:49:00 2025 +0800
+
+    +Additions
+    
+    added InformationTechnology.tsx
+    changes Index.tsx includes search bar and buttons
+    - new route added
+    
+    @JNQuez27 paki help q sa connect2 aning mga buttons
+
+[33mcommit d7bdeb742dec2628b13b06166dd012144854131b[m
+Author: w1 <tperalta_230000001926@uic.edu.ph>
+Date:   Wed Jul 23 19:01:43 2025 +0800
+
+    +New Additions
+    
+    -added new route via web.php
+    - change layout for honorarium-summary
+    -update information in individual-record to panelists
+
+[33mcommit b1ba14a4a10d36301e718d74ca4cbc8286b96a56[m
+Merge: 26e21c1 1e280b4
+Author: Arial12 <jestano_230000001603@uic.edu.ph>
+Date:   Wed Jul 23 16:49:20 2025 +0800
+
+    Merge pull request #15 from JohnEstano/defense-request/defense-request-form
+    
+    Defense request/defense request form
+
+[33mcommit 1e280b41c0d4b5b532b92ce47ea73154b7e44901[m[33m ([m[1;31morigin/defense-request/defense-request-form[m[33m, [m[1;32mdefense-request/defense-request-form[m[33m)[m
+Merge: 5f5fddf 26e21c1
+Author: JohnEstano <jestano_230000001603@uic.edu.ph>
+Date:   Wed Jul 23 16:48:48 2025 +0800
+
+    merged changes
+
+[33mcommit 5f5fddf61c474b2b53dc2dcd8a5c906465a6e6ff[m
+Author: JohnEstano <jestano_230000001603@uic.edu.ph>
+Date:   Wed Jul 23 16:45:27 2025 +0800
+
+    stuff
+
+[33mcommit 9f96cce462bb32d54383e74067bec421e9f404a1[m[33m ([m[1;31morigin/debug/fix_tests[m[33m, [m[1;32mdebug/fix_tests[m[33m)[m
+Author: JohnEstano <jestano_230000001603@uic.edu.ph>
+Date:   Wed Jul 23 16:43:36 2025 +0800
+
+    Fixed some stuff
+
+[33mcommit 26e21c1acf058fecc0c94d976c7a5d82eec51747[m
+Merge: 9089c61 4c9a320
+Author: Arial12 <jestano_230000001603@uic.edu.ph>
+Date:   Wed Jul 23 16:23:41 2025 +0800
+
+    Merge pull request #14 from JohnEstano/debug/fix_tests
+    
+    Debug/fix tests
+
+[33mcommit 4c9a3206e22b7a3f40359954e57f4d593825af76[m
+Author: JohnEstano <jestano_230000001603@uic.edu.ph>
+Date:   Wed Jul 23 16:18:50 2025 +0800
+
+    Fix all ESLINT and CI,CD tests and quality
+
+[33mcommit 1e698bdbd9a9d5881cef9e84ea23b4b9098e0435[m
+Author: JohnEstano <jestano_230000001603@uic.edu.ph>
+Date:   Wed Jul 23 15:19:45 2025 +0800
+
+    merged some stuff
+
+[33mcommit 9089c614c17110891b7997bb7e6de583aeb3f7b2[m[33m ([m[1;31morigin/GraduateSchool/assets[m[33m)[m
+Merge: da982e7 91fae43
+Author: Arial12 <jestano_230000001603@uic.edu.ph>
+Date:   Wed Jul 23 15:06:54 2025 +0800
+
+    Merge pull request #13 from JohnEstano/develop
+    
+    Fixed eslint
+
+[33mcommit 91fae434694f4f3b9696434c675234d68aa527c4[m
+Author: JohnEstano <jestano_230000001603@uic.edu.ph>
+Date:   Wed Jul 23 11:40:48 2025 +0800
+
+    Fixed eslint
+
+[33mcommit da982e75af2c630c8b365aac345667360d816062[m
+Merge: 758fb4e 0fa64e4
+Author: Arial12 <jestano_230000001603@uic.edu.ph>
+Date:   Tue Jul 22 15:38:12 2025 +0800
+
+    Merge pull request #9 from JohnEstano/develop
+    
+    Added sidebar dynamics depending on user roles
+
+[33mcommit 383300b41b06bbe1030bd06e0bc6ee77d06d8239[m
+Author: JohnEstano <jestano_230000001603@uic.edu.ph>
+Date:   Tue Jul 22 15:26:11 2025 +0800
+
+    Initial
+
+[33mcommit 0fa64e49f80045615bc129fa82300d249c13bc38[m
+Merge: 9c70604 758fb4e
+Author: Geoffrey Diapz <145132976+yyerf@users.noreply.github.com>
+Date:   Tue Jul 22 15:21:39 2025 +0800
+
+    Merge remote-tracking branch 'origin' into develop
+
+[33mcommit 9c70604ecb1c514d72833752d22ca1e3d1ece065[m
+Merge: 0e85b28 a37b3dd
+Author: Arial12 <jestano_230000001603@uic.edu.ph>
+Date:   Tue Jul 22 14:54:04 2025 +0800
+
+    Merge pull request #12 from JohnEstano/defense-request/defense-tracking
+    
+    Defense request/defense tracking
+
+[33mcommit a37b3ddbf7443da629f8779f9edf2395fde85e02[m
+Author: JohnEstano <jestano_230000001603@uic.edu.ph>
+Date:   Tue Jul 22 14:53:16 2025 +0800
+
+    Changes in the defense request
+
+[33mcommit 633cda5193396d501a1b5031457c39a9ca2a537f[m[33m ([m[1;31morigin/honorarium/generate-report[m[33m, [m[1;31morigin/honorarium/dashboard[m[33m)[m
+Author: JNQuez <jquezada_230000000642@uic.edu.ph>
+Date:   Tue Jul 22 13:18:08 2025 +0800
+
+    This code will add honorarium sidebar and its function but some are dummy data
+
+[33mcommit b35ef72ae0cd969891e51b5ae55c5b236221b79b[m
+Author: JohnEstano <jestano_230000001603@uic.edu.ph>
+Date:   Mon Jul 21 18:38:16 2025 +0800
+
+    Defense Request Tracking
+
+[33mcommit 0e85b28239913c60116588574d5ccb5fd686501f[m
+Merge: 8253d3e c083c27
+Author: Arial12 <jestano_230000001603@uic.edu.ph>
+Date:   Mon Jul 21 13:13:31 2025 +0800
+
+    Merge pull request #11 from JohnEstano/defense-request/defense-request-form
+    
+    Defense request/defense request form
+
+[33mcommit c083c2753f52eefb4dbdf7ef2f40a6c509d67ce7[m
+Author: JohnEstano <jestano_230000001603@uic.edu.ph>
+Date:   Mon Jul 21 13:04:11 2025 +0800
+
+    Fixed display-requests.tsx UI
+
+[33mcommit e54281ef2b10304397ed7c38bbc53908f4d88f7a[m
+Author: JohnEstano <jestano_230000001603@uic.edu.ph>
+Date:   Mon Jul 21 12:47:18 2025 +0800
+
+    Added some more stuff on the display-requests.tsx
+
+[33mcommit c0d1b4412c15717465143976f677266dd03fa7e5[m
+Author: JohnEstano <jestano_230000001603@uic.edu.ph>
+Date:   Mon Jul 21 10:20:23 2025 +0800
+
+    Updated defense request forms, Defense requests table, and model, DefenseRequestController
+
+[33mcommit 2a26f0a931af2b08a1bd733f8f7d4a9493a84059[m
+Author: JNQuez <jquezada_230000000642@uic.edu.ph>
+Date:   Sat Jul 19 23:17:28 2025 +0800
+
+    example
+
+[33mcommit bf67c229a3127dfd58f146022872ab006bb549f0[m
+Author: wde11 <tperalta_230000001926@uic.edu.ph>
+Date:   Sat Jul 19 23:05:36 2025 +0800
+
+    Created Honorarium folder & index.tsx
+    
+    index.tsx and folder has been added
+    7/19/25
+
+[33mcommit 2173f81d2f5c93c5892d87884756e0c3980c02f4[m
+Author: JohnEstano <jestano_230000001603@uic.edu.ph>
+Date:   Thu Jul 17 22:47:01 2025 +0800
+
+    File attachement icons on inputs
+
+[33mcommit 8253d3e8385c4f2bb6dcf19491a1bec7e6563845[m
+Author: JohnEstano <jestano_230000001603@uic.edu.ph>
+Date:   Thu Jul 17 21:59:04 2025 +0800
+
+    Added sidebar dynamics depending on user roles
+
+[33mcommit 758fb4eafc73b69ff8b4ba983e7c8f26b32fd940[m
+Merge: fdc7f52 2b4a47e
+Author: Arial12 <jestano_230000001603@uic.edu.ph>
+Date:   Tue Jul 15 20:50:00 2025 +0800
+
+    Merge pull request #8 from JohnEstano/develop
+    
+    Fixed the app-header.tsx
+
+[33mcommit 2b4a47e5bcb6865ae02ecb2725de4a5db91e03fc[m
+Author: JohnEstano <jestano_230000001603@uic.edu.ph>
+Date:   Tue Jul 15 20:49:26 2025 +0800
+
+    Fixed the app-header.tsx
+
+[33mcommit fdc7f52e39a6d737ff004f60ef1eaa2b8ce44d98[m
+Merge: 2dd9bae 17051fc
+Author: Arial12 <jestano_230000001603@uic.edu.ph>
+Date:   Tue Jul 15 10:21:13 2025 +0800
+
+    Merge pull request #7 from JohnEstano/develop
+    
+    Added defense request form component
+
+[33mcommit 17051fc67abd762e7ffab42a46f22dc599d6a776[m
+Author: JohnEstano <jestano_230000001603@uic.edu.ph>
+Date:   Tue Jul 15 10:17:54 2025 +0800
+
+    Added defense request form component
+
+[33mcommit 2dd9bae917656282bb7b40121148a7d5121e7baa[m
+Merge: df78c43 9b9af5d
+Author: Arial12 <jestano_230000001603@uic.edu.ph>
+Date:   Mon Jul 14 12:18:49 2025 +0800
+
+    Merge pull request #6 from JohnEstano/develop
+    
+    Modified User database table, split names column, added program and school_id column and integrated changes to affected files
+
+[33mcommit 9b9af5df77bb4ef52a0a275844c0b59c68c27b93[m
+Author: JohnEstano <jestano_230000001603@uic.edu.ph>
+Date:   Mon Jul 14 12:10:40 2025 +0800
+
+    Split name column from Users database table to first_name, middle_name, and last_name, Added school_id and Programs columns on User table database, Integrated the changes to affected file like profile.tsx, registeredusercontroller.tsx, User.php
+
+[33mcommit df78c43522db0d7d0814dd4d9aea5e9228e907f5[m
+Merge: 49e68d2 b69d1d5
+Author: Arial12 <jestano_230000001603@uic.edu.ph>
+Date:   Sat Jul 12 14:45:18 2025 +0800
+
+    Merge pull request #5 from JohnEstano/develop
+    
+    Added user roles, dashboard layout pages , and  DashboardController
+
+[33mcommit b69d1d561fb3959c6d77ffbc70532100f8f816c4[m
+Author: JohnEstano <jestano_230000001603@uic.edu.ph>
+Date:   Sat Jul 12 14:44:42 2025 +0800
+
+    Added user roles, dashboard layout pages , and  DashboardController
+
+[33mcommit 49e68d27ee9bcfca18464291843b692aced36b22[m
+Merge: 795e664 d208412
+Author: Arial12 <jestano_230000001603@uic.edu.ph>
+Date:   Sat Jul 12 10:58:55 2025 +0800
+
+    Merge pull request #4 from JohnEstano/develop
+    
+    Edited the auth layout login form and register, Added logo image on the right side
+
+[33mcommit d208412b6ecbfa31fea220ae1fc9c895bcdeef44[m
+Author: JohnEstano <jestano_230000001603@uic.edu.ph>
+Date:   Sat Jul 12 10:57:29 2025 +0800
+
+    Edited the auth layout login form and register, Added logo image on the right side
+
+[33mcommit 795e6641297dcb32371fd7f850f5a8b44b80b59c[m
+Merge: 15f2a45 6002875
+Author: Arial12 <jestano_230000001603@uic.edu.ph>
+Date:   Sat Jul 12 01:45:17 2025 +0800
+
+    Merge pull request #3 from JohnEstano/develop
+    
+    Added routes under web.php, Added React pages for each links and linked their corresponding routes
+
+[33mcommit 6002875222a438ec05195b67d461ee29568fd7b1[m
+Author: JohnEstano <jestano_230000001603@uic.edu.ph>
+Date:   Sat Jul 12 01:43:57 2025 +0800
+
+    Added routes under web.php, Added React pages for each links and linked their corresponding routes
+
+[33mcommit 15f2a458c426cfd8c63b04b96824a07945e43174[m
+Merge: 7a97cff ef687de
+Author: Arial12 <jestano_230000001603@uic.edu.ph>
+Date:   Fri Jul 11 23:50:43 2025 +0800
+
+    Merge pull request #2 from JohnEstano/develop
+    
+    Added sidebar links and sub menus, Changed App logo icon and app name
+
+[33mcommit ef687de608cf692585a742068736fb26986367e7[m
+Author: JohnEstano <jestano_230000001603@uic.edu.ph>
+Date:   Fri Jul 11 23:46:26 2025 +0800
+
+    Added sidebar links and sub menus, Changed App logo icon and app name
+
+[33mcommit 7a97cff2487ea150b4fd4cceb68eff4f19374b52[m
+Author: JohnEstano <jestano_230000001603@uic.edu.ph>
+Date:   Thu Jul 10 23:07:14 2025 +0800
+
+    Initial Commit
+
+[33mcommit b5ee20fec1cab9baeff5cb9bd512cf1fda42de6c[m
+Author: JohnEstano <jestano_230000001603@uic.edu.ph>
+Date:   Thu Jul 10 23:06:48 2025 +0800
+
+    Initial Commit
+
+[33mcommit 9a6694aa29b405dfef1c662610efb6dc05056f03[m
+Author: JohnEstano <jestano_230000001603@uic.edu.ph>
+Date:   Thu Jul 10 23:06:25 2025 +0800
+
+    Initial Commit
+
+[33mcommit eeaeddc4f4ff782d3c59433c66e4ac4237a94159[m
+Author: JohnEstano <jestano_230000001603@uic.edu.ph>
+Date:   Thu Jul 10 23:03:39 2025 +0800
+
+    Initial Commit
+
+[33mcommit 7a007744f2ff9ad21672b1085d57cb80607d69cf[m
+Merge: d2886db cfee624
+Author: Arial12 <jestano_230000001603@uic.edu.ph>
+Date:   Wed Jul 9 18:42:13 2025 +0800
+
+    Merge pull request #1 from JohnEstano/feature/students-page
+    
+    Added student list feature
+
+[33mcommit cfee624d94ac5578ac5e45d071d37387be568323[m
+Author: JohnEstano <jestano_230000001603@uic.edu.ph>
+Date:   Wed Jul 9 18:41:09 2025 +0800
+
+    Added student list feature
+
+[33mcommit d2886db69dc8f5d955dbe760ddccd839192e08cf[m[33m ([m[1;31morigin/feature/students-page[m[33m, [m[1;32mfeature/students-page[m[33m)[m
+Author: JohnEstano <jestano_230000001603@uic.edu.ph>
+Date:   Thu May 1 11:12:24 2025 +0800
+
+    Initial Commit

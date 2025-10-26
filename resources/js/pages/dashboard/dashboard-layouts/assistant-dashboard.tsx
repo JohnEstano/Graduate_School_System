@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { usePage } from '@inertiajs/react';
-import { Sun, Moon, Users, CalendarDays, ClipboardList, DollarSign, CircleEllipsis, BarChart3 } from 'lucide-react';
+import { Sun, Moon, Users, CalendarDays, ClipboardList, DollarSign, CircleEllipsis } from 'lucide-react';
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -57,7 +57,6 @@ export default function AssistantDashboard() {
     const [todaysDefenses, setTodaysDefenses] = useState<number | null>(stats.todays_defenses ?? null);
     const [pendingApplications, setPendingApplications] = useState<number>(stats.pending_applications ?? 0);
     const [pendingPayments, setPendingPayments] = useState<number>(stats.pending_payments ?? 0);
-    const [pendingDefenseRequests, setPendingDefenseRequests] = useState<number>(stats.pending_defense_requests ?? 0);
 
     const [allRequests, setAllRequests] = useState<any[]>([]);
     const [pendingRequests, setPendingRequests] = useState<any[]>([]);
@@ -79,19 +78,17 @@ export default function AssistantDashboard() {
 
         setLoading(true);
         Promise.all([
-            fetch('/api/pending-honorariums').then(res => res.ok ? res.json() : { count: 0 }).catch(() => ({ count: 0 })),
+            fetch('/api/assistant/pending-honorariums').then(res => res.ok ? res.json() : { pending_count: 0 }).catch(() => ({ pending_count: 0 })),
             fetch('/api/todays-defenses').then(res => res.ok ? res.json() : { count: 0 }).catch(() => ({ count: 0 })),
             fetch('/api/pending-applications').then(res => res.ok ? res.json() : { count: 0 }).catch(() => ({ count: 0 })),
             fetch('/api/pending-payments').then(res => res.ok ? res.json() : { count: 0 }).catch(() => ({ count: 0 })),
-            fetch('/api/pending-defense-requests').then(res => res.ok ? res.json() : { count: 0 }).catch(() => ({ count: 0 })),
             fetch('/defense-requests', { headers: { 'Accept': 'application/json' } }).then(res => res.ok ? res.json() : []).catch(() => []),
         ])
-            .then(([honorariums, defenses, applications, payments, defenseRequests, allDefenseRequests]) => {
-                setPendingHonorariums(honorariums.count ?? 0);
+            .then(([honorariums, defenses, applications, payments, allDefenseRequests]) => {
+                setPendingHonorariums(honorariums.pending_count ?? 0);
                 setTodaysDefenses(defenses.count ?? 0);
                 setPendingApplications(applications.count ?? 0);
                 setPendingPayments(payments.count ?? 0);
-                setPendingDefenseRequests(defenseRequests.count ?? 0);
 
                 const requests = Array.isArray(allDefenseRequests)
                     ? allDefenseRequests
@@ -142,14 +139,6 @@ export default function AssistantDashboard() {
             iconTheme: "bg-violet-100 text-violet-600 dark:bg-violet-900 dark:text-violet-300",
             iconColorClass: "text-violet-500"
         },
-        {
-            title: "Defense Requests",
-            value: pendingDefenseRequests,
-            description: "Defense requests to process",
-            icon: <ClipboardList />,
-            iconTheme: "bg-rose-100 text-rose-600 dark:bg-rose-900 dark:text-rose-300",
-            iconColorClass: "text-rose-500"
-        },
     ];
 
     return (
@@ -197,7 +186,6 @@ export default function AssistantDashboard() {
                         <Tabs value={tab} onValueChange={setTab} className="w-full">
                             <TabsList className="mb-2 ">
                                 <TabsTrigger value="overview" className="flex-1 sm:flex-none">Overview</TabsTrigger>
-                                <TabsTrigger value="analytics" className="flex-1 sm:flex-none">Analytics</TabsTrigger>
                             </TabsList>
 
                             {/* Overview Tab */}
@@ -243,23 +231,6 @@ export default function AssistantDashboard() {
                                         />
                                         <PendingDefenseRequestsWidget pendingRequests={pendingRequests} loading={loading} />
                                     </div>
-                                </div>
-                            </TabsContent>
-
-                            {/* Analytics Tab - Mobile Responsive */}
-                            <TabsContent value="analytics" className="w-full">
-                                <div className="w-full max-w-screen-xl mx-auto grid grid-cols-1 gap-4 mb-4 md:mb-6">
-                                    {/* Icon analytic card */}
-                                    <Card className="flex flex-row items-center gap-3 md:gap-4 p-4 md:p-6">
-                                        <div className="rounded-full bg-violet-100 dark:bg-violet-900 p-2 md:p-3 flex items-center justify-center flex-shrink-0">
-                                            <BarChart3 className="size-6 md:size-8 text-violet-600 dark:text-violet-300" />
-                                        </div>
-                                        <div>
-                                            <div className="text-base md:text-lg font-bold text-gray-900 dark:text-white">Analytics</div>
-                                            <div className="text-xs md:text-sm text-gray-500 dark:text-gray-400">Visualize assistant workflow metrics and trends here.</div>
-                                        </div>
-                                    </Card>
-                                    {/* Add more analytics widgets here later */}
                                 </div>
                             </TabsContent>
                         </Tabs>

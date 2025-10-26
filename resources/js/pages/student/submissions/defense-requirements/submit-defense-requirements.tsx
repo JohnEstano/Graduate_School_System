@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Separator } from '@/components/ui/separator';
 
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { useForm } from '@inertiajs/react';
 import { Stepper } from '@/components/ui/Stepper';
 import {
@@ -33,6 +33,13 @@ type FacultyUser = {
     first_name: string;
     middle_name: string | null;
     last_name: string;
+};
+
+type PaymentRateRow = {
+    program_level: string;
+    type: string;
+    defense_type: string;
+    amount: number;
 };
 
 type AdviserSearchInputProps = {
@@ -155,6 +162,8 @@ export default function SubmitDefenseRequirements({ onFinish, open, onOpenChange
     const proofOfPaymentRef = useRef<HTMLInputElement>(null);
     const aviseeAdviserAttachmentRef = useRef<HTMLInputElement>(null);
 
+    const [paymentRates, setPaymentRates] = useState<PaymentRateRow[]>([]);
+
     // Add defense_type to form data
     const { data, setData, post, processing, reset } = useForm<{
         first_name: string;
@@ -199,6 +208,66 @@ export default function SubmitDefenseRequirements({ onFinish, open, onOpenChange
     const [showSuccessPanel, setShowSuccessPanel] = useState(false);
     const [showValidationAlert, setShowValidationAlert] = useState(false);
     const [validationMessage, setValidationMessage] = useState('');
+
+    // Fetch payment rates on mount
+    useEffect(() => {
+        fetch('/dean/payment-rates/data')
+            .then(res => res.json())
+            .then(data => {
+                if (data.rates) {
+                    setPaymentRates(data.rates);
+                }
+            })
+            .catch(err => console.error('Failed to fetch payment rates:', err));
+    }, []);
+
+    // Auto-calculate payment amount when defense type or program changes
+    useEffect(() => {
+        if (!data.defense_type || !data.program || paymentRates.length === 0) {
+            setData('amount', '');
+            return;
+        }
+
+        // Map program to program_level using same logic as backend ProgramLevel helper
+        let programLevel = 'Masteral'; // Default
+        const lowerProgram = data.program.toLowerCase().trim();
+        
+        // Check for doctorate keywords first (same as backend)
+        const doctorateKeywords = ['doctor', 'doctorate', 'doctoral', 'phd', 'ph.d', 'ph. d', 'dba', 'edd', 'ed.d', 'dsc', 'dpm', 'dpa'];
+        const isDoctorateProgramMatch = doctorateKeywords.some(kw => lowerProgram.includes(kw));
+        
+        if (isDoctorateProgramMatch) {
+            programLevel = 'Doctorate';
+        } else {
+            // All other programs (including Bachelors) map to Masteral for testing
+            programLevel = 'Masteral';
+        }
+
+        // Normalize defense type for comparison - match exact case from database
+        const normalizedDefenseType = data.defense_type; // Keep original case: "Proposal", "Prefinal", "Final"
+
+        console.log('Payment calculation:', {
+            program: data.program,
+            mappedLevel: programLevel,
+            defenseType: normalizedDefenseType,
+            availableRates: paymentRates
+        });
+
+        // Calculate total amount for this program level and defense type
+        const matchingRates = paymentRates.filter(rate => {
+            const programMatch = rate.program_level === programLevel;
+            const defenseMatch = rate.defense_type.toLowerCase() === normalizedDefenseType.toLowerCase();
+            return programMatch && defenseMatch;
+        });
+
+        console.log('Matching rates:', matchingRates);
+
+        const totalAmount = matchingRates.reduce((sum, rate) => sum + Number(rate.amount), 0);
+
+        console.log('Total calculated amount:', totalAmount);
+
+        setData('amount', totalAmount > 0 ? totalAmount.toFixed(2) : '0.00');
+    }, [data.defense_type, data.program, paymentRates]);
 
     function handleFile(field: keyof typeof data) {
         return (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -274,7 +343,7 @@ export default function SubmitDefenseRequirements({ onFinish, open, onOpenChange
         if (!data.similarity_index) return false;
         if (!data.proof_of_payment) return false;
         if (!data.reference_no.trim()) return false;
-        if (!data.amount.trim()) return false; // <-- Add this line
+        if (data.amount === '' || data.amount === null || data.amount === undefined) return false; // Amount must be calculated
 
         if (data.defense_type === 'Proposal') {
             if (!data.avisee_adviser_attachment) return false;
@@ -449,6 +518,10 @@ export default function SubmitDefenseRequirements({ onFinish, open, onOpenChange
                     <Separator />
                     <div>
                         <h3 className="text-base font-semibold mb-2">Document Uploads</h3>
+                        <p className="text-xs text-gray-600 mb-3">
+                            Please upload the required documents below. <strong>PDF files only</strong> are accepted. <br />
+                          
+                        </p>
                         <div className="space-y-4">
                             {(data.defense_type === 'Prefinal' || data.defense_type === 'Final') && (
                                 <div>
@@ -500,7 +573,7 @@ export default function SubmitDefenseRequirements({ onFinish, open, onOpenChange
                             </div>
                             <div>
                                 <Label className="text-xs">
-                                    Similarity Index <span className="text-rose-500">*</span>
+                                    Similarity Form <span className="text-rose-500">*</span>
                                 </Label>
                                 <div className="flex items-center gap-2">
                                     <Input
@@ -582,17 +655,22 @@ export default function SubmitDefenseRequirements({ onFinish, open, onOpenChange
                                 <div className="flex items-center gap-2">
                                     <span className="text-lg font-semibold text-gray-700">₱</span>
                                     <Input
-                                        type="number"
-                                        min="0"
-                                        step="0.01"
-                                        value={data.amount}
-                                        onChange={e => setData('amount', e.target.value)}
-                                        placeholder="Enter paid amount"
-                                        className="h-8 text-sm w-40"
+                                        type="text"
+                                        value={
+                                            data.amount 
+                                                ? parseFloat(data.amount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+                                                : data.defense_type 
+                                                    ? '0.00' 
+                                                    : ''
+                                        }
+                                        readOnly
+                                        disabled
+                                        placeholder={data.defense_type ? "Calculating..." : "Select defense type first"}
+                                        className="h-8 text-sm w-48 bg-gray-50"
                                     />
                                 </div>
                                 <p className="text-xs text-muted-foreground mt-1">
-                                    Please enter the accurate paid amount reflected on the uploaded receipt.
+                                    Please ensure that the submitted proof of payment matches the amount reflected above.
                                 </p>
                             </div>
                             <div>
@@ -658,7 +736,7 @@ export default function SubmitDefenseRequirements({ onFinish, open, onOpenChange
                                     <span className="font-medium">Manuscript:</span> {data.manuscript_proposal?.name || <span className="text-muted-foreground">—</span>}
                                 </div>
                                 <div>
-                                    <span className="font-medium">Similarity Index:</span> {data.similarity_index?.name || <span className="text-muted-foreground">—</span>}
+                                    <span className="font-medium">Similarity Form:</span> {data.similarity_index?.name || <span className="text-muted-foreground">—</span>}
                                 </div>
                                 {data.defense_type === 'Proposal' && (
                                     <div>

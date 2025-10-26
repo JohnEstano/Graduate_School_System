@@ -34,11 +34,11 @@ const studentNavItems: MainNavItem[] = [
             { title: 'Defense Requirements', href: '/defense-requirements' },
         ],
     },
-    {
-        title: 'My Documents', // <-- Add this block
-        href: '/student/documents',
-        icon: FileText,
-    },
+    //{
+      //  title: 'My Documents', // <-- Add this block
+        //href: '/student/documents',
+       // icon: FileText,
+  //  },
     {
         title: 'Academic Records',
         href: '/academic-records',
@@ -80,7 +80,6 @@ const coordinatorNavItems: MainNavItem[] = [
     },
     { title: 'Honorarium', href: '/honorarium', icon: DollarSign },
     { title: 'Student Records', href: '/student-records', icon: Users },
-    { title: 'Payment Rates', href: '/dean/payment-rates', icon: DollarSign },
     { title: 'Schedules', href: '/schedules', icon: CalendarFold },
 ];
 

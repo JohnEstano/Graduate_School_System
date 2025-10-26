@@ -58,6 +58,8 @@ export type DefenseRequestSummary = {
   last_status_updated_by?: string;
   last_status_updated_at?: string;
   workflow_state?: string;
+  adviser?: string;
+  aa_status?: 'pending' | 'ready_for_finance' | 'in_progress' | 'completed' | null;
 };
 
 interface ShowAllRequestsProps {
@@ -120,19 +122,14 @@ function ShowAllRequestsInner({ defenseRequests: initial, onStatusChange }: Show
   const [sortDir, setSortDir] = useState<'asc' | 'desc' | null>(null);
   const [page, setPage] = useState(1);
 
-  const [selectedByTab, setSelectedByTab] = useState<{ [k: string]: number[] }>({ pending: [], rejected: [], approved: [] });
-
+  // Remove all bulk select logic
   // Update columns state to reflect new columns for each tab
-  const [columns, setColumns] = useState<Record<string, boolean>>({
+  const [columns] = useState<Record<string, boolean>>({
     title: true,
     presenter: true,
-    adviser: true,      // Added
-    submitted_at: true, // Added
-    program: true,      // Added
-    date: true,
-    mode: true,
-    type: true,
-    priority: true
+    adviser: true,
+    program: true,
+    status: true,
   });
 
   // Helper to get columns per tab
@@ -230,89 +227,20 @@ function ShowAllRequestsInner({ defenseRequests: initial, onStatusChange }: Show
 
   const totalPages = Math.max(1, Math.ceil(sorted.length / 10));
   const paged = sorted.slice((page - 1) * 10, page * 10);
-
-  const selected = selectedByTab['all'] || [];
-  const setSelected = (arr: number[]) => setSelectedByTab(prev => ({ ...prev, all: arr }));
-  const headerChecked = selected.length === paged.length && paged.length > 0;
-  const toggleSelectAll = () => setSelected(headerChecked ? [] : paged.map(r => r.id));
-  const toggleSelectOne = (id: number) => setSelected(selected.includes(id) ? selected.filter(x => x !== id) : [...selected, id]);
   const toggleSort = () => setSortDir(d => (d === 'asc' ? 'desc' : d === 'desc' ? null : 'asc'));
-  const toggleColumn = (key: string) => setColumns(cols => ({ ...cols, [key]: !cols[key] }));
 
   const updateLocalStatus = (id: number, newStatus: DefenseRequestSummary['status']) => {
     setDefenseRequests(prev => prev.map(r => (r.id === id ? { ...r, status: newStatus } : r)));
     onStatusChange?.(id, newStatus);
   };
 
-  const bulkUpdateStatus = async (status: string) => {
-    try {
-      const res = await fetch('/defense-requests/bulk-status', {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-CSRF-TOKEN': getCsrfToken(),
-          Accept: 'application/json'
-        },
-        body: JSON.stringify({ ids: selected, status })
-      });
-      const data = await res.json();
-      if (res.ok && data.updated_ids) {
-        setDefenseRequests(prev =>
-          prev.map(r =>
-            data.updated_ids.includes(r.id) ? { ...r, status: data.status as DefenseRequestSummary['status'] } : r
-          )
-        );
-        setSelected([]);
-        toast.success('Bulk updated');
-      } else {
-        toast.error(data?.error || 'Bulk update failed');
-      }
-    } catch {
-      toast.error('Bulk update error');
-    }
-  };
+  // Bulk update status logic removed
 
-  const handleBulkDelete = async () => {
-    try {
-      const res = await fetch('/defense-requests/bulk-remove', {
-        method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-CSRF-TOKEN': getCsrfToken(),
-          Accept: 'application/json'
-        },
-        body: JSON.stringify({ ids: selected })
-      });
-      const data = await res.json();
-      if (res.ok) {
-        setDefenseRequests(prev => prev.filter(r => !selected.includes(r.id)));
-        setSelected([]);
-        toast.success('Deleted');
-      } else toast.error(data?.error || 'Delete failed');
-    } catch {
-      toast.error('Delete error');
-    }
-  };
+  // Bulk delete logic removed
 
-  function openConfirmBulk(action: 'approve' | 'reject' | 'retrieve') {
-    setConfirmAction(action);
-    setConfirmDialogOpen(true);
-  }
+  // Bulk confirm dialog logic removed
 
-  const handleConfirmBulk = async () => {
-    if (!confirmAction || selected.length === 0) {
-      setConfirmDialogOpen(false);
-      return;
-    }
-    let newStatus: DefenseRequestSummary['status'] = 'Pending';
-    if (confirmAction === 'approve') newStatus = 'Approved';
-    else if (confirmAction === 'reject') newStatus = 'Rejected';
-    else if (confirmAction === 'retrieve') newStatus = 'Pending';
-    await bulkUpdateStatus(newStatus);
-    setConfirmDialogOpen(false);
-    setConfirmAction(null);
-    toast.success(`Updated to ${newStatus}`);
-  };
+  // Bulk confirm handler removed
 
   const onPriorityChange = async (id: number, priority: string) => {
     try {
@@ -334,42 +262,7 @@ function ShowAllRequestsInner({ defenseRequests: initial, onStatusChange }: Show
     }
   };
 
-  function handleBulkPrint() {
-    const rows = defenseRequests.filter(r => selected.includes(r.id));
-    const w = window.open('', '', 'height=900,width=1200');
-    if (!w) return;
-    w.document.write(`
-      <html>
-        <head>
-          <title>Print Selected</title>
-          <style>
-            body{font-family:Arial;padding:32px}
-            h1{font-size:18px;margin:0 0 16px}
-            table{border-collapse:collapse;width:100%}
-            th,td{border:1px solid #ccc;padding:6px 8px;font-size:12px;text-align:left}
-          </style>
-        </head>
-        <body>
-          <h1>Defense Requests</h1>
-          <table>
-            <thead><tr><th>ID</th><th>Title</th><th>Presenter</th><th>Type</th><th>Priority</th><th>Status</th></tr></thead>
-            <tbody>
-              ${rows.map(r => `<tr>
-                <td>${r.id}</td>
-                <td>${r.thesis_title}</td>
-                <td>${r.first_name} ${r.last_name}</td>
-                <td>${r.defense_type}</td>
-                <td>${r.priority}</td>
-                <td>${r.status}</td>
-              </tr>`).join('')}
-            </tbody>
-          </table>
-          <script>window.print()</script>
-        </body>
-      </html>
-    `);
-    w.document.close();
-  }
+  // Bulk print logic removed
 
   const updateOneStatus = useCallback(async (id: number, status: DefenseRequestSummary['status']) => {
     try {
@@ -411,39 +304,7 @@ function ShowAllRequestsInner({ defenseRequests: initial, onStatusChange }: Show
     setSingleConfirm({open:false,id:null,action:null});
   }
 
-  async function handleBulkStatusChange(newStatus: 'Pending' | 'Approved' | 'Rejected') {
-    if (selected.length === 0) return;
-    setIsLoading(true);
-    try {
-      const res = await fetch('/defense-requests/bulk-status', {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-CSRF-TOKEN': getCsrfToken(),
-        },
-        body: JSON.stringify({
-          ids: selected,
-          status: newStatus,
-        }),
-      });
-      const data = await res.json();
-      if (data.ok) {
-        // Update local state
-        setDefenseRequests(prev =>
-          prev.map(r =>
-            selected.includes(r.id) ? { ...r, status: newStatus } : r
-          )
-        );
-        setSelected([]); // Clear selection
-      } else {
-        // Handle error (show toast, etc.)
-      }
-    } catch (e) {
-      // Handle error (show toast, etc.)
-    } finally {
-      setIsLoading(false);
-    }
-  }
+  // Bulk status change handler removed
 
   console.log("Initial defenseRequests prop:", initial);
 
@@ -598,97 +459,13 @@ function ShowAllRequestsInner({ defenseRequests: initial, onStatusChange }: Show
           </div>
         </div>
 
-        {/* Table and bulk bar */}
-        {selected.length > 0 && (
-          <div className="fixed left-1/2 z-30 -translate-x-1/2 bottom-4 md:bottom-6 flex items-center gap-1 bg-white border border-border shadow-lg rounded-lg px-4 py-1 text-xs animate-in fade-in slide-in-from-bottom-2 dark:bg-muted dark:text-muted-foreground dark:border-border">
-            <span className="font-semibold min-w-[70px] text-center">{selected.length} selected</span>
-            <div className="flex gap-1">
-              <Button
-                variant="ghost"
-                size="icon"
-                className="px-2 py-1 h-7 w-auto text-xs flex items-center gap-1"
-                onClick={() => openConfirmBulk('approve')}
-                aria-label="Approve"
-                disabled={isLoading}
-              >
-                <CheckCircle size={13} className="text-green-500" />
-                <span className="hidden sm:inline">{isLoading ? "Updating..." : "Approve"}</span>
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="px-2 py-1 h-7 w-auto text-xs flex items-center gap-1"
-                onClick={() => openConfirmBulk('reject')}
-                aria-label="Reject"
-                disabled={isLoading}
-              >
-                <XCircle size={13} className="text-red-500" />
-                <span className="hidden sm:inline">{isLoading ? "Updating..." : "Reject"}</span>
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="px-2 py-1 h-7 w-auto text-xs flex items-center gap-1"
-                onClick={() => openConfirmBulk('retrieve')}
-                aria-label="Retrieve"
-                disabled={isLoading}
-              >
-                <CircleArrowLeft size={13} className="text-blue-500" />
-                <span className="hidden sm:inline">{isLoading ? "Updating..." : "Retrieve"}</span>
-              </Button>
-              {/* Link button replaces Delete */}
-              <Button
-                variant="ghost"
-                size="icon"
-                className="px-2 py-1 h-7 w-auto text-xs flex items-center gap-1"
-                onClick={() => {/* your link logic here */}}
-                aria-label="Link"
-                disabled={isLoading}
-              >
-                <Settings2 size={13} className="text-blue-500" />
-                <span className="hidden sm:inline">Link</span>
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="px-2 py-1 h-7 w-auto text-xs flex items-center gap-1"
-                onClick={handleBulkPrint}
-                aria-label="Print"
-                disabled={isLoading}
-              >
-                <Printer size={13} />
-                <span className="hidden sm:inline">Print</span>
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="px-1 py-1 h-7 w-auto text-xs flex items-center"
-                onClick={() => setSelected([])}
-                aria-label="Clear selection"
-              >
-                <X size={14} />
-              </Button>
-            </div>
-          </div>
-        )}
+
 
         {/* Table */}
         <div className="w-full flex-1 flex flex-col min-h-0 overflow-hidden">
           <TableDefenseRequests
             paged={paged}
-            columns={{
-              title: true,
-              presenter: true,
-              adviser: true,
-              program: true,
-              panelists: true,   
-              scheduled: true,  
-              status: true,
-            }}
-            selected={selected}
-            toggleSelectOne={toggleSelectOne}
-            headerChecked={headerChecked}
-            toggleSelectAll={toggleSelectAll}
+            columns={columns}
             toggleSort={toggleSort}
             sortDir={sortDir}
             onPriorityChange={onPriorityChange}
@@ -699,7 +476,7 @@ function ShowAllRequestsInner({ defenseRequests: initial, onStatusChange }: Show
             onRowRetrieve={(id: number) => openConfirmSingle(id, 'retrieve')}
             highlightMissingDateMode={false}
             hideActions={false}
-            hideSelect={false}
+            hideSelect={true}
           />
         </div>
         <PaginationBar page={page} totalPages={totalPages} onPageChange={setPage} />
@@ -746,59 +523,9 @@ function ShowAllRequestsInner({ defenseRequests: initial, onStatusChange }: Show
         </DialogContent>
       </Dialog>
 
-      {/* Bulk Status Confirm Dialog */}
-      <Dialog open={confirmDialogOpen} onOpenChange={o => { if (!o) { setConfirmDialogOpen(false); setConfirmAction(null); } }}>
-        <DialogContent>
-          <DialogTitle>Status Update</DialogTitle>
-          <DialogDescription>
-            {confirmAction === 'approve'
-              ? 'Review before bulk approval.'
-              : 'Confirm the status change.'}
-          </DialogDescription>
-          <div className="space-y-3 mt-2 text-sm">
-            <p>
-              Update {selected.length} request{selected.length !== 1 && 's'} to{' '}
-              <span className="font-semibold">
-                {confirmAction === 'approve'
-                  ? 'Approved'
-                  : confirmAction === 'reject'
-                  ? 'Rejected'
-                  : 'Pending'}
-              </span>?
-            </p>
-            {confirmAction === 'approve' && (
-              <div className="flex flex-col items-center gap-3 rounded-md border bg-muted/40 p-5">
-                <div className="rounded-full bg-primary/10 p-4">
-                  <Signature className="h-14 w-14 text-primary" />
-                </div>
-                <p className="text-center text-sm leading-relaxed">
-                  Approving these defense requests authorizes the use of your signature
-                  on their official defense documents.
-                </p>
-              </div>
-            )}
-            <div className="flex justify-end gap-2">
-              <Button variant="ghost" onClick={() => { setConfirmDialogOpen(false); setConfirmAction(null); }}>Cancel</Button>
-              <Button onClick={handleConfirmBulk}>Confirm</Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
+      {/* Bulk Status Confirm Dialog removed */}
 
-      {/* Bulk delete confirm */}
-      <Dialog open={confirmBulkDelete} onOpenChange={setConfirmBulkDelete}>
-        <DialogContent>
-          <DialogTitle>Delete Requests</DialogTitle>
-          <DialogDescription>This action cannot be undone.</DialogDescription>
-          <div className="space-y-2 mt-2">
-            <p className="text-sm">Delete {selected.length} selected request(s)?</p>
-            <div className="flex justify-end gap-2">
-              <Button variant="ghost" onClick={() => setConfirmBulkDelete(false)}>Cancel</Button>
-              <Button variant="destructive" onClick={async () => { await handleBulkDelete(); setConfirmBulkDelete(false); }}>Delete</Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
+      {/* Bulk delete confirm dialog removed */}
     </>
   );
 }
