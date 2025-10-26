@@ -28,6 +28,7 @@ class DefenseRequest extends Model
         'coordinator_assigned_at'    => 'datetime',
         'coordinator_manually_assigned' => 'boolean',
         'amount' => 'decimal:2',
+        'payment_date' => 'date',
     ];
 
     public function user()                { return $this->belongsTo(User::class,'submitted_by'); }

@@ -55,6 +55,7 @@ class StudentRecordSyncService
                     'defense_type' => $defenseRequest->defense_type,
                     'defense_request_id' => $defenseRequest->id,
                     'or_number' => $defenseRequest->reference_no, // ✅ Add OR number
+                    'payment_date' => $defenseRequest->payment_date, // ✅ Add payment date
                 ]
             );
 
@@ -69,49 +70,79 @@ class StudentRecordSyncService
 
             // Process each payment
             foreach ($honorariumPayments as $honorariumPayment) {
-                if (!$honorariumPayment->panelist) {
-                    Log::warning('Skipping payment - no panelist', ['payment_id' => $honorariumPayment->id]);
+                if (!$honorariumPayment->panelist_name && !$honorariumPayment->panelist) {
+                    Log::warning('Skipping payment - no panelist info', ['payment_id' => $honorariumPayment->id]);
                     continue;
                 }
 
-                // Create panelist record with program_record_id
+                // Get panelist name (prefer panelist relation, fall back to panelist_name)
+                $panelistName = $honorariumPayment->panelist 
+                    ? $honorariumPayment->panelist->name 
+                    : $honorariumPayment->panelist_name;
+
+                if (!$panelistName) {
+                    Log::warning('Skipping payment - no panelist name', ['payment_id' => $honorariumPayment->id]);
+                    continue;
+                }
+
+                // Parse name into first, middle, last
+                $nameParts = explode(' ', trim($panelistName));
+                $firstName = $nameParts[0] ?? '';
+                $lastName = count($nameParts) > 1 ? $nameParts[count($nameParts) - 1] : '';
+                $middleName = count($nameParts) > 2 ? implode(' ', array_slice($nameParts, 1, -1)) : '';
+
+                // Create panelist record with proper name parsing
                 $panelistRecord = PanelistRecord::firstOrCreate(
                     [
-                        'pfirst_name' => $honorariumPayment->panelist->name,
+                        'pfirst_name' => $firstName,
+                        'plast_name' => $lastName,
                         'program_record_id' => $programRecord->id,
                     ],
                     [
-                        'pmiddle_name' => '',
-                        'plast_name' => '',
+                        'pmiddle_name' => $middleName,
                         'role' => $honorariumPayment->role,
                         'received_date' => $honorariumPayment->payment_date ?? now(),
                     ]
                 );
 
-                Log::info('Panelist record created', [
+                Log::info('Panelist record created/found', [
                     'id' => $panelistRecord->id,
-                    'name' => $panelistRecord->pfirst_name
+                    'name' => "{$firstName} {$middleName} {$lastName}",
+                    'role' => $honorariumPayment->role
                 ]);
 
-                // Create payment record with school year
-                $paymentRecord = PaymentRecord::create([
-                    'student_record_id' => $studentRecord->id,
-                    'panelist_record_id' => $panelistRecord->id,
-                    'defense_request_id' => $defenseRequest->id, // Add this line
-                    'school_year' => PaymentRecord::getCurrentSchoolYear(),
-                    'payment_date' => $honorariumPayment->payment_date ?? now(),
-                    'defense_status' => 'completed',
-                    'amount' => $honorariumPayment->amount,
-                ]);
+                // Create payment record (or update if exists) to avoid duplicates
+                $paymentRecord = PaymentRecord::updateOrCreate(
+                    [
+                        'student_record_id' => $studentRecord->id,
+                        'panelist_record_id' => $panelistRecord->id,
+                        'defense_request_id' => $defenseRequest->id,
+                    ],
+                    [
+                        'school_year' => PaymentRecord::getCurrentSchoolYear(),
+                        'payment_date' => $honorariumPayment->payment_date ?? $defenseRequest->payment_date ?? now(),
+                        'defense_status' => 'completed',
+                        'amount' => $honorariumPayment->amount,
+                        'role' => $honorariumPayment->role,
+                    ]
+                );
 
-                Log::info('Payment record created', [
+                Log::info('Payment record created/updated', [
                     'id' => $paymentRecord->id,
-                    'amount' => $paymentRecord->amount
+                    'amount' => $paymentRecord->amount,
+                    'role' => $honorariumPayment->role
                 ]);
 
                 // Link panelist to student with role in pivot table
+                // Use sync to avoid duplicates, and preserve the role
                 $studentRecord->panelists()->syncWithoutDetaching([
                     $panelistRecord->id => ['role' => $honorariumPayment->role]
+                ]);
+
+                Log::info('Panelist linked to student via pivot', [
+                    'student_id' => $studentRecord->id,
+                    'panelist_id' => $panelistRecord->id,
+                    'role' => $honorariumPayment->role
                 ]);
             }
 
