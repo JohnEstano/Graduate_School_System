@@ -317,6 +317,9 @@ export default function DefenseRequestForm() {
             content: (
                 <>
                     <HeadingSmall title="Step 3: Required Attachments" />
+                    <p className="mb-4 text-sm text-gray-600">
+                        Please upload the required documents below. <strong>PDF files only</strong> are accepted for all attachments.
+                    </p>
                     {([
                         ['advisersEndorsement', "Adviser's Endorsement", advisersRef],
                         ['recEndorsement', 'REC Endorsement', recRef],

@@ -29,7 +29,16 @@ import { Info as InfoIcon } from "lucide-react";
 import { DocumentGeneratorDialog } from "@/components/DocumentGeneratorDialog";
 import { Badge } from "@/components/ui/badge";
 
+
 dayjs.extend(relativeTime);
+
+// Helper to get adviser info from user object
+function getAdviser(user: any) {
+    if (Array.isArray(user?.advisers)) {
+        return user.advisers[0] ?? null;
+    }
+    return null;
+}
 
 function resolveFileUrl(url?: string | null) {
     if (!url) return null;
@@ -150,15 +159,20 @@ type PageProps = {
 };
 
 export default function DefenseRequestIndex() {
-    const { props } = usePage<PageProps>();
-    const { defenseRequirements = [], defenseRequest: initialDefenseRequest, acceptDefense = true } = props;
+    const { props } = usePage<PageProps & { auth: { user: any } }>();
+    const { defenseRequirements = [], defenseRequest: initialDefenseRequest, acceptDefense = true, auth } = props;
+    const user = auth?.user || {};
+    const adviser = getAdviser(user);
 
     const [showClosedAlert, setShowClosedAlert] = useState(!acceptDefense);
     const [defenseRequest, setDefenseRequest] = useState<DefenseRequest | null>(initialDefenseRequest || null);
     const [lastUpdateTime, setLastUpdateTime] = useState<string>(dayjs().format('h:mm A'));
     const [loading, setLoading] = useState(false);
 
-    const TERMINAL_WORKFLOW_STATES = new Set(['cancelled','adviser-rejected','coordinator-rejected','completed']);
+    // Disable submit if no adviser assigned
+    const noAdviserAssigned = !adviser;
+
+    const TERMINAL_WORKFLOW_STATES = new Set(['cancelled', 'adviser-rejected', 'coordinator-rejected', 'completed']);
     const hasActiveWorkflow = !!defenseRequest && !TERMINAL_WORKFLOW_STATES.has((defenseRequest.workflow_state || '').toLowerCase());
 
     const [open, setOpen] = useState(false);
@@ -171,7 +185,8 @@ export default function DefenseRequestIndex() {
     const [processingUnsubmit, setProcessingUnsubmit] = useState(false);
     const [openItemId, setOpenItemId] = useState<number | null>(null);
 
-    const STATE_ORDER = ['submitted','adviser-approved','coordinator-approved','panels-assigned','scheduled','completed'] as const;
+    // Update the STATE_ORDER to match actual workflow
+    const STATE_ORDER = ['submitted', 'adviser-approved', 'panels-assigned', 'scheduled', 'coordinator-approved', 'completed'] as const;
     type CanonicalState = typeof STATE_ORDER[number];
 
     function normalizeWorkflowState(raw?: string | null): CanonicalState | null {
@@ -179,23 +194,35 @@ export default function DefenseRequestIndex() {
         const r = raw.toLowerCase();
         if (r === 'submitted' || r === 'adviser-review') return 'submitted';
         if (r === 'adviser-approved' || r === 'coordinator-review') return 'adviser-approved';
-        if (r === 'coordinator-approved') return 'coordinator-approved';
         if (r === 'panels-assigned' || r === 'panel-assigned') return 'panels-assigned';
         if (r === 'scheduled') return 'scheduled';
+        if (r === 'coordinator-approved') return 'coordinator-approved';
         if (r === 'completed') return 'completed';
         return null;
     }
 
     function currentStepperIndex(dr: DefenseRequest | { workflow_state?: string } | null): number {
         if (!dr) return 0;
-        const wf = (dr.workflow_state || '').toLowerCase();
-        if ((dr as any).panels_assigned_at && !['panels-assigned','scheduled','completed'].includes(wf)) {
-            return STATE_ORDER.indexOf('panels-assigned');
-        }
-        const norm = normalizeWorkflowState(wf);
-        if (!norm) return 0;
-        return STATE_ORDER.indexOf(norm);
+        const wf = (dr.workflow_state || '').toLowerCase().trim();
+
+        // Map workflow states to their correct position
+        if (wf === 'completed') return 5; // Step 6
+        if (wf === 'coordinator-approved') return 4; // Step 5 - Coordinator approves AFTER scheduling
+        if (wf === 'scheduled') return 3; // Step 4 - Schedule AFTER panels
+        if (wf === 'panels-assigned' || wf === 'panel-assigned') return 2; // Step 3 - Panels AFTER adviser
+        if (wf === 'adviser-approved' || wf === 'coordinator-review') return 1; // Step 2
+        if (wf === 'submitted' || wf === 'adviser-review' || wf === 'pending') return 0; // Step 1
+
+        return 0;
     }
+
+    // Add console log to debug
+    useEffect(() => {
+        if (defenseRequest) {
+            console.log('Defense Request Workflow State:', defenseRequest.workflow_state);
+            console.log('Current Stepper Index:', currentStepperIndex(defenseRequest));
+        }
+    }, [defenseRequest]);
 
     useEffect(() => {
         if (!defenseRequest?.id) return;
@@ -205,28 +232,32 @@ export default function DefenseRequestIndex() {
                 if (!response.ok) return;
                 const updated = await response.json();
                 const keys: (keyof DefenseRequest)[] = [
-                    'workflow_state','defense_chairperson','defense_panelist1','defense_panelist2','defense_panelist3',
-                    'defense_panelist4','scheduled_date','scheduled_time','scheduled_end_time','defense_venue','defense_mode','scheduling_notes'
+                    'workflow_state', 'defense_chairperson', 'defense_panelist1', 'defense_panelist2', 'defense_panelist3',
+                    'defense_panelist4', 'scheduled_date', 'scheduled_time', 'scheduled_end_time', 'defense_venue', 'defense_mode', 'scheduling_notes'
                 ];
                 const changed = keys.some(k => (updated as any)[k] !== (defenseRequest as any)[k]);
                 if (changed) setLastUpdateTime(dayjs().format('h:mm A'));
                 setDefenseRequest(updated);
-            } catch {}
+            } catch { }
         }, 10000);
         return () => clearInterval(pollInterval);
     }, [defenseRequest?.id, defenseRequest]);
 
     function canUnsubmit(req: DefenseRequirement, dr: DefenseRequest | null) {
-        if (!dr) return (req.status || '').toLowerCase() === 'pending';
-        const allowed = ['pending','submitted','adviser-review'];
+        // Match by ID to ensure we're checking the correct submission
+        if (!dr || dr.id !== req.id) {
+            return (req.status || '').toLowerCase() === 'pending';
+        }
+        const allowed = ['pending', 'submitted', 'adviser-review'];
         if ((req.status || '').toLowerCase() === 'cancelled') return false;
-        if (dr.thesis_title === req.thesis_title && dr.workflow_state === 'cancelled') return false;
-        return (req.status || '').toLowerCase() === 'pending' || (dr.thesis_title === req.thesis_title && allowed.includes(dr.workflow_state));
+        if (dr.workflow_state === 'cancelled') return false;
+        return (req.status || '').toLowerCase() === 'pending' || allowed.includes(dr.workflow_state);
     }
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Defense Requirements" />
+
             {loading ? (
                 <div className="w-full min-h-[70vh] bg-zinc-100 dark:bg-zinc-900 flex flex-col gap-4 p-0 m-0">
                     <Skeleton className="h-6 w-1/6 rounded bg-zinc-300 dark:bg-zinc-800 mt-8 mx-8" />
@@ -236,6 +267,18 @@ export default function DefenseRequestIndex() {
                 </div>
             ) : (
                 <div className="flex flex-col px-7 pt-5 pb-5 w-full">
+                    {/* Always show adviser notice if not assigned */}
+                    {noAdviserAssigned && (
+                        <Alert className="bg-rose-50 dark:bg-rose-950 border-rose-200 dark:border-rose-900 text-rose-900 dark:text-rose-100 flex items-start gap-3 px-6 py-5 rounded-xl mb-4">
+                            <InfoIcon className="h-5 w-5 text-rose-500 dark:text-rose-400 mt-1 flex-shrink-0" />
+                            <div>
+                                <AlertTitle className="font-semibold mb-1">No Adviser Assigned</AlertTitle>
+                                <AlertDescription>
+                                    You are not currently assigned to an adviser. You must be registered with an adviser before you can submit defense requirements. Please contact your coordinator or adviser for assistance.
+                                </AlertDescription>
+                            </div>
+                        </Alert>
+                    )}
                     {/* Alert if submissions are closed */}
                     {!acceptDefense && showClosedAlert && (
                         <Alert
@@ -276,13 +319,15 @@ export default function DefenseRequestIndex() {
                             <Button
                                 className="bg-rose-500 text-sm px-5 rounded-md dark:bg-rose-600 disabled:opacity-60"
                                 onClick={() => setOpen(true)}
-                                disabled={hasActiveWorkflow || !acceptDefense} 
+                                disabled={hasActiveWorkflow || !acceptDefense || noAdviserAssigned}
                                 title={
-                                    !acceptDefense
-                                        ? 'Submissions closed'
-                                        : hasActiveWorkflow
-                                            ? 'Finish current workflow before submitting another'
-                                            : 'Submit new defense requirements'
+                                    noAdviserAssigned
+                                        ? 'You must be assigned to an adviser to submit requirements'
+                                        : !acceptDefense
+                                            ? 'Submissions closed'
+                                            : hasActiveWorkflow
+                                                ? 'Finish current workflow before submitting another'
+                                                : 'Submit new defense requirements'
                                 }
                             >
                                 <Plus /> Submit requirements
@@ -290,8 +335,8 @@ export default function DefenseRequestIndex() {
                             <SubmitDefenseRequirements
                                 open={open}
                                 onOpenChange={setOpen}
-                                onFinish={() => {}}
-                                acceptDefense={acceptDefense} 
+                                onFinish={() => { }}
+                                acceptDefense={acceptDefense}
                             />
                         </div>
                         {defenseRequirements.length === 0 ? (
@@ -306,17 +351,18 @@ export default function DefenseRequestIndex() {
                                     const isOpen = openItemId === req.id;
                                     const timeSubmitted = req.created_at ? dayjs(req.created_at).fromNow() : 'Unknown';
 
+                                    // Match by unique ID instead of thesis_title to prevent cross-contamination
                                     const activeObjForRow =
-                                        defenseRequest && defenseRequest.thesis_title === req.thesis_title
+                                        defenseRequest && defenseRequest.id === req.id
                                             ? defenseRequest
                                             : (req.workflow_state ? { workflow_state: req.workflow_state } : null);
 
                                     const stepIdx = currentStepperIndex(activeObjForRow as any);
 
-                                    // Merge row data with active request so students always see latest schedule/committee
+                                    // Merge row data with active request ONLY if IDs match
                                     const merged = {
                                         ...req,
-                                        ...(defenseRequest && defenseRequest.thesis_title === req.thesis_title ? defenseRequest : {}),
+                                        ...(defenseRequest && defenseRequest.id === req.id ? defenseRequest : {}),
                                     } as DefenseRequirement & Partial<DefenseRequest>;
 
                                     const wf = (merged.workflow_state || '').toLowerCase();
@@ -325,12 +371,13 @@ export default function DefenseRequestIndex() {
                                     const isCompleted = wf === 'completed';
                                     const showStepper = !isCancelled && !isRejected && !isCompleted;
 
+                                    // Update workflow steps to match the correct order
                                     const workflowSteps = [
                                         { key: 'submitted', label: 'Submitted', icon: <Hourglass className="w-4 h-4" /> },
                                         { key: 'adviser-approved', label: 'Adviser Approved', icon: <CheckCircle className="w-4 h-4" /> },
-                                        { key: 'coordinator-approved', label: 'Coordinator Approved', icon: <CheckCircle className="w-4 h-4" /> },
                                         { key: 'panels-assigned', label: 'Panels Assigned', icon: <Users className="w-4 h-4" /> },
                                         { key: 'scheduled', label: 'Scheduled', icon: <Calendar className="w-4 h-4" /> },
+                                        { key: 'coordinator-approved', label: 'Coordinator Approved', icon: <CheckCircle className="w-4 h-4" /> },
                                         { key: 'completed', label: 'Completed', icon: <GraduationCap className="w-4 h-4" /> },
                                     ] as const;
 
@@ -508,16 +555,7 @@ export default function DefenseRequestIndex() {
                                                                         {req.program || '—'}
                                                                     </div>
                                                                 </div>
-                                                                {/* Reference No. */}
-                                                                <div className="min-w-0">
-                                                                    <div className="text-[11px] text-muted-foreground flex items-center gap-1.5">
-                                                                        <Paperclip className="h-3.5 w-3.5" />
-                                                                        Reference No.
-                                                                    </div>
-                                                                    <div className="font-medium text-zinc-900 dark:text-zinc-100 truncate">
-                                                                        {req.reference_no || '—'}
-                                                                    </div>
-                                                                </div>
+                                                              
 
                                                                 {/* Date */}
                                                                 <div className="min-w-0">
@@ -770,7 +808,7 @@ export default function DefenseRequestIndex() {
                                                 });
                                                 if (res.ok) { setUnsubmitDialogOpen(false); window.location.reload(); }
                                                 else {
-                                                    let data: any = {}; try { data = await res.json(); } catch {}
+                                                    let data: any = {}; try { data = await res.json(); } catch { }
                                                     alert(data?.message || 'Failed to unsubmit.');
                                                 }
                                             } catch { alert('Network error. Please try again.'); }

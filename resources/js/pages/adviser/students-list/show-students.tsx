@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Check, Users, Trash, Mail, Loader2, UserCheck, UserX } from "lucide-react";
+import { Check, Users, Trash } from "lucide-react";
 import {
   Dialog,
   DialogTrigger,
@@ -18,7 +18,6 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
-  DialogDescription,
 } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -52,12 +51,6 @@ export default function ShowStudents() {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [studentToRemove, setStudentToRemove] = useState<Student | null>(null);
 
-  // Email confirmation dialogs
-  const [acceptEmailConfirmOpen, setAcceptEmailConfirmOpen] = useState(false);
-  const [rejectEmailConfirmOpen, setRejectEmailConfirmOpen] = useState(false);
-  const [pendingAction, setPendingAction] = useState<{ student: Student; action: 'accept' | 'reject' } | null>(null);
-  const [processing, setProcessing] = useState(false);
-
   useEffect(() => {
     loadAccepted();
     fetchPending();
@@ -88,50 +81,22 @@ export default function ShowStudents() {
     }
   };
 
-  const openAcceptDialog = (s: Student) => {
-    setPendingAction({ student: s, action: 'accept' });
-    setAcceptEmailConfirmOpen(true);
-  };
-
-  const openRejectDialog = (s: Student) => {
-    setPendingAction({ student: s, action: 'reject' });
-    setRejectEmailConfirmOpen(true);
-  };
-
-  const handleConfirmAccept = async (sendEmail: boolean) => {
-    if (!pendingAction || pendingAction.action !== 'accept') return;
-    
-    setProcessing(true);
+  const acceptPending = async (s: Student) => {
     try {
-      await axios.post(`/api/adviser/pending-students/${pendingAction.student.id}/accept`, {
-        send_email: sendEmail
-      });
+      await axios.post(`/api/adviser/pending-students/${s.id}/accept`);
       await loadAccepted();
       await fetchPending();
     } catch (err) {
       console.error(err);
-    } finally {
-      setProcessing(false);
-      setAcceptEmailConfirmOpen(false);
-      setPendingAction(null);
     }
   };
 
-  const handleConfirmReject = async (sendEmail: boolean) => {
-    if (!pendingAction || pendingAction.action !== 'reject') return;
-    
-    setProcessing(true);
+  const rejectPending = async (s: Student) => {
     try {
-      await axios.post(`/api/adviser/pending-students/${pendingAction.student.id}/reject`, {
-        send_email: sendEmail
-      });
+      await axios.post(`/api/adviser/pending-students/${s.id}/reject`);
       await fetchPending();
     } catch (err) {
       console.error(err);
-    } finally {
-      setProcessing(false);
-      setRejectEmailConfirmOpen(false);
-      setPendingAction(null);
     }
   };
 
@@ -198,7 +163,7 @@ export default function ShowStudents() {
               variant="outline"
               size="icon"
               title="Accept"
-              onClick={() => openAcceptDialog(s)}
+              onClick={() => acceptPending(s)}
               className="text-green-600 border-green-300 hover:bg-green-50 hover:text-green-700"
             >
               <Check className="w-4 h-4" />
@@ -207,7 +172,7 @@ export default function ShowStudents() {
               variant="outline"
               size="icon"
               title="Reject"
-              onClick={() => openRejectDialog(s)}
+              onClick={() => rejectPending(s)}
               className="text-rose-600 border-rose-300 hover:bg-rose-50 hover:text-rose-700"
             >
               <Trash className="w-4 h-4" />
@@ -309,116 +274,6 @@ export default function ShowStudents() {
           </div>
         </TabsContent>
       </Tabs>
-
-      {/* Accept Student Email Confirmation Dialog */}
-      <Dialog open={acceptEmailConfirmOpen} onOpenChange={setAcceptEmailConfirmOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <UserCheck className="h-5 w-5 text-green-500" />
-              Accept Student & Send Notification?
-            </DialogTitle>
-            <DialogDescription className="pt-2 space-y-2">
-              <p>You are accepting this student:</p>
-              <div className="bg-zinc-100 dark:bg-zinc-800 p-3 rounded-md space-y-1">
-                <p className="font-semibold text-zinc-900 dark:text-zinc-100">
-                  {pendingAction?.student.first_name} {pendingAction?.student.middle_name ? pendingAction.student.middle_name[0] + '.' : ''} {pendingAction?.student.last_name}
-                </p>
-                <p className="text-sm text-zinc-600 dark:text-zinc-400">
-                  {pendingAction?.student.email}
-                </p>
-                <p className="text-sm text-zinc-600 dark:text-zinc-400">
-                  {pendingAction?.student.program}
-                </p>
-              </div>
-              <p className="text-sm text-zinc-600 dark:text-zinc-400">
-                Would you like to send an acceptance email notification to the student?
-              </p>
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter className="gap-2 sm:gap-0">
-            <Button
-              variant="outline"
-              onClick={() => handleConfirmAccept(false)}
-              disabled={processing}
-            >
-              Skip Email
-            </Button>
-            <Button
-              onClick={() => handleConfirmAccept(true)}
-              disabled={processing}
-              className="bg-green-600 hover:bg-green-700"
-            >
-              {processing ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Processing...
-                </>
-              ) : (
-                <>
-                  <Mail className="mr-2 h-4 w-4" />
-                  Send Email
-                </>
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Reject Student Email Confirmation Dialog */}
-      <Dialog open={rejectEmailConfirmOpen} onOpenChange={setRejectEmailConfirmOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <UserX className="h-5 w-5 text-rose-500" />
-              Reject Student & Send Notification?
-            </DialogTitle>
-            <DialogDescription className="pt-2 space-y-2">
-              <p>You are rejecting this student:</p>
-              <div className="bg-zinc-100 dark:bg-zinc-800 p-3 rounded-md space-y-1">
-                <p className="font-semibold text-zinc-900 dark:text-zinc-100">
-                  {pendingAction?.student.first_name} {pendingAction?.student.middle_name ? pendingAction.student.middle_name[0] + '.' : ''} {pendingAction?.student.last_name}
-                </p>
-                <p className="text-sm text-zinc-600 dark:text-zinc-400">
-                  {pendingAction?.student.email}
-                </p>
-                <p className="text-sm text-zinc-600 dark:text-zinc-400">
-                  {pendingAction?.student.program}
-                </p>
-              </div>
-              <p className="text-sm text-zinc-600 dark:text-zinc-400">
-                Would you like to send a rejection email notification to the student?
-              </p>
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter className="gap-2 sm:gap-0">
-            <Button
-              variant="outline"
-              onClick={() => handleConfirmReject(false)}
-              disabled={processing}
-            >
-              Skip Email
-            </Button>
-            <Button
-              onClick={() => handleConfirmReject(true)}
-              disabled={processing}
-              className="bg-rose-600 hover:bg-rose-700"
-            >
-              {processing ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Processing...
-                </>
-              ) : (
-                <>
-                  <Mail className="mr-2 h-4 w-4" />
-                  Send Email
-                </>
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

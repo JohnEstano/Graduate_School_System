@@ -40,10 +40,36 @@ class GeneratedDocumentController extends Controller {
       $defenseRequest = \App\Models\DefenseRequest::findOrFail($request->defense_request_id);
 
       $generator = new \App\Services\DocumentGenerator();
-      $generated = $generator->generate($tpl, $defenseRequest, $request->fields ?? []);
+      
+      try {
+          $generated = $generator->generate($tpl, $defenseRequest, $request->fields ?? []);
+          
+          $pdfPath = storage_path('app/public/' . $generated->output_path);
+          
+          if (!file_exists($pdfPath)) {
+              \Log::error("Generated PDF not found at path: $pdfPath");
+              return response()->json([
+                  'ok' => false,
+                  'error' => 'Generated PDF file not found'
+              ], 500);
+          }
 
-      $pdfPath = storage_path('app/public/' . $generated->output_path);
-
-      return response()->download($pdfPath, 'endorsement_form.pdf')->deleteFileAfterSend(false);
+          // Return PDF as binary stream for download
+          $filename = 'endorsement_form_' . $defenseRequest->id . '_' . time() . '.pdf';
+          
+          return response()->file($pdfPath, [
+              'Content-Type' => 'application/pdf',
+              'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+          ]);
+          
+      } catch (\Throwable $e) {
+          \Log::error('Document generation failed: ' . $e->getMessage(), [
+              'trace' => $e->getTraceAsString()
+          ]);
+          return response()->json([
+              'ok' => false,
+              'error' => 'Document generation failed: ' . $e->getMessage()
+          ], 500);
+      }
   }
 }

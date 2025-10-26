@@ -19,7 +19,7 @@ return new class extends Migration
             $table->string('middle_name')->nullable();
             $table->string('last_name');
             $table->string('gender')->nullable();
-            $table->string('program')->nullable(); // Added program column
+            $table->string('program')->nullable(); 
             $table->string('school_year')->nullable();
             $table->string('student_id')->nullable()->unique();
             $table->string('course_section')->nullable();

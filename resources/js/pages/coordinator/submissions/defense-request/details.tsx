@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
@@ -25,7 +25,8 @@ import {
   XCircle,
   CircleArrowLeft,
   Signature,
-  User
+  User,
+  X  // ADD THIS
 } from 'lucide-react';
 import { useRef } from 'react';
 
@@ -113,6 +114,22 @@ export type DefenseRequestFull = {
   adviser_status?: string;
   coordinator_status?: string;
   program_level?: string; // "Masteral" | "Doctorate" from server
+  submitted_at?: string;
+  coordinator?: {
+    id: number;
+    name: string;
+    email: string;
+  } | null;
+  attachments?: {
+    advisers_endorsement?: string;
+    rec_endorsement?: string;
+    proof_of_payment?: string;
+    manuscript_proposal?: string;
+    similarity_index?: string;
+    avisee_adviser_attachment?: string;
+    ai_detection_certificate?: string;
+    endorsement_form?: string;
+  };
 };
 
 // add: local type for payment rate to avoid cross-file type conflicts
@@ -172,12 +189,25 @@ function PanelMemberCombobox({
             className="w-full h-9 px-3 flex items-center justify-between rounded-md border bg-background text-sm text-left focus:outline-none focus:ring-2 focus:ring-primary/40 hover:bg-accent disabled:opacity-50"
             disabled={disabled}
           >
-            <span
-              className={`truncate ${!value ? 'text-muted-foreground' : ''}`}
-            >
+            <span className={`truncate flex-1 ${!value ? 'text-muted-foreground' : ''}`}>
               {value || `Select ${label}`}
             </span>
-            <ChevronsUpDown size={14} className="opacity-50" />
+            <div className="flex items-center gap-1 ml-2">
+              {/* X button - only show when there's a value and not disabled */}
+              {value && !disabled && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onChange('');
+                  }}
+                  className="h-5 w-5 rounded-sm hover:bg-muted flex items-center justify-center transition-colors"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              )}
+              <ChevronsUpDown size={14} className="opacity-50" />
+            </div>
           </button>
         </PopoverTrigger>
         <PopoverContent
@@ -260,7 +290,7 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
   // Build breadcrumbs, use thesis title (truncated) instead of id
   const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Dashboard', href: '/dashboard' },
-    { title: 'Defense Requests', href: '/defense-request' }
+    { title: 'Defense Requests', href: '/coordinator/defense-requests' }
   ];
   if (requestProp?.id) {
     const thesisForCrumb =
@@ -284,7 +314,7 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
           </p>
           <Button
             variant="outline"
-            onClick={() => router.visit('/defense-request')}
+            onClick={() => router.visit('/coordinator/defense-requests')}
           >
             Back to list
           </Button>
@@ -397,6 +427,27 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
   const canEdit = ['Coordinator', 'Administrative Assistant', 'Dean'].includes(
     userRole
   );
+
+  // Options for assignment comboboxes: exclude adviser-type entries
+  const panelOptionsForAssignment = useMemo(() => {
+    const adviserName = (request.defense_adviser || '').toLowerCase().trim();
+    const adviserEmail = (request.coordinator?.email || '').toLowerCase().trim();
+
+    return panelMembers.filter(pm => {
+      const t = (pm.type || '').toLowerCase();
+      const name = (pm.name || '').toLowerCase();
+      const email = (pm.email || '').toLowerCase();
+
+      // exclude adviser/advisor types (covers both spellings) - case-insensitive
+      if (t.includes('advis')) return false;
+
+      // Exclude if this panel member appears to be the request's adviser by name or email
+      if (adviserName && name && (name === adviserName || name.includes(adviserName) || adviserName.includes(name))) return false;
+      if (adviserEmail && email && email === adviserEmail) return false;
+
+      return true;
+    });
+  }, [panelMembers]);
 
   // Helper to always get a fresh CSRF token
   async function getFreshCsrfToken(): Promise<string> {
@@ -562,62 +613,56 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
     if (!request.id) return;
     setIsLoading(true);
 
-    let newStatus: 'Pending' | 'Approved' | 'Rejected' = 'Pending';
-    if (action === 'approve') newStatus = 'Approved';
-    else if (action === 'reject') newStatus = 'Rejected';
-    else if (action === 'retrieve') newStatus = 'Pending';
-
     try {
-      const payload: any = { status: newStatus, send_email: sendEmail };
-      console.log('handleStatusChange payload:', payload);
-      // If approving, include current panels and schedule to be saved together
+      // STEP 1: If approving, save panels and schedule FIRST
       if (action === 'approve') {
-        payload.panels = {
-          defense_chairperson: panels.defense_chairperson,
-          defense_panelist1: panels.defense_panelist1,
-          defense_panelist2: panels.defense_panelist2,
-          defense_panelist3: panels.defense_panelist3,
-          defense_panelist4: panels.defense_panelist4,
-        };
-        
-        // Format times to H:i (strip seconds if present)
-        const formatTimeForBackend = (time: string) => {
-          if (!time) return '';
-          // If time has seconds (HH:mm:ss), strip them to get HH:mm
-          const parts = time.split(':');
-          return parts.length >= 2 ? `${parts[0]}:${parts[1]}` : time;
-        };
-        
-        payload.schedule = {
-          scheduled_date: schedule.scheduled_date,
-          scheduled_time: formatTimeForBackend(schedule.scheduled_time),
-          scheduled_end_time: formatTimeForBackend(schedule.scheduled_end_time),
-          defense_mode: schedule.defense_mode,
-          defense_venue: schedule.defense_venue,
-          scheduling_notes: schedule.scheduling_notes,
-        };
-        console.log('Approval payload with panels and schedule:', payload);
+        // Save panels
+        await fetchWithCsrfRetry(`/coordinator/defense-requests/${request.id}/panels`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Accept: 'application/json'
+          },
+          body: JSON.stringify(panels)
+        });
+
+        // Save schedule
+        await fetchWithCsrfRetry(`/coordinator/defense-requests/${request.id}/schedule-json`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Accept: 'application/json'
+          },
+          body: JSON.stringify(schedule)
+        });
       }
 
+      // STEP 2: Now approve/reject/retrieve
       const res = await fetchWithCsrfRetry(`/defense-requests/${request.id}/status`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
           Accept: 'application/json'
         },
-        body: JSON.stringify(payload),
+        body: JSON.stringify({ 
+          decision: action === 'approve' ? 'approve' : action === 'reject' ? 'reject' : 'retrieve',
+          comment: null,
+          send_email: sendEmail
+        }),
       });
+      
       let data: any = {};
       try {
         data = await res.json();
       } catch {
         data = { error: 'Invalid response from server.' };
       }
+
       console.log('updateStatus response:', { ok: res.ok, status: res.status, data });
-      if (res.ok) {
+      
+      if (res.ok && data.ok) {
         if (data.request) {
           setRequest(data.request);
-          // Also update local state from server response to fix cache issue
           setPanels({
             defense_chairperson: data.request.defense_chairperson || '',
             defense_panelist1: data.request.defense_panelist1 || '',
@@ -633,29 +678,14 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
             defense_venue: data.request.defense_venue || '',
             scheduling_notes: data.request.scheduling_notes || '',
           });
-        } else {
-          setRequest(r => ({
-            ...r,
-            coordinator_status: newStatus,
-            workflow_state: data.workflow_state || r.workflow_state,
-            workflow_history: data.workflow_history || r.workflow_history,
-            status: data.status || r.status,
-          }));
         }
-        toast.success(`Coordinator status set to ${newStatus}`);
-      } else if (res.status === 422 && data?.conflicts) {
-        // Show conflict details to the user and offer force option
-        const conflictList = (data.conflicts || []).map((c: any) => `${c.person} has a conflict (${c.time_range}) with ${c.student_name}`).join('\n');
-        if (action === 'approve') {
-          // Ask user whether to force approve despite conflicts
-          if (window.confirm('Scheduling conflicts detected:\n' + conflictList + '\n\nClick OK to force approve and override, Cancel to abort.')) {
-            // resend with force=true
-            await handleForceApprove();
-          }
-        }
-        toast.error(data?.error || `Failed to update status (${res.status})`);
+        toast.success(`Defense request ${action === 'approve' ? 'approved' : action === 'reject' ? 'rejected' : 'retrieved'} successfully`);
       } else {
-        toast.error(data?.error || `Failed to update status (${res.status})`);
+        if (data.missing_fields) {
+          toast.error('Missing required fields: ' + data.missing_fields.join(', '));
+        } else {
+          toast.error(data?.error || `Failed to update status (${res.status})`);
+        }
       }
     } catch (err: any) {
       if (err instanceof Error && err.message === 'network') {
@@ -747,14 +777,14 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
 
   // Attachments (show all, including manuscript, similarity, avisee, etc.)
   const attachments = [
-    { label: "Adviser’s Endorsement", url: resolveFileUrl(request.advisers_endorsement) },
-    { label: 'REC Endorsement', url: resolveFileUrl(request.rec_endorsement) },
-    { label: 'Proof of Payment', url: resolveFileUrl(request.proof_of_payment) },
-    { label: 'Manuscript', url: resolveFileUrl(request.manuscript_proposal) },
-    { label: 'Similarity Index', url: resolveFileUrl(request.similarity_index) },
-    { label: 'Avisee-Adviser File', url: resolveFileUrl(request.avisee_adviser_attachment) },
-    { label: 'AI Detection Certificate', url: resolveFileUrl(request.ai_detection_certificate) },
-    { label: 'Endorsement Form', url: resolveFileUrl(request.endorsement_form) },
+    { label: "Adviser’s Endorsement", url: resolveFileUrl(request.attachments?.advisers_endorsement || request.advisers_endorsement) },
+    { label: 'REC Endorsement', url: resolveFileUrl(request.attachments?.rec_endorsement || request.rec_endorsement) },
+    { label: 'Proof of Payment', url: resolveFileUrl(request.attachments?.proof_of_payment || request.proof_of_payment) },
+    { label: 'Manuscript', url: resolveFileUrl(request.attachments?.manuscript_proposal || request.manuscript_proposal) },
+    { label: 'Similarity Form', url: resolveFileUrl(request.attachments?.similarity_index || request.similarity_index) },
+    { label: 'Avisee-Adviser File', url: resolveFileUrl(request.attachments?.avisee_adviser_attachment || request.avisee_adviser_attachment) },
+    { label: 'AI Declaration Form', url: resolveFileUrl(request.attachments?.ai_detection_certificate || request.ai_detection_certificate) },
+    { label: 'Endorsement Form', url: resolveFileUrl(request.attachments?.endorsement_form || request.endorsement_form) },
   ];
 
   // Helper for workflow history rendering robustness
@@ -811,7 +841,7 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
     }
   }
 
-  // Workflow stepper config
+  // Workflow stepper config (UPDATED ORDER)
   const workflowSteps = [
     {
       key: 'submitted',
@@ -820,8 +850,18 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
     },
     {
       key: 'adviser-approved',
-      label: 'Endorsed by Adviser', // CHANGED from "Approved by Adviser"
+      label: 'Endorsed by Adviser',
       icon: <UserCheck className="h-5 w-5" />,
+    },
+    {
+      key: 'panels-assigned',
+      label: 'Panels Assigned',
+      icon: <UsersIcon className="h-5 w-5" />,
+    },
+    {
+      key: 'scheduled',
+      label: 'Scheduled',
+      icon: <Clock className="h-5 w-5" />,
     },
     {
       key: 'coordinator-approved',
@@ -835,20 +875,9 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
     },
     {
       key: 'retrieved',
-      label: 'Retrieved (Set to Pending)',
+      label: 'Retrieved',
       icon: <CircleArrowLeft className="h-5 w-5" />,
     },
-    {
-      key: 'panels-assigned',
-      label: 'Panels Assigned',
-      icon: <User className="h-5 w-5" />,
-    },
-    {
-      key: 'scheduled',
-      label: 'Scheduled',
-      icon: <Clock className="h-5 w-5" />,
-    },
-    // Add more steps as needed
   ];
 
   // Update this function:
@@ -874,6 +903,36 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
 
   // Tabs: "details" and "assign-schedule"
   const [tab, setTab] = useState<'details' | 'assign-schedule'>('details');
+
+  // Local helper to get receivable (matching AA logic)
+  function getMemberReceivable(role: string): number | null {
+    if (!request.program_level || !request.defense_type) return null;
+    
+    // Map role to payment rate type exactly as stored in DB
+    let rateType = '';
+    if (role === 'Adviser') {
+      rateType = 'Adviser';
+    } else {
+      // All panel members (chair, panelist 1-4) use "Panel Chair" rate
+      rateType = 'Panel Chair';
+    }
+    
+    // Normalize defense type for case-insensitive comparison
+    const normalizeDefenseType = (dt: string) => dt.toLowerCase().replace(/[^a-z]/g, '');
+    const targetDefenseType = normalizeDefenseType(request.defense_type);
+    
+    // Direct comparison with normalization
+    const rate = paymentRates.find(
+      r => {
+        const matchesProgram = r.program_level === request.program_level;
+        const matchesType = r.type === rateType;
+        const matchesDefense = normalizeDefenseType(r.defense_type || '') === targetDefenseType;
+        return matchesProgram && matchesType && matchesDefense;
+      }
+    );
+    
+    return rate ? Number(rate.amount) : null;
+  }
 
   const statusMap: Record<string, string> = {
     'submitted': 'Submitted',
@@ -973,39 +1032,37 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
             <Tabs value={tab} onValueChange={v => setTab(v as 'details' | 'assign-schedule')} className="w-full">
               {/* DETAILS TAB */}
               <TabsContent value="details" className="space-y-5">
-                {/* Submission summary card */}
+                {/* Submission summary card - MATCHING ADVISER LAYOUT */}
                 <div className="rounded-xl border p-8 bg-white dark:bg-zinc-900">
-                  {/* Thesis Title Header with Status */}
-                  <div className="mb-1 flex flex-col md:flex-row md:items-center md:justify-between gap-2">
-                    <div>
+                  {/* Thesis Title Header with Adviser Status ONLY */}
+                  <div className="mb-1 flex flex-col md:flex-row md:items-start md:justify-between gap-2">
+                    <div className="flex-1">
                       <div className="text-2xl font-semibold">{request.thesis_title}</div>
                       <div className="text-xs text-muted-foreground font-medium mt-0.5">Thesis Title</div>
                     </div>
                     <div className="flex flex-col md:items-end gap-1">
-                      {/* Coordinator Status */}
-                      {request.coordinator_status && (
-                        <span
-                          className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
-                            request.coordinator_status === 'Approved'
-                              ? 'bg-green-100 text-green-600'
-                              : request.coordinator_status === 'Rejected'
-                              ? 'bg-red-100 text-red-600'
-                              : request.coordinator_status === 'Needs Signature'
-                              ? 'bg-blue-100 text-blue-600'
-                              : request.coordinator_status === 'Not Scheduled'
-                              ? 'bg-yellow-100 text-yellow-700'
-                              : request.coordinator_status === 'No Assigned Panelists'
-                              ? 'bg-orange-100 text-orange-600'
-                              : 'bg-gray-100 text-gray-600'
-                          }`}
+                      {/* Adviser Status Badge */}
+                      {request.adviser_status && (
+                        <Badge
+                          variant="secondary"
+                          className={cn(
+                            "text-xs font-semibold px-3 py-1",
+                            request.adviser_status === 'Approved'
+                              ? 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300'
+                              : request.adviser_status === 'Rejected'
+                              ? 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300'
+                              : 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300'
+                          )}
                         >
-                          Coordinator Status: {request.coordinator_status}
-                        </span>
+                          Adviser Status: {request.adviser_status === 'Approved' ? 'Endorsed' : request.adviser_status}
+                        </Badge>
                       )}
                     </div>
                   </div>
+
                   {/* Info Grid */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-6 mt-6">
+                    {/* Presenter */}
                     <div>
                       <div className="text-xs text-muted-foreground mb-1">Presenter</div>
                       <div className="flex items-center gap-3">
@@ -1024,20 +1081,65 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
                         </div>
                       </div>
                     </div>
+
+                    {/* Program */}
                     <div>
                       <div className="text-xs text-muted-foreground mb-1">Program</div>
                       <div className="font-medium text-sm">{request.program}</div>
                     </div>
+
+                    {/* Defense Type */}
                     <div>
                       <div className="text-xs text-muted-foreground mb-1">Defense Type</div>
                       <Badge variant="secondary" className="text-xs font-medium">
                         {request.defense_type ?? '—'}
                       </Badge>
                     </div>
+
+                    {/* Submitted At */}
+                    <div>
+                      <div className="text-xs text-muted-foreground mb-1">Submitted At</div>
+                      <div className="font-medium text-sm">{formatDate(request.submitted_at)}</div>
+                    </div>
+
+                    {/* Program Coordinator */}
+                    <div>
+                      <div className="text-xs text-muted-foreground mb-1">Program Coordinator</div>
+                      <div className="font-medium text-sm">
+                        {request.coordinator?.name || 'Rogelio O. Badiang (rbadiang@uic.edu.ph)'}
+                      </div>
+                    </div>
+
+                    {/* Coordinator Status */}
+                    <div>
+                      <div className="text-xs text-muted-foreground mb-1">Coordinator Status</div>
+                      <Badge
+                        variant="secondary"
+                        className={cn(
+                          "text-xs font-semibold",
+                          request.coordinator_status === 'Approved'
+                            ? 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300'
+                            : request.coordinator_status === 'Rejected'
+                            ? 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300'
+                            : 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300'
+                        )}
+                      >
+                        {request.coordinator_status || 'Pending'}
+                      </Badge>
+                    </div>
+
+                    {/* Separator before schedule info */}
+                    <div className="md:col-span-2">
+                      <Separator className="my-2" />
+                    </div>
+
+                    {/* Scheduled Date */}
                     <div>
                       <div className="text-xs text-muted-foreground mb-1">Scheduled Date</div>
                       <div className="font-medium text-sm">{formatDate(request.scheduled_date)}</div>
                     </div>
+
+                    {/* Time */}
                     <div>
                       <div className="text-xs text-muted-foreground mb-1">Time</div>
                       <div className="font-medium text-sm">
@@ -1046,14 +1148,22 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
                           : '—'}
                       </div>
                     </div>
+
+                    {/* Venue */}
                     <div>
                       <div className="text-xs text-muted-foreground mb-1">Venue</div>
                       <div className="font-medium text-sm">{request.defense_venue || '—'}</div>
                     </div>
+
+                    {/* Mode */}
                     <div>
                       <div className="text-xs text-muted-foreground mb-1">Mode</div>
-                      <div className="font-medium text-sm">{request.defense_mode ? (request.defense_mode === 'face-to-face' ? 'Face-to-Face' : 'Online') : '—'}</div>
+                      <div className="font-medium text-sm capitalize">
+                        {request.defense_mode ? (request.defense_mode === 'face-to-face' ? 'Face-to-Face' : 'Online') : '—'}
+                      </div>
                     </div>
+
+                    {/* Notes */}
                     <div className="md:col-span-2">
                       <div className="text-xs text-muted-foreground mb-1">Notes</div>
                       <div className="font-medium text-sm">{request.scheduling_notes || '—'}</div>
@@ -1071,39 +1181,31 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
                     const memberFor = (value: string | null | undefined, fallbackRole: string) => {
                       const resolved = findPanelMember(panelMembers, value);
                       return {
-                        displayName: resolved?.name || value || '—',
-                        email: resolved?.email || '',
-                        rawValue: value || '',
-                        role: fallbackRole,
+                          displayName: resolved?.name || value || '—',
+                          email: resolved?.email || '',
+                          rawValue: value || '',
+                          role: fallbackRole,
                       };
                     };
 
                     const rows = [
                       { key: 'adviser', info: memberFor(request.defense_adviser, 'Adviser') },
                       { key: 'defense_chairperson', info: memberFor(panels.defense_chairperson || request.defense_chairperson, 'Panel Chair') },
-                      { key: 'defense_panelist1', info: memberFor(panels.defense_panelist1 || request.defense_panelist1, 'Panel Member') },
-                      { key: 'defense_panelist2', info: memberFor(panels.defense_panelist2 || request.defense_panelist2, 'Panel Member') },
-                      { key: 'defense_panelist3', info: memberFor(panels.defense_panelist3 || request.defense_panelist3, 'Panel Member') },
-                      { key: 'defense_panelist4', info: memberFor(panels.defense_panelist4 || request.defense_panelist4, 'Panel Member') },
+                      { key: 'defense_panelist1', info: memberFor(panels.defense_panelist1 || request.defense_panelist1, 'Panel Member 1') },
+                      { key: 'defense_panelist2', info: memberFor(panels.defense_panelist2 || request.defense_panelist2, 'Panel Member 2') },
+                      { key: 'defense_panelist3', info: memberFor(panels.defense_panelist3 || request.defense_panelist3, 'Panel Member 3') },
+                      { key: 'defense_panelist4', info: memberFor(panels.defense_panelist4 || request.defense_panelist4, 'Panel Member 4') },
                     ].map(r => {
                       const namePresent = !!(r.info.rawValue || (r.info.displayName && r.info.displayName !== '—'));
-                      const emailPresent = !!(r.info.email);
-                      const status = namePresent ? (emailPresent ? 'Assigned' : 'Pending confirmation') : '—';
-
-                      const receivable = namePresent
-                        ? (
-                            request.program_level
-                              ? getMemberReceivableByProgramLevel(paymentRates, request.program_level, request.defense_type, r.info.role)
-                              : getMemberReceivable(paymentRates, request.program, request.defense_type, r.info.role)
-                          )
-                        : null;
+                      
+                      // Use local function for receivables (matches AA logic)
+                      const receivable = namePresent ? getMemberReceivable(r.info.role) : null;
 
                       return {
-                        name: r.info.displayName,
-                        email: r.info.email || '—',
-                        role: r.info.role,
-                        status,
-                        receivable,
+                          name: r.info.displayName,
+                          email: r.info.email || '—',
+                          role: r.info.role,
+                          receivable,
                       };
                     });
 
@@ -1113,38 +1215,42 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
                         : v ?? '—';
 
                     return (
-                      <div className="rounded-md border overflow-x-auto">
-                        <Table>
+                      <div className="overflow-x-auto">
+                        <Table className="border-0">
                           <TableHeader>
                             <TableRow>
-                              <TableHead className="min-w-[180px]">Name</TableHead>
-                              <TableHead className="min-w-[220px]">Email</TableHead>
-                              <TableHead className="min-w-[120px]">Role</TableHead>
-                              <TableHead className="min-w-[120px]">Status</TableHead>
-                              <TableHead className="min-w-[160px] text-right">Receivable</TableHead>
+                              <TableHead className="min-w-[200px]">Name & Email</TableHead>
+                              <TableHead className="min-w-[100px]">Role</TableHead>
+                              {/* <TableHead className="min-w-[100px]">Status</TableHead> */}
+                              <TableHead className="min-w-[140px] text-right">Receivable</TableHead>
                             </TableRow>
                           </TableHeader>
                           <TableBody>
                             {rows.map((r, idx) => (
                               <TableRow key={idx}>
-                                <TableCell className="font-medium">{r.name}</TableCell>
-                                <TableCell className="text-xs text-muted-foreground">{r.email || '—'}</TableCell>
-                                <TableCell>{r.role}</TableCell>
                                 <TableCell>
+                                  <div className="flex flex-col">
+                                    <span className="font-medium text-sm">{r.name}</span>
+                                    <span className="text-xs text-muted-foreground">{r.email}</span>
+                                  </div>
+                                </TableCell>
+                                <TableCell className="text-xs">{r.role}</TableCell>
+                                {/* <TableCell>
                                   <Badge
                                     variant="secondary"
-                                    className={
+                                    className={cn(
+                                      "text-xs",
                                       r.status === 'Assigned'
                                         ? 'bg-green-100 text-green-700'
                                         : r.status === 'Pending confirmation'
                                         ? 'bg-yellow-100 text-amber-700'
                                         : 'bg-amber-100 text-amber-700'
-                                    }
+                                    )}
                                   >
                                     {r.status}
                                   </Badge>
-                                </TableCell>
-                                <TableCell className="text-right">{formatCurrency(r.receivable)}</TableCell>
+                                </TableCell> */}
+                                <TableCell className="text-right text-xs font-medium">{formatCurrency(r.receivable)}</TableCell>
                               </TableRow>
                             ))}
                           </TableBody>
@@ -1214,7 +1320,7 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
                         label={label}
                         value={panels[key as keyof typeof panels]}
                         onChange={v => setPanels(p => ({ ...p, [key]: v }))}
-                        options={panelMembers}
+                        options={panelOptionsForAssignment}
                         disabled={!canEdit || loadingMembers}
                         taken={taken}
                       />
@@ -1398,15 +1504,7 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
           </div>
         </div>
 
-        <div className="text-[11px] text-muted-foreground">
-          Last updated by:{' '}
-          {request.last_status_updated_by_name ||
-            request.last_status_updated_by ||
-            '—'}{' '}
-          {request.last_status_updated_at
-            ? `(${dayjs(request.last_status_updated_at).format('YYYY-MM-DD [at] h:mm A')})`
-            : ''}
-        </div>
+    
       </div>
 
       {/* Confirmation Dialog for Approve/Reject/Retrieve */}

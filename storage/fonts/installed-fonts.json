@@ -1,0 +1,8 @@
+{
+    "dejavu sans": {
+        "bold": "C:\\xampp\\htdocs\\Graduate_School_System\\vendor\\dompdf\\dompdf\/lib\/fonts\/DejaVuSans-Bold",
+        "bold_italic": "C:\\xampp\\htdocs\\Graduate_School_System\\vendor\\dompdf\\dompdf\/lib\/fonts\/DejaVuSans-BoldOblique",
+        "italic": "C:\\xampp\\htdocs\\Graduate_School_System\\vendor\\dompdf\\dompdf\/lib\/fonts\/DejaVuSans-Oblique",
+        "normal": "dejavu_sans_normal_1c5f9038305ff23261ddbc82618e132a"
+    }
+}

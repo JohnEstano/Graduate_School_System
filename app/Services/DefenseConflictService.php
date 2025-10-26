@@ -91,8 +91,10 @@ class DefenseConflictService
             ->whereNotNull('scheduled_time')
             ->whereNotNull('scheduled_end_time')
             ->whereIn('workflow_state', ['adviser-approved', 'coordinator-approved', 'scheduled'])
+
             ->with('student:id,first_name,last_name')
             ->get(['id', 'submitted_by', 'scheduled_time', 'scheduled_end_time', 'formatted_time_range',
+
                    'defense_chairperson', 'defense_panelist1', 'defense_panelist2', 'defense_panelist3', 'defense_panelist4']);
 
         foreach ($others as $other) {
@@ -134,7 +136,7 @@ class DefenseConflictService
                             'conflicting_role' => $otherPanelWithRoles[$person],
                             'defense_id' => $other->id,
                             'time_range' => $other->formatted_time_range ?? $otherStart->format('g:i A') . ' - ' . $otherEnd->format('g:i A'),
-                            'student_name' => $studentName
+                            'student_name' => $studentName ?: 'Unknown Student'
                         ];
                     }
                 }

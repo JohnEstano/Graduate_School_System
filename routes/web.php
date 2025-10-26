@@ -1,13 +1,13 @@
 <?php
 
 
+
 use App\Http\Controllers\HonorariumSummaryController;
 use App\Http\Controllers\StudentRecordController;
 use App\Http\Controllers\EmailsController;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
-
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DefenseRequestController;
 use App\Http\Controllers\DefenseRequirementController;
@@ -43,8 +43,15 @@ Route::get('/', function () {
     return Auth::check()
         ? redirect()->route('dashboard')
         : redirect()->route('login');
+    return Auth::check()
+        ? redirect()->route('dashboard')
+        : redirect()->route('login');
 })->name('home');
 
+Route::post('/programs/{programId}/panelists', [HonorariumSummaryController::class, 'storePanelist'])
+    ->name('programs.panelists.store');
+
+// The routes here means that to be rendered or accessed, you need to login or have prior authentication.
 Route::middleware('guest')->group(function () {
     // BASIC login page (adjust Inertia component path to what you actually have)
     Route::get('/login', fn() => Inertia::render('auth/Login'))->name('login');
@@ -295,6 +302,8 @@ Route::get('/test-mail', function () {
 |--------------------------------------------------------------------------
 */
 Route::middleware(['auth', 'verified'])->group(function () {
+    Route::get('/api/coordinator/code', [CoordinatorAdviserController::class, 'getCoordinatorCode']);
+    Route::post('/api/adviser/register-with-coordinator-code', [\App\Http\Controllers\CoordinatorAdviserController::class, 'registerWithCode']);
     Route::get('/coordinator/defense-requests/all-defense-requests', [\App\Http\Controllers\DefenseRequestController::class, 'allForCoordinator'])->middleware('auth');
     Route::get('/api/coordinator/code', [CoordinatorAdviserController::class, 'getCoordinatorCode']);
     Route::post('/api/adviser/register-with-coordinator-code', [\App\Http\Controllers\CoordinatorAdviserController::class, 'registerWithCode']);
@@ -315,11 +324,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/api/coordinator/students/search', [CoordinatorAdviserController::class, 'searchStudents']);
 
 
-    Route::get('/panelists/honorarium-specs', [PanelistHonorariumSpecController::class, 'index']);
-    Route::put('/panelists/honorarium-specs', [PanelistHonorariumSpecController::class, 'update'])
-        ->name('panelists.honorarium-specs.update');
 
-    
 
     //PAYMENTVERIFIATION AA
     Route::prefix('aa')->group(function () {
@@ -328,9 +333,16 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('/payment-verifications/batch', [PaymentVerificationController::class, 'addToBatch'])->name('aa.payment-verifications.batch');
         Route::get('/payment-batch/{batchId}/export', [PaymentVerificationController::class, 'exportBatch'])->name('aa.payment-batch.export');
         Route::post('/payment-verifications/bulk-update', [PaymentVerificationController::class, 'bulkUpdateStatus']);
-
-
     });
+
+    // AA Verification Status Update by Defense Request ID (for details page)
+    Route::post('/assistant/aa-verification/{defenseRequestId}/status', [PaymentVerificationController::class, 'updateStatusByDefenseRequest'])
+        ->name('assistant.aa-verification.update-status');
+
+    Route::get('/assistant/defense-batches', [\App\Http\Controllers\Assistant\DefenseBatchController::class, 'index']);
+    Route::post('/assistant/defense-batches', [\App\Http\Controllers\Assistant\DefenseBatchController::class, 'store']);
+    Route::post('/assistant/defense-batches/{batch}/status', [\App\Http\Controllers\Assistant\DefenseBatchController::class, 'updateStatus']);
+
 
     //PAYMENT RATESS ETC.
     Route::post('/dean/payment-rates', [\App\Http\Controllers\PaymentRateController::class, 'update'])
@@ -359,17 +371,109 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
 
 
+        // HONORARIUM ROUTES
 
-    //Honorarium route
-    // honorarium-summary route
-    Route::get('/honorarium-summary', [HonorariumSummaryController::class, 'Index'])
-        ->name('honorarium-summary.index');
-    Route::get('/honorarium-summary/{record}/download', [HonorariumSummaryController::class, 'download'])
-        ->name('honorarium-summary.download');
+        // Page 1 - List all programs
+        Route::get('/honorarium', [HonorariumSummaryController::class, 'index'])
+            ->name('honorarium.index');
+
+        // Page 2 - Show individual program details (panelists, etc.)
+        Route::get('/honorarium/individual-record/{programId}', [HonorariumSummaryController::class, 'show'])
+            ->name('honorarium.individual-record');
+
+        // Download program PDF
+        Route::get('/honorarium/{programId}/download-pdf', [HonorariumSummaryController::class, 'downloadProgramPdf'])
+            ->name('honorarium.downloadPDF');
+
+        // Download individual panelist PDF
+        Route::get('/honorarium/panelist/{panelistId}/download-pdf', [HonorariumSummaryController::class, 'downloadPanelistPdf'])
+            ->name('honorarium.panelist.downloadPDF');
+
+
+
+
+
+
+
+
+    // HONORARIUM ROUTES
+   
+
+
+  // Download individual panelist CSV (includes per-assignment role)
+        Route::get('/honorarium/panelist/{panelistId}/download-csv', [HonorariumSummaryController::class, 'downloadPanelistCsv'])
+            ->name('honorarium.panelist.downloadCSV');
+
+    Route::get('/honorarium/individual-record/{programId}', [HonorariumSummaryController::class, 'show'])
+        ->name('honorarium.individual-record');
+
+
+    Route::get('/honorarium', [HonorariumSummaryController::class, 'index'])
+        ->name('honorarium.index');
+
+    Route::get('/honorarium/individual-record/{programId}', [HonorariumSummaryController::class, 'show'])
+        ->name('honorarium-record.show');
+
+    // Download CSV for a program
+    // API route
+    Route::get('/api/honorarium/{programId}/download-pdf', [HonorariumSummaryController::class, 'downloadPdfApi']);
+
+    // Web route
+    Route::get('/honorarium/{programId}/download-pdf', [HonorariumSummaryController::class, 'downloadProgramPdf'])
+        ->name('honorarium.downloadPDF');
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     //student-records route
     Route::get('/student-records', [StudentRecordController::class, 'index'])->name('student-records.index');
+    Route::get('/student-records/program/{programId}', [StudentRecordController::class, 'showProgramStudents'])->name('student-records.program.show');
+    Route::get('/student-records/{id}', [StudentRecordController::class, 'show'])->name('student-records.show');
+    Route::get('/student-records/{id}/download-pdf', [StudentRecordController::class, 'downloadPdf'])->name('student-records.downloadPdf');
     Route::put('/student-records/{studentRecord}', [StudentRecordController::class, 'update'])->name('student-records.update');
     Route::delete('/student-records/{studentRecord}', [StudentRecordController::class, 'destroy'])->name('student-records.destroy');
+
+    Route::get('/payments/{id}/download-pdf', [StudentRecordController::class, 'downloadPdf'])
+        ->name('payments.downloadPdf');
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -410,8 +514,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
     /* Notifications */
     Route::get('/notification', fn() => Inertia::render('notification/Index'))->name('notification.index');
     Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
-    Route::post('/notifications/{notification}/read', [NotificationController::class, 'markAsRead'])->name('notifications.read');
-    Route::post('/notifications/read-all', [NotificationController::class, 'markAllAsRead'])->name('notifications.read-all');
 
     /* Payments */
     Route::get('/payment', [PaymentSubmissionController::class, 'index'])->name('payment.index');
@@ -440,7 +542,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     /* Defense Request (main workflow) */
     Route::get('/defense-request', [DefenseRequestController::class, 'index'])->name('defense-request.index');
-    // Alias so frontend calls to /defense-requests (plural) also hit the same index action (JSON or Inertia)
     Route::get('/defense-requests', [DefenseRequestController::class, 'index'])->name('defense-requests.index');
     Route::post('/defense-request', [DefenseRequestController::class, 'store'])->name('defense-request.store');
 
@@ -449,10 +550,18 @@ Route::middleware(['auth', 'verified'])->group(function () {
         '/defense-requests/{defenseRequest}/adviser-decision',
         [DefenseRequestController::class, 'adviserDecision']
     )->name('defense-requests.adviser-decision');
+
     Route::post(
         '/defense-requests/{defenseRequest}/coordinator-decision',
         [DefenseRequestController::class, 'coordinatorDecision']
     )->name('defense-requests.coordinator-decision');
+
+    // ADD THIS ROUTE - Mark defense as completed
+    Route::post(
+        '/defense-requests/{defenseRequest}/complete',
+        [DefenseRequestController::class, 'completeDefense']
+    )->name('defense-requests.complete')
+        ->middleware(['auth', 'verified']);
 
     /* Status / priority */
     Route::patch(
@@ -581,74 +690,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('/panel-members', [CoordinatorDefenseController::class, 'panelMembersAll'])
             ->name('defense.panel-members');
 
-        Route::get('/defense-requests/{defenseRequest}/details', function (DefenseRequest $defenseRequest) {
-            $user = Auth::user();
-            $roles = ['Coordinator', 'Administrative Assistant', 'Dean'];
-            if (!$user || !in_array($user->role, $roles))
-                abort(403);
-
-            $mapped = [
-                'id' => $defenseRequest->id,
-                'first_name' => $defenseRequest->first_name,
-                'middle_name' => $defenseRequest->middle_name,
-                'last_name' => $defenseRequest->last_name,
-                'school_id' => $defenseRequest->school_id,
-                'program' => $defenseRequest->program,
-                'thesis_title' => $defenseRequest->thesis_title,
-                'defense_type' => $defenseRequest->defense_type,
-                'status' => $defenseRequest->status,
-                'priority' => $defenseRequest->priority,
-                'workflow_state' => $defenseRequest->workflow_state,
-                'defense_adviser' => $defenseRequest->defense_adviser,
-                'defense_chairperson' => $defenseRequest->defense_chairperson,
-                'defense_panelist1' => $defenseRequest->defense_panelist1,
-                'defense_panelist2' => $defenseRequest->defense_panelist2,
-                'defense_panelist3' => $defenseRequest->defense_panelist3,
-                'defense_panelist4' => $defenseRequest->defense_panelist4,
-                'scheduled_date' => $defenseRequest->scheduled_date?->format('Y-m-d'),
-                'scheduled_time' => $defenseRequest->scheduled_time,
-                'scheduled_end_time' => $defenseRequest->scheduled_end_time,
-                'defense_mode' => $defenseRequest->defense_mode,
-                'defense_venue' => $defenseRequest->defense_venue,
-                'scheduling_notes' => $defenseRequest->scheduling_notes,
-                // --- ALL DOCUMENT FIELDS ---
-                'advisers_endorsement' => $defenseRequest->advisers_endorsement,
-                'rec_endorsement' => $defenseRequest->rec_endorsement,
-                'proof_of_payment' => $defenseRequest->proof_of_payment,
-                'reference_no' => $defenseRequest->reference_no,
-                'manuscript_proposal' => $defenseRequest->manuscript_proposal,
-                'similarity_index' => $defenseRequest->similarity_index,
-                'avisee_adviser_attachment' => $defenseRequest->avisee_adviser_attachment,
-                'ai_detection_certificate' => $defenseRequest->ai_detection_certificate,
-                'endorsement_form' => $defenseRequest->endorsement_form,
-                // --- END DOCUMENT FIELDS ---
-                'last_status_updated_by' => $defenseRequest->last_status_updated_by,
-                'last_status_updated_at' => $defenseRequest->last_status_updated_at,
-                'workflow_history' => $defenseRequest->workflow_history ?? [],
-                'adviser_status' => $defenseRequest->adviser_status ?? null,
-                'coordinator_status' => $defenseRequest->coordinator_status ?? null,
-
-                // ADD: exact level for rate matching
-                'program_level' => \App\Helpers\ProgramLevel::getLevel($defenseRequest->program),
-            ];
-            
-            // Add the name of the user who last updated the status
-            if ($defenseRequest->last_status_updated_by) {
-                $updatedByUser = \App\Models\User::find($defenseRequest->last_status_updated_by);
-                if ($updatedByUser) {
-                    $mapped['last_status_updated_by_name'] = trim(
-                        $updatedByUser->first_name . ' ' . 
-                        ($updatedByUser->middle_name ? strtoupper($updatedByUser->middle_name[0]) . '. ' : '') . 
-                        $updatedByUser->last_name
-                    );
-                }
-            }
-            
-            return Inertia::render('coordinator/submissions/defense-request/details', [
-                'defenseRequest' => $mapped,
-                'userRole' => $user->role
-            ]);
-        })->name('defense-requests.details');
+        Route::get('/defense-requests/{defenseRequest}/details', [CoordinatorDefenseController::class, 'details'])
+            ->name('defense-requests.details'); // <-- FIXED: was 'coordinator.defense-requests.details'
     });
 
     /* Profile */
@@ -777,7 +820,7 @@ if (file_exists(__DIR__ . '/settings.php'))
 Route::middleware(['auth'])->group(function () {
     Route::get('/api/adviser/students', [AdviserStudentController::class, 'index']);
     Route::post('/api/adviser/students', [AdviserStudentController::class, 'store']);
-    Route::post('/api/adviser/register-with-code', [AdviserStudentController::class, 'registerWithCode']);
+    Route::post('/api/adviser/register_with_code', [AdviserStudentController::class, 'registerWithCode']);
     Route::get('/api/adviser/code', [AdviserStudentController::class, 'getAdviserCode']);
     Route::delete('/api/adviser/students/{student}', [AdviserStudentController::class, 'destroy']);
 
@@ -790,6 +833,82 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/api/adviser/pending-students', [AdviserStudentController::class, 'pending']);
     Route::post('/api/adviser/pending-students/{student}/accept', [AdviserStudentController::class, 'acceptPending']);
     Route::post('/api/adviser/pending-students/{student}/reject', [AdviserStudentController::class, 'rejectPending']);
+
+
+    Route::get('/api/coordinator/pending-honorariums', function () {
+        $user = Auth::user();
+        if (!$user || $user->role !== 'Coordinator') {
+            abort(403);
+        }
+
+        // Get defense requests assigned to this coordinator that are approved
+        $approvedRequestIds = \App\Models\DefenseRequest::where('coordinator_user_id', $user->id)
+            ->where('coordinator_status', 'Approved')
+            ->pluck('id');
+
+        // Count requests where:
+        // 1. AA verification record exists with status 'pending', OR
+        // 2. AA verification record doesn't exist yet (null status, treated as pending)
+        $pendingCount = 0;
+        foreach ($approvedRequestIds as $requestId) {
+            $aaVerification = \App\Models\AaPaymentVerification::where('defense_request_id', $requestId)->latest()->first();
+            
+            // If no record exists (null) or record exists with 'pending' status
+            if (!$aaVerification || $aaVerification->status === 'pending') {
+                $pendingCount++;
+            }
+        }
+
+        return response()->json(['pending_count' => $pendingCount]);
+    });
+
+    // Dean pending honorariums (all approved defense requests)
+    Route::get('/api/dean/pending-honorariums', function () {
+        $user = Auth::user();
+        if (!$user || $user->role !== 'Dean') {
+            abort(403);
+        }
+
+        // Get ALL approved defense requests
+        $approvedRequestIds = \App\Models\DefenseRequest::where('coordinator_status', 'Approved')
+            ->pluck('id');
+
+        // Count requests where AA verification is pending or doesn't exist
+        $pendingCount = 0;
+        foreach ($approvedRequestIds as $requestId) {
+            $aaVerification = \App\Models\AaPaymentVerification::where('defense_request_id', $requestId)->latest()->first();
+            
+            if (!$aaVerification || $aaVerification->status === 'pending') {
+                $pendingCount++;
+            }
+        }
+
+        return response()->json(['pending_count' => $pendingCount]);
+    });
+
+    // Assistant pending honorariums (all approved defense requests)
+    Route::get('/api/assistant/pending-honorariums', function () {
+        $user = Auth::user();
+        if (!$user || $user->role !== 'Administrative Assistant') {
+            abort(403);
+        }
+
+        // Get ALL approved defense requests
+        $approvedRequestIds = \App\Models\DefenseRequest::where('coordinator_status', 'Approved')
+            ->pluck('id');
+
+        // Count requests where AA verification is pending or doesn't exist
+        $pendingCount = 0;
+        foreach ($approvedRequestIds as $requestId) {
+            $aaVerification = \App\Models\AaPaymentVerification::where('defense_request_id', $requestId)->latest()->first();
+            
+            if (!$aaVerification || $aaVerification->status === 'pending') {
+                $pendingCount++;
+            }
+        }
+
+        return response()->json(['pending_count' => $pendingCount]);
+    });
 
 
     // Student search for autocomplete
@@ -810,18 +929,6 @@ Route::get('/adviser/defense-requirements/{id}/details', function ($id) {
         abort(403);
 
     $defenseRequest = \App\Models\DefenseRequest::findOrFail($id);
-
-    // Add the name of the user who last updated the status
-    if ($defenseRequest->last_status_updated_by) {
-        $updatedByUser = \App\Models\User::find($defenseRequest->last_status_updated_by);
-        if ($updatedByUser) {
-            $defenseRequest->last_status_updated_by_name = trim(
-                $updatedByUser->first_name . ' ' . 
-                ($updatedByUser->middle_name ? strtoupper($updatedByUser->middle_name[0]) . '. ' : '') . 
-                $updatedByUser->last_name
-            );
-        }
-    }
 
     // Fetch all coordinators linked to this adviser
     $coordinators = $user->coordinators()
@@ -868,6 +975,11 @@ Route::post('/adviser/defense-requirements/{id}/endorsement-form', function ($id
 /* Document Generation API */
 Route::post('/api/generate-document', [GeneratedDocumentController::class, 'generateDocument']);
 
+/* Upload Endorsement Form (Web route for session auth) */
+Route::post('/api/defense-requests/{defenseRequest}/upload-endorsement', [DefenseRequestController::class, 'uploadDocuments'])
+    ->middleware('auth')
+    ->name('api.defense-requests.upload-endorsement');
+
 /* Update Adviser Status for Defense Requirements */
 Route::patch('/adviser/defense-requirements/{defenseRequest}/adviser-status', [\App\Http\Controllers\DefenseRequestController::class, 'updateAdviserStatus'])
     ->name('adviser.defense-requirements.update-adviser-status');
@@ -875,132 +987,32 @@ Route::patch('/adviser/defense-requirements/{defenseRequest}/adviser-status', [\
 
 
 Route::get('/assistant/all-defense-list', function () {
-    // You can add authorization here if you want only AA/Dean to access
-    if (!in_array(Auth::user()->role, ['Administrative Assistant', 'Dean'])) {
+    $user = Auth::user();
+    // Authorization check
+    if (!in_array($user->role, ['Administrative Assistant', 'Dean'])) {
         abort(403);
     }
+
     return Inertia::render('assistant/all-defense-list/Index');
 })->name('assistant.all-defense-list');
 
-Route::get('/coordinator/defense-requests', function () {
-    $user = Auth::user();
-    if (!$user || $user->role !== 'Coordinator') {
-        abort(403);
-    }
-    return Inertia::render('coordinator/submissions/defense-request/Index');
-})->name('coordinator.defense-requests');
-
-
-
-Route::get('/assistant/all-defense-list/{id}/details', function ($id) {
-    $user = Auth::user();
-    if (!$user || !in_array($user->role, ['Administrative Assistant', 'Dean'])) {
-        abort(403);
-    }
-    $defenseRequest = DefenseRequest::findOrFail($id);
-
-    // Get program level using helper
-    $programLevel = \App\Helpers\ProgramLevel::getLevel($defenseRequest->program);
-
-    // Sum all rates for this program level and defense type
-    $expectedTotal = PaymentRate::where('program_level', $programLevel)
-        ->where('defense_type', $defenseRequest->defense_type)
-        ->sum('amount');
-
-    // Define vars to avoid "unassigned variable" errors
-    $coordinator = null;
-    $aa_verification_status = null;
-    $aa_verification_id = null;
-
-    // Compose panelists list (same as before)
-    $panelistFields = [
-        $defenseRequest->defense_chairperson,
-        $defenseRequest->defense_panelist1,
-        $defenseRequest->defense_panelist2,
-        $defenseRequest->defense_panelist3,
-        $defenseRequest->defense_panelist4,
-    ];
-    $panelists = collect($panelistFields)
-        ->filter()
-        ->map(function ($panelistIdOrName) {
-            if (is_numeric($panelistIdOrName)) {
-                $p = \App\Models\Panelist::find($panelistIdOrName);
-                if ($p)
-                    return ['id' => $p->id, 'name' => $p->name];
-            }
-            return ['id' => null, 'name' => $panelistIdOrName];
-        })->values()->all();
-
-    return Inertia::render('assistant/all-defense-list/details', [
-        'defenseRequest' => [
-            'id' => $defenseRequest->id,
-            'first_name' => $defenseRequest->first_name,
-            'middle_name' => $defenseRequest->middle_name,
-            'last_name' => $defenseRequest->last_name,
-            'school_id' => $defenseRequest->school_id,
-            'program' => $defenseRequest->program,
-            'thesis_title' => $defenseRequest->thesis_title,
-            'defense_type' => $defenseRequest->defense_type,
-            'priority' => $defenseRequest->priority,
-            'workflow_state' => $defenseRequest->workflow_state,
-            'status' => $defenseRequest->status,
-            'scheduled_date' => $defenseRequest->scheduled_date?->format('Y-m-d'),
-            'date_of_defense' => $defenseRequest->scheduled_date
-                ? $defenseRequest->scheduled_date->format('Y-m-d')
-                : ($defenseRequest->created_at ? $defenseRequest->created_at->format('Y-m-d') : null),
-            'defense_mode' => $defenseRequest->defense_mode,
-            'mode_defense' => $defenseRequest->defense_mode,
-            'adviser' => $defenseRequest->defense_adviser ?? '—',
-            'submitted_at' => $defenseRequest->submitted_at ? \Carbon\Carbon::parse($defenseRequest->submitted_at)->format('Y-m-d H:i:s') : null,
-            'coordinator_status' => $defenseRequest->coordinator_status,
-            'expected_rate' => $expectedTotal,
-            'amount' => $defenseRequest->amount ?? null,
-            'reference_no' => $defenseRequest->reference_no ?? null,
-            'coordinator' => $coordinator,
-            'aa_verification_status' => $aa_verification_status,
-            'aa_verification_id' => $aa_verification_id,
-        ],
-    ]);
-});
-
-Route::middleware(['auth'])->get('/api/adviser/coordinators', function (Request $request) {
-    $user = $request->user();
-    $coordinators = $user->coordinators()
-        ->select('first_name', 'middle_name', 'last_name', 'email')
-        ->get()
-        ->map(function ($c) {
-            return [
-                'name' => trim($c->first_name . ' ' . ($c->middle_name ? strtoupper($c->middle_name[0]) . '. ' : '') . $c->last_name),
-                'email' => $c->email,
-            ];
-        });
-    return response()->json(['coordinators' => $coordinators]);
-});
-
-Route::middleware(['auth'])->get('/api/adviser/registered-coordinator', [\App\Http\Controllers\CoordinatorAdviserController::class, 'getRegisteredCoordinator']);
-
-/*
-|--------------------------------------------------------------------------
-| Student Documents
-|--------------------------------------------------------------------------
-*/
-Route::get('/student/documents', [\App\Http\Controllers\StudentDocumentController::class, 'index'])
-    ->name('student.documents');
-
-Route::put('/test-put', function () {
-    return response()->json(['ok' => true]);
-});
-
 Route::get('/assistant/all-defense-list/data', function () {
     $user = Auth::user();
-    if (!$user || !in_array($user->role, ['Administrative Assistant', 'Dean'])) {
+    if (!in_array($user->role, ['Administrative Assistant', 'Dean'])) {
         abort(403);
     }
 
-    $rows = \App\Models\DefenseRequest::query()
-        ->where('coordinator_status', 'Approved')
+    // Fetch all approved/completed defense requests for AA
+    $defenseRequests = DefenseRequest::query()
+        ->with('aaVerification')
+        ->whereIn('coordinator_status', ['Approved'])
+        ->whereIn('workflow_state', [
+            'coordinator-approved',
+            'panels-assigned',
+            'scheduled',
+            'completed'
+        ])
         ->orderByDesc('created_at')
-        ->limit(500)
         ->get([
             'id',
             'first_name',
@@ -1025,30 +1037,19 @@ Route::get('/assistant/all-defense-list/data', function () {
             'coordinator_user_id',
         ])
         ->map(function ($r) {
-            $expectedTotal = 0;
-            if ($r->program && $r->defense_type) {
-                $programLevel = \App\Helpers\ProgramLevel::getLevel($r->program);
-                $expectedTotal = \App\Models\PaymentRate::where('program_level', $programLevel)
-                    ->where('defense_type', $r->defense_type)
-                    ->sum('amount');
-            }
+            $programLevel = \App\Helpers\ProgramLevel::getLevel($r->program);
+            $expectedTotal = \App\Models\PaymentRate::where('program_level', $programLevel)
+                ->where('defense_type', $r->defense_type)
+                ->sum('amount');
 
             $coordinator = null;
             if ($r->coordinator_user_id) {
                 $coordUser = \App\Models\User::find($r->coordinator_user_id);
                 if ($coordUser) {
-                    $coordinator = trim(
-                        $coordUser->first_name . ' ' .
-                        ($coordUser->middle_name ? strtoupper($coordUser->middle_name[0]) . '. ' : '') .
-                        $coordUser->last_name
-                    );
+                    $coordinator = trim($coordUser->first_name . ' ' . ($coordUser->middle_name ? strtoupper($coordUser->middle_name[0]) . '. ' : '') . $coordUser->last_name);
                 }
             }
 
-            $aaVerification = \App\Models\AaPaymentVerification::where('defense_request_id', $r->id)->first();
-            $aa_verification_status = $aaVerification ? $aaVerification->status : null;
-            $aa_verification_id = $aaVerification ? $aaVerification->id : null; // <-- ADD THIS
-    
             return [
                 'id' => $r->id,
                 'first_name' => $r->first_name,
@@ -1070,21 +1071,41 @@ Route::get('/assistant/all-defense-list/data', function () {
                 'submitted_at' => $r->submitted_at ? \Carbon\Carbon::parse($r->submitted_at)->format('Y-m-d H:i:s') : null,
                 'coordinator_status' => $r->coordinator_status,
                 'expected_rate' => $expectedTotal,
-                'amount' => $r->amount ?? null,
-                'reference_no' => $r->reference_no ?? null,
+                'amount' => $r->amount,
+                'reference_no' => $r->reference_no,
                 'coordinator' => $coordinator,
-                'aa_verification_status' => $aa_verification_status,
-                'aa_verification_id' => $aa_verification_id, // <-- ADD THIS
+                'aa_verification_status' => optional($r->aaVerification)->status ?? 'pending',
+                'aa_verification_id' => optional($r->aaVerification)->id,
             ];
         });
 
-    return response()->json($rows->values());
-});
+    return response()->json($defenseRequests);
+})->name('assistant.all-defense-list.data');
 
-// Test route to preview adviser invitation email
-Route::get('/test-adviser-invitation', function () {
-    return new App\Mail\AdviserInvitation(
-        'Dr. Juan Dela Cruz',
-        'Dr. Maria Santos (Coordinator)'
-    );
+Route::get('/coordinator/defense-requests', function () {
+    $user = Auth::user();
+    if (!$user || $user->role !== 'Coordinator') {
+        abort(403);
+    }
+    return Inertia::render('coordinator/submissions/defense-request/Index');
+})->name('coordinator.defense-requests');
+
+
+
+Route::get('/assistant/all-defense-list/{id}/details', [DefenseRequestController::class, 'showAADetails'])
+    ->name('assistant.all-defense-list.details');
+
+// Add this route for manual testing
+Route::post('/admin/sync-student-records', function () {
+    $service = app(\App\Services\StudentRecordSyncService::class);
+    $service->syncAllCompletedDefenses();
+    return response()->json(['message' => 'Sync completed']);
 })->middleware('auth');
+
+// Test Mailpit
+Route::get('/test-mailpit', function () {
+    Mail::raw('Test email from Laravel to Mailpit!', function ($message) {
+        $message->to('test@example.com')->subject('Laravel Test Email');
+    });
+    return 'Email sent! Check Mailpit at <a href="http://localhost:8025" target="_blank">http://localhost:8025</a>';
+});

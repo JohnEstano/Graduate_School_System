@@ -59,7 +59,7 @@ export default function Login(props: LoginProps) {
                             autoComplete="username"
                             value={data.identifier}
                             onChange={e => setData('identifier', e.target.value)}
-                            placeholder="Email or Student Number"
+                            placeholder="Use your myuic credentials"
                         />
                         <InputError message={errors.identifier} />
                     </div>

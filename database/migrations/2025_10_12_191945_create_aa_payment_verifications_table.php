@@ -13,7 +13,8 @@ return new class extends Migration
             $table->unsignedBigInteger('defense_request_id');
             $table->unsignedBigInteger('assigned_to')->nullable(); // AA user id
             $table->unsignedBigInteger('batch_id')->nullable();
-            $table->enum('status', ['pending', 'verified', 'rejected'])->default('pending');
+            $table->enum('status', ['pending', 'ready_for_finance', 'in_progress', 'paid', 'completed'])->default('pending');
+
             $table->text('remarks')->nullable();
             $table->timestamps();
 

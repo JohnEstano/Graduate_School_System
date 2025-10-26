@@ -24,7 +24,11 @@ import {
   Signature,
   Filter,
   MoreHorizontal,
-  Send, // <-- Add this import
+  Send,
+  ArrowRight,
+  Hourglass,
+  Banknote,
+  CircleCheck,
 } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import TableAllDefenseList from './table-all-defense-list';
@@ -137,7 +141,6 @@ function ShowAllRequestsInner({ defenseRequests: initial, onStatusChange }: Show
     adviser: true,
     submitted_at: true,
     program: true,
-    expected_amount: true,
     amount_paid: true,
     reference_no: true,
     coordinator: true,
@@ -146,7 +149,8 @@ function ShowAllRequestsInner({ defenseRequests: initial, onStatusChange }: Show
     date: true,
     mode: true,
     type: false,
-    priority: false
+    priority: false,
+    status: true,
   });
 
   // Helper to get columns per tab
@@ -396,7 +400,7 @@ function ShowAllRequestsInner({ defenseRequests: initial, onStatusChange }: Show
         setDefenseRequests(prev =>
           prev.map(r =>
             verificationIds.includes(r.aa_verification_id ?? -1)
-              ? { ...r, aa_verification_status: status }
+              ? ({ ...r, aa_verification_status: status } as DefenseRequestSummary)
               : r
           )
         );
@@ -511,7 +515,7 @@ function ShowAllRequestsInner({ defenseRequests: initial, onStatusChange }: Show
     setSingleConfirm({ open: false, id: null, action: null });
   }
 
-  async function handleBulkStatusChange(newStatus: 'pending' | 'verified' | 'rejected') {
+  async function handleBulkStatusChange(newStatus: 'ready_for_finance' | 'in_progress' | 'paid' | 'completed') {
     if (selected.length === 0) return;
     setIsLoading(true);
     try {
@@ -529,7 +533,7 @@ function ShowAllRequestsInner({ defenseRequests: initial, onStatusChange }: Show
         },
         body: JSON.stringify({
           verification_ids: verificationIds,
-          status: confirmAction === 'approve' ? 'verified' : 'rejected',
+          status: newStatus,
         }),
       });
 
@@ -537,12 +541,12 @@ function ShowAllRequestsInner({ defenseRequests: initial, onStatusChange }: Show
         setDefenseRequests(prev =>
           prev.map(r =>
             verificationIds.includes(r.aa_verification_id ?? -1)
-              ? { ...r, aa_verification_status: confirmAction === 'approve' ? 'verified' : 'rejected' }
+              ? ({ ...r, aa_verification_status: newStatus } as unknown as DefenseRequestSummary)
               : r
           )
         );
         setSelected([]);
-        toast.success('Bulk status updated');
+        toast.success(`Bulk updated to ${newStatus.replace('_', ' ')}`);
       } else {
         toast.error('Bulk update failed');
       }
@@ -550,8 +554,6 @@ function ShowAllRequestsInner({ defenseRequests: initial, onStatusChange }: Show
       toast.error('Bulk update error');
     } finally {
       setIsLoading(false);
-      setConfirmDialogOpen(false);
-      setConfirmAction(null);
     }
   }
 
@@ -835,16 +837,8 @@ function ShowAllRequestsInner({ defenseRequests: initial, onStatusChange }: Show
           </div>
         </div>
 
-        {/* SHADCN Tabs for Masteral/Doctorate */}
-        <div className="mb-2">
-          <Tabs value={programTab} onValueChange={v => setProgramTab(v as any)}>
-            <TabsList>
-              <TabsTrigger value="All">All</TabsTrigger>
-              <TabsTrigger value="Masteral">Masteral</TabsTrigger>
-              <TabsTrigger value="Doctorate">Doctorate</TabsTrigger>
-            </TabsList>
-          </Tabs>
-        </div>
+     
+       
 
         {/* Table and bulk bar */}
         {selected.length > 0 && (
@@ -855,30 +849,40 @@ function ShowAllRequestsInner({ defenseRequests: initial, onStatusChange }: Show
                 variant="ghost"
                 size="sm"
                 className="px-3 py-1 h-7 w-auto text-xs flex items-center gap-1"
-                onClick={() => { setConfirmAction('approve'); setConfirmDialogOpen(true); }}
+                onClick={() => handleBulkStatusChange('ready_for_finance')}
                 disabled={isLoading}
               >
-                <CheckCircle size={13} className="text-green-600" />
-                Bulk Approve
+                <ArrowRight size={13} className="text-blue-600" />
+                Ready for Finance
               </Button>
               <Button
                 variant="ghost"
                 size="sm"
                 className="px-3 py-1 h-7 w-auto text-xs flex items-center gap-1"
-                onClick={() => { setConfirmAction('reject'); setConfirmDialogOpen(true); }}
+                onClick={() => handleBulkStatusChange('in_progress')}
                 disabled={isLoading}
               >
-                <X size={13} className="text-red-600" />
-                Bulk Reject
+                <Hourglass size={13} className="text-amber-600" />
+                In Progress
               </Button>
               <Button
                 variant="ghost"
                 size="sm"
                 className="px-3 py-1 h-7 w-auto text-xs flex items-center gap-1"
-                onClick={handleBulkMarkCompleted}
+                onClick={() => handleBulkStatusChange('paid')}
                 disabled={isLoading}
               >
-                <CheckCircle size={13} className="text-green-600" />
+                <Banknote size={13} className="text-emerald-600" />
+                Paid
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="px-3 py-1 h-7 w-auto text-xs flex items-center gap-1"
+                onClick={() => handleBulkStatusChange('completed')}
+                disabled={isLoading}
+              >
+                <CircleCheck size={13} className="text-green-600" />
                 Mark as Completed
               </Button>
               <Button

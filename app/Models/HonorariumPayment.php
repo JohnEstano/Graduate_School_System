@@ -9,11 +9,16 @@ class HonorariumPayment extends Model
     protected $fillable = [
         'defense_request_id',
         'panelist_id',
-        'panelist_type', // 'Panelist' or 'Faculty'
-        'role', // Chairperson/Panel Member
+        'panelist_name',      // ✅ ALREADY THERE
+        'panelist_type',
+        'role',
         'amount',
         'payment_date',
-        'status', // Paid/Unpaid
+        'payment_status',     // ✅ ALREADY THERE
+        'defense_date',       // ✅ ADD THIS
+        'student_name',       // ✅ ADD THIS
+        'program',            // ✅ ADD THIS
+        'defense_type',       // ✅ ADD THIS
     ];
 
     public function defenseRequest()
