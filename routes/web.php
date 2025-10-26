@@ -880,3 +880,11 @@ Route::post('/admin/sync-student-records', function () {
     $service->syncAllCompletedDefenses();
     return response()->json(['message' => 'Sync completed']);
 })->middleware('auth');
+
+// Test Mailpit
+Route::get('/test-mailpit', function () {
+    Mail::raw('Test email from Laravel to Mailpit!', function ($message) {
+        $message->to('test@example.com')->subject('Laravel Test Email');
+    });
+    return 'Email sent! Check Mailpit at <a href="http://localhost:8025" target="_blank">http://localhost:8025</a>';
+});

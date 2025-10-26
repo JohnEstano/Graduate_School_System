@@ -1,4 +1,5 @@
 {
+<<<<<<< Updated upstream
   "_AreaChart-Cnc-_-2A.js": {
     "file": "assets/AreaChart-Cnc-_-2A.js",
     "name": "AreaChart",
@@ -79,15 +80,68 @@
   },
   "_YAxis-CFpew_UZ.js": {
     "file": "assets/YAxis-CFpew_UZ.js",
+=======
+  "_AreaChart-DsRJgi_x.js": {
+    "file": "assets/AreaChart-DsRJgi_x.js",
+    "name": "AreaChart",
+    "imports": [
+      "_generateCategoricalChart-CNUWMMUU.js",
+      "resources/js/app.tsx",
+      "_utils-jAU0Cazi.js",
+      "_YAxis-9IOyoiJg.js"
+    ]
+  },
+  "_DocumentGeneratorDialog-BRqfc6nx.js": {
+    "file": "assets/DocumentGeneratorDialog-BRqfc6nx.js",
+    "name": "DocumentGeneratorDialog",
+    "imports": [
+      "resources/js/app.tsx",
+      "_dialog-BeApitpu.js",
+      "_button-C4XkiM_B.js",
+      "_input-DCrn1t-u.js",
+      "_select-BHDrHMEc.js",
+      "_index-B2MlTwnV.js"
+    ]
+  },
+  "_RadialBarChart-Ck00DEXN.js": {
+    "file": "assets/RadialBarChart-Ck00DEXN.js",
+    "name": "RadialBarChart",
+    "imports": [
+      "resources/js/app.tsx",
+      "_utils-jAU0Cazi.js",
+      "_generateCategoricalChart-CNUWMMUU.js"
+    ]
+  },
+  "_Stepper-D95oqrcg.js": {
+    "file": "assets/Stepper-D95oqrcg.js",
+    "name": "Stepper",
+    "imports": [
+      "resources/js/app.tsx",
+      "_button-C4XkiM_B.js",
+      "_utils-jAU0Cazi.js",
+      "_proxy-BIJhVlnW.js"
+    ]
+  },
+  "_YAxis-9IOyoiJg.js": {
+    "file": "assets/YAxis-9IOyoiJg.js",
+>>>>>>> Stashed changes
     "name": "YAxis",
     "imports": [
       "resources/js/app.tsx",
       "_utils-jAU0Cazi.js",
+<<<<<<< Updated upstream
       "_generateCategoricalChart-RpaH3faT.js"
     ]
   },
   "_alert-Bmbp8jiW.js": {
     "file": "assets/alert-Bmbp8jiW.js",
+=======
+      "_generateCategoricalChart-CNUWMMUU.js"
+    ]
+  },
+  "_alert-C_jnSLAo.js": {
+    "file": "assets/alert-C_jnSLAo.js",
+>>>>>>> Stashed changes
     "name": "alert",
     "imports": [
       "resources/js/app.tsx",
@@ -95,6 +149,7 @@
       "_utils-jAU0Cazi.js"
     ]
   },
+<<<<<<< Updated upstream
   "_alert-dialog-Bv4FR8BT.js": {
     "file": "assets/alert-dialog-Bv4FR8BT.js",
     "name": "alert-dialog",
@@ -169,10 +224,101 @@
     "imports": [
       "resources/js/app.tsx",
       "_index-CDDLQrUy.js",
+=======
+  "_alert-dialog-B8yj1s4q.js": {
+    "file": "assets/alert-dialog-B8yj1s4q.js",
+    "name": "alert-dialog",
+    "imports": [
+      "resources/js/app.tsx",
+      "_index-DDxX9UbU.js",
+      "_index-DYEC1Owk.js",
+      "_utils-jAU0Cazi.js",
+      "_button-C4XkiM_B.js"
+    ]
+  },
+  "_app-layout-CZ3kZ0t2.js": {
+    "file": "assets/app-layout-CZ3kZ0t2.js",
+    "name": "app-layout",
+    "imports": [
+      "resources/js/app.tsx",
+      "_index-DYEC1Owk.js",
+      "_index-DZZQifJx.js",
+      "_utils-jAU0Cazi.js",
+      "_button-C4XkiM_B.js",
+      "_input-DCrn1t-u.js",
+      "_index-DDxX9UbU.js",
+      "_x-gfWO9KfB.js",
+      "_tooltip-YyHP33lU.js",
+      "_createLucideIcon-B8qZ3ylK.js",
+      "_separator-DAbYQnLI.js",
+      "_chevron-right-BZod6iQK.js",
+      "_dropdown-menu-sYZpN2tC.js",
+      "_avatar-Cz3zvE7t.js",
+      "_settings-CYIvZ_Tn.js",
+      "_users-Bi2Lh05r.js",
+      "_graduation-cap-BxuxjmnL.js",
+      "_file-text-Dl_aF8u0.js",
+      "_dollar-sign-DEGfV_co.js",
+      "_send-ChQ392yu.js",
+      "_credit-card-BvkjxVWT.js",
+      "_tabs-BvzTftzm.js",
+      "_badge-ofr1GoIX.js",
+      "_circle-check-big-CKCqbWb4.js",
+      "_info-BWBV8Gn3.js",
+      "_sun-CPhm4DAg.js"
+    ]
+  },
+  "_arrow-left-C9WAaS2h.js": {
+    "file": "assets/arrow-left-C9WAaS2h.js",
+    "name": "arrow-left",
+    "imports": [
+      "_createLucideIcon-B8qZ3ylK.js"
+    ]
+  },
+  "_auth-layout-wRBhd69F.js": {
+    "file": "assets/auth-layout-wRBhd69F.js",
+    "name": "auth-layout",
+    "imports": [
+      "resources/js/app.tsx",
+      "_card-VQzzqn5t.js"
+    ]
+  },
+  "_avatar-Cz3zvE7t.js": {
+    "file": "assets/avatar-Cz3zvE7t.js",
+    "name": "avatar",
+    "imports": [
+      "resources/js/app.tsx",
+      "_index-ATT6OHxL.js",
+      "_index-DxK34XW3.js",
+      "_utils-jAU0Cazi.js"
+    ]
+  },
+  "_badge-check-tsoLEH-7.js": {
+    "file": "assets/badge-check-tsoLEH-7.js",
+    "name": "badge-check",
+    "imports": [
+      "_createLucideIcon-B8qZ3ylK.js"
+    ]
+  },
+  "_badge-dollar-sign-D1ijFK0L.js": {
+    "file": "assets/badge-dollar-sign-D1ijFK0L.js",
+    "name": "badge-dollar-sign",
+    "imports": [
+      "_createLucideIcon-B8qZ3ylK.js"
+    ]
+  },
+  "_badge-ofr1GoIX.js": {
+    "file": "assets/badge-ofr1GoIX.js",
+    "name": "badge",
+    "imports": [
+      "resources/js/app.tsx",
+      "_index-DYEC1Owk.js",
+>>>>>>> Stashed changes
       "_index-DZZQifJx.js",
       "_utils-jAU0Cazi.js"
     ]
   },
+<<<<<<< Updated upstream
   "_badge-check-C-EI3EoT.js": {
     "file": "assets/badge-check-C-EI3EoT.js",
     "name": "badge-check",
@@ -207,10 +353,26 @@
     "imports": [
       "resources/js/app.tsx",
       "_index-CDDLQrUy.js",
+=======
+  "_book-open-DwBftJzx.js": {
+    "file": "assets/book-open-DwBftJzx.js",
+    "name": "book-open",
+    "imports": [
+      "_createLucideIcon-B8qZ3ylK.js"
+    ]
+  },
+  "_button-C4XkiM_B.js": {
+    "file": "assets/button-C4XkiM_B.js",
+    "name": "button",
+    "imports": [
+      "resources/js/app.tsx",
+      "_index-DYEC1Owk.js",
+>>>>>>> Stashed changes
       "_index-DZZQifJx.js",
       "_utils-jAU0Cazi.js"
     ]
   },
+<<<<<<< Updated upstream
   "_calendar-Bi5dAEy5.js": {
     "file": "assets/calendar-Bi5dAEy5.js",
     "name": "calendar",
@@ -220,11 +382,26 @@
   },
   "_calendar-BpWedVzv.js": {
     "file": "assets/calendar-BpWedVzv.js",
+=======
+  "_calendar-BkrqGKNC.js": {
+    "file": "assets/calendar-BkrqGKNC.js",
+    "name": "calendar",
+    "imports": [
+      "_createLucideIcon-B8qZ3ylK.js"
+    ]
+  },
+  "_calendar-DKOUdBib.js": {
+    "file": "assets/calendar-DKOUdBib.js",
+>>>>>>> Stashed changes
     "name": "calendar",
     "imports": [
       "resources/js/app.tsx",
       "_utils-jAU0Cazi.js",
+<<<<<<< Updated upstream
       "_button-Cw9tQIeO.js",
+=======
+      "_button-C4XkiM_B.js",
+>>>>>>> Stashed changes
       "_en-US-BA9orzCf.js",
       "_endOfWeek-QFyZPl43.js",
       "_format-HX8DKPSU.js",
@@ -233,6 +410,7 @@
       "_endOfMonth-CK_ShA5m.js",
       "_isSameDay-DUlCFK42.js",
       "_isSameMonth-CQd3m9St.js",
+<<<<<<< Updated upstream
       "_chevron-left-BphKULEz.js",
       "_chevron-right-QGs8lTP5.js",
       "_chevron-down-Bg3q2iyP.js"
@@ -247,12 +425,29 @@
   },
   "_card-C_emSl4Q.js": {
     "file": "assets/card-C_emSl4Q.js",
+=======
+      "_chevron-left-IcMAr9yn.js",
+      "_chevron-right-BZod6iQK.js",
+      "_chevron-down-DEJUajdp.js"
+    ]
+  },
+  "_calendar-days-QY893wAX.js": {
+    "file": "assets/calendar-days-QY893wAX.js",
+    "name": "calendar-days",
+    "imports": [
+      "_createLucideIcon-B8qZ3ylK.js"
+    ]
+  },
+  "_card-VQzzqn5t.js": {
+    "file": "assets/card-VQzzqn5t.js",
+>>>>>>> Stashed changes
     "name": "card",
     "imports": [
       "resources/js/app.tsx",
       "_utils-jAU0Cazi.js"
     ]
   },
+<<<<<<< Updated upstream
   "_chart-BC_ZPf9S.js": {
     "file": "assets/chart-BC_ZPf9S.js",
     "name": "chart",
@@ -377,6 +572,133 @@
       "_index-BfMlnZ5P.js",
       "_utils-jAU0Cazi.js",
       "_search-yiLKmxcv.js"
+=======
+  "_chart-kHTqPVhU.js": {
+    "file": "assets/chart-kHTqPVhU.js",
+    "name": "chart",
+    "imports": [
+      "resources/js/app.tsx",
+      "_generateCategoricalChart-CNUWMMUU.js",
+      "_YAxis-9IOyoiJg.js",
+      "_utils-jAU0Cazi.js"
+    ]
+  },
+  "_check-BgnkF1LW.js": {
+    "file": "assets/check-BgnkF1LW.js",
+    "name": "check",
+    "imports": [
+      "_createLucideIcon-B8qZ3ylK.js"
+    ]
+  },
+  "_checkbox-DDzRYWAy.js": {
+    "file": "assets/checkbox-DDzRYWAy.js",
+    "name": "checkbox",
+    "imports": [
+      "resources/js/app.tsx",
+      "_index-DxK34XW3.js",
+      "_index-ATT6OHxL.js",
+      "_index-DGKk-Zer.js",
+      "_index-DFD1OPps.js",
+      "_index-BdQOngYf.js",
+      "_utils-jAU0Cazi.js",
+      "_check-BgnkF1LW.js"
+    ]
+  },
+  "_chevron-down-DEJUajdp.js": {
+    "file": "assets/chevron-down-DEJUajdp.js",
+    "name": "chevron-down",
+    "imports": [
+      "_createLucideIcon-B8qZ3ylK.js"
+    ]
+  },
+  "_chevron-left-IcMAr9yn.js": {
+    "file": "assets/chevron-left-IcMAr9yn.js",
+    "name": "chevron-left",
+    "imports": [
+      "_createLucideIcon-B8qZ3ylK.js"
+    ]
+  },
+  "_chevron-right-BZod6iQK.js": {
+    "file": "assets/chevron-right-BZod6iQK.js",
+    "name": "chevron-right",
+    "imports": [
+      "_createLucideIcon-B8qZ3ylK.js"
+    ]
+  },
+  "_chevrons-right-BiGuqRdN.js": {
+    "file": "assets/chevrons-right-BiGuqRdN.js",
+    "name": "chevrons-right",
+    "imports": [
+      "_createLucideIcon-B8qZ3ylK.js"
+    ]
+  },
+  "_circle-alert-DF3kdfmF.js": {
+    "file": "assets/circle-alert-DF3kdfmF.js",
+    "name": "circle-alert",
+    "imports": [
+      "_createLucideIcon-B8qZ3ylK.js"
+    ]
+  },
+  "_circle-arrow-left-Bx1mKyRQ.js": {
+    "file": "assets/circle-arrow-left-Bx1mKyRQ.js",
+    "name": "circle-arrow-left",
+    "imports": [
+      "_createLucideIcon-B8qZ3ylK.js"
+    ]
+  },
+  "_circle-check-B5R0L350.js": {
+    "file": "assets/circle-check-B5R0L350.js",
+    "name": "circle-check",
+    "imports": [
+      "_createLucideIcon-B8qZ3ylK.js"
+    ]
+  },
+  "_circle-check-big-CKCqbWb4.js": {
+    "file": "assets/circle-check-big-CKCqbWb4.js",
+    "name": "circle-check-big",
+    "imports": [
+      "_createLucideIcon-B8qZ3ylK.js"
+    ]
+  },
+  "_circle-plus-DNS-2CjW.js": {
+    "file": "assets/circle-plus-DNS-2CjW.js",
+    "name": "circle-plus",
+    "imports": [
+      "_createLucideIcon-B8qZ3ylK.js"
+    ]
+  },
+  "_circle-x-BzZWIzCj.js": {
+    "file": "assets/circle-x-BzZWIzCj.js",
+    "name": "circle-x",
+    "imports": [
+      "_createLucideIcon-B8qZ3ylK.js"
+    ]
+  },
+  "_clipboard-list-CItztuo4.js": {
+    "file": "assets/clipboard-list-CItztuo4.js",
+    "name": "clipboard-list",
+    "imports": [
+      "_createLucideIcon-B8qZ3ylK.js"
+    ]
+  },
+  "_clock-WdEz_qo4.js": {
+    "file": "assets/clock-WdEz_qo4.js",
+    "name": "clock",
+    "imports": [
+      "_createLucideIcon-B8qZ3ylK.js"
+    ]
+  },
+  "_command-D56cLWk0.js": {
+    "file": "assets/command-D56cLWk0.js",
+    "name": "command",
+    "imports": [
+      "resources/js/app.tsx",
+      "_index-DDxX9UbU.js",
+      "_index-DxK34XW3.js",
+      "_index-MX9TSR8D.js",
+      "_utils-jAU0Cazi.js",
+      "_search-gvHM0uxt.js"
+>>>>>>> Stashed changes
     ]
   },
   "_constructNow-Chb2L4Vx.js": {
@@ -386,13 +708,19 @@
       "_en-US-BA9orzCf.js"
     ]
   },
+<<<<<<< Updated upstream
   "_createLucideIcon-pjYyoixj.js": {
     "file": "assets/createLucideIcon-pjYyoixj.js",
+=======
+  "_createLucideIcon-B8qZ3ylK.js": {
+    "file": "assets/createLucideIcon-B8qZ3ylK.js",
+>>>>>>> Stashed changes
     "name": "createLucideIcon",
     "imports": [
       "resources/js/app.tsx"
     ]
   },
+<<<<<<< Updated upstream
   "_credit-card-Cid_txJ6.js": {
     "file": "assets/credit-card-Cid_txJ6.js",
     "name": "credit-card",
@@ -409,11 +737,30 @@
   },
   "_dayjs.min-C04TMi-8.js": {
     "file": "assets/dayjs.min-C04TMi-8.js",
+=======
+  "_credit-card-BvkjxVWT.js": {
+    "file": "assets/credit-card-BvkjxVWT.js",
+    "name": "credit-card",
+    "imports": [
+      "_createLucideIcon-B8qZ3ylK.js"
+    ]
+  },
+  "_database-DPC1avUz.js": {
+    "file": "assets/database-DPC1avUz.js",
+    "name": "database",
+    "imports": [
+      "_createLucideIcon-B8qZ3ylK.js"
+    ]
+  },
+  "_dayjs.min-D6wfwQTr.js": {
+    "file": "assets/dayjs.min-D6wfwQTr.js",
+>>>>>>> Stashed changes
     "name": "dayjs.min",
     "imports": [
       "resources/js/app.tsx"
     ]
   },
+<<<<<<< Updated upstream
   "_dialog-D-tH9FDm.js": {
     "file": "assets/dialog-D-tH9FDm.js",
     "name": "dialog",
@@ -422,6 +769,16 @@
       "_index-BSk2xfhC.js",
       "_utils-jAU0Cazi.js",
       "_x-B3RMhnUQ.js"
+=======
+  "_dialog-BeApitpu.js": {
+    "file": "assets/dialog-BeApitpu.js",
+    "name": "dialog",
+    "imports": [
+      "resources/js/app.tsx",
+      "_index-DDxX9UbU.js",
+      "_utils-jAU0Cazi.js",
+      "_x-gfWO9KfB.js"
+>>>>>>> Stashed changes
     ]
   },
   "_differenceInCalendarMonths-HUNRrXGm.js": {
@@ -431,6 +788,7 @@
       "_en-US-BA9orzCf.js"
     ]
   },
+<<<<<<< Updated upstream
   "_dollar-sign-CkMbILE9.js": {
     "file": "assets/dollar-sign-CkMbILE9.js",
     "name": "dollar-sign",
@@ -465,6 +823,42 @@
     "name": "ellipsis-vertical",
     "imports": [
       "_createLucideIcon-pjYyoixj.js"
+=======
+  "_dollar-sign-DEGfV_co.js": {
+    "file": "assets/dollar-sign-DEGfV_co.js",
+    "name": "dollar-sign",
+    "imports": [
+      "_createLucideIcon-B8qZ3ylK.js"
+    ]
+  },
+  "_download-DERSZnXw.js": {
+    "file": "assets/download-DERSZnXw.js",
+    "name": "download",
+    "imports": [
+      "_createLucideIcon-B8qZ3ylK.js"
+    ]
+  },
+  "_dropdown-menu-sYZpN2tC.js": {
+    "file": "assets/dropdown-menu-sYZpN2tC.js",
+    "name": "dropdown-menu",
+    "imports": [
+      "resources/js/app.tsx",
+      "_index-DGKk-Zer.js",
+      "_index-DxK34XW3.js",
+      "_index-ATT6OHxL.js",
+      "_index-MX9TSR8D.js",
+      "_index-BdQOngYf.js",
+      "_index-DRr-UIpQ.js",
+      "_utils-jAU0Cazi.js",
+      "_check-BgnkF1LW.js"
+    ]
+  },
+  "_ellipsis-vertical-BjZAtm0I.js": {
+    "file": "assets/ellipsis-vertical-BjZAtm0I.js",
+    "name": "ellipsis-vertical",
+    "imports": [
+      "_createLucideIcon-B8qZ3ylK.js"
+>>>>>>> Stashed changes
     ]
   },
   "_en-US-BA9orzCf.js": {
@@ -492,6 +886,7 @@
       "_en-US-BA9orzCf.js"
     ]
   },
+<<<<<<< Updated upstream
   "_eye-B6whRoNB.js": {
     "file": "assets/eye-B6whRoNB.js",
     "name": "eye",
@@ -519,6 +914,35 @@
     "imports": [
       "resources/js/app.tsx",
       "_index-DRp-GX9j.js"
+=======
+  "_eye-Dkmyf9ow.js": {
+    "file": "assets/eye-Dkmyf9ow.js",
+    "name": "eye",
+    "imports": [
+      "_createLucideIcon-B8qZ3ylK.js"
+    ]
+  },
+  "_file-text-Dl_aF8u0.js": {
+    "file": "assets/file-text-Dl_aF8u0.js",
+    "name": "file-text",
+    "imports": [
+      "_createLucideIcon-B8qZ3ylK.js"
+    ]
+  },
+  "_filter-DUO50SL3.js": {
+    "file": "assets/filter-DUO50SL3.js",
+    "name": "filter",
+    "imports": [
+      "_createLucideIcon-B8qZ3ylK.js"
+    ]
+  },
+  "_floating-ui.react-dom-qFQCHW7g.js": {
+    "file": "assets/floating-ui.react-dom-qFQCHW7g.js",
+    "name": "floating-ui.react-dom",
+    "imports": [
+      "resources/js/app.tsx",
+      "_index-C0AcbnKJ.js"
+>>>>>>> Stashed changes
     ]
   },
   "_format-HX8DKPSU.js": {
@@ -540,13 +964,22 @@
       "_endOfMonth-CK_ShA5m.js"
     ]
   },
+<<<<<<< Updated upstream
   "_generateCategoricalChart-RpaH3faT.js": {
     "file": "assets/generateCategoricalChart-RpaH3faT.js",
+=======
+  "_generateCategoricalChart-CNUWMMUU.js": {
+    "file": "assets/generateCategoricalChart-CNUWMMUU.js",
+>>>>>>> Stashed changes
     "name": "generateCategoricalChart",
     "imports": [
       "_utils-jAU0Cazi.js",
       "resources/js/app.tsx",
+<<<<<<< Updated upstream
       "_index-BGXDct6C.js"
+=======
+      "_index-Bt9ylsuM.js"
+>>>>>>> Stashed changes
     ]
   },
   "_getRoundingMethod-Btu-7J5l.js": {
@@ -556,6 +989,7 @@
       "_en-US-BA9orzCf.js"
     ]
   },
+<<<<<<< Updated upstream
   "_graduation-cap-DHFIPOzN.js": {
     "file": "assets/graduation-cap-DHFIPOzN.js",
     "name": "graduation-cap",
@@ -565,11 +999,23 @@
   },
   "_heading-small-xTyNxbYL.js": {
     "file": "assets/heading-small-xTyNxbYL.js",
+=======
+  "_graduation-cap-BxuxjmnL.js": {
+    "file": "assets/graduation-cap-BxuxjmnL.js",
+    "name": "graduation-cap",
+    "imports": [
+      "_createLucideIcon-B8qZ3ylK.js"
+    ]
+  },
+  "_heading-small-h3Z97KlJ.js": {
+    "file": "assets/heading-small-h3Z97KlJ.js",
+>>>>>>> Stashed changes
     "name": "heading-small",
     "imports": [
       "resources/js/app.tsx"
     ]
   },
+<<<<<<< Updated upstream
   "_hourglass-Ck8E1KPu.js": {
     "file": "assets/hourglass-Ck8E1KPu.js",
     "name": "hourglass",
@@ -579,14 +1025,54 @@
   },
   "_index-BGXDct6C.js": {
     "file": "assets/index-BGXDct6C.js",
+=======
+  "_hourglass-BrU7Yv6c.js": {
+    "file": "assets/hourglass-BrU7Yv6c.js",
+    "name": "hourglass",
+    "imports": [
+      "_createLucideIcon-B8qZ3ylK.js"
+    ]
+  },
+  "_index-ATT6OHxL.js": {
+    "file": "assets/index-ATT6OHxL.js",
+    "name": "index",
+    "imports": [
+      "resources/js/app.tsx"
+    ]
+  },
+  "_index-B2MlTwnV.js": {
+    "file": "assets/index-B2MlTwnV.js",
+    "name": "index",
+    "imports": [
+      "resources/js/app.tsx",
+      "_index-C0AcbnKJ.js"
+    ]
+  },
+  "_index-BdQOngYf.js": {
+    "file": "assets/index-BdQOngYf.js",
+    "name": "index",
+    "imports": [
+      "resources/js/app.tsx",
+      "_index-DxK34XW3.js",
+      "_index-ATT6OHxL.js"
+    ]
+  },
+  "_index-Bt9ylsuM.js": {
+    "file": "assets/index-Bt9ylsuM.js",
+>>>>>>> Stashed changes
     "name": "index",
     "imports": [
       "resources/js/app.tsx",
       "_index-Chjiymov.js"
     ]
   },
+<<<<<<< Updated upstream
   "_index-BJk2QW0A.js": {
     "file": "assets/index-BJk2QW0A.js",
+=======
+  "_index-C0AcbnKJ.js": {
+    "file": "assets/index-C0AcbnKJ.js",
+>>>>>>> Stashed changes
     "name": "index",
     "imports": [
       "resources/js/app.tsx"
@@ -640,6 +1126,7 @@
     "file": "assets/index-Chjiymov.js",
     "name": "index"
   },
+<<<<<<< Updated upstream
   "_index-Csh4Fj4k.js": {
     "file": "assets/index-Csh4Fj4k.js",
     "name": "index",
@@ -651,6 +1138,42 @@
   },
   "_index-DRp-GX9j.js": {
     "file": "assets/index-DRp-GX9j.js",
+=======
+  "_index-DDxX9UbU.js": {
+    "file": "assets/index-DDxX9UbU.js",
+    "name": "index",
+    "imports": [
+      "resources/js/app.tsx",
+      "_index-C0AcbnKJ.js",
+      "_index-DYEC1Owk.js",
+      "_index-DRr-UIpQ.js"
+    ]
+  },
+  "_index-DFD1OPps.js": {
+    "file": "assets/index-DFD1OPps.js",
+    "name": "index",
+    "imports": [
+      "resources/js/app.tsx"
+    ]
+  },
+  "_index-DGKk-Zer.js": {
+    "file": "assets/index-DGKk-Zer.js",
+    "name": "index",
+    "imports": [
+      "resources/js/app.tsx",
+      "_index-ATT6OHxL.js"
+    ]
+  },
+  "_index-DRr-UIpQ.js": {
+    "file": "assets/index-DRr-UIpQ.js",
+    "name": "index",
+    "imports": [
+      "resources/js/app.tsx"
+    ]
+  },
+  "_index-DYEC1Owk.js": {
+    "file": "assets/index-DYEC1Owk.js",
+>>>>>>> Stashed changes
     "name": "index",
     "imports": [
       "resources/js/app.tsx"
@@ -663,6 +1186,7 @@
       "_utils-jAU0Cazi.js"
     ]
   },
+<<<<<<< Updated upstream
   "_index-VBHUZLOo.js": {
     "file": "assets/index-VBHUZLOo.js",
     "name": "index",
@@ -705,14 +1229,52 @@
   "_input-error-B7NcGVv3.js": {
     "file": "assets/input-error-B7NcGVv3.js",
     "name": "input-error",
+=======
+  "_index-DxK34XW3.js": {
+    "file": "assets/index-DxK34XW3.js",
+    "name": "index",
+    "imports": [
+      "resources/js/app.tsx",
+      "_index-C0AcbnKJ.js"
+    ]
+  },
+  "_index-MX9TSR8D.js": {
+    "file": "assets/index-MX9TSR8D.js",
+    "name": "index",
+    "imports": [
+      "resources/js/app.tsx",
+      "_index-ATT6OHxL.js",
+      "_index-DxK34XW3.js",
+      "_index-DGKk-Zer.js",
+      "_floating-ui.react-dom-qFQCHW7g.js",
+      "_index-C0AcbnKJ.js"
+    ]
+  },
+  "_info-BWBV8Gn3.js": {
+    "file": "assets/info-BWBV8Gn3.js",
+    "name": "info",
+    "imports": [
+      "_createLucideIcon-B8qZ3ylK.js"
+    ]
+  },
+  "_input-DCrn1t-u.js": {
+    "file": "assets/input-DCrn1t-u.js",
+    "name": "input",
+>>>>>>> Stashed changes
     "imports": [
       "resources/js/app.tsx",
       "_utils-jAU0Cazi.js"
     ]
   },
+<<<<<<< Updated upstream
   "_input-izsDzGd9.js": {
     "file": "assets/input-izsDzGd9.js",
     "name": "input",
+=======
+  "_input-error-DBfxdkea.js": {
+    "file": "assets/input-error-DBfxdkea.js",
+    "name": "input-error",
+>>>>>>> Stashed changes
     "imports": [
       "resources/js/app.tsx",
       "_utils-jAU0Cazi.js"
@@ -742,6 +1304,7 @@
       "_isSameDay-DUlCFK42.js"
     ]
   },
+<<<<<<< Updated upstream
   "_isWithinInterval-BTvWHy0U.js": {
     "file": "assets/isWithinInterval-BTvWHy0U.js",
     "name": "isWithinInterval",
@@ -793,6 +1356,60 @@
     "name": "message-circle",
     "imports": [
       "_createLucideIcon-pjYyoixj.js"
+=======
+  "_isWithinInterval-BGjcImah.js": {
+    "file": "assets/isWithinInterval-BGjcImah.js",
+    "name": "isWithinInterval",
+    "imports": [
+      "_createLucideIcon-B8qZ3ylK.js",
+      "_en-US-BA9orzCf.js"
+    ]
+  },
+  "_label-by1MoGWy.js": {
+    "file": "assets/label-by1MoGWy.js",
+    "name": "label",
+    "imports": [
+      "resources/js/app.tsx",
+      "_index-C0AcbnKJ.js",
+      "_index-DYEC1Owk.js",
+      "_utils-jAU0Cazi.js"
+    ]
+  },
+  "_layout-BZxyRDf-.js": {
+    "file": "assets/layout-BZxyRDf-.js",
+    "name": "layout",
+    "imports": [
+      "resources/js/app.tsx",
+      "_separator-DAbYQnLI.js"
+    ]
+  },
+  "_loader-circle-D7qrpiZm.js": {
+    "file": "assets/loader-circle-D7qrpiZm.js",
+    "name": "loader-circle",
+    "imports": [
+      "_createLucideIcon-B8qZ3ylK.js"
+    ]
+  },
+  "_mail-DebR_hdY.js": {
+    "file": "assets/mail-DebR_hdY.js",
+    "name": "mail",
+    "imports": [
+      "_createLucideIcon-B8qZ3ylK.js"
+    ]
+  },
+  "_map-pin-BTCBX3sh.js": {
+    "file": "assets/map-pin-BTCBX3sh.js",
+    "name": "map-pin",
+    "imports": [
+      "_createLucideIcon-B8qZ3ylK.js"
+    ]
+  },
+  "_message-circle-Dmo5mriC.js": {
+    "file": "assets/message-circle-Dmo5mriC.js",
+    "name": "message-circle",
+    "imports": [
+      "_createLucideIcon-B8qZ3ylK.js"
+>>>>>>> Stashed changes
     ]
   },
   "_normalizeInterval-CdMCNNY-.js": {
@@ -802,11 +1419,19 @@
       "_en-US-BA9orzCf.js"
     ]
   },
+<<<<<<< Updated upstream
   "_paperclip-DYnyPUSo.js": {
     "file": "assets/paperclip-DYnyPUSo.js",
     "name": "paperclip",
     "imports": [
       "_createLucideIcon-pjYyoixj.js"
+=======
+  "_paperclip-CZJ8UXmI.js": {
+    "file": "assets/paperclip-CZJ8UXmI.js",
+    "name": "paperclip",
+    "imports": [
+      "_createLucideIcon-B8qZ3ylK.js"
+>>>>>>> Stashed changes
     ]
   },
   "_parseISO-CbXPh3Al.js": {
@@ -816,6 +1441,7 @@
       "_en-US-BA9orzCf.js"
     ]
   },
+<<<<<<< Updated upstream
   "_pencil-DZXKP1_R.js": {
     "file": "assets/pencil-DZXKP1_R.js",
     "name": "pencil",
@@ -847,19 +1473,58 @@
     "name": "printer",
     "imports": [
       "_createLucideIcon-pjYyoixj.js"
+=======
+  "_pencil-B4PKA2yC.js": {
+    "file": "assets/pencil-B4PKA2yC.js",
+    "name": "pencil",
+    "imports": [
+      "_createLucideIcon-B8qZ3ylK.js"
+    ]
+  },
+  "_plus-Bp59822C.js": {
+    "file": "assets/plus-Bp59822C.js",
+    "name": "plus",
+    "imports": [
+      "_createLucideIcon-B8qZ3ylK.js"
+    ]
+  },
+  "_popover-tBQRRq13.js": {
+    "file": "assets/popover-tBQRRq13.js",
+    "name": "popover",
+    "imports": [
+      "resources/js/app.tsx",
+      "_index-C0AcbnKJ.js",
+      "_index-DYEC1Owk.js",
+      "_floating-ui.react-dom-qFQCHW7g.js",
+      "_index-DRr-UIpQ.js",
+      "_utils-jAU0Cazi.js"
+    ]
+  },
+  "_printer-8ps6np5W.js": {
+    "file": "assets/printer-8ps6np5W.js",
+    "name": "printer",
+    "imports": [
+      "_createLucideIcon-B8qZ3ylK.js"
+>>>>>>> Stashed changes
     ]
   },
   "_program-abbreviations-BcvFCzIW.js": {
     "file": "assets/program-abbreviations-BcvFCzIW.js",
     "name": "program-abbreviations"
   },
+<<<<<<< Updated upstream
   "_proxy-DVhXeFh8.js": {
     "file": "assets/proxy-DVhXeFh8.js",
+=======
+  "_proxy-BIJhVlnW.js": {
+    "file": "assets/proxy-BIJhVlnW.js",
+>>>>>>> Stashed changes
     "name": "proxy",
     "imports": [
       "resources/js/app.tsx"
     ]
   },
+<<<<<<< Updated upstream
   "_receipt-CoKWPx4G.js": {
     "file": "assets/receipt-CoKWPx4G.js",
     "name": "receipt",
@@ -947,12 +1612,103 @@
   },
   "_skeleton-Dhy5gbzz.js": {
     "file": "assets/skeleton-Dhy5gbzz.js",
+=======
+  "_receipt-DWAji_2S.js": {
+    "file": "assets/receipt-DWAji_2S.js",
+    "name": "receipt",
+    "imports": [
+      "_createLucideIcon-B8qZ3ylK.js"
+    ]
+  },
+  "_refresh-ccw-DkBDNhPs.js": {
+    "file": "assets/refresh-ccw-DkBDNhPs.js",
+    "name": "refresh-ccw",
+    "imports": [
+      "_createLucideIcon-B8qZ3ylK.js"
+    ]
+  },
+  "_refresh-cw-DFFpfEuC.js": {
+    "file": "assets/refresh-cw-DFFpfEuC.js",
+    "name": "refresh-cw",
+    "imports": [
+      "_createLucideIcon-B8qZ3ylK.js"
+    ]
+  },
+  "_search-gvHM0uxt.js": {
+    "file": "assets/search-gvHM0uxt.js",
+    "name": "search",
+    "imports": [
+      "_createLucideIcon-B8qZ3ylK.js"
+    ]
+  },
+  "_search-input-Do8im2K8.js": {
+    "file": "assets/search-input-Do8im2K8.js",
+    "name": "search-input",
+    "imports": [
+      "_createLucideIcon-B8qZ3ylK.js",
+      "resources/js/app.tsx",
+      "_utils-jAU0Cazi.js",
+      "_search-gvHM0uxt.js"
+    ]
+  },
+  "_select-BHDrHMEc.js": {
+    "file": "assets/select-BHDrHMEc.js",
+    "name": "select",
+    "imports": [
+      "resources/js/app.tsx",
+      "_index-C0AcbnKJ.js",
+      "_index-DGKk-Zer.js",
+      "_index-MX9TSR8D.js",
+      "_index-DxK34XW3.js",
+      "_index-ATT6OHxL.js",
+      "_index-DFD1OPps.js",
+      "_index-DRr-UIpQ.js",
+      "_utils-jAU0Cazi.js",
+      "_chevron-down-DEJUajdp.js",
+      "_check-BgnkF1LW.js",
+      "_createLucideIcon-B8qZ3ylK.js"
+    ]
+  },
+  "_send-ChQ392yu.js": {
+    "file": "assets/send-ChQ392yu.js",
+    "name": "send",
+    "imports": [
+      "_createLucideIcon-B8qZ3ylK.js"
+    ]
+  },
+  "_separator-DAbYQnLI.js": {
+    "file": "assets/separator-DAbYQnLI.js",
+    "name": "separator",
+    "imports": [
+      "resources/js/app.tsx",
+      "_index-DxK34XW3.js",
+      "_utils-jAU0Cazi.js"
+    ]
+  },
+  "_settings-CYIvZ_Tn.js": {
+    "file": "assets/settings-CYIvZ_Tn.js",
+    "name": "settings",
+    "imports": [
+      "_createLucideIcon-B8qZ3ylK.js"
+    ]
+  },
+  "_signature-HJa2c2uW.js": {
+    "file": "assets/signature-HJa2c2uW.js",
+    "name": "signature",
+    "imports": [
+      "_createLucideIcon-B8qZ3ylK.js"
+    ]
+  },
+  "_skeleton-eQxcUfOO.js": {
+    "file": "assets/skeleton-eQxcUfOO.js",
+>>>>>>> Stashed changes
     "name": "skeleton",
     "imports": [
       "resources/js/app.tsx",
       "_utils-jAU0Cazi.js"
     ]
   },
+<<<<<<< Updated upstream
   "_square-pen-D_F9SxFV.js": {
     "file": "assets/square-pen-D_F9SxFV.js",
     "name": "square-pen",
@@ -979,12 +1735,41 @@
   },
   "_table-BEEQP98I.js": {
     "file": "assets/table-BEEQP98I.js",
+=======
+  "_square-pen-Brbz-8qz.js": {
+    "file": "assets/square-pen-Brbz-8qz.js",
+    "name": "square-pen",
+    "imports": [
+      "_createLucideIcon-B8qZ3ylK.js"
+    ]
+  },
+  "_sun-CPhm4DAg.js": {
+    "file": "assets/sun-CPhm4DAg.js",
+    "name": "sun",
+    "imports": [
+      "_createLucideIcon-B8qZ3ylK.js"
+    ]
+  },
+  "_switch-CgQi2nSl.js": {
+    "file": "assets/switch-CgQi2nSl.js",
+    "name": "switch",
+    "imports": [
+      "resources/js/app.tsx",
+      "_index-C0AcbnKJ.js",
+      "_index-DYEC1Owk.js",
+      "_utils-jAU0Cazi.js"
+    ]
+  },
+  "_table-C8ztdzxp.js": {
+    "file": "assets/table-C8ztdzxp.js",
+>>>>>>> Stashed changes
     "name": "table",
     "imports": [
       "resources/js/app.tsx",
       "_utils-jAU0Cazi.js"
     ]
   },
+<<<<<<< Updated upstream
   "_tabs-DJOYkXMD.js": {
     "file": "assets/tabs-DJOYkXMD.js",
     "name": "tabs",
@@ -997,20 +1782,40 @@
   },
   "_text-link-2nkkrYAe.js": {
     "file": "assets/text-link-2nkkrYAe.js",
+=======
+  "_tabs-BvzTftzm.js": {
+    "file": "assets/tabs-BvzTftzm.js",
+    "name": "tabs",
+    "imports": [
+      "resources/js/app.tsx",
+      "_index-DYEC1Owk.js",
+      "_index-C0AcbnKJ.js",
+      "_utils-jAU0Cazi.js"
+    ]
+  },
+  "_text-link-CfDgp0x-.js": {
+    "file": "assets/text-link-CfDgp0x-.js",
+>>>>>>> Stashed changes
     "name": "text-link",
     "imports": [
       "resources/js/app.tsx",
       "_utils-jAU0Cazi.js"
     ]
   },
+<<<<<<< Updated upstream
   "_textarea-CCb-V_XO.js": {
     "file": "assets/textarea-CCb-V_XO.js",
+=======
+  "_textarea-ClN04vZX.js": {
+    "file": "assets/textarea-ClN04vZX.js",
+>>>>>>> Stashed changes
     "name": "textarea",
     "imports": [
       "resources/js/app.tsx",
       "_utils-jAU0Cazi.js"
     ]
   },
+<<<<<<< Updated upstream
   "_tooltip-BvePKNvs.js": {
     "file": "assets/tooltip-BvePKNvs.js",
     "name": "tooltip",
@@ -1080,12 +1885,80 @@
     "name": "users",
     "imports": [
       "_createLucideIcon-pjYyoixj.js"
+=======
+  "_tooltip-YyHP33lU.js": {
+    "file": "assets/tooltip-YyHP33lU.js",
+    "name": "tooltip",
+    "imports": [
+      "resources/js/app.tsx",
+      "_index-C0AcbnKJ.js",
+      "_index-DYEC1Owk.js",
+      "_floating-ui.react-dom-qFQCHW7g.js",
+      "_utils-jAU0Cazi.js"
+    ]
+  },
+  "_trash-2-oufS_Sxw.js": {
+    "file": "assets/trash-2-oufS_Sxw.js",
+    "name": "trash-2",
+    "imports": [
+      "_createLucideIcon-B8qZ3ylK.js"
+    ]
+  },
+  "_trash-DOTJaUFR.js": {
+    "file": "assets/trash-DOTJaUFR.js",
+    "name": "trash",
+    "imports": [
+      "_createLucideIcon-B8qZ3ylK.js"
+    ]
+  },
+  "_trending-up-BqVVlbnw.js": {
+    "file": "assets/trending-up-BqVVlbnw.js",
+    "name": "trending-up",
+    "imports": [
+      "_createLucideIcon-B8qZ3ylK.js"
+    ]
+  },
+  "_user-Dpzu1VZB.js": {
+    "file": "assets/user-Dpzu1VZB.js",
+    "name": "user",
+    "imports": [
+      "_createLucideIcon-B8qZ3ylK.js"
+    ]
+  },
+  "_user-check-jTMUIr-7.js": {
+    "file": "assets/user-check-jTMUIr-7.js",
+    "name": "user-check",
+    "imports": [
+      "_createLucideIcon-B8qZ3ylK.js"
+    ]
+  },
+  "_user-plus-C3DX8qgj.js": {
+    "file": "assets/user-plus-C3DX8qgj.js",
+    "name": "user-plus",
+    "imports": [
+      "_createLucideIcon-B8qZ3ylK.js"
+    ]
+  },
+  "_user-round-DdfHKHWt.js": {
+    "file": "assets/user-round-DdfHKHWt.js",
+    "name": "user-round",
+    "imports": [
+      "_createLucideIcon-B8qZ3ylK.js"
+    ]
+  },
+  "_users-Bi2Lh05r.js": {
+    "file": "assets/users-Bi2Lh05r.js",
+    "name": "users",
+    "imports": [
+      "_createLucideIcon-B8qZ3ylK.js"
+>>>>>>> Stashed changes
     ]
   },
   "_utils-jAU0Cazi.js": {
     "file": "assets/utils-jAU0Cazi.js",
     "name": "utils"
   },
+<<<<<<< Updated upstream
   "_x-B3RMhnUQ.js": {
     "file": "assets/x-B3RMhnUQ.js",
     "name": "x",
@@ -1128,6 +2001,13 @@
       "node_modules/html2canvas/dist/html2canvas.esm.js",
       "node_modules/dompurify/dist/purify.es.mjs",
       "node_modules/canvg/lib/index.es.js"
+=======
+  "_x-gfWO9KfB.js": {
+    "file": "assets/x-gfWO9KfB.js",
+    "name": "x",
+    "imports": [
+      "_createLucideIcon-B8qZ3ylK.js"
+>>>>>>> Stashed changes
     ]
   },
   "node_modules/pdfjs-dist/build/pdf.worker.min.mjs": {
@@ -1140,7 +2020,11 @@
     "isEntry": true
   },
   "resources/js/app.tsx": {
+<<<<<<< Updated upstream
     "file": "assets/app-CQngmq00.js",
+=======
+    "file": "assets/app-DdPj2m7B.js",
+>>>>>>> Stashed changes
     "name": "app",
     "src": "resources/js/app.tsx",
     "isEntry": true,
@@ -1268,12 +2152,17 @@
     ]
   },
   "resources/js/pages/adviser/defense-requirements/Index.tsx": {
+<<<<<<< Updated upstream
     "file": "assets/Index-BqMXxR59.js",
+=======
+    "file": "assets/Index-BOoUf53O.js",
+>>>>>>> Stashed changes
     "name": "Index",
     "src": "resources/js/pages/adviser/defense-requirements/Index.tsx",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/app.tsx",
+<<<<<<< Updated upstream
       "_app-layout-C76KB2Lm.js",
       "resources/js/pages/adviser/defense-requirements/show-all-defense-requests.tsx",
       "_index-CDDLQrUy.js",
@@ -1323,11 +2212,69 @@
   },
   "resources/js/pages/adviser/defense-requirements/details-requirements.tsx": {
     "file": "assets/details-requirements-CBn4QL9K.js",
+=======
+      "_app-layout-CZ3kZ0t2.js",
+      "resources/js/pages/adviser/defense-requirements/show-all-defense-requests.tsx",
+      "_index-DYEC1Owk.js",
+      "_index-DZZQifJx.js",
+      "_utils-jAU0Cazi.js",
+      "_button-C4XkiM_B.js",
+      "_input-DCrn1t-u.js",
+      "_index-DDxX9UbU.js",
+      "_index-C0AcbnKJ.js",
+      "_index-DRr-UIpQ.js",
+      "_x-gfWO9KfB.js",
+      "_createLucideIcon-B8qZ3ylK.js",
+      "_tooltip-YyHP33lU.js",
+      "_floating-ui.react-dom-qFQCHW7g.js",
+      "_separator-DAbYQnLI.js",
+      "_index-DxK34XW3.js",
+      "_chevron-right-BZod6iQK.js",
+      "_dropdown-menu-sYZpN2tC.js",
+      "_index-DGKk-Zer.js",
+      "_index-ATT6OHxL.js",
+      "_index-MX9TSR8D.js",
+      "_index-BdQOngYf.js",
+      "_check-BgnkF1LW.js",
+      "_avatar-Cz3zvE7t.js",
+      "_settings-CYIvZ_Tn.js",
+      "_users-Bi2Lh05r.js",
+      "_graduation-cap-BxuxjmnL.js",
+      "_file-text-Dl_aF8u0.js",
+      "_dollar-sign-DEGfV_co.js",
+      "_send-ChQ392yu.js",
+      "_credit-card-BvkjxVWT.js",
+      "_tabs-BvzTftzm.js",
+      "_badge-ofr1GoIX.js",
+      "_circle-check-big-CKCqbWb4.js",
+      "_info-BWBV8Gn3.js",
+      "_sun-CPhm4DAg.js",
+      "_dayjs.min-D6wfwQTr.js",
+      "_popover-tBQRRq13.js",
+      "_table-C8ztdzxp.js",
+      "_checkbox-DDzRYWAy.js",
+      "_index-DFD1OPps.js",
+      "_index-B2MlTwnV.js",
+      "_dialog-BeApitpu.js",
+      "_program-abbreviations-BcvFCzIW.js",
+      "_search-gvHM0uxt.js",
+      "_circle-plus-DNS-2CjW.js",
+      "_circle-x-BzZWIzCj.js",
+      "_circle-arrow-left-Bx1mKyRQ.js",
+      "_trash-2-oufS_Sxw.js",
+      "_printer-8ps6np5W.js",
+      "_paperclip-CZJ8UXmI.js"
+    ]
+  },
+  "resources/js/pages/adviser/defense-requirements/details-requirements.tsx": {
+    "file": "assets/details-requirements-kMztE6sI.js",
+>>>>>>> Stashed changes
     "name": "details-requirements",
     "src": "resources/js/pages/adviser/defense-requirements/details-requirements.tsx",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/app.tsx",
+<<<<<<< Updated upstream
       "_app-layout-C76KB2Lm.js",
       "_dayjs.min-C04TMi-8.js",
       "_index-Vwkg4oTI.js",
@@ -1426,11 +2373,62 @@
   },
   "resources/js/pages/adviser/defense-requirements/show-all-defense-requests.tsx": {
     "file": "assets/show-all-defense-requests-CHQFpsj9.js",
+=======
+      "_app-layout-CZ3kZ0t2.js",
+      "_dayjs.min-D6wfwQTr.js",
+      "_index-B2MlTwnV.js",
+      "_button-C4XkiM_B.js",
+      "_badge-ofr1GoIX.js",
+      "_separator-DAbYQnLI.js",
+      "_avatar-Cz3zvE7t.js",
+      "_dialog-BeApitpu.js",
+      "_tabs-BvzTftzm.js",
+      "_input-DCrn1t-u.js",
+      "_arrow-left-C9WAaS2h.js",
+      "_file-text-Dl_aF8u0.js",
+      "_circle-check-big-CKCqbWb4.js",
+      "_circle-x-BzZWIzCj.js",
+      "_circle-arrow-left-Bx1mKyRQ.js",
+      "_users-Bi2Lh05r.js",
+      "_clock-WdEz_qo4.js",
+      "_signature-HJa2c2uW.js",
+      "_send-ChQ392yu.js",
+      "_user-check-jTMUIr-7.js",
+      "_index-DYEC1Owk.js",
+      "_index-DZZQifJx.js",
+      "_utils-jAU0Cazi.js",
+      "_index-DDxX9UbU.js",
+      "_index-C0AcbnKJ.js",
+      "_index-DRr-UIpQ.js",
+      "_x-gfWO9KfB.js",
+      "_createLucideIcon-B8qZ3ylK.js",
+      "_tooltip-YyHP33lU.js",
+      "_floating-ui.react-dom-qFQCHW7g.js",
+      "_chevron-right-BZod6iQK.js",
+      "_dropdown-menu-sYZpN2tC.js",
+      "_index-DGKk-Zer.js",
+      "_index-ATT6OHxL.js",
+      "_index-DxK34XW3.js",
+      "_index-MX9TSR8D.js",
+      "_index-BdQOngYf.js",
+      "_check-BgnkF1LW.js",
+      "_settings-CYIvZ_Tn.js",
+      "_graduation-cap-BxuxjmnL.js",
+      "_dollar-sign-DEGfV_co.js",
+      "_credit-card-BvkjxVWT.js",
+      "_info-BWBV8Gn3.js",
+      "_sun-CPhm4DAg.js"
+    ]
+  },
+  "resources/js/pages/adviser/defense-requirements/show-all-defense-requests.tsx": {
+    "file": "assets/show-all-defense-requests-DUF373fG.js",
+>>>>>>> Stashed changes
     "name": "show-all-defense-requests",
     "src": "resources/js/pages/adviser/defense-requirements/show-all-defense-requests.tsx",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/app.tsx",
+<<<<<<< Updated upstream
       "_dayjs.min-C04TMi-8.js",
       "_popover-C8pU6zmg.js",
       "_input-izsDzGd9.js",
@@ -1460,11 +2458,52 @@
   },
   "resources/js/pages/adviser/students-list/Index.tsx": {
     "file": "assets/Index-BDYmqT4T.js",
+=======
+      "_dayjs.min-D6wfwQTr.js",
+      "_popover-tBQRRq13.js",
+      "_input-DCrn1t-u.js",
+      "_table-C8ztdzxp.js",
+      "_button-C4XkiM_B.js",
+      "_checkbox-DDzRYWAy.js",
+      "_badge-ofr1GoIX.js",
+      "_tooltip-YyHP33lU.js",
+      "_index-B2MlTwnV.js",
+      "_dialog-BeApitpu.js",
+      "_program-abbreviations-BcvFCzIW.js",
+      "_createLucideIcon-B8qZ3ylK.js",
+      "_search-gvHM0uxt.js",
+      "_circle-plus-DNS-2CjW.js",
+      "_x-gfWO9KfB.js",
+      "_circle-check-big-CKCqbWb4.js",
+      "_circle-x-BzZWIzCj.js",
+      "_circle-arrow-left-Bx1mKyRQ.js",
+      "_trash-2-oufS_Sxw.js",
+      "_printer-8ps6np5W.js",
+      "_paperclip-CZJ8UXmI.js",
+      "_index-C0AcbnKJ.js",
+      "_index-DYEC1Owk.js",
+      "_floating-ui.react-dom-qFQCHW7g.js",
+      "_index-DRr-UIpQ.js",
+      "_utils-jAU0Cazi.js",
+      "_index-DZZQifJx.js",
+      "_index-DxK34XW3.js",
+      "_index-ATT6OHxL.js",
+      "_index-DGKk-Zer.js",
+      "_index-DFD1OPps.js",
+      "_index-BdQOngYf.js",
+      "_check-BgnkF1LW.js",
+      "_index-DDxX9UbU.js"
+    ]
+  },
+  "resources/js/pages/adviser/students-list/Index.tsx": {
+    "file": "assets/Index-ComC8MM4.js",
+>>>>>>> Stashed changes
     "name": "Index",
     "src": "resources/js/pages/adviser/students-list/Index.tsx",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/app.tsx",
+<<<<<<< Updated upstream
       "_app-layout-C76KB2Lm.js",
       "resources/js/pages/adviser/students-list/show-students.tsx",
       "_index-CDDLQrUy.js",
@@ -1508,11 +2547,61 @@
   },
   "resources/js/pages/adviser/students-list/show-students.tsx": {
     "file": "assets/show-students-DUq4PefF.js",
+=======
+      "_app-layout-CZ3kZ0t2.js",
+      "resources/js/pages/adviser/students-list/show-students.tsx",
+      "_index-DYEC1Owk.js",
+      "_index-DZZQifJx.js",
+      "_utils-jAU0Cazi.js",
+      "_button-C4XkiM_B.js",
+      "_input-DCrn1t-u.js",
+      "_index-DDxX9UbU.js",
+      "_index-C0AcbnKJ.js",
+      "_index-DRr-UIpQ.js",
+      "_x-gfWO9KfB.js",
+      "_createLucideIcon-B8qZ3ylK.js",
+      "_tooltip-YyHP33lU.js",
+      "_floating-ui.react-dom-qFQCHW7g.js",
+      "_separator-DAbYQnLI.js",
+      "_index-DxK34XW3.js",
+      "_chevron-right-BZod6iQK.js",
+      "_dropdown-menu-sYZpN2tC.js",
+      "_index-DGKk-Zer.js",
+      "_index-ATT6OHxL.js",
+      "_index-MX9TSR8D.js",
+      "_index-BdQOngYf.js",
+      "_check-BgnkF1LW.js",
+      "_avatar-Cz3zvE7t.js",
+      "_settings-CYIvZ_Tn.js",
+      "_users-Bi2Lh05r.js",
+      "_graduation-cap-BxuxjmnL.js",
+      "_file-text-Dl_aF8u0.js",
+      "_dollar-sign-DEGfV_co.js",
+      "_send-ChQ392yu.js",
+      "_credit-card-BvkjxVWT.js",
+      "_tabs-BvzTftzm.js",
+      "_badge-ofr1GoIX.js",
+      "_circle-check-big-CKCqbWb4.js",
+      "_info-BWBV8Gn3.js",
+      "_sun-CPhm4DAg.js",
+      "_table-C8ztdzxp.js",
+      "_dialog-BeApitpu.js",
+      "_skeleton-eQxcUfOO.js",
+      "_user-check-jTMUIr-7.js",
+      "_loader-circle-D7qrpiZm.js",
+      "_mail-DebR_hdY.js",
+      "_trash-DOTJaUFR.js"
+    ]
+  },
+  "resources/js/pages/adviser/students-list/show-students.tsx": {
+    "file": "assets/show-students-DRJZUHy3.js",
+>>>>>>> Stashed changes
     "name": "show-students",
     "src": "resources/js/pages/adviser/students-list/show-students.tsx",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/app.tsx",
+<<<<<<< Updated upstream
       "_table-BEEQP98I.js",
       "_button-Cw9tQIeO.js",
       "_input-izsDzGd9.js",
@@ -1533,11 +2622,41 @@
   },
   "resources/js/pages/assistant/all-defense-list/Index.tsx": {
     "file": "assets/Index-Syzz-94n.js",
+=======
+      "_table-C8ztdzxp.js",
+      "_button-C4XkiM_B.js",
+      "_input-DCrn1t-u.js",
+      "_dialog-BeApitpu.js",
+      "_skeleton-eQxcUfOO.js",
+      "_avatar-Cz3zvE7t.js",
+      "_tabs-BvzTftzm.js",
+      "_users-Bi2Lh05r.js",
+      "_user-check-jTMUIr-7.js",
+      "_loader-circle-D7qrpiZm.js",
+      "_mail-DebR_hdY.js",
+      "_createLucideIcon-B8qZ3ylK.js",
+      "_check-BgnkF1LW.js",
+      "_trash-DOTJaUFR.js",
+      "_utils-jAU0Cazi.js",
+      "_index-DYEC1Owk.js",
+      "_index-DZZQifJx.js",
+      "_index-DDxX9UbU.js",
+      "_index-C0AcbnKJ.js",
+      "_index-DRr-UIpQ.js",
+      "_x-gfWO9KfB.js",
+      "_index-ATT6OHxL.js",
+      "_index-DxK34XW3.js"
+    ]
+  },
+  "resources/js/pages/assistant/all-defense-list/Index.tsx": {
+    "file": "assets/Index-C9K-YPPu.js",
+>>>>>>> Stashed changes
     "name": "Index",
     "src": "resources/js/pages/assistant/all-defense-list/Index.tsx",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/app.tsx",
+<<<<<<< Updated upstream
       "_app-layout-C76KB2Lm.js",
       "resources/js/pages/assistant/all-defense-list/show-all-requests.tsx",
       "_index-CDDLQrUy.js",
@@ -1587,6 +2706,53 @@
       "_circle-check-B6ukRmdw.js",
       "_clock-Cn1v7f4i.js",
       "_calendar-BpWedVzv.js",
+=======
+      "_app-layout-CZ3kZ0t2.js",
+      "resources/js/pages/assistant/all-defense-list/show-all-requests.tsx",
+      "_index-DYEC1Owk.js",
+      "_index-DZZQifJx.js",
+      "_utils-jAU0Cazi.js",
+      "_button-C4XkiM_B.js",
+      "_input-DCrn1t-u.js",
+      "_index-DDxX9UbU.js",
+      "_index-C0AcbnKJ.js",
+      "_index-DRr-UIpQ.js",
+      "_x-gfWO9KfB.js",
+      "_createLucideIcon-B8qZ3ylK.js",
+      "_tooltip-YyHP33lU.js",
+      "_floating-ui.react-dom-qFQCHW7g.js",
+      "_separator-DAbYQnLI.js",
+      "_index-DxK34XW3.js",
+      "_chevron-right-BZod6iQK.js",
+      "_dropdown-menu-sYZpN2tC.js",
+      "_index-DGKk-Zer.js",
+      "_index-ATT6OHxL.js",
+      "_index-MX9TSR8D.js",
+      "_index-BdQOngYf.js",
+      "_check-BgnkF1LW.js",
+      "_avatar-Cz3zvE7t.js",
+      "_settings-CYIvZ_Tn.js",
+      "_users-Bi2Lh05r.js",
+      "_graduation-cap-BxuxjmnL.js",
+      "_file-text-Dl_aF8u0.js",
+      "_dollar-sign-DEGfV_co.js",
+      "_send-ChQ392yu.js",
+      "_credit-card-BvkjxVWT.js",
+      "_tabs-BvzTftzm.js",
+      "_badge-ofr1GoIX.js",
+      "_circle-check-big-CKCqbWb4.js",
+      "_info-BWBV8Gn3.js",
+      "_sun-CPhm4DAg.js",
+      "_index-B2MlTwnV.js",
+      "_checkbox-DDzRYWAy.js",
+      "_index-DFD1OPps.js",
+      "resources/js/pages/assistant/all-defense-list/table-all-defense-list.tsx",
+      "_table-C8ztdzxp.js",
+      "_program-abbreviations-BcvFCzIW.js",
+      "_dialog-BeApitpu.js",
+      "_circle-check-B5R0L350.js",
+      "_calendar-DKOUdBib.js",
+>>>>>>> Stashed changes
       "_en-US-BA9orzCf.js",
       "_endOfWeek-QFyZPl43.js",
       "_format-HX8DKPSU.js",
@@ -1595,6 +2761,7 @@
       "_endOfMonth-CK_ShA5m.js",
       "_isSameDay-DUlCFK42.js",
       "_isSameMonth-CQd3m9St.js",
+<<<<<<< Updated upstream
       "_chevron-left-BphKULEz.js",
       "_chevron-down-Bg3q2iyP.js",
       "_popover-C8pU6zmg.js",
@@ -1609,11 +2776,28 @@
   },
   "resources/js/pages/assistant/all-defense-list/details.tsx": {
     "file": "assets/details-Ci2FWKNx.js",
+=======
+      "_chevron-left-IcMAr9yn.js",
+      "_chevron-down-DEJUajdp.js",
+      "_popover-tBQRRq13.js",
+      "_endOfDay-UBg8OSOW.js",
+      "_isWithinInterval-BGjcImah.js",
+      "_search-gvHM0uxt.js",
+      "_circle-plus-DNS-2CjW.js",
+      "_calendar-BkrqGKNC.js",
+      "_printer-8ps6np5W.js",
+      "_signature-HJa2c2uW.js"
+    ]
+  },
+  "resources/js/pages/assistant/all-defense-list/details.tsx": {
+    "file": "assets/details-PJ9_8_9k.js",
+>>>>>>> Stashed changes
     "name": "details",
     "src": "resources/js/pages/assistant/all-defense-list/details.tsx",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/app.tsx",
+<<<<<<< Updated upstream
       "_app-layout-C76KB2Lm.js",
       "_badge-BsPMjMb7.js",
       "_separator-CMC4qrzs.js",
@@ -1662,16 +2846,70 @@
       "_tabs-DJOYkXMD.js",
       "_info-BJ9Jpdwx.js",
       "_sun-5m6UvoyG.js",
+=======
+      "_app-layout-CZ3kZ0t2.js",
+      "_dayjs.min-D6wfwQTr.js",
+      "_badge-ofr1GoIX.js",
+      "_separator-DAbYQnLI.js",
+      "_avatar-Cz3zvE7t.js",
+      "_button-C4XkiM_B.js",
+      "_index-B2MlTwnV.js",
+      "_tabs-BvzTftzm.js",
+      "resources/js/pages/assistant/all-defense-list/payment-validation.tsx",
+      "_arrow-left-C9WAaS2h.js",
+      "_circle-check-big-CKCqbWb4.js",
+      "_users-Bi2Lh05r.js",
+      "_file-text-Dl_aF8u0.js",
+      "_clock-WdEz_qo4.js",
+      "_send-ChQ392yu.js",
+      "_user-check-jTMUIr-7.js",
+      "_signature-HJa2c2uW.js",
+      "_circle-x-BzZWIzCj.js",
+      "_circle-arrow-left-Bx1mKyRQ.js",
+      "_user-Dpzu1VZB.js",
+      "_format-HX8DKPSU.js",
+      "_index-DYEC1Owk.js",
+      "_index-DZZQifJx.js",
+      "_utils-jAU0Cazi.js",
+      "_input-DCrn1t-u.js",
+      "_index-DDxX9UbU.js",
+      "_index-C0AcbnKJ.js",
+      "_index-DRr-UIpQ.js",
+      "_x-gfWO9KfB.js",
+      "_createLucideIcon-B8qZ3ylK.js",
+      "_tooltip-YyHP33lU.js",
+      "_floating-ui.react-dom-qFQCHW7g.js",
+      "_chevron-right-BZod6iQK.js",
+      "_dropdown-menu-sYZpN2tC.js",
+      "_index-DGKk-Zer.js",
+      "_index-ATT6OHxL.js",
+      "_index-DxK34XW3.js",
+      "_index-MX9TSR8D.js",
+      "_index-BdQOngYf.js",
+      "_check-BgnkF1LW.js",
+      "_settings-CYIvZ_Tn.js",
+      "_graduation-cap-BxuxjmnL.js",
+      "_dollar-sign-DEGfV_co.js",
+      "_credit-card-BvkjxVWT.js",
+      "_info-BWBV8Gn3.js",
+      "_sun-CPhm4DAg.js",
+      "_badge-dollar-sign-D1ijFK0L.js",
+>>>>>>> Stashed changes
       "_en-US-BA9orzCf.js"
     ]
   },
   "resources/js/pages/assistant/all-defense-list/payment-validation.tsx": {
+<<<<<<< Updated upstream
     "file": "assets/payment-validation-BMdz_5sR.js",
+=======
+    "file": "assets/payment-validation-BNK1EnDi.js",
+>>>>>>> Stashed changes
     "name": "payment-validation",
     "src": "resources/js/pages/assistant/all-defense-list/payment-validation.tsx",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/app.tsx",
+<<<<<<< Updated upstream
       "_separator-CMC4qrzs.js",
       "_badge-dollar-sign-DPXQOWgc.js",
       "_x-B3RMhnUQ.js",
@@ -1684,11 +2922,26 @@
   },
   "resources/js/pages/assistant/all-defense-list/show-all-requests.tsx": {
     "file": "assets/show-all-requests-CHrrsIRT.js",
+=======
+      "_separator-DAbYQnLI.js",
+      "_badge-dollar-sign-D1ijFK0L.js",
+      "_x-gfWO9KfB.js",
+      "_file-text-Dl_aF8u0.js",
+      "_index-DxK34XW3.js",
+      "_index-C0AcbnKJ.js",
+      "_utils-jAU0Cazi.js",
+      "_createLucideIcon-B8qZ3ylK.js"
+    ]
+  },
+  "resources/js/pages/assistant/all-defense-list/show-all-requests.tsx": {
+    "file": "assets/show-all-requests-CCeaEn0w.js",
+>>>>>>> Stashed changes
     "name": "show-all-requests",
     "src": "resources/js/pages/assistant/all-defense-list/show-all-requests.tsx",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/app.tsx",
+<<<<<<< Updated upstream
       "_index-Vwkg4oTI.js",
       "_button-Cw9tQIeO.js",
       "_checkbox-D0LzfNbG.js",
@@ -1734,6 +2987,47 @@
       "_clock-Cn1v7f4i.js",
       "_index-BSk2xfhC.js",
       "_index-BZgaE142.js",
+=======
+      "_index-B2MlTwnV.js",
+      "_button-C4XkiM_B.js",
+      "_checkbox-DDzRYWAy.js",
+      "_input-DCrn1t-u.js",
+      "resources/js/pages/assistant/all-defense-list/table-all-defense-list.tsx",
+      "_dialog-BeApitpu.js",
+      "_tabs-BvzTftzm.js",
+      "_calendar-DKOUdBib.js",
+      "_popover-tBQRRq13.js",
+      "_app-layout-CZ3kZ0t2.js",
+      "_dropdown-menu-sYZpN2tC.js",
+      "_endOfDay-UBg8OSOW.js",
+      "_isWithinInterval-BGjcImah.js",
+      "_send-ChQ392yu.js",
+      "_search-gvHM0uxt.js",
+      "_circle-plus-DNS-2CjW.js",
+      "_calendar-BkrqGKNC.js",
+      "_x-gfWO9KfB.js",
+      "_circle-check-big-CKCqbWb4.js",
+      "_printer-8ps6np5W.js",
+      "_signature-HJa2c2uW.js",
+      "_format-HX8DKPSU.js",
+      "_index-C0AcbnKJ.js",
+      "_index-DYEC1Owk.js",
+      "_index-DZZQifJx.js",
+      "_utils-jAU0Cazi.js",
+      "_index-DxK34XW3.js",
+      "_index-ATT6OHxL.js",
+      "_index-DGKk-Zer.js",
+      "_index-DFD1OPps.js",
+      "_index-BdQOngYf.js",
+      "_check-BgnkF1LW.js",
+      "_createLucideIcon-B8qZ3ylK.js",
+      "_table-C8ztdzxp.js",
+      "_badge-ofr1GoIX.js",
+      "_program-abbreviations-BcvFCzIW.js",
+      "_circle-check-B5R0L350.js",
+      "_index-DDxX9UbU.js",
+      "_index-DRr-UIpQ.js",
+>>>>>>> Stashed changes
       "_en-US-BA9orzCf.js",
       "_endOfWeek-QFyZPl43.js",
       "_differenceInCalendarMonths-HUNRrXGm.js",
@@ -1741,6 +3035,7 @@
       "_endOfMonth-CK_ShA5m.js",
       "_isSameDay-DUlCFK42.js",
       "_isSameMonth-CQd3m9St.js",
+<<<<<<< Updated upstream
       "_chevron-left-BphKULEz.js",
       "_chevron-right-QGs8lTP5.js",
       "_chevron-down-Bg3q2iyP.js",
@@ -1759,11 +3054,34 @@
   },
   "resources/js/pages/assistant/all-defense-list/table-all-defense-list.tsx": {
     "file": "assets/table-all-defense-list-B7Q3cW-l.js",
+=======
+      "_chevron-left-IcMAr9yn.js",
+      "_chevron-right-BZod6iQK.js",
+      "_chevron-down-DEJUajdp.js",
+      "_floating-ui.react-dom-qFQCHW7g.js",
+      "_tooltip-YyHP33lU.js",
+      "_separator-DAbYQnLI.js",
+      "_avatar-Cz3zvE7t.js",
+      "_settings-CYIvZ_Tn.js",
+      "_users-Bi2Lh05r.js",
+      "_graduation-cap-BxuxjmnL.js",
+      "_file-text-Dl_aF8u0.js",
+      "_dollar-sign-DEGfV_co.js",
+      "_credit-card-BvkjxVWT.js",
+      "_info-BWBV8Gn3.js",
+      "_sun-CPhm4DAg.js",
+      "_index-MX9TSR8D.js"
+    ]
+  },
+  "resources/js/pages/assistant/all-defense-list/table-all-defense-list.tsx": {
+    "file": "assets/table-all-defense-list-DgHr1_nO.js",
+>>>>>>> Stashed changes
     "name": "table-all-defense-list",
     "src": "resources/js/pages/assistant/all-defense-list/table-all-defense-list.tsx",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/app.tsx",
+<<<<<<< Updated upstream
       "_button-Cw9tQIeO.js",
       "_table-BEEQP98I.js",
       "_checkbox-D0LzfNbG.js",
@@ -1796,11 +3114,39 @@
   },
   "resources/js/pages/assistant/defense-batch/Index.tsx": {
     "file": "assets/Index-tpVepTvh.js",
+=======
+      "_button-C4XkiM_B.js",
+      "_table-C8ztdzxp.js",
+      "_checkbox-DDzRYWAy.js",
+      "_badge-ofr1GoIX.js",
+      "_program-abbreviations-BcvFCzIW.js",
+      "_dialog-BeApitpu.js",
+      "_circle-check-B5R0L350.js",
+      "_x-gfWO9KfB.js",
+      "_index-DYEC1Owk.js",
+      "_index-DZZQifJx.js",
+      "_utils-jAU0Cazi.js",
+      "_index-DxK34XW3.js",
+      "_index-C0AcbnKJ.js",
+      "_index-ATT6OHxL.js",
+      "_index-DGKk-Zer.js",
+      "_index-DFD1OPps.js",
+      "_index-BdQOngYf.js",
+      "_check-BgnkF1LW.js",
+      "_createLucideIcon-B8qZ3ylK.js",
+      "_index-DDxX9UbU.js",
+      "_index-DRr-UIpQ.js"
+    ]
+  },
+  "resources/js/pages/assistant/defense-batch/Index.tsx": {
+    "file": "assets/Index-BtBgAgub.js",
+>>>>>>> Stashed changes
     "name": "Index",
     "src": "resources/js/pages/assistant/defense-batch/Index.tsx",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/app.tsx",
+<<<<<<< Updated upstream
       "_app-layout-C76KB2Lm.js",
       "_button-Cw9tQIeO.js",
       "_card-C_emSl4Q.js",
@@ -1848,11 +3194,61 @@
   },
   "resources/js/pages/assistant/defense-batch/table-all-defense-batch.tsx": {
     "file": "assets/table-all-defense-batch-DqbxM46f.js",
+=======
+      "_app-layout-CZ3kZ0t2.js",
+      "_button-C4XkiM_B.js",
+      "_card-VQzzqn5t.js",
+      "_input-DCrn1t-u.js",
+      "_index-B2MlTwnV.js",
+      "_dialog-BeApitpu.js",
+      "resources/js/pages/assistant/defense-batch/table-all-defense-batch.tsx",
+      "_send-ChQ392yu.js",
+      "_refresh-cw-DFFpfEuC.js",
+      "_plus-Bp59822C.js",
+      "_x-gfWO9KfB.js",
+      "_index-DYEC1Owk.js",
+      "_index-DZZQifJx.js",
+      "_utils-jAU0Cazi.js",
+      "_index-DDxX9UbU.js",
+      "_index-C0AcbnKJ.js",
+      "_index-DRr-UIpQ.js",
+      "_tooltip-YyHP33lU.js",
+      "_floating-ui.react-dom-qFQCHW7g.js",
+      "_createLucideIcon-B8qZ3ylK.js",
+      "_separator-DAbYQnLI.js",
+      "_index-DxK34XW3.js",
+      "_chevron-right-BZod6iQK.js",
+      "_dropdown-menu-sYZpN2tC.js",
+      "_index-DGKk-Zer.js",
+      "_index-ATT6OHxL.js",
+      "_index-MX9TSR8D.js",
+      "_index-BdQOngYf.js",
+      "_check-BgnkF1LW.js",
+      "_avatar-Cz3zvE7t.js",
+      "_settings-CYIvZ_Tn.js",
+      "_users-Bi2Lh05r.js",
+      "_graduation-cap-BxuxjmnL.js",
+      "_file-text-Dl_aF8u0.js",
+      "_dollar-sign-DEGfV_co.js",
+      "_credit-card-BvkjxVWT.js",
+      "_tabs-BvzTftzm.js",
+      "_badge-ofr1GoIX.js",
+      "_circle-check-big-CKCqbWb4.js",
+      "_info-BWBV8Gn3.js",
+      "_sun-CPhm4DAg.js",
+      "_table-C8ztdzxp.js",
+      "_pencil-B4PKA2yC.js"
+    ]
+  },
+  "resources/js/pages/assistant/defense-batch/table-all-defense-batch.tsx": {
+    "file": "assets/table-all-defense-batch-VzPPWTS5.js",
+>>>>>>> Stashed changes
     "name": "table-all-defense-batch",
     "src": "resources/js/pages/assistant/defense-batch/table-all-defense-batch.tsx",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/app.tsx",
+<<<<<<< Updated upstream
       "_badge-BsPMjMb7.js",
       "_button-Cw9tQIeO.js",
       "_table-BEEQP98I.js",
@@ -1866,6 +3262,21 @@
   },
   "resources/js/pages/auth/LoginV2.tsx": {
     "file": "assets/LoginV2-BwRaWYFX.js",
+=======
+      "_badge-ofr1GoIX.js",
+      "_button-C4XkiM_B.js",
+      "_table-C8ztdzxp.js",
+      "_send-ChQ392yu.js",
+      "_pencil-B4PKA2yC.js",
+      "_index-DYEC1Owk.js",
+      "_index-DZZQifJx.js",
+      "_utils-jAU0Cazi.js",
+      "_createLucideIcon-B8qZ3ylK.js"
+    ]
+  },
+  "resources/js/pages/auth/LoginV2.tsx": {
+    "file": "assets/LoginV2-B9axWe_Q.js",
+>>>>>>> Stashed changes
     "name": "LoginV2",
     "src": "resources/js/pages/auth/LoginV2.tsx",
     "isDynamicEntry": true,
@@ -1874,12 +3285,17 @@
     ]
   },
   "resources/js/pages/auth/confirm-password.tsx": {
+<<<<<<< Updated upstream
     "file": "assets/confirm-password-B78AFFp8.js",
+=======
+    "file": "assets/confirm-password-DyZUVnhq.js",
+>>>>>>> Stashed changes
     "name": "confirm-password",
     "src": "resources/js/pages/auth/confirm-password.tsx",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/app.tsx",
+<<<<<<< Updated upstream
       "_input-error-B7NcGVv3.js",
       "_button-Cw9tQIeO.js",
       "_input-izsDzGd9.js",
@@ -1896,11 +3312,30 @@
   },
   "resources/js/pages/auth/forgot-password.tsx": {
     "file": "assets/forgot-password-By4sDwFB.js",
+=======
+      "_input-error-DBfxdkea.js",
+      "_button-C4XkiM_B.js",
+      "_input-DCrn1t-u.js",
+      "_label-by1MoGWy.js",
+      "_auth-layout-wRBhd69F.js",
+      "_loader-circle-D7qrpiZm.js",
+      "_utils-jAU0Cazi.js",
+      "_index-DYEC1Owk.js",
+      "_index-DZZQifJx.js",
+      "_index-C0AcbnKJ.js",
+      "_card-VQzzqn5t.js",
+      "_createLucideIcon-B8qZ3ylK.js"
+    ]
+  },
+  "resources/js/pages/auth/forgot-password.tsx": {
+    "file": "assets/forgot-password-BolNeHex.js",
+>>>>>>> Stashed changes
     "name": "forgot-password",
     "src": "resources/js/pages/auth/forgot-password.tsx",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/app.tsx",
+<<<<<<< Updated upstream
       "_input-error-B7NcGVv3.js",
       "_text-link-2nkkrYAe.js",
       "_button-Cw9tQIeO.js",
@@ -1918,11 +3353,31 @@
   },
   "resources/js/pages/auth/login.tsx": {
     "file": "assets/login-NzfcFIZW.js",
+=======
+      "_input-error-DBfxdkea.js",
+      "_text-link-CfDgp0x-.js",
+      "_button-C4XkiM_B.js",
+      "_input-DCrn1t-u.js",
+      "_label-by1MoGWy.js",
+      "_auth-layout-wRBhd69F.js",
+      "_loader-circle-D7qrpiZm.js",
+      "_utils-jAU0Cazi.js",
+      "_index-DYEC1Owk.js",
+      "_index-DZZQifJx.js",
+      "_index-C0AcbnKJ.js",
+      "_card-VQzzqn5t.js",
+      "_createLucideIcon-B8qZ3ylK.js"
+    ]
+  },
+  "resources/js/pages/auth/login.tsx": {
+    "file": "assets/login-DQcxvQRb.js",
+>>>>>>> Stashed changes
     "name": "login",
     "src": "resources/js/pages/auth/login.tsx",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/app.tsx",
+<<<<<<< Updated upstream
       "_input-error-B7NcGVv3.js",
       "_text-link-2nkkrYAe.js",
       "_button-Cw9tQIeO.js",
@@ -1947,11 +3402,38 @@
   },
   "resources/js/pages/auth/register.tsx": {
     "file": "assets/register-B5ILjG25.js",
+=======
+      "_input-error-DBfxdkea.js",
+      "_text-link-CfDgp0x-.js",
+      "_button-C4XkiM_B.js",
+      "_checkbox-DDzRYWAy.js",
+      "_input-DCrn1t-u.js",
+      "_label-by1MoGWy.js",
+      "_auth-layout-wRBhd69F.js",
+      "_loader-circle-D7qrpiZm.js",
+      "_utils-jAU0Cazi.js",
+      "_index-DYEC1Owk.js",
+      "_index-DZZQifJx.js",
+      "_index-DxK34XW3.js",
+      "_index-C0AcbnKJ.js",
+      "_index-ATT6OHxL.js",
+      "_index-DGKk-Zer.js",
+      "_index-DFD1OPps.js",
+      "_index-BdQOngYf.js",
+      "_check-BgnkF1LW.js",
+      "_createLucideIcon-B8qZ3ylK.js",
+      "_card-VQzzqn5t.js"
+    ]
+  },
+  "resources/js/pages/auth/register.tsx": {
+    "file": "assets/register-DFbqzvd8.js",
+>>>>>>> Stashed changes
     "name": "register",
     "src": "resources/js/pages/auth/register.tsx",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/app.tsx",
+<<<<<<< Updated upstream
       "_input-error-B7NcGVv3.js",
       "_text-link-2nkkrYAe.js",
       "_button-Cw9tQIeO.js",
@@ -1979,11 +3461,41 @@
   },
   "resources/js/pages/auth/reset-password.tsx": {
     "file": "assets/reset-password-BF9NST3j.js",
+=======
+      "_input-error-DBfxdkea.js",
+      "_text-link-CfDgp0x-.js",
+      "_button-C4XkiM_B.js",
+      "_input-DCrn1t-u.js",
+      "_label-by1MoGWy.js",
+      "_select-BHDrHMEc.js",
+      "_auth-layout-wRBhd69F.js",
+      "_loader-circle-D7qrpiZm.js",
+      "_utils-jAU0Cazi.js",
+      "_index-DYEC1Owk.js",
+      "_index-DZZQifJx.js",
+      "_index-C0AcbnKJ.js",
+      "_index-DGKk-Zer.js",
+      "_index-ATT6OHxL.js",
+      "_index-MX9TSR8D.js",
+      "_index-DxK34XW3.js",
+      "_floating-ui.react-dom-qFQCHW7g.js",
+      "_index-DFD1OPps.js",
+      "_index-DRr-UIpQ.js",
+      "_chevron-down-DEJUajdp.js",
+      "_createLucideIcon-B8qZ3ylK.js",
+      "_check-BgnkF1LW.js",
+      "_card-VQzzqn5t.js"
+    ]
+  },
+  "resources/js/pages/auth/reset-password.tsx": {
+    "file": "assets/reset-password-womdS4XR.js",
+>>>>>>> Stashed changes
     "name": "reset-password",
     "src": "resources/js/pages/auth/reset-password.tsx",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/app.tsx",
+<<<<<<< Updated upstream
       "_input-error-B7NcGVv3.js",
       "_button-Cw9tQIeO.js",
       "_input-izsDzGd9.js",
@@ -2000,11 +3512,30 @@
   },
   "resources/js/pages/auth/verify-email.tsx": {
     "file": "assets/verify-email-C6oLxDRC.js",
+=======
+      "_input-error-DBfxdkea.js",
+      "_button-C4XkiM_B.js",
+      "_input-DCrn1t-u.js",
+      "_label-by1MoGWy.js",
+      "_auth-layout-wRBhd69F.js",
+      "_loader-circle-D7qrpiZm.js",
+      "_utils-jAU0Cazi.js",
+      "_index-DYEC1Owk.js",
+      "_index-DZZQifJx.js",
+      "_index-C0AcbnKJ.js",
+      "_card-VQzzqn5t.js",
+      "_createLucideIcon-B8qZ3ylK.js"
+    ]
+  },
+  "resources/js/pages/auth/verify-email.tsx": {
+    "file": "assets/verify-email-BUmkaiB3.js",
+>>>>>>> Stashed changes
     "name": "verify-email",
     "src": "resources/js/pages/auth/verify-email.tsx",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/app.tsx",
+<<<<<<< Updated upstream
       "_text-link-2nkkrYAe.js",
       "_button-Cw9tQIeO.js",
       "_auth-layout-ClQEqQCQ.js",
@@ -2018,11 +3549,27 @@
   },
   "resources/js/pages/coordinator/adviser-list/Index.tsx": {
     "file": "assets/Index-Cnfntd40.js",
+=======
+      "_text-link-CfDgp0x-.js",
+      "_button-C4XkiM_B.js",
+      "_auth-layout-wRBhd69F.js",
+      "_loader-circle-D7qrpiZm.js",
+      "_utils-jAU0Cazi.js",
+      "_index-DYEC1Owk.js",
+      "_index-DZZQifJx.js",
+      "_card-VQzzqn5t.js",
+      "_createLucideIcon-B8qZ3ylK.js"
+    ]
+  },
+  "resources/js/pages/coordinator/adviser-list/Index.tsx": {
+    "file": "assets/Index-CxEk-M4Q.js",
+>>>>>>> Stashed changes
     "name": "Index",
     "src": "resources/js/pages/coordinator/adviser-list/Index.tsx",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/app.tsx",
+<<<<<<< Updated upstream
       "_app-layout-C76KB2Lm.js",
       "resources/js/pages/coordinator/adviser-list/show-advisers.tsx",
       "_index-CDDLQrUy.js",
@@ -2078,11 +3625,69 @@
   },
   "resources/js/pages/coordinator/adviser-list/show-advisers.tsx": {
     "file": "assets/show-advisers-DlrR2WfZ.js",
+=======
+      "_app-layout-CZ3kZ0t2.js",
+      "resources/js/pages/coordinator/adviser-list/show-advisers.tsx",
+      "_index-DYEC1Owk.js",
+      "_index-DZZQifJx.js",
+      "_utils-jAU0Cazi.js",
+      "_button-C4XkiM_B.js",
+      "_input-DCrn1t-u.js",
+      "_index-DDxX9UbU.js",
+      "_index-C0AcbnKJ.js",
+      "_index-DRr-UIpQ.js",
+      "_x-gfWO9KfB.js",
+      "_createLucideIcon-B8qZ3ylK.js",
+      "_tooltip-YyHP33lU.js",
+      "_floating-ui.react-dom-qFQCHW7g.js",
+      "_separator-DAbYQnLI.js",
+      "_index-DxK34XW3.js",
+      "_chevron-right-BZod6iQK.js",
+      "_dropdown-menu-sYZpN2tC.js",
+      "_index-DGKk-Zer.js",
+      "_index-ATT6OHxL.js",
+      "_index-MX9TSR8D.js",
+      "_index-BdQOngYf.js",
+      "_check-BgnkF1LW.js",
+      "_avatar-Cz3zvE7t.js",
+      "_settings-CYIvZ_Tn.js",
+      "_users-Bi2Lh05r.js",
+      "_graduation-cap-BxuxjmnL.js",
+      "_file-text-Dl_aF8u0.js",
+      "_dollar-sign-DEGfV_co.js",
+      "_send-ChQ392yu.js",
+      "_credit-card-BvkjxVWT.js",
+      "_tabs-BvzTftzm.js",
+      "_badge-ofr1GoIX.js",
+      "_circle-check-big-CKCqbWb4.js",
+      "_info-BWBV8Gn3.js",
+      "_sun-CPhm4DAg.js",
+      "_table-C8ztdzxp.js",
+      "_dialog-BeApitpu.js",
+      "_skeleton-eQxcUfOO.js",
+      "_alert-C_jnSLAo.js",
+      "_index-B2MlTwnV.js",
+      "_user-plus-C3DX8qgj.js",
+      "_loader-circle-D7qrpiZm.js",
+      "_search-gvHM0uxt.js",
+      "_square-pen-Brbz-8qz.js",
+      "_trash-DOTJaUFR.js",
+      "_user-Dpzu1VZB.js",
+      "_mail-DebR_hdY.js",
+      "_message-circle-Dmo5mriC.js",
+      "_refresh-cw-DFFpfEuC.js",
+      "_plus-Bp59822C.js"
+    ]
+  },
+  "resources/js/pages/coordinator/adviser-list/show-advisers.tsx": {
+    "file": "assets/show-advisers-D3htPShU.js",
+>>>>>>> Stashed changes
     "name": "show-advisers",
     "src": "resources/js/pages/coordinator/adviser-list/show-advisers.tsx",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/app.tsx",
+<<<<<<< Updated upstream
       "_table-BEEQP98I.js",
       "_button-Cw9tQIeO.js",
       "_input-izsDzGd9.js",
@@ -2119,11 +3724,50 @@
   },
   "resources/js/pages/coordinator/compre-exam/Index.tsx": {
     "file": "assets/Index-BcHDpsRM.js",
+=======
+      "_table-C8ztdzxp.js",
+      "_button-C4XkiM_B.js",
+      "_input-DCrn1t-u.js",
+      "_dialog-BeApitpu.js",
+      "_skeleton-eQxcUfOO.js",
+      "_avatar-Cz3zvE7t.js",
+      "_tabs-BvzTftzm.js",
+      "_badge-ofr1GoIX.js",
+      "_alert-C_jnSLAo.js",
+      "_index-B2MlTwnV.js",
+      "_users-Bi2Lh05r.js",
+      "_user-plus-C3DX8qgj.js",
+      "_loader-circle-D7qrpiZm.js",
+      "_search-gvHM0uxt.js",
+      "_square-pen-Brbz-8qz.js",
+      "_trash-DOTJaUFR.js",
+      "_user-Dpzu1VZB.js",
+      "_mail-DebR_hdY.js",
+      "_message-circle-Dmo5mriC.js",
+      "_refresh-cw-DFFpfEuC.js",
+      "_plus-Bp59822C.js",
+      "_info-BWBV8Gn3.js",
+      "_utils-jAU0Cazi.js",
+      "_index-DYEC1Owk.js",
+      "_index-DZZQifJx.js",
+      "_index-DDxX9UbU.js",
+      "_index-C0AcbnKJ.js",
+      "_index-DRr-UIpQ.js",
+      "_x-gfWO9KfB.js",
+      "_createLucideIcon-B8qZ3ylK.js",
+      "_index-ATT6OHxL.js",
+      "_index-DxK34XW3.js"
+    ]
+  },
+  "resources/js/pages/coordinator/compre-exam/Index.tsx": {
+    "file": "assets/Index-DMF_mCHX.js",
+>>>>>>> Stashed changes
     "name": "Index",
     "src": "resources/js/pages/coordinator/compre-exam/Index.tsx",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/app.tsx",
+<<<<<<< Updated upstream
       "_app-layout-C76KB2Lm.js",
       "_input-izsDzGd9.js",
       "resources/js/pages/coordinator/compre-exam/table-compre-exam.tsx",
@@ -2173,17 +3817,73 @@
       "_circle-check-B6ukRmdw.js",
       "_circle-x-CSxHo4yb.js",
       "_filter-80F9WJqC.js",
+=======
+      "_app-layout-CZ3kZ0t2.js",
+      "_input-DCrn1t-u.js",
+      "resources/js/pages/coordinator/compre-exam/table-compre-exam.tsx",
+      "_paperclip-CZJ8UXmI.js",
+      "_search-gvHM0uxt.js",
+      "_index-DYEC1Owk.js",
+      "_index-DZZQifJx.js",
+      "_utils-jAU0Cazi.js",
+      "_button-C4XkiM_B.js",
+      "_index-DDxX9UbU.js",
+      "_index-C0AcbnKJ.js",
+      "_index-DRr-UIpQ.js",
+      "_x-gfWO9KfB.js",
+      "_createLucideIcon-B8qZ3ylK.js",
+      "_tooltip-YyHP33lU.js",
+      "_floating-ui.react-dom-qFQCHW7g.js",
+      "_separator-DAbYQnLI.js",
+      "_index-DxK34XW3.js",
+      "_chevron-right-BZod6iQK.js",
+      "_dropdown-menu-sYZpN2tC.js",
+      "_index-DGKk-Zer.js",
+      "_index-ATT6OHxL.js",
+      "_index-MX9TSR8D.js",
+      "_index-BdQOngYf.js",
+      "_check-BgnkF1LW.js",
+      "_avatar-Cz3zvE7t.js",
+      "_settings-CYIvZ_Tn.js",
+      "_users-Bi2Lh05r.js",
+      "_graduation-cap-BxuxjmnL.js",
+      "_file-text-Dl_aF8u0.js",
+      "_dollar-sign-DEGfV_co.js",
+      "_send-ChQ392yu.js",
+      "_credit-card-BvkjxVWT.js",
+      "_tabs-BvzTftzm.js",
+      "_badge-ofr1GoIX.js",
+      "_circle-check-big-CKCqbWb4.js",
+      "_info-BWBV8Gn3.js",
+      "_sun-CPhm4DAg.js",
+      "_table-C8ztdzxp.js",
+      "_checkbox-DDzRYWAy.js",
+      "_index-DFD1OPps.js",
+      "_dialog-BeApitpu.js",
+      "resources/js/pages/coordinator/compre-exam/details.tsx",
+      "_clipboard-list-CItztuo4.js",
+      "_user-round-DdfHKHWt.js",
+      "_mail-DebR_hdY.js",
+      "_circle-check-B5R0L350.js",
+      "_circle-x-BzZWIzCj.js",
+      "_filter-DUO50SL3.js",
+>>>>>>> Stashed changes
       "_format-HX8DKPSU.js",
       "_en-US-BA9orzCf.js"
     ]
   },
   "resources/js/pages/coordinator/compre-exam/details.tsx": {
+<<<<<<< Updated upstream
     "file": "assets/details-BR-0BrdH.js",
+=======
+    "file": "assets/details-mrsGhLss.js",
+>>>>>>> Stashed changes
     "name": "details",
     "src": "resources/js/pages/coordinator/compre-exam/details.tsx",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/app.tsx",
+<<<<<<< Updated upstream
       "_badge-BsPMjMb7.js",
       "_clipboard-list-D93gqQbk.js",
       "_user-round-Re0lcQTC.js",
@@ -2199,11 +3899,29 @@
   },
   "resources/js/pages/coordinator/compre-exam/table-compre-exam.tsx": {
     "file": "assets/table-compre-exam-DopTs2oF.js",
+=======
+      "_badge-ofr1GoIX.js",
+      "_clipboard-list-CItztuo4.js",
+      "_user-round-DdfHKHWt.js",
+      "_mail-DebR_hdY.js",
+      "_graduation-cap-BxuxjmnL.js",
+      "_circle-check-B5R0L350.js",
+      "_circle-x-BzZWIzCj.js",
+      "_index-DYEC1Owk.js",
+      "_index-DZZQifJx.js",
+      "_utils-jAU0Cazi.js",
+      "_createLucideIcon-B8qZ3ylK.js"
+    ]
+  },
+  "resources/js/pages/coordinator/compre-exam/table-compre-exam.tsx": {
+    "file": "assets/table-compre-exam-BfmOksxg.js",
+>>>>>>> Stashed changes
     "name": "table-compre-exam",
     "src": "resources/js/pages/coordinator/compre-exam/table-compre-exam.tsx",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/app.tsx",
+<<<<<<< Updated upstream
       "_table-BEEQP98I.js",
       "_checkbox-D0LzfNbG.js",
       "_badge-BsPMjMb7.js",
@@ -2236,16 +3954,55 @@
       "_circle-x-CSxHo4yb.js",
       "_index-BfMlnZ5P.js",
       "_floating-ui.react-dom-DL84dtXf.js",
+=======
+      "_table-C8ztdzxp.js",
+      "_checkbox-DDzRYWAy.js",
+      "_badge-ofr1GoIX.js",
+      "_dialog-BeApitpu.js",
+      "_button-C4XkiM_B.js",
+      "resources/js/pages/coordinator/compre-exam/details.tsx",
+      "_dropdown-menu-sYZpN2tC.js",
+      "_filter-DUO50SL3.js",
+      "_check-BgnkF1LW.js",
+      "_info-BWBV8Gn3.js",
+      "_format-HX8DKPSU.js",
+      "_utils-jAU0Cazi.js",
+      "_index-DxK34XW3.js",
+      "_index-C0AcbnKJ.js",
+      "_index-ATT6OHxL.js",
+      "_index-DGKk-Zer.js",
+      "_index-DFD1OPps.js",
+      "_index-BdQOngYf.js",
+      "_index-DYEC1Owk.js",
+      "_index-DZZQifJx.js",
+      "_index-DDxX9UbU.js",
+      "_index-DRr-UIpQ.js",
+      "_x-gfWO9KfB.js",
+      "_createLucideIcon-B8qZ3ylK.js",
+      "_clipboard-list-CItztuo4.js",
+      "_user-round-DdfHKHWt.js",
+      "_mail-DebR_hdY.js",
+      "_graduation-cap-BxuxjmnL.js",
+      "_circle-check-B5R0L350.js",
+      "_circle-x-BzZWIzCj.js",
+      "_index-MX9TSR8D.js",
+      "_floating-ui.react-dom-qFQCHW7g.js",
+>>>>>>> Stashed changes
       "_en-US-BA9orzCf.js"
     ]
   },
   "resources/js/pages/coordinator/compre-payment/Index.tsx": {
+<<<<<<< Updated upstream
     "file": "assets/Index-BiTL5f_d.js",
+=======
+    "file": "assets/Index-8934RgMD.js",
+>>>>>>> Stashed changes
     "name": "Index",
     "src": "resources/js/pages/coordinator/compre-payment/Index.tsx",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/app.tsx",
+<<<<<<< Updated upstream
       "_app-layout-C76KB2Lm.js",
       "_button-Cw9tQIeO.js",
       "_input-izsDzGd9.js",
@@ -2302,11 +4059,70 @@
   },
   "resources/js/pages/coordinator/compre-payment/details.tsx": {
     "file": "assets/details-a1QuLgW8.js",
+=======
+      "_app-layout-CZ3kZ0t2.js",
+      "_button-C4XkiM_B.js",
+      "_input-DCrn1t-u.js",
+      "resources/js/pages/coordinator/compre-payment/table-compre-payment.tsx",
+      "_search-gvHM0uxt.js",
+      "_index-DYEC1Owk.js",
+      "_index-DZZQifJx.js",
+      "_utils-jAU0Cazi.js",
+      "_index-DDxX9UbU.js",
+      "_index-C0AcbnKJ.js",
+      "_index-DRr-UIpQ.js",
+      "_x-gfWO9KfB.js",
+      "_createLucideIcon-B8qZ3ylK.js",
+      "_tooltip-YyHP33lU.js",
+      "_floating-ui.react-dom-qFQCHW7g.js",
+      "_separator-DAbYQnLI.js",
+      "_index-DxK34XW3.js",
+      "_chevron-right-BZod6iQK.js",
+      "_dropdown-menu-sYZpN2tC.js",
+      "_index-DGKk-Zer.js",
+      "_index-ATT6OHxL.js",
+      "_index-MX9TSR8D.js",
+      "_index-BdQOngYf.js",
+      "_check-BgnkF1LW.js",
+      "_avatar-Cz3zvE7t.js",
+      "_settings-CYIvZ_Tn.js",
+      "_users-Bi2Lh05r.js",
+      "_graduation-cap-BxuxjmnL.js",
+      "_file-text-Dl_aF8u0.js",
+      "_dollar-sign-DEGfV_co.js",
+      "_send-ChQ392yu.js",
+      "_credit-card-BvkjxVWT.js",
+      "_tabs-BvzTftzm.js",
+      "_badge-ofr1GoIX.js",
+      "_circle-check-big-CKCqbWb4.js",
+      "_info-BWBV8Gn3.js",
+      "_sun-CPhm4DAg.js",
+      "_table-C8ztdzxp.js",
+      "_checkbox-DDzRYWAy.js",
+      "_index-DFD1OPps.js",
+      "_dialog-BeApitpu.js",
+      "resources/js/pages/coordinator/compre-payment/details.tsx",
+      "_user-round-DdfHKHWt.js",
+      "_mail-DebR_hdY.js",
+      "_receipt-DWAji_2S.js",
+      "_format-HX8DKPSU.js",
+      "_en-US-BA9orzCf.js",
+      "_textarea-ClN04vZX.js",
+      "_alert-dialog-B8yj1s4q.js",
+      "_filter-DUO50SL3.js",
+      "_circle-x-BzZWIzCj.js",
+      "_circle-arrow-left-Bx1mKyRQ.js"
+    ]
+  },
+  "resources/js/pages/coordinator/compre-payment/details.tsx": {
+    "file": "assets/details-CuXdAbPD.js",
+>>>>>>> Stashed changes
     "name": "details",
     "src": "resources/js/pages/coordinator/compre-payment/details.tsx",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/app.tsx",
+<<<<<<< Updated upstream
       "_badge-BsPMjMb7.js",
       "_credit-card-Cid_txJ6.js",
       "_user-round-Re0lcQTC.js",
@@ -2318,16 +4134,34 @@
       "_index-DZZQifJx.js",
       "_utils-jAU0Cazi.js",
       "_createLucideIcon-pjYyoixj.js",
+=======
+      "_badge-ofr1GoIX.js",
+      "_credit-card-BvkjxVWT.js",
+      "_user-round-DdfHKHWt.js",
+      "_mail-DebR_hdY.js",
+      "_graduation-cap-BxuxjmnL.js",
+      "_receipt-DWAji_2S.js",
+      "_format-HX8DKPSU.js",
+      "_index-DYEC1Owk.js",
+      "_index-DZZQifJx.js",
+      "_utils-jAU0Cazi.js",
+      "_createLucideIcon-B8qZ3ylK.js",
+>>>>>>> Stashed changes
       "_en-US-BA9orzCf.js"
     ]
   },
   "resources/js/pages/coordinator/compre-payment/table-compre-payment.tsx": {
+<<<<<<< Updated upstream
     "file": "assets/table-compre-payment-D-Cnqjlz.js",
+=======
+    "file": "assets/table-compre-payment-BigUYkT3.js",
+>>>>>>> Stashed changes
     "name": "table-compre-payment",
     "src": "resources/js/pages/coordinator/compre-payment/table-compre-payment.tsx",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/app.tsx",
+<<<<<<< Updated upstream
       "_table-BEEQP98I.js",
       "_checkbox-D0LzfNbG.js",
       "_badge-BsPMjMb7.js",
@@ -2364,16 +4198,59 @@
       "_receipt-CoKWPx4G.js",
       "_index-BfMlnZ5P.js",
       "_floating-ui.react-dom-DL84dtXf.js",
+=======
+      "_table-C8ztdzxp.js",
+      "_checkbox-DDzRYWAy.js",
+      "_badge-ofr1GoIX.js",
+      "_dialog-BeApitpu.js",
+      "_button-C4XkiM_B.js",
+      "resources/js/pages/coordinator/compre-payment/details.tsx",
+      "_dropdown-menu-sYZpN2tC.js",
+      "_textarea-ClN04vZX.js",
+      "_alert-dialog-B8yj1s4q.js",
+      "_filter-DUO50SL3.js",
+      "_check-BgnkF1LW.js",
+      "_info-BWBV8Gn3.js",
+      "_circle-x-BzZWIzCj.js",
+      "_circle-check-big-CKCqbWb4.js",
+      "_circle-arrow-left-Bx1mKyRQ.js",
+      "_format-HX8DKPSU.js",
+      "_utils-jAU0Cazi.js",
+      "_index-DxK34XW3.js",
+      "_index-C0AcbnKJ.js",
+      "_index-ATT6OHxL.js",
+      "_index-DGKk-Zer.js",
+      "_index-DFD1OPps.js",
+      "_index-BdQOngYf.js",
+      "_index-DYEC1Owk.js",
+      "_index-DZZQifJx.js",
+      "_index-DDxX9UbU.js",
+      "_index-DRr-UIpQ.js",
+      "_x-gfWO9KfB.js",
+      "_createLucideIcon-B8qZ3ylK.js",
+      "_credit-card-BvkjxVWT.js",
+      "_user-round-DdfHKHWt.js",
+      "_mail-DebR_hdY.js",
+      "_graduation-cap-BxuxjmnL.js",
+      "_receipt-DWAji_2S.js",
+      "_index-MX9TSR8D.js",
+      "_floating-ui.react-dom-qFQCHW7g.js",
+>>>>>>> Stashed changes
       "_en-US-BA9orzCf.js"
     ]
   },
   "resources/js/pages/coordinator/defense-management/CoordinatorDefenseDashboard.tsx": {
+<<<<<<< Updated upstream
     "file": "assets/CoordinatorDefenseDashboard-DzhXE6Xo.js",
+=======
+    "file": "assets/CoordinatorDefenseDashboard-CkQq5vnW.js",
+>>>>>>> Stashed changes
     "name": "CoordinatorDefenseDashboard",
     "src": "resources/js/pages/coordinator/defense-management/CoordinatorDefenseDashboard.tsx",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/app.tsx",
+<<<<<<< Updated upstream
       "_button-Cw9tQIeO.js",
       "_index-Vwkg4oTI.js",
       "_card-C_emSl4Q.js",
@@ -2426,11 +4303,66 @@
   },
   "resources/js/pages/coordinator/documents/document-page.tsx": {
     "file": "assets/document-page-DYbtMVww.js",
+=======
+      "_button-C4XkiM_B.js",
+      "_index-B2MlTwnV.js",
+      "_card-VQzzqn5t.js",
+      "_badge-ofr1GoIX.js",
+      "_input-DCrn1t-u.js",
+      "_label-by1MoGWy.js",
+      "_textarea-ClN04vZX.js",
+      "_select-BHDrHMEc.js",
+      "_dialog-BeApitpu.js",
+      "_app-layout-CZ3kZ0t2.js",
+      "_circle-alert-DF3kdfmF.js",
+      "_users-Bi2Lh05r.js",
+      "_calendar-BkrqGKNC.js",
+      "_circle-check-big-CKCqbWb4.js",
+      "_eye-Dkmyf9ow.js",
+      "_square-pen-Brbz-8qz.js",
+      "_check-BgnkF1LW.js",
+      "_map-pin-BTCBX3sh.js",
+      "_index-DYEC1Owk.js",
+      "_index-DZZQifJx.js",
+      "_utils-jAU0Cazi.js",
+      "_index-C0AcbnKJ.js",
+      "_index-DGKk-Zer.js",
+      "_index-ATT6OHxL.js",
+      "_index-MX9TSR8D.js",
+      "_index-DxK34XW3.js",
+      "_floating-ui.react-dom-qFQCHW7g.js",
+      "_index-DFD1OPps.js",
+      "_index-DRr-UIpQ.js",
+      "_chevron-down-DEJUajdp.js",
+      "_createLucideIcon-B8qZ3ylK.js",
+      "_index-DDxX9UbU.js",
+      "_x-gfWO9KfB.js",
+      "_tooltip-YyHP33lU.js",
+      "_separator-DAbYQnLI.js",
+      "_chevron-right-BZod6iQK.js",
+      "_dropdown-menu-sYZpN2tC.js",
+      "_index-BdQOngYf.js",
+      "_avatar-Cz3zvE7t.js",
+      "_settings-CYIvZ_Tn.js",
+      "_graduation-cap-BxuxjmnL.js",
+      "_file-text-Dl_aF8u0.js",
+      "_dollar-sign-DEGfV_co.js",
+      "_send-ChQ392yu.js",
+      "_credit-card-BvkjxVWT.js",
+      "_tabs-BvzTftzm.js",
+      "_info-BWBV8Gn3.js",
+      "_sun-CPhm4DAg.js"
+    ]
+  },
+  "resources/js/pages/coordinator/documents/document-page.tsx": {
+    "file": "assets/document-page-BEN2OS88.js",
+>>>>>>> Stashed changes
     "name": "document-page",
     "src": "resources/js/pages/coordinator/documents/document-page.tsx",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/app.tsx",
+<<<<<<< Updated upstream
       "_DocumentGeneratorDialog-CfIvJ0sw.js",
       "_dialog-D-tH9FDm.js",
       "_index-BSk2xfhC.js",
@@ -2457,11 +4389,40 @@
   },
   "resources/js/pages/coordinator/panelists/honorarium-rates-dialog.tsx": {
     "file": "assets/honorarium-rates-dialog-CNDs2yWv.js",
+=======
+      "_DocumentGeneratorDialog-BRqfc6nx.js",
+      "_dialog-BeApitpu.js",
+      "_index-DDxX9UbU.js",
+      "_index-C0AcbnKJ.js",
+      "_index-DYEC1Owk.js",
+      "_index-DRr-UIpQ.js",
+      "_utils-jAU0Cazi.js",
+      "_x-gfWO9KfB.js",
+      "_createLucideIcon-B8qZ3ylK.js",
+      "_button-C4XkiM_B.js",
+      "_index-DZZQifJx.js",
+      "_input-DCrn1t-u.js",
+      "_select-BHDrHMEc.js",
+      "_index-DGKk-Zer.js",
+      "_index-ATT6OHxL.js",
+      "_index-MX9TSR8D.js",
+      "_index-DxK34XW3.js",
+      "_floating-ui.react-dom-qFQCHW7g.js",
+      "_index-DFD1OPps.js",
+      "_chevron-down-DEJUajdp.js",
+      "_check-BgnkF1LW.js",
+      "_index-B2MlTwnV.js"
+    ]
+  },
+  "resources/js/pages/coordinator/panelists/honorarium-rates-dialog.tsx": {
+    "file": "assets/honorarium-rates-dialog-BYmbXpPW.js",
+>>>>>>> Stashed changes
     "name": "honorarium-rates-dialog",
     "src": "resources/js/pages/coordinator/panelists/honorarium-rates-dialog.tsx",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/app.tsx",
+<<<<<<< Updated upstream
       "_dialog-D-tH9FDm.js",
       "_button-Cw9tQIeO.js",
       "_input-izsDzGd9.js",
@@ -2473,16 +4434,34 @@
       "_utils-jAU0Cazi.js",
       "_x-B3RMhnUQ.js",
       "_createLucideIcon-pjYyoixj.js",
+=======
+      "_dialog-BeApitpu.js",
+      "_button-C4XkiM_B.js",
+      "_input-DCrn1t-u.js",
+      "_table-C8ztdzxp.js",
+      "_index-DDxX9UbU.js",
+      "_index-C0AcbnKJ.js",
+      "_index-DYEC1Owk.js",
+      "_index-DRr-UIpQ.js",
+      "_utils-jAU0Cazi.js",
+      "_x-gfWO9KfB.js",
+      "_createLucideIcon-B8qZ3ylK.js",
+>>>>>>> Stashed changes
       "_index-DZZQifJx.js"
     ]
   },
   "resources/js/pages/coordinator/panelists/index.tsx": {
+<<<<<<< Updated upstream
     "file": "assets/index-D7VWI6uR.js",
+=======
+    "file": "assets/index-BwrqxqnV.js",
+>>>>>>> Stashed changes
     "name": "index",
     "src": "resources/js/pages/coordinator/panelists/index.tsx",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/app.tsx",
+<<<<<<< Updated upstream
       "_app-layout-C76KB2Lm.js",
       "_button-Cw9tQIeO.js",
       "_input-izsDzGd9.js",
@@ -2542,11 +4521,73 @@
   },
   "resources/js/pages/coordinator/panelists/panelists-form-modal.tsx": {
     "file": "assets/panelists-form-modal-CM7gnQJL.js",
+=======
+      "_app-layout-CZ3kZ0t2.js",
+      "_button-C4XkiM_B.js",
+      "_input-DCrn1t-u.js",
+      "resources/js/pages/coordinator/panelists/panelists-list-table.tsx",
+      "resources/js/pages/coordinator/panelists/panelists-form-modal.tsx",
+      "_index-B2MlTwnV.js",
+      "_popover-tBQRRq13.js",
+      "_checkbox-DDzRYWAy.js",
+      "_users-Bi2Lh05r.js",
+      "_user-plus-C3DX8qgj.js",
+      "_search-gvHM0uxt.js",
+      "_circle-plus-DNS-2CjW.js",
+      "_x-gfWO9KfB.js",
+      "_trash-2-oufS_Sxw.js",
+      "_circle-check-big-CKCqbWb4.js",
+      "_circle-x-BzZWIzCj.js",
+      "_index-DYEC1Owk.js",
+      "_index-DZZQifJx.js",
+      "_utils-jAU0Cazi.js",
+      "_index-DDxX9UbU.js",
+      "_index-C0AcbnKJ.js",
+      "_index-DRr-UIpQ.js",
+      "_tooltip-YyHP33lU.js",
+      "_floating-ui.react-dom-qFQCHW7g.js",
+      "_createLucideIcon-B8qZ3ylK.js",
+      "_separator-DAbYQnLI.js",
+      "_index-DxK34XW3.js",
+      "_chevron-right-BZod6iQK.js",
+      "_dropdown-menu-sYZpN2tC.js",
+      "_index-DGKk-Zer.js",
+      "_index-ATT6OHxL.js",
+      "_index-MX9TSR8D.js",
+      "_index-BdQOngYf.js",
+      "_check-BgnkF1LW.js",
+      "_avatar-Cz3zvE7t.js",
+      "_settings-CYIvZ_Tn.js",
+      "_graduation-cap-BxuxjmnL.js",
+      "_file-text-Dl_aF8u0.js",
+      "_dollar-sign-DEGfV_co.js",
+      "_send-ChQ392yu.js",
+      "_credit-card-BvkjxVWT.js",
+      "_tabs-BvzTftzm.js",
+      "_badge-ofr1GoIX.js",
+      "_info-BWBV8Gn3.js",
+      "_sun-CPhm4DAg.js",
+      "_table-C8ztdzxp.js",
+      "_dialog-BeApitpu.js",
+      "_pencil-B4PKA2yC.js",
+      "_user-Dpzu1VZB.js",
+      "_mail-DebR_hdY.js",
+      "_message-circle-Dmo5mriC.js",
+      "_refresh-cw-DFFpfEuC.js",
+      "_loader-circle-D7qrpiZm.js",
+      "_label-by1MoGWy.js",
+      "_index-DFD1OPps.js"
+    ]
+  },
+  "resources/js/pages/coordinator/panelists/panelists-form-modal.tsx": {
+    "file": "assets/panelists-form-modal-BVshQsvL.js",
+>>>>>>> Stashed changes
     "name": "panelists-form-modal",
     "src": "resources/js/pages/coordinator/panelists/panelists-form-modal.tsx",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/app.tsx",
+<<<<<<< Updated upstream
       "_dialog-D-tH9FDm.js",
       "_button-Cw9tQIeO.js",
       "_input-izsDzGd9.js",
@@ -2558,16 +4599,34 @@
       "_utils-jAU0Cazi.js",
       "_x-B3RMhnUQ.js",
       "_createLucideIcon-pjYyoixj.js",
+=======
+      "_dialog-BeApitpu.js",
+      "_button-C4XkiM_B.js",
+      "_input-DCrn1t-u.js",
+      "_label-by1MoGWy.js",
+      "_index-DDxX9UbU.js",
+      "_index-C0AcbnKJ.js",
+      "_index-DYEC1Owk.js",
+      "_index-DRr-UIpQ.js",
+      "_utils-jAU0Cazi.js",
+      "_x-gfWO9KfB.js",
+      "_createLucideIcon-B8qZ3ylK.js",
+>>>>>>> Stashed changes
       "_index-DZZQifJx.js"
     ]
   },
   "resources/js/pages/coordinator/panelists/panelists-list-table.tsx": {
+<<<<<<< Updated upstream
     "file": "assets/panelists-list-table-CTDaZ2t8.js",
+=======
+    "file": "assets/panelists-list-table-6LivELgb.js",
+>>>>>>> Stashed changes
     "name": "panelists-list-table",
     "src": "resources/js/pages/coordinator/panelists/panelists-list-table.tsx",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/app.tsx",
+<<<<<<< Updated upstream
       "_table-BEEQP98I.js",
       "_checkbox-D0LzfNbG.js",
       "_button-Cw9tQIeO.js",
@@ -2599,11 +4658,45 @@
   },
   "resources/js/pages/coordinator/schedule/DefenseScheduleCalendar.tsx": {
     "file": "assets/DefenseScheduleCalendar-BwMGzfP5.js",
+=======
+      "_table-C8ztdzxp.js",
+      "_checkbox-DDzRYWAy.js",
+      "_button-C4XkiM_B.js",
+      "_dialog-BeApitpu.js",
+      "_tabs-BvzTftzm.js",
+      "_users-Bi2Lh05r.js",
+      "_pencil-B4PKA2yC.js",
+      "_trash-2-oufS_Sxw.js",
+      "_user-Dpzu1VZB.js",
+      "_mail-DebR_hdY.js",
+      "_message-circle-Dmo5mriC.js",
+      "_refresh-cw-DFFpfEuC.js",
+      "_loader-circle-D7qrpiZm.js",
+      "_utils-jAU0Cazi.js",
+      "_index-DxK34XW3.js",
+      "_index-C0AcbnKJ.js",
+      "_index-ATT6OHxL.js",
+      "_index-DGKk-Zer.js",
+      "_index-DFD1OPps.js",
+      "_index-BdQOngYf.js",
+      "_check-BgnkF1LW.js",
+      "_createLucideIcon-B8qZ3ylK.js",
+      "_index-DYEC1Owk.js",
+      "_index-DZZQifJx.js",
+      "_index-DDxX9UbU.js",
+      "_index-DRr-UIpQ.js",
+      "_x-gfWO9KfB.js"
+    ]
+  },
+  "resources/js/pages/coordinator/schedule/DefenseScheduleCalendar.tsx": {
+    "file": "assets/DefenseScheduleCalendar-CS3tRjWd.js",
+>>>>>>> Stashed changes
     "name": "DefenseScheduleCalendar",
     "src": "resources/js/pages/coordinator/schedule/DefenseScheduleCalendar.tsx",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/app.tsx",
+<<<<<<< Updated upstream
       "_app-layout-C76KB2Lm.js",
       "_card-C_emSl4Q.js",
       "_badge-BsPMjMb7.js",
@@ -2611,10 +4704,20 @@
       "_input-izsDzGd9.js",
       "_select-Dw8a4pct.js",
       "_dialog-D-tH9FDm.js",
+=======
+      "_app-layout-CZ3kZ0t2.js",
+      "_card-VQzzqn5t.js",
+      "_badge-ofr1GoIX.js",
+      "_button-C4XkiM_B.js",
+      "_input-DCrn1t-u.js",
+      "_select-BHDrHMEc.js",
+      "_dialog-BeApitpu.js",
+>>>>>>> Stashed changes
       "_normalizeInterval-CdMCNNY-.js",
       "_en-US-BA9orzCf.js",
       "_endOfWeek-QFyZPl43.js",
       "_isToday-2ODO8FsQ.js",
+<<<<<<< Updated upstream
       "_createLucideIcon-pjYyoixj.js",
       "_calendar-Bi5dAEy5.js",
       "_clock-Cn1v7f4i.js",
@@ -2654,12 +4757,57 @@
       "_sun-5m6UvoyG.js",
       "_index-BJk2QW0A.js",
       "_chevron-down-Bg3q2iyP.js",
+=======
+      "_createLucideIcon-B8qZ3ylK.js",
+      "_calendar-BkrqGKNC.js",
+      "_clock-WdEz_qo4.js",
+      "_map-pin-BTCBX3sh.js",
+      "_eye-Dkmyf9ow.js",
+      "_parseISO-CbXPh3Al.js",
+      "_users-Bi2Lh05r.js",
+      "_format-HX8DKPSU.js",
+      "_index-DYEC1Owk.js",
+      "_index-DZZQifJx.js",
+      "_utils-jAU0Cazi.js",
+      "_index-DDxX9UbU.js",
+      "_index-C0AcbnKJ.js",
+      "_index-DRr-UIpQ.js",
+      "_x-gfWO9KfB.js",
+      "_tooltip-YyHP33lU.js",
+      "_floating-ui.react-dom-qFQCHW7g.js",
+      "_separator-DAbYQnLI.js",
+      "_index-DxK34XW3.js",
+      "_chevron-right-BZod6iQK.js",
+      "_dropdown-menu-sYZpN2tC.js",
+      "_index-DGKk-Zer.js",
+      "_index-ATT6OHxL.js",
+      "_index-MX9TSR8D.js",
+      "_index-BdQOngYf.js",
+      "_check-BgnkF1LW.js",
+      "_avatar-Cz3zvE7t.js",
+      "_settings-CYIvZ_Tn.js",
+      "_graduation-cap-BxuxjmnL.js",
+      "_file-text-Dl_aF8u0.js",
+      "_dollar-sign-DEGfV_co.js",
+      "_send-ChQ392yu.js",
+      "_credit-card-BvkjxVWT.js",
+      "_tabs-BvzTftzm.js",
+      "_circle-check-big-CKCqbWb4.js",
+      "_info-BWBV8Gn3.js",
+      "_sun-CPhm4DAg.js",
+      "_index-DFD1OPps.js",
+      "_chevron-down-DEJUajdp.js",
+>>>>>>> Stashed changes
       "_constructNow-Chb2L4Vx.js",
       "_isSameDay-DUlCFK42.js"
     ]
   },
   "resources/js/pages/coordinator/schedule/ErrorBoundary.tsx": {
+<<<<<<< Updated upstream
     "file": "assets/ErrorBoundary-BQ9OXBDl.js",
+=======
+    "file": "assets/ErrorBoundary-Chvd68L_.js",
+>>>>>>> Stashed changes
     "name": "ErrorBoundary",
     "src": "resources/js/pages/coordinator/schedule/ErrorBoundary.tsx",
     "isDynamicEntry": true,
@@ -2668,12 +4816,17 @@
     ]
   },
   "resources/js/pages/coordinator/schedule/Index.tsx": {
+<<<<<<< Updated upstream
     "file": "assets/Index-Gutct-di.js",
+=======
+    "file": "assets/Index-C4fbX9h1.js",
+>>>>>>> Stashed changes
     "name": "Index",
     "src": "resources/js/pages/coordinator/schedule/Index.tsx",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/app.tsx",
+<<<<<<< Updated upstream
       "_app-layout-C76KB2Lm.js",
       "_tabs-DJOYkXMD.js",
       "_button-Cw9tQIeO.js",
@@ -2697,6 +4850,31 @@
       "_square-pen-D_F9SxFV.js",
       "_printer-BV1DV1RI.js",
       "_trash-2-BOv4JxAD.js",
+=======
+      "_app-layout-CZ3kZ0t2.js",
+      "_tabs-BvzTftzm.js",
+      "_button-C4XkiM_B.js",
+      "_badge-ofr1GoIX.js",
+      "_utils-jAU0Cazi.js",
+      "_select-BHDrHMEc.js",
+      "_dialog-BeApitpu.js",
+      "_label-by1MoGWy.js",
+      "_textarea-ClN04vZX.js",
+      "_checkbox-DDzRYWAy.js",
+      "_skeleton-eQxcUfOO.js",
+      "_index-C0AcbnKJ.js",
+      "_graduation-cap-BxuxjmnL.js",
+      "_calendar-BkrqGKNC.js",
+      "_x-gfWO9KfB.js",
+      "_chevron-left-IcMAr9yn.js",
+      "_chevron-right-BZod6iQK.js",
+      "_calendar-days-QY893wAX.js",
+      "_createLucideIcon-B8qZ3ylK.js",
+      "_eye-Dkmyf9ow.js",
+      "_square-pen-Brbz-8qz.js",
+      "_printer-8ps6np5W.js",
+      "_trash-2-oufS_Sxw.js",
+>>>>>>> Stashed changes
       "_format-HX8DKPSU.js",
       "_isSameMonth-CQd3m9St.js",
       "_endOfMonth-CK_ShA5m.js",
@@ -2704,6 +4882,7 @@
       "_parseISO-CbXPh3Al.js",
       "_isToday-2ODO8FsQ.js",
       "_isSameDay-DUlCFK42.js",
+<<<<<<< Updated upstream
       "_index-CDDLQrUy.js",
       "_index-DZZQifJx.js",
       "_input-izsDzGd9.js",
@@ -2731,17 +4910,51 @@
       "_sun-5m6UvoyG.js",
       "_index-BJk2QW0A.js",
       "_chevron-down-Bg3q2iyP.js",
+=======
+      "_index-DYEC1Owk.js",
+      "_index-DZZQifJx.js",
+      "_input-DCrn1t-u.js",
+      "_index-DDxX9UbU.js",
+      "_index-DRr-UIpQ.js",
+      "_tooltip-YyHP33lU.js",
+      "_floating-ui.react-dom-qFQCHW7g.js",
+      "_separator-DAbYQnLI.js",
+      "_index-DxK34XW3.js",
+      "_dropdown-menu-sYZpN2tC.js",
+      "_index-DGKk-Zer.js",
+      "_index-ATT6OHxL.js",
+      "_index-MX9TSR8D.js",
+      "_index-BdQOngYf.js",
+      "_check-BgnkF1LW.js",
+      "_avatar-Cz3zvE7t.js",
+      "_settings-CYIvZ_Tn.js",
+      "_users-Bi2Lh05r.js",
+      "_file-text-Dl_aF8u0.js",
+      "_dollar-sign-DEGfV_co.js",
+      "_send-ChQ392yu.js",
+      "_credit-card-BvkjxVWT.js",
+      "_circle-check-big-CKCqbWb4.js",
+      "_info-BWBV8Gn3.js",
+      "_sun-CPhm4DAg.js",
+      "_index-DFD1OPps.js",
+      "_chevron-down-DEJUajdp.js",
+>>>>>>> Stashed changes
       "_en-US-BA9orzCf.js",
       "_constructNow-Chb2L4Vx.js"
     ]
   },
   "resources/js/pages/coordinator/submissions/defense-request/Index.tsx": {
+<<<<<<< Updated upstream
     "file": "assets/Index-DMc19biI.js",
+=======
+    "file": "assets/Index-BJUBQhAu.js",
+>>>>>>> Stashed changes
     "name": "Index",
     "src": "resources/js/pages/coordinator/submissions/defense-request/Index.tsx",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/app.tsx",
+<<<<<<< Updated upstream
       "_app-layout-C76KB2Lm.js",
       "resources/js/pages/coordinator/submissions/defense-request/show-all-requests.tsx",
       "resources/js/pages/coordinator/submissions/defense-request/show-all-honorarium.tsx",
@@ -2791,6 +5004,54 @@
       "_hourglass-Ck8E1KPu.js",
       "_dialog-D-tH9FDm.js",
       "_calendar-BpWedVzv.js",
+=======
+      "_app-layout-CZ3kZ0t2.js",
+      "resources/js/pages/coordinator/submissions/defense-request/show-all-requests.tsx",
+      "resources/js/pages/coordinator/submissions/defense-request/show-all-honorarium.tsx",
+      "_tabs-BvzTftzm.js",
+      "_index-DYEC1Owk.js",
+      "_index-DZZQifJx.js",
+      "_utils-jAU0Cazi.js",
+      "_button-C4XkiM_B.js",
+      "_input-DCrn1t-u.js",
+      "_index-DDxX9UbU.js",
+      "_index-C0AcbnKJ.js",
+      "_index-DRr-UIpQ.js",
+      "_x-gfWO9KfB.js",
+      "_createLucideIcon-B8qZ3ylK.js",
+      "_tooltip-YyHP33lU.js",
+      "_floating-ui.react-dom-qFQCHW7g.js",
+      "_separator-DAbYQnLI.js",
+      "_index-DxK34XW3.js",
+      "_chevron-right-BZod6iQK.js",
+      "_dropdown-menu-sYZpN2tC.js",
+      "_index-DGKk-Zer.js",
+      "_index-ATT6OHxL.js",
+      "_index-MX9TSR8D.js",
+      "_index-BdQOngYf.js",
+      "_check-BgnkF1LW.js",
+      "_avatar-Cz3zvE7t.js",
+      "_settings-CYIvZ_Tn.js",
+      "_users-Bi2Lh05r.js",
+      "_graduation-cap-BxuxjmnL.js",
+      "_file-text-Dl_aF8u0.js",
+      "_dollar-sign-DEGfV_co.js",
+      "_send-ChQ392yu.js",
+      "_credit-card-BvkjxVWT.js",
+      "_badge-ofr1GoIX.js",
+      "_circle-check-big-CKCqbWb4.js",
+      "_info-BWBV8Gn3.js",
+      "_sun-CPhm4DAg.js",
+      "_index-B2MlTwnV.js",
+      "_checkbox-DDzRYWAy.js",
+      "_index-DFD1OPps.js",
+      "resources/js/pages/coordinator/submissions/defense-request/table-defense-requests.tsx",
+      "_table-C8ztdzxp.js",
+      "_circle-x-BzZWIzCj.js",
+      "_clock-WdEz_qo4.js",
+      "_dialog-BeApitpu.js",
+      "_calendar-DKOUdBib.js",
+>>>>>>> Stashed changes
       "_en-US-BA9orzCf.js",
       "_endOfWeek-QFyZPl43.js",
       "_format-HX8DKPSU.js",
@@ -2799,6 +5060,7 @@
       "_endOfMonth-CK_ShA5m.js",
       "_isSameDay-DUlCFK42.js",
       "_isSameMonth-CQd3m9St.js",
+<<<<<<< Updated upstream
       "_chevron-left-BphKULEz.js",
       "_chevron-down-Bg3q2iyP.js",
       "_popover-C8pU6zmg.js",
@@ -2814,11 +5076,31 @@
   },
   "resources/js/pages/coordinator/submissions/defense-request/details.tsx": {
     "file": "assets/details-Mp3dgFI-.js",
+=======
+      "_chevron-left-IcMAr9yn.js",
+      "_chevron-down-DEJUajdp.js",
+      "_popover-tBQRRq13.js",
+      "_search-gvHM0uxt.js",
+      "_circle-plus-DNS-2CjW.js",
+      "_calendar-BkrqGKNC.js",
+      "_circle-arrow-left-Bx1mKyRQ.js",
+      "_isWithinInterval-BGjcImah.js",
+      "_printer-8ps6np5W.js",
+      "_signature-HJa2c2uW.js",
+      "_chevrons-right-BiGuqRdN.js",
+      "_endOfDay-UBg8OSOW.js",
+      "_card-VQzzqn5t.js"
+    ]
+  },
+  "resources/js/pages/coordinator/submissions/defense-request/details.tsx": {
+    "file": "assets/details-Dy2wdN1o.js",
+>>>>>>> Stashed changes
     "name": "details",
     "src": "resources/js/pages/coordinator/submissions/defense-request/details.tsx",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/app.tsx",
+<<<<<<< Updated upstream
       "_app-layout-C76KB2Lm.js",
       "_dayjs.min-C04TMi-8.js",
       "_index-Vwkg4oTI.js",
@@ -2871,6 +5153,61 @@
       "_info-BJ9Jpdwx.js",
       "_sun-5m6UvoyG.js",
       "_search-yiLKmxcv.js",
+=======
+      "_app-layout-CZ3kZ0t2.js",
+      "_dayjs.min-D6wfwQTr.js",
+      "_index-B2MlTwnV.js",
+      "_button-C4XkiM_B.js",
+      "_input-DCrn1t-u.js",
+      "_badge-ofr1GoIX.js",
+      "_separator-DAbYQnLI.js",
+      "_command-D56cLWk0.js",
+      "_calendar-DKOUdBib.js",
+      "_select-BHDrHMEc.js",
+      "_popover-tBQRRq13.js",
+      "_dialog-BeApitpu.js",
+      "_utils-jAU0Cazi.js",
+      "_avatar-Cz3zvE7t.js",
+      "_tabs-BvzTftzm.js",
+      "_table-C8ztdzxp.js",
+      "_arrow-left-C9WAaS2h.js",
+      "_file-text-Dl_aF8u0.js",
+      "_calendar-BkrqGKNC.js",
+      "_circle-check-big-CKCqbWb4.js",
+      "_circle-x-BzZWIzCj.js",
+      "_circle-arrow-left-Bx1mKyRQ.js",
+      "_users-Bi2Lh05r.js",
+      "_clock-WdEz_qo4.js",
+      "_signature-HJa2c2uW.js",
+      "_send-ChQ392yu.js",
+      "_user-check-jTMUIr-7.js",
+      "_user-Dpzu1VZB.js",
+      "_check-BgnkF1LW.js",
+      "_format-HX8DKPSU.js",
+      "_index-DYEC1Owk.js",
+      "_index-DZZQifJx.js",
+      "_index-DDxX9UbU.js",
+      "_index-C0AcbnKJ.js",
+      "_index-DRr-UIpQ.js",
+      "_x-gfWO9KfB.js",
+      "_createLucideIcon-B8qZ3ylK.js",
+      "_tooltip-YyHP33lU.js",
+      "_floating-ui.react-dom-qFQCHW7g.js",
+      "_chevron-right-BZod6iQK.js",
+      "_dropdown-menu-sYZpN2tC.js",
+      "_index-DGKk-Zer.js",
+      "_index-ATT6OHxL.js",
+      "_index-DxK34XW3.js",
+      "_index-MX9TSR8D.js",
+      "_index-BdQOngYf.js",
+      "_settings-CYIvZ_Tn.js",
+      "_graduation-cap-BxuxjmnL.js",
+      "_dollar-sign-DEGfV_co.js",
+      "_credit-card-BvkjxVWT.js",
+      "_info-BWBV8Gn3.js",
+      "_sun-CPhm4DAg.js",
+      "_search-gvHM0uxt.js",
+>>>>>>> Stashed changes
       "_en-US-BA9orzCf.js",
       "_endOfWeek-QFyZPl43.js",
       "_differenceInCalendarMonths-HUNRrXGm.js",
@@ -2878,6 +5215,7 @@
       "_endOfMonth-CK_ShA5m.js",
       "_isSameDay-DUlCFK42.js",
       "_isSameMonth-CQd3m9St.js",
+<<<<<<< Updated upstream
       "_chevron-left-BphKULEz.js",
       "_chevron-down-Bg3q2iyP.js",
       "_index-BJk2QW0A.js"
@@ -2885,6 +5223,15 @@
   },
   "resources/js/pages/coordinator/submissions/defense-request/print-selected.tsx": {
     "file": "assets/print-selected-B3tCExGH.js",
+=======
+      "_chevron-left-IcMAr9yn.js",
+      "_chevron-down-DEJUajdp.js",
+      "_index-DFD1OPps.js"
+    ]
+  },
+  "resources/js/pages/coordinator/submissions/defense-request/print-selected.tsx": {
+    "file": "assets/print-selected-CEArwQ9T.js",
+>>>>>>> Stashed changes
     "name": "print-selected",
     "src": "resources/js/pages/coordinator/submissions/defense-request/print-selected.tsx",
     "isDynamicEntry": true,
@@ -2893,12 +5240,17 @@
     ]
   },
   "resources/js/pages/coordinator/submissions/defense-request/show-all-honorarium.tsx": {
+<<<<<<< Updated upstream
     "file": "assets/show-all-honorarium-DCTZiVbZ.js",
+=======
+    "file": "assets/show-all-honorarium-CNGIagae.js",
+>>>>>>> Stashed changes
     "name": "show-all-honorarium",
     "src": "resources/js/pages/coordinator/submissions/defense-request/show-all-honorarium.tsx",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/app.tsx",
+<<<<<<< Updated upstream
       "_card-C_emSl4Q.js",
       "_separator-CMC4qrzs.js",
       "_input-izsDzGd9.js",
@@ -2911,11 +5263,26 @@
   },
   "resources/js/pages/coordinator/submissions/defense-request/show-all-requests.tsx": {
     "file": "assets/show-all-requests-DLbzLCoW.js",
+=======
+      "_card-VQzzqn5t.js",
+      "_separator-DAbYQnLI.js",
+      "_input-DCrn1t-u.js",
+      "_search-gvHM0uxt.js",
+      "_utils-jAU0Cazi.js",
+      "_index-DxK34XW3.js",
+      "_index-C0AcbnKJ.js",
+      "_createLucideIcon-B8qZ3ylK.js"
+    ]
+  },
+  "resources/js/pages/coordinator/submissions/defense-request/show-all-requests.tsx": {
+    "file": "assets/show-all-requests-BicZZPfM.js",
+>>>>>>> Stashed changes
     "name": "show-all-requests",
     "src": "resources/js/pages/coordinator/submissions/defense-request/show-all-requests.tsx",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/app.tsx",
+<<<<<<< Updated upstream
       "_index-Vwkg4oTI.js",
       "_button-Cw9tQIeO.js",
       "_checkbox-D0LzfNbG.js",
@@ -2959,6 +5326,49 @@
       "_hourglass-Ck8E1KPu.js",
       "_index-BSk2xfhC.js",
       "_index-BZgaE142.js",
+=======
+      "_index-B2MlTwnV.js",
+      "_button-C4XkiM_B.js",
+      "_checkbox-DDzRYWAy.js",
+      "_input-DCrn1t-u.js",
+      "resources/js/pages/coordinator/submissions/defense-request/table-defense-requests.tsx",
+      "_dialog-BeApitpu.js",
+      "_calendar-DKOUdBib.js",
+      "_popover-tBQRRq13.js",
+      "_app-layout-CZ3kZ0t2.js",
+      "_graduation-cap-BxuxjmnL.js",
+      "_search-gvHM0uxt.js",
+      "_circle-plus-DNS-2CjW.js",
+      "_calendar-BkrqGKNC.js",
+      "_x-gfWO9KfB.js",
+      "_circle-check-big-CKCqbWb4.js",
+      "_circle-x-BzZWIzCj.js",
+      "_circle-arrow-left-Bx1mKyRQ.js",
+      "_isWithinInterval-BGjcImah.js",
+      "_printer-8ps6np5W.js",
+      "_signature-HJa2c2uW.js",
+      "_chevrons-right-BiGuqRdN.js",
+      "_chevron-left-IcMAr9yn.js",
+      "_chevron-right-BZod6iQK.js",
+      "_format-HX8DKPSU.js",
+      "_endOfDay-UBg8OSOW.js",
+      "_index-C0AcbnKJ.js",
+      "_index-DYEC1Owk.js",
+      "_index-DZZQifJx.js",
+      "_utils-jAU0Cazi.js",
+      "_index-DxK34XW3.js",
+      "_index-ATT6OHxL.js",
+      "_index-DGKk-Zer.js",
+      "_index-DFD1OPps.js",
+      "_index-BdQOngYf.js",
+      "_check-BgnkF1LW.js",
+      "_createLucideIcon-B8qZ3ylK.js",
+      "_table-C8ztdzxp.js",
+      "_badge-ofr1GoIX.js",
+      "_clock-WdEz_qo4.js",
+      "_index-DDxX9UbU.js",
+      "_index-DRr-UIpQ.js",
+>>>>>>> Stashed changes
       "_en-US-BA9orzCf.js",
       "_endOfWeek-QFyZPl43.js",
       "_differenceInCalendarMonths-HUNRrXGm.js",
@@ -2966,6 +5376,7 @@
       "_endOfMonth-CK_ShA5m.js",
       "_isSameDay-DUlCFK42.js",
       "_isSameMonth-CQd3m9St.js",
+<<<<<<< Updated upstream
       "_chevron-down-Bg3q2iyP.js",
       "_floating-ui.react-dom-DL84dtXf.js",
       "_tooltip-BvePKNvs.js",
@@ -2985,11 +5396,34 @@
   },
   "resources/js/pages/coordinator/submissions/defense-request/summary-cards.tsx": {
     "file": "assets/summary-cards-CoSR-u1Z.js",
+=======
+      "_chevron-down-DEJUajdp.js",
+      "_floating-ui.react-dom-qFQCHW7g.js",
+      "_tooltip-YyHP33lU.js",
+      "_separator-DAbYQnLI.js",
+      "_dropdown-menu-sYZpN2tC.js",
+      "_index-MX9TSR8D.js",
+      "_avatar-Cz3zvE7t.js",
+      "_settings-CYIvZ_Tn.js",
+      "_users-Bi2Lh05r.js",
+      "_file-text-Dl_aF8u0.js",
+      "_dollar-sign-DEGfV_co.js",
+      "_send-ChQ392yu.js",
+      "_credit-card-BvkjxVWT.js",
+      "_tabs-BvzTftzm.js",
+      "_info-BWBV8Gn3.js",
+      "_sun-CPhm4DAg.js"
+    ]
+  },
+  "resources/js/pages/coordinator/submissions/defense-request/summary-cards.tsx": {
+    "file": "assets/summary-cards-DcCdvn99.js",
+>>>>>>> Stashed changes
     "name": "summary-cards",
     "src": "resources/js/pages/coordinator/submissions/defense-request/summary-cards.tsx",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/app.tsx",
+<<<<<<< Updated upstream
       "_card-C_emSl4Q.js",
       "_circle-alert-qBFnhNFa.js",
       "_utils-jAU0Cazi.js",
@@ -2998,11 +5432,22 @@
   },
   "resources/js/pages/coordinator/submissions/defense-request/table-defense-requests.tsx": {
     "file": "assets/table-defense-requests-BgkAp82-.js",
+=======
+      "_card-VQzzqn5t.js",
+      "_circle-alert-DF3kdfmF.js",
+      "_utils-jAU0Cazi.js",
+      "_createLucideIcon-B8qZ3ylK.js"
+    ]
+  },
+  "resources/js/pages/coordinator/submissions/defense-request/table-defense-requests.tsx": {
+    "file": "assets/table-defense-requests-BDr91uvO.js",
+>>>>>>> Stashed changes
     "name": "table-defense-requests",
     "src": "resources/js/pages/coordinator/submissions/defense-request/table-defense-requests.tsx",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/app.tsx",
+<<<<<<< Updated upstream
       "_table-BEEQP98I.js",
       "_badge-BsPMjMb7.js",
       "_circle-check-big-PSYRp90q.js",
@@ -3020,18 +5465,46 @@
   },
   "resources/js/pages/dashboard/Index.tsx": {
     "file": "assets/Index-Bolq_rk8.js",
+=======
+      "_table-C8ztdzxp.js",
+      "_checkbox-DDzRYWAy.js",
+      "_badge-ofr1GoIX.js",
+      "_circle-check-big-CKCqbWb4.js",
+      "_circle-x-BzZWIzCj.js",
+      "_clock-WdEz_qo4.js",
+      "_utils-jAU0Cazi.js",
+      "_index-DxK34XW3.js",
+      "_index-C0AcbnKJ.js",
+      "_index-ATT6OHxL.js",
+      "_index-DGKk-Zer.js",
+      "_index-DFD1OPps.js",
+      "_index-BdQOngYf.js",
+      "_check-BgnkF1LW.js",
+      "_createLucideIcon-B8qZ3ylK.js",
+      "_index-DYEC1Owk.js",
+      "_index-DZZQifJx.js"
+    ]
+  },
+  "resources/js/pages/dashboard/Index.tsx": {
+    "file": "assets/Index-CKanJlfb.js",
+>>>>>>> Stashed changes
     "name": "Index",
     "src": "resources/js/pages/dashboard/Index.tsx",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/app.tsx",
+<<<<<<< Updated upstream
       "_app-layout-C76KB2Lm.js",
+=======
+      "_app-layout-CZ3kZ0t2.js",
+>>>>>>> Stashed changes
       "resources/js/pages/dashboard/dashboard-layouts/assistant-dashboard.tsx",
       "resources/js/pages/dashboard/dashboard-layouts/coordinator-dashboard.tsx",
       "resources/js/pages/dashboard/dashboard-layouts/dean-dashboard.tsx",
       "resources/js/pages/dashboard/dashboard-layouts/student-dashboard.tsx",
       "resources/js/pages/dashboard/dashboard-layouts/faculty-dashboard.tsx",
       "resources/js/pages/dashboard/dashboard-layouts/super-admin-dashboard.tsx",
+<<<<<<< Updated upstream
       "_index-CDDLQrUy.js",
       "_index-DZZQifJx.js",
       "_utils-jAU0Cazi.js",
@@ -3075,6 +5548,51 @@
       "_book-open-BEj5GOyH.js",
       "resources/js/pages/dashboard/widgets/weekly-defense-schedule-widget.tsx",
       "_calendar-Bi5dAEy5.js",
+=======
+      "_index-DYEC1Owk.js",
+      "_index-DZZQifJx.js",
+      "_utils-jAU0Cazi.js",
+      "_button-C4XkiM_B.js",
+      "_input-DCrn1t-u.js",
+      "_index-DDxX9UbU.js",
+      "_index-C0AcbnKJ.js",
+      "_index-DRr-UIpQ.js",
+      "_x-gfWO9KfB.js",
+      "_createLucideIcon-B8qZ3ylK.js",
+      "_tooltip-YyHP33lU.js",
+      "_floating-ui.react-dom-qFQCHW7g.js",
+      "_separator-DAbYQnLI.js",
+      "_index-DxK34XW3.js",
+      "_chevron-right-BZod6iQK.js",
+      "_dropdown-menu-sYZpN2tC.js",
+      "_index-DGKk-Zer.js",
+      "_index-ATT6OHxL.js",
+      "_index-MX9TSR8D.js",
+      "_index-BdQOngYf.js",
+      "_check-BgnkF1LW.js",
+      "_avatar-Cz3zvE7t.js",
+      "_settings-CYIvZ_Tn.js",
+      "_users-Bi2Lh05r.js",
+      "_graduation-cap-BxuxjmnL.js",
+      "_file-text-Dl_aF8u0.js",
+      "_dollar-sign-DEGfV_co.js",
+      "_send-ChQ392yu.js",
+      "_credit-card-BvkjxVWT.js",
+      "_tabs-BvzTftzm.js",
+      "_badge-ofr1GoIX.js",
+      "_circle-check-big-CKCqbWb4.js",
+      "_info-BWBV8Gn3.js",
+      "_sun-CPhm4DAg.js",
+      "_card-VQzzqn5t.js",
+      "_skeleton-eQxcUfOO.js",
+      "resources/js/pages/dashboard/widgets/quick-actions-widget.tsx",
+      "_user-round-DdfHKHWt.js",
+      "_receipt-DWAji_2S.js",
+      "_badge-dollar-sign-D1ijFK0L.js",
+      "_book-open-DwBftJzx.js",
+      "resources/js/pages/dashboard/widgets/weekly-defense-schedule-widget.tsx",
+      "_calendar-BkrqGKNC.js",
+>>>>>>> Stashed changes
       "_format-HX8DKPSU.js",
       "_en-US-BA9orzCf.js",
       "_isSameDay-DUlCFK42.js",
@@ -3082,6 +5600,7 @@
       "resources/js/pages/dashboard/widgets/pending-defense-request-widget.tsx",
       "_constructNow-Chb2L4Vx.js",
       "_getRoundingMethod-Btu-7J5l.js",
+<<<<<<< Updated upstream
       "_calendar-days-DHLDYaT_.js",
       "_clipboard-list-D93gqQbk.js",
       "resources/js/pages/dashboard/widgets/visual-charts/defense-count.tsx",
@@ -3117,11 +5636,40 @@
   },
   "resources/js/pages/dashboard/components/unified-dashboard-layout.tsx": {
     "file": "assets/unified-dashboard-layout-CJ_y1FTD.js",
+=======
+      "_calendar-days-QY893wAX.js",
+      "_clipboard-list-CItztuo4.js",
+      "resources/js/pages/dashboard/widgets/visual-charts/defense-count.tsx",
+      "_generateCategoricalChart-CNUWMMUU.js",
+      "_index-Bt9ylsuM.js",
+      "_index-Chjiymov.js",
+      "_AreaChart-DsRJgi_x.js",
+      "_YAxis-9IOyoiJg.js",
+      "resources/js/pages/dashboard/widgets/defense-status-widget.tsx",
+      "_hourglass-BrU7Yv6c.js",
+      "resources/js/pages/dashboard/widgets/exam-eligibility-widget.tsx",
+      "_circle-alert-DF3kdfmF.js",
+      "resources/js/pages/dashboard/widgets/immediate-action-defense-requests-widget.tsx",
+      "_label-by1MoGWy.js",
+      "_select-BHDrHMEc.js",
+      "_index-DFD1OPps.js",
+      "_chevron-down-DEJUajdp.js",
+      "_textarea-ClN04vZX.js",
+      "_dialog-BeApitpu.js",
+      "_database-DPC1avUz.js",
+      "_user-check-jTMUIr-7.js",
+      "_mail-DebR_hdY.js"
+    ]
+  },
+  "resources/js/pages/dashboard/components/unified-dashboard-layout.tsx": {
+    "file": "assets/unified-dashboard-layout-CtxOBrjL.js",
+>>>>>>> Stashed changes
     "name": "unified-dashboard-layout",
     "src": "resources/js/pages/dashboard/components/unified-dashboard-layout.tsx",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/app.tsx",
+<<<<<<< Updated upstream
       "_separator-CMC4qrzs.js",
       "_sun-5m6UvoyG.js",
       "_index-ahz1tZ6M.js",
@@ -3132,11 +5680,24 @@
   },
   "resources/js/pages/dashboard/dashboard-layouts/assistant-dashboard.tsx": {
     "file": "assets/assistant-dashboard-CKbDCugz.js",
+=======
+      "_separator-DAbYQnLI.js",
+      "_sun-CPhm4DAg.js",
+      "_index-DxK34XW3.js",
+      "_index-C0AcbnKJ.js",
+      "_utils-jAU0Cazi.js",
+      "_createLucideIcon-B8qZ3ylK.js"
+    ]
+  },
+  "resources/js/pages/dashboard/dashboard-layouts/assistant-dashboard.tsx": {
+    "file": "assets/assistant-dashboard-NEGCne9f.js",
+>>>>>>> Stashed changes
     "name": "assistant-dashboard",
     "src": "resources/js/pages/dashboard/dashboard-layouts/assistant-dashboard.tsx",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/app.tsx",
+<<<<<<< Updated upstream
       "_card-C_emSl4Q.js",
       "_skeleton-Dhy5gbzz.js",
       "_tabs-DJOYkXMD.js",
@@ -3162,6 +5723,33 @@
       "_calendar-Bi5dAEy5.js",
       "_chevron-right-QGs8lTP5.js",
       "_graduation-cap-DHFIPOzN.js",
+=======
+      "_card-VQzzqn5t.js",
+      "_skeleton-eQxcUfOO.js",
+      "_tabs-BvzTftzm.js",
+      "resources/js/pages/dashboard/widgets/quick-actions-widget.tsx",
+      "resources/js/pages/dashboard/widgets/weekly-defense-schedule-widget.tsx",
+      "resources/js/pages/dashboard/widgets/pending-defense-request-widget.tsx",
+      "_sun-CPhm4DAg.js",
+      "_createLucideIcon-B8qZ3ylK.js",
+      "_dollar-sign-DEGfV_co.js",
+      "_calendar-days-QY893wAX.js",
+      "_clipboard-list-CItztuo4.js",
+      "_utils-jAU0Cazi.js",
+      "_index-DYEC1Owk.js",
+      "_index-C0AcbnKJ.js",
+      "_tooltip-YyHP33lU.js",
+      "_floating-ui.react-dom-qFQCHW7g.js",
+      "_user-round-DdfHKHWt.js",
+      "_settings-CYIvZ_Tn.js",
+      "_receipt-DWAji_2S.js",
+      "_badge-dollar-sign-D1ijFK0L.js",
+      "_users-Bi2Lh05r.js",
+      "_book-open-DwBftJzx.js",
+      "_calendar-BkrqGKNC.js",
+      "_chevron-right-BZod6iQK.js",
+      "_graduation-cap-BxuxjmnL.js",
+>>>>>>> Stashed changes
       "_format-HX8DKPSU.js",
       "_en-US-BA9orzCf.js",
       "_isSameDay-DUlCFK42.js",
@@ -3171,7 +5759,11 @@
     ]
   },
   "resources/js/pages/dashboard/dashboard-layouts/coordinator-dashboard.tsx": {
+<<<<<<< Updated upstream
     "file": "assets/coordinator-dashboard-vRJm6UQK.js",
+=======
+    "file": "assets/coordinator-dashboard-Bga_sQ50.js",
+>>>>>>> Stashed changes
     "name": "coordinator-dashboard",
     "src": "resources/js/pages/dashboard/dashboard-layouts/coordinator-dashboard.tsx",
     "isDynamicEntry": true,
@@ -3180,6 +5772,7 @@
       "resources/js/pages/dashboard/widgets/pending-defense-request-widget.tsx",
       "resources/js/pages/dashboard/widgets/weekly-defense-schedule-widget.tsx",
       "resources/js/pages/dashboard/widgets/quick-actions-widget.tsx",
+<<<<<<< Updated upstream
       "_card-C_emSl4Q.js",
       "_skeleton-Dhy5gbzz.js",
       "resources/js/pages/dashboard/widgets/visual-charts/defense-count.tsx",
@@ -3195,11 +5788,26 @@
       "_graduation-cap-DHFIPOzN.js",
       "_createLucideIcon-pjYyoixj.js",
       "_chevron-right-QGs8lTP5.js",
+=======
+      "_card-VQzzqn5t.js",
+      "_skeleton-eQxcUfOO.js",
+      "resources/js/pages/dashboard/widgets/visual-charts/defense-count.tsx",
+      "_tabs-BvzTftzm.js",
+      "_clipboard-list-CItztuo4.js",
+      "_calendar-days-QY893wAX.js",
+      "_badge-dollar-sign-D1ijFK0L.js",
+      "_users-Bi2Lh05r.js",
+      "_sun-CPhm4DAg.js",
+      "_graduation-cap-BxuxjmnL.js",
+      "_createLucideIcon-B8qZ3ylK.js",
+      "_chevron-right-BZod6iQK.js",
+>>>>>>> Stashed changes
       "_constructNow-Chb2L4Vx.js",
       "_en-US-BA9orzCf.js",
       "_getRoundingMethod-Btu-7J5l.js",
       "_parseISO-CbXPh3Al.js",
       "_utils-jAU0Cazi.js",
+<<<<<<< Updated upstream
       "_calendar-Bi5dAEy5.js",
       "_format-HX8DKPSU.js",
       "_isSameDay-DUlCFK42.js",
@@ -3227,12 +5835,37 @@
   },
   "resources/js/pages/dashboard/dashboard-layouts/dean-dashboard.tsx": {
     "file": "assets/dean-dashboard-C4WYOikM.js",
+=======
+      "_calendar-BkrqGKNC.js",
+      "_format-HX8DKPSU.js",
+      "_isSameDay-DUlCFK42.js",
+      "_tooltip-YyHP33lU.js",
+      "_index-C0AcbnKJ.js",
+      "_index-DYEC1Owk.js",
+      "_floating-ui.react-dom-qFQCHW7g.js",
+      "_user-round-DdfHKHWt.js",
+      "_settings-CYIvZ_Tn.js",
+      "_receipt-DWAji_2S.js",
+      "_book-open-DwBftJzx.js",
+      "_button-C4XkiM_B.js",
+      "_index-DZZQifJx.js",
+      "_generateCategoricalChart-CNUWMMUU.js",
+      "_index-Bt9ylsuM.js",
+      "_index-Chjiymov.js",
+      "_AreaChart-DsRJgi_x.js",
+      "_YAxis-9IOyoiJg.js"
+    ]
+  },
+  "resources/js/pages/dashboard/dashboard-layouts/dean-dashboard.tsx": {
+    "file": "assets/dean-dashboard-Cxg6BFYR.js",
+>>>>>>> Stashed changes
     "name": "dean-dashboard",
     "src": "resources/js/pages/dashboard/dashboard-layouts/dean-dashboard.tsx",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/app.tsx",
       "resources/js/pages/dashboard/widgets/quick-actions-widget.tsx",
+<<<<<<< Updated upstream
       "_skeleton-Dhy5gbzz.js",
       "_card-C_emSl4Q.js",
       "_tabs-DJOYkXMD.js",
@@ -3257,12 +5890,39 @@
       "_calendar-Bi5dAEy5.js",
       "_chevron-right-QGs8lTP5.js",
       "_graduation-cap-DHFIPOzN.js",
+=======
+      "_skeleton-eQxcUfOO.js",
+      "_card-VQzzqn5t.js",
+      "_tabs-BvzTftzm.js",
+      "resources/js/pages/dashboard/widgets/weekly-defense-schedule-widget.tsx",
+      "resources/js/pages/dashboard/widgets/pending-defense-request-widget.tsx",
+      "resources/js/pages/dashboard/widgets/visual-charts/defense-count.tsx",
+      "_clipboard-list-CItztuo4.js",
+      "_calendar-days-QY893wAX.js",
+      "_badge-dollar-sign-D1ijFK0L.js",
+      "_users-Bi2Lh05r.js",
+      "_sun-CPhm4DAg.js",
+      "_tooltip-YyHP33lU.js",
+      "_index-C0AcbnKJ.js",
+      "_index-DYEC1Owk.js",
+      "_floating-ui.react-dom-qFQCHW7g.js",
+      "_utils-jAU0Cazi.js",
+      "_user-round-DdfHKHWt.js",
+      "_createLucideIcon-B8qZ3ylK.js",
+      "_settings-CYIvZ_Tn.js",
+      "_receipt-DWAji_2S.js",
+      "_book-open-DwBftJzx.js",
+      "_calendar-BkrqGKNC.js",
+      "_chevron-right-BZod6iQK.js",
+      "_graduation-cap-BxuxjmnL.js",
+>>>>>>> Stashed changes
       "_format-HX8DKPSU.js",
       "_en-US-BA9orzCf.js",
       "_isSameDay-DUlCFK42.js",
       "_parseISO-CbXPh3Al.js",
       "_constructNow-Chb2L4Vx.js",
       "_getRoundingMethod-Btu-7J5l.js",
+<<<<<<< Updated upstream
       "_button-Cw9tQIeO.js",
       "_index-DZZQifJx.js",
       "_generateCategoricalChart-RpaH3faT.js",
@@ -3274,6 +5934,19 @@
   },
   "resources/js/pages/dashboard/dashboard-layouts/faculty-dashboard.tsx": {
     "file": "assets/faculty-dashboard-XFMPNdCL.js",
+=======
+      "_button-C4XkiM_B.js",
+      "_index-DZZQifJx.js",
+      "_generateCategoricalChart-CNUWMMUU.js",
+      "_index-Bt9ylsuM.js",
+      "_index-Chjiymov.js",
+      "_AreaChart-DsRJgi_x.js",
+      "_YAxis-9IOyoiJg.js"
+    ]
+  },
+  "resources/js/pages/dashboard/dashboard-layouts/faculty-dashboard.tsx": {
+    "file": "assets/faculty-dashboard-BwbBQmsv.js",
+>>>>>>> Stashed changes
     "name": "faculty-dashboard",
     "src": "resources/js/pages/dashboard/dashboard-layouts/faculty-dashboard.tsx",
     "isDynamicEntry": true,
@@ -3282,6 +5955,7 @@
       "resources/js/pages/dashboard/widgets/weekly-defense-schedule-widget.tsx",
       "resources/js/pages/dashboard/widgets/quick-actions-widget.tsx",
       "resources/js/pages/dashboard/widgets/immediate-action-defense-requests-widget.tsx",
+<<<<<<< Updated upstream
       "_card-C_emSl4Q.js",
       "_skeleton-Dhy5gbzz.js",
       "_clipboard-list-D93gqQbk.js",
@@ -3293,10 +5967,24 @@
       "_createLucideIcon-pjYyoixj.js",
       "_chevron-right-QGs8lTP5.js",
       "_graduation-cap-DHFIPOzN.js",
+=======
+      "_card-VQzzqn5t.js",
+      "_skeleton-eQxcUfOO.js",
+      "_clipboard-list-CItztuo4.js",
+      "_calendar-days-QY893wAX.js",
+      "_users-Bi2Lh05r.js",
+      "_sun-CPhm4DAg.js",
+      "_utils-jAU0Cazi.js",
+      "_calendar-BkrqGKNC.js",
+      "_createLucideIcon-B8qZ3ylK.js",
+      "_chevron-right-BZod6iQK.js",
+      "_graduation-cap-BxuxjmnL.js",
+>>>>>>> Stashed changes
       "_format-HX8DKPSU.js",
       "_en-US-BA9orzCf.js",
       "_isSameDay-DUlCFK42.js",
       "_parseISO-CbXPh3Al.js",
+<<<<<<< Updated upstream
       "_tooltip-BvePKNvs.js",
       "_index-DRp-GX9j.js",
       "_index-CDDLQrUy.js",
@@ -3310,6 +5998,21 @@
   },
   "resources/js/pages/dashboard/dashboard-layouts/student-dashboard.tsx": {
     "file": "assets/student-dashboard-NA1Ay4Ox.js",
+=======
+      "_tooltip-YyHP33lU.js",
+      "_index-C0AcbnKJ.js",
+      "_index-DYEC1Owk.js",
+      "_floating-ui.react-dom-qFQCHW7g.js",
+      "_user-round-DdfHKHWt.js",
+      "_settings-CYIvZ_Tn.js",
+      "_receipt-DWAji_2S.js",
+      "_badge-dollar-sign-D1ijFK0L.js",
+      "_book-open-DwBftJzx.js"
+    ]
+  },
+  "resources/js/pages/dashboard/dashboard-layouts/student-dashboard.tsx": {
+    "file": "assets/student-dashboard-ChragbJh.js",
+>>>>>>> Stashed changes
     "name": "student-dashboard",
     "src": "resources/js/pages/dashboard/dashboard-layouts/student-dashboard.tsx",
     "isDynamicEntry": true,
@@ -3319,6 +6022,7 @@
       "resources/js/pages/dashboard/widgets/weekly-defense-schedule-widget.tsx",
       "resources/js/pages/dashboard/widgets/quick-actions-widget.tsx",
       "resources/js/pages/dashboard/widgets/exam-eligibility-widget.tsx",
+<<<<<<< Updated upstream
       "_card-C_emSl4Q.js",
       "_clipboard-list-D93gqQbk.js",
       "_calendar-days-DHLDYaT_.js",
@@ -3334,11 +6038,29 @@
       "_check-BEGkAg7k.js",
       "_calendar-Bi5dAEy5.js",
       "_skeleton-Dhy5gbzz.js",
+=======
+      "_card-VQzzqn5t.js",
+      "_clipboard-list-CItztuo4.js",
+      "_calendar-days-QY893wAX.js",
+      "_badge-dollar-sign-D1ijFK0L.js",
+      "_users-Bi2Lh05r.js",
+      "_sun-CPhm4DAg.js",
+      "_circle-alert-DF3kdfmF.js",
+      "_graduation-cap-BxuxjmnL.js",
+      "_createLucideIcon-B8qZ3ylK.js",
+      "_chevron-right-BZod6iQK.js",
+      "_hourglass-BrU7Yv6c.js",
+      "_x-gfWO9KfB.js",
+      "_check-BgnkF1LW.js",
+      "_calendar-BkrqGKNC.js",
+      "_skeleton-eQxcUfOO.js",
+>>>>>>> Stashed changes
       "_utils-jAU0Cazi.js",
       "_format-HX8DKPSU.js",
       "_en-US-BA9orzCf.js",
       "_isSameDay-DUlCFK42.js",
       "_parseISO-CbXPh3Al.js",
+<<<<<<< Updated upstream
       "_tooltip-BvePKNvs.js",
       "_index-DRp-GX9j.js",
       "_index-CDDLQrUy.js",
@@ -3352,11 +6074,26 @@
   },
   "resources/js/pages/dashboard/dashboard-layouts/super-admin-dashboard.tsx": {
     "file": "assets/super-admin-dashboard-Dxo_4_sk.js",
+=======
+      "_tooltip-YyHP33lU.js",
+      "_index-C0AcbnKJ.js",
+      "_index-DYEC1Owk.js",
+      "_floating-ui.react-dom-qFQCHW7g.js",
+      "_user-round-DdfHKHWt.js",
+      "_settings-CYIvZ_Tn.js",
+      "_receipt-DWAji_2S.js",
+      "_book-open-DwBftJzx.js"
+    ]
+  },
+  "resources/js/pages/dashboard/dashboard-layouts/super-admin-dashboard.tsx": {
+    "file": "assets/super-admin-dashboard-CxFlop9P.js",
+>>>>>>> Stashed changes
     "name": "super-admin-dashboard",
     "src": "resources/js/pages/dashboard/dashboard-layouts/super-admin-dashboard.tsx",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/app.tsx",
+<<<<<<< Updated upstream
       "_card-C_emSl4Q.js",
       "_button-Cw9tQIeO.js",
       "_badge-BsPMjMb7.js",
@@ -3396,11 +6133,53 @@
   },
   "resources/js/pages/dashboard/widgets/defense-status-widget.tsx": {
     "file": "assets/defense-status-widget-BmWNVO05.js",
+=======
+      "_card-VQzzqn5t.js",
+      "_button-C4XkiM_B.js",
+      "_badge-ofr1GoIX.js",
+      "_skeleton-eQxcUfOO.js",
+      "_separator-DAbYQnLI.js",
+      "_input-DCrn1t-u.js",
+      "_label-by1MoGWy.js",
+      "_select-BHDrHMEc.js",
+      "_textarea-ClN04vZX.js",
+      "_dialog-BeApitpu.js",
+      "_sun-CPhm4DAg.js",
+      "_users-Bi2Lh05r.js",
+      "_book-open-DwBftJzx.js",
+      "_clipboard-list-CItztuo4.js",
+      "_database-DPC1avUz.js",
+      "_settings-CYIvZ_Tn.js",
+      "_user-check-jTMUIr-7.js",
+      "_createLucideIcon-B8qZ3ylK.js",
+      "_graduation-cap-BxuxjmnL.js",
+      "_mail-DebR_hdY.js",
+      "_utils-jAU0Cazi.js",
+      "_index-DYEC1Owk.js",
+      "_index-DZZQifJx.js",
+      "_index-DxK34XW3.js",
+      "_index-C0AcbnKJ.js",
+      "_index-DGKk-Zer.js",
+      "_index-ATT6OHxL.js",
+      "_index-MX9TSR8D.js",
+      "_floating-ui.react-dom-qFQCHW7g.js",
+      "_index-DFD1OPps.js",
+      "_index-DRr-UIpQ.js",
+      "_chevron-down-DEJUajdp.js",
+      "_check-BgnkF1LW.js",
+      "_index-DDxX9UbU.js",
+      "_x-gfWO9KfB.js"
+    ]
+  },
+  "resources/js/pages/dashboard/widgets/defense-status-widget.tsx": {
+    "file": "assets/defense-status-widget-BRJYuqIY.js",
+>>>>>>> Stashed changes
     "name": "defense-status-widget",
     "src": "resources/js/pages/dashboard/widgets/defense-status-widget.tsx",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/app.tsx",
+<<<<<<< Updated upstream
       "_graduation-cap-DHFIPOzN.js",
       "_chevron-right-QGs8lTP5.js",
       "_hourglass-Ck8E1KPu.js",
@@ -3413,6 +6192,20 @@
   },
   "resources/js/pages/dashboard/widgets/exam-eligibility-widget.tsx": {
     "file": "assets/exam-eligibility-widget-CtwRxU6b.js",
+=======
+      "_graduation-cap-BxuxjmnL.js",
+      "_chevron-right-BZod6iQK.js",
+      "_hourglass-BrU7Yv6c.js",
+      "_x-gfWO9KfB.js",
+      "_check-BgnkF1LW.js",
+      "_calendar-BkrqGKNC.js",
+      "_users-Bi2Lh05r.js",
+      "_createLucideIcon-B8qZ3ylK.js"
+    ]
+  },
+  "resources/js/pages/dashboard/widgets/exam-eligibility-widget.tsx": {
+    "file": "assets/exam-eligibility-widget-DUPnsNmd.js",
+>>>>>>> Stashed changes
     "name": "exam-eligibility-widget",
     "src": "resources/js/pages/dashboard/widgets/exam-eligibility-widget.tsx",
     "isDynamicEntry": true,
@@ -3421,12 +6214,17 @@
     ]
   },
   "resources/js/pages/dashboard/widgets/immediate-action-defense-requests-widget.tsx": {
+<<<<<<< Updated upstream
     "file": "assets/immediate-action-defense-requests-widget-CGg-CemU.js",
+=======
+    "file": "assets/immediate-action-defense-requests-widget-UdWhHdxy.js",
+>>>>>>> Stashed changes
     "name": "immediate-action-defense-requests-widget",
     "src": "resources/js/pages/dashboard/widgets/immediate-action-defense-requests-widget.tsx",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/app.tsx",
+<<<<<<< Updated upstream
       "_skeleton-Dhy5gbzz.js",
       "_graduation-cap-DHFIPOzN.js",
       "_chevron-right-QGs8lTP5.js",
@@ -3436,29 +6234,55 @@
   },
   "resources/js/pages/dashboard/widgets/pending-defense-request-widget.tsx": {
     "file": "assets/pending-defense-request-widget-Wll2GlDq.js",
+=======
+      "_skeleton-eQxcUfOO.js",
+      "_graduation-cap-BxuxjmnL.js",
+      "_chevron-right-BZod6iQK.js",
+      "_utils-jAU0Cazi.js",
+      "_createLucideIcon-B8qZ3ylK.js"
+    ]
+  },
+  "resources/js/pages/dashboard/widgets/pending-defense-request-widget.tsx": {
+    "file": "assets/pending-defense-request-widget-CAwpUGVV.js",
+>>>>>>> Stashed changes
     "name": "pending-defense-request-widget",
     "src": "resources/js/pages/dashboard/widgets/pending-defense-request-widget.tsx",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/app.tsx",
+<<<<<<< Updated upstream
       "_skeleton-Dhy5gbzz.js",
       "_graduation-cap-DHFIPOzN.js",
       "_chevron-right-QGs8lTP5.js",
+=======
+      "_skeleton-eQxcUfOO.js",
+      "_graduation-cap-BxuxjmnL.js",
+      "_chevron-right-BZod6iQK.js",
+>>>>>>> Stashed changes
       "_constructNow-Chb2L4Vx.js",
       "_en-US-BA9orzCf.js",
       "_getRoundingMethod-Btu-7J5l.js",
       "_parseISO-CbXPh3Al.js",
       "_utils-jAU0Cazi.js",
+<<<<<<< Updated upstream
       "_createLucideIcon-pjYyoixj.js"
     ]
   },
   "resources/js/pages/dashboard/widgets/quick-actions-widget.tsx": {
     "file": "assets/quick-actions-widget-CFXp9tUk.js",
+=======
+      "_createLucideIcon-B8qZ3ylK.js"
+    ]
+  },
+  "resources/js/pages/dashboard/widgets/quick-actions-widget.tsx": {
+    "file": "assets/quick-actions-widget-C-8cE6Xj.js",
+>>>>>>> Stashed changes
     "name": "quick-actions-widget",
     "src": "resources/js/pages/dashboard/widgets/quick-actions-widget.tsx",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/app.tsx",
+<<<<<<< Updated upstream
       "_tooltip-BvePKNvs.js",
       "_user-round-Re0lcQTC.js",
       "_settings-CDLWUJwV.js",
@@ -3475,6 +6299,24 @@
   },
   "resources/js/pages/dashboard/widgets/recent-activity-widget.tsx": {
     "file": "assets/recent-activity-widget-Ck19RcOT.js",
+=======
+      "_tooltip-YyHP33lU.js",
+      "_user-round-DdfHKHWt.js",
+      "_settings-CYIvZ_Tn.js",
+      "_receipt-DWAji_2S.js",
+      "_badge-dollar-sign-D1ijFK0L.js",
+      "_users-Bi2Lh05r.js",
+      "_book-open-DwBftJzx.js",
+      "_index-C0AcbnKJ.js",
+      "_index-DYEC1Owk.js",
+      "_floating-ui.react-dom-qFQCHW7g.js",
+      "_utils-jAU0Cazi.js",
+      "_createLucideIcon-B8qZ3ylK.js"
+    ]
+  },
+  "resources/js/pages/dashboard/widgets/recent-activity-widget.tsx": {
+    "file": "assets/recent-activity-widget-CFJWf42G.js",
+>>>>>>> Stashed changes
     "name": "recent-activity-widget",
     "src": "resources/js/pages/dashboard/widgets/recent-activity-widget.tsx",
     "isDynamicEntry": true,
@@ -3483,7 +6325,11 @@
     ]
   },
   "resources/js/pages/dashboard/widgets/reminders-widget.tsx": {
+<<<<<<< Updated upstream
     "file": "assets/reminders-widget-CNIwvo02.js",
+=======
+    "file": "assets/reminders-widget-D4FWiWBl.js",
+>>>>>>> Stashed changes
     "name": "reminders-widget",
     "src": "resources/js/pages/dashboard/widgets/reminders-widget.tsx",
     "isDynamicEntry": true,
@@ -3492,12 +6338,17 @@
     ]
   },
   "resources/js/pages/dashboard/widgets/status-defense-widget.tsx": {
+<<<<<<< Updated upstream
     "file": "assets/status-defense-widget-BfauKFQE.js",
+=======
+    "file": "assets/status-defense-widget-zxDT6Ugl.js",
+>>>>>>> Stashed changes
     "name": "status-defense-widget",
     "src": "resources/js/pages/dashboard/widgets/status-defense-widget.tsx",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/app.tsx",
+<<<<<<< Updated upstream
       "_card-C_emSl4Q.js",
       "_button-Cw9tQIeO.js",
       "_graduation-cap-DHFIPOzN.js",
@@ -3512,6 +6363,22 @@
   },
   "resources/js/pages/dashboard/widgets/upcomming-schedules-widget.tsx": {
     "file": "assets/upcomming-schedules-widget-BQWSjyxI.js",
+=======
+      "_card-VQzzqn5t.js",
+      "_button-C4XkiM_B.js",
+      "_graduation-cap-BxuxjmnL.js",
+      "_x-gfWO9KfB.js",
+      "_check-BgnkF1LW.js",
+      "_hourglass-BrU7Yv6c.js",
+      "_utils-jAU0Cazi.js",
+      "_index-DYEC1Owk.js",
+      "_index-DZZQifJx.js",
+      "_createLucideIcon-B8qZ3ylK.js"
+    ]
+  },
+  "resources/js/pages/dashboard/widgets/upcomming-schedules-widget.tsx": {
+    "file": "assets/upcomming-schedules-widget-BSQuuDwP.js",
+>>>>>>> Stashed changes
     "name": "upcomming-schedules-widget",
     "src": "resources/js/pages/dashboard/widgets/upcomming-schedules-widget.tsx",
     "isDynamicEntry": true,
@@ -3520,12 +6387,17 @@
     ]
   },
   "resources/js/pages/dashboard/widgets/visual-charts/ActiveUsersAreaChart.tsx": {
+<<<<<<< Updated upstream
     "file": "assets/ActiveUsersAreaChart-BALkmCVH.js",
+=======
+    "file": "assets/ActiveUsersAreaChart-X8Jmp_zT.js",
+>>>>>>> Stashed changes
     "name": "ActiveUsersAreaChart",
     "src": "resources/js/pages/dashboard/widgets/visual-charts/ActiveUsersAreaChart.tsx",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/app.tsx",
+<<<<<<< Updated upstream
       "_card-C_emSl4Q.js",
       "_chart-BC_ZPf9S.js",
       "_AreaChart-Cnc-_-2A.js",
@@ -3534,16 +6406,30 @@
       "_utils-jAU0Cazi.js",
       "_generateCategoricalChart-RpaH3faT.js",
       "_index-BGXDct6C.js",
+=======
+      "_card-VQzzqn5t.js",
+      "_chart-kHTqPVhU.js",
+      "_AreaChart-DsRJgi_x.js",
+      "_YAxis-9IOyoiJg.js",
+      "_utils-jAU0Cazi.js",
+      "_generateCategoricalChart-CNUWMMUU.js",
+      "_index-Bt9ylsuM.js",
+>>>>>>> Stashed changes
       "_index-Chjiymov.js"
     ]
   },
   "resources/js/pages/dashboard/widgets/visual-charts/adviser-count.tsx": {
+<<<<<<< Updated upstream
     "file": "assets/adviser-count-EK06ybET.js",
+=======
+    "file": "assets/adviser-count-BtQ4cpgI.js",
+>>>>>>> Stashed changes
     "name": "adviser-count",
     "src": "resources/js/pages/dashboard/widgets/visual-charts/adviser-count.tsx",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/app.tsx",
+<<<<<<< Updated upstream
       "_card-C_emSl4Q.js",
       "_generateCategoricalChart-RpaH3faT.js",
       "_RadialBarChart-C1HcTjr9.js",
@@ -3601,16 +6487,28 @@
       "_generateCategoricalChart-RpaH3faT.js",
       "_utils-jAU0Cazi.js",
       "_index-BGXDct6C.js",
+=======
+      "_card-VQzzqn5t.js",
+      "_generateCategoricalChart-CNUWMMUU.js",
+      "_RadialBarChart-Ck00DEXN.js",
+      "_utils-jAU0Cazi.js",
+      "_index-Bt9ylsuM.js",
+>>>>>>> Stashed changes
       "_index-Chjiymov.js"
     ]
   },
   "resources/js/pages/dashboard/widgets/visual-charts/defense-count.tsx": {
+<<<<<<< Updated upstream
     "file": "assets/defense-count-BiU_WDs9.js",
+=======
+    "file": "assets/defense-count-C8f6mCo4.js",
+>>>>>>> Stashed changes
     "name": "defense-count",
     "src": "resources/js/pages/dashboard/widgets/visual-charts/defense-count.tsx",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/app.tsx",
+<<<<<<< Updated upstream
       "_card-C_emSl4Q.js",
       "_button-Cw9tQIeO.js",
       "_generateCategoricalChart-RpaH3faT.js",
@@ -3625,11 +6523,28 @@
   },
   "resources/js/pages/dashboard/widgets/visual-charts/number-of-students-line-chart.tsx": {
     "file": "assets/number-of-students-line-chart-D1rtXN-J.js",
+=======
+      "_card-VQzzqn5t.js",
+      "_button-C4XkiM_B.js",
+      "_generateCategoricalChart-CNUWMMUU.js",
+      "_AreaChart-DsRJgi_x.js",
+      "_utils-jAU0Cazi.js",
+      "_index-DYEC1Owk.js",
+      "_index-DZZQifJx.js",
+      "_index-Bt9ylsuM.js",
+      "_index-Chjiymov.js",
+      "_YAxis-9IOyoiJg.js"
+    ]
+  },
+  "resources/js/pages/dashboard/widgets/visual-charts/number-of-students-line-chart.tsx": {
+    "file": "assets/number-of-students-line-chart-D5g9xVi4.js",
+>>>>>>> Stashed changes
     "name": "number-of-students-line-chart",
     "src": "resources/js/pages/dashboard/widgets/visual-charts/number-of-students-line-chart.tsx",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/app.tsx",
+<<<<<<< Updated upstream
       "_card-C_emSl4Q.js",
       "_chart-BC_ZPf9S.js",
       "_LineChart-DccwEbWW.js",
@@ -3645,27 +6560,55 @@
   },
   "resources/js/pages/dashboard/widgets/visual-charts/panel-assigned-count.tsx": {
     "file": "assets/panel-assigned-count-BxL4ilXJ.js",
+=======
+      "_card-VQzzqn5t.js",
+      "_chart-kHTqPVhU.js",
+      "_generateCategoricalChart-CNUWMMUU.js",
+      "_utils-jAU0Cazi.js",
+      "_YAxis-9IOyoiJg.js",
+      "_trending-up-BqVVlbnw.js",
+      "_index-Bt9ylsuM.js",
+      "_index-Chjiymov.js",
+      "_createLucideIcon-B8qZ3ylK.js"
+    ]
+  },
+  "resources/js/pages/dashboard/widgets/visual-charts/panel-assigned-count.tsx": {
+    "file": "assets/panel-assigned-count-BAV31VML.js",
+>>>>>>> Stashed changes
     "name": "panel-assigned-count",
     "src": "resources/js/pages/dashboard/widgets/visual-charts/panel-assigned-count.tsx",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/app.tsx",
+<<<<<<< Updated upstream
       "_card-C_emSl4Q.js",
       "_generateCategoricalChart-RpaH3faT.js",
       "_RadialBarChart-C1HcTjr9.js",
       "_PolarAngleAxis-J6U1uu9p.js",
       "_utils-jAU0Cazi.js",
       "_index-BGXDct6C.js",
+=======
+      "_card-VQzzqn5t.js",
+      "_generateCategoricalChart-CNUWMMUU.js",
+      "_RadialBarChart-Ck00DEXN.js",
+      "_utils-jAU0Cazi.js",
+      "_index-Bt9ylsuM.js",
+>>>>>>> Stashed changes
       "_index-Chjiymov.js"
     ]
   },
   "resources/js/pages/dashboard/widgets/visual-charts/students-per-program-count.tsx": {
+<<<<<<< Updated upstream
     "file": "assets/students-per-program-count-DMoyythq.js",
+=======
+    "file": "assets/students-per-program-count-DopsjceA.js",
+>>>>>>> Stashed changes
     "name": "students-per-program-count",
     "src": "resources/js/pages/dashboard/widgets/visual-charts/students-per-program-count.tsx",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/app.tsx",
+<<<<<<< Updated upstream
       "_card-C_emSl4Q.js",
       "_chart-BC_ZPf9S.js",
       "_BarChart-C9yfhd02.js",
@@ -3681,11 +6624,27 @@
   },
   "resources/js/pages/dashboard/widgets/weekly-defense-schedule-widget.tsx": {
     "file": "assets/weekly-defense-schedule-widget-neNTVngQ.js",
+=======
+      "_card-VQzzqn5t.js",
+      "_chart-kHTqPVhU.js",
+      "_generateCategoricalChart-CNUWMMUU.js",
+      "_YAxis-9IOyoiJg.js",
+      "_trending-up-BqVVlbnw.js",
+      "_utils-jAU0Cazi.js",
+      "_index-Bt9ylsuM.js",
+      "_index-Chjiymov.js",
+      "_createLucideIcon-B8qZ3ylK.js"
+    ]
+  },
+  "resources/js/pages/dashboard/widgets/weekly-defense-schedule-widget.tsx": {
+    "file": "assets/weekly-defense-schedule-widget-DBOiOoFP.js",
+>>>>>>> Stashed changes
     "name": "weekly-defense-schedule-widget",
     "src": "resources/js/pages/dashboard/widgets/weekly-defense-schedule-widget.tsx",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/app.tsx",
+<<<<<<< Updated upstream
       "_skeleton-Dhy5gbzz.js",
       "_utils-jAU0Cazi.js",
       "_calendar-Bi5dAEy5.js",
@@ -3695,16 +6654,32 @@
       "_isSameDay-DUlCFK42.js",
       "_parseISO-CbXPh3Al.js",
       "_createLucideIcon-pjYyoixj.js",
+=======
+      "_skeleton-eQxcUfOO.js",
+      "_utils-jAU0Cazi.js",
+      "_calendar-BkrqGKNC.js",
+      "_chevron-right-BZod6iQK.js",
+      "_graduation-cap-BxuxjmnL.js",
+      "_format-HX8DKPSU.js",
+      "_isSameDay-DUlCFK42.js",
+      "_parseISO-CbXPh3Al.js",
+      "_createLucideIcon-B8qZ3ylK.js",
+>>>>>>> Stashed changes
       "_en-US-BA9orzCf.js"
     ]
   },
   "resources/js/pages/dean/payment-rates/Index.tsx": {
+<<<<<<< Updated upstream
     "file": "assets/Index-BO5VHPPH.js",
+=======
+    "file": "assets/Index-CacdPA9s.js",
+>>>>>>> Stashed changes
     "name": "Index",
     "src": "resources/js/pages/dean/payment-rates/Index.tsx",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/app.tsx",
+<<<<<<< Updated upstream
       "_app-layout-C76KB2Lm.js",
       "_button-Cw9tQIeO.js",
       "_input-izsDzGd9.js",
@@ -3749,11 +6724,58 @@
   },
   "resources/js/pages/faculty/ClassList.tsx": {
     "file": "assets/ClassList-Dsm1oeVZ.js",
+=======
+      "_app-layout-CZ3kZ0t2.js",
+      "_button-C4XkiM_B.js",
+      "_input-DCrn1t-u.js",
+      "_table-C8ztdzxp.js",
+      "_dialog-BeApitpu.js",
+      "_index-B2MlTwnV.js",
+      "_tabs-BvzTftzm.js",
+      "_printer-8ps6np5W.js",
+      "_pencil-B4PKA2yC.js",
+      "_index-DYEC1Owk.js",
+      "_index-DZZQifJx.js",
+      "_utils-jAU0Cazi.js",
+      "_index-DDxX9UbU.js",
+      "_index-C0AcbnKJ.js",
+      "_index-DRr-UIpQ.js",
+      "_x-gfWO9KfB.js",
+      "_createLucideIcon-B8qZ3ylK.js",
+      "_tooltip-YyHP33lU.js",
+      "_floating-ui.react-dom-qFQCHW7g.js",
+      "_separator-DAbYQnLI.js",
+      "_index-DxK34XW3.js",
+      "_chevron-right-BZod6iQK.js",
+      "_dropdown-menu-sYZpN2tC.js",
+      "_index-DGKk-Zer.js",
+      "_index-ATT6OHxL.js",
+      "_index-MX9TSR8D.js",
+      "_index-BdQOngYf.js",
+      "_check-BgnkF1LW.js",
+      "_avatar-Cz3zvE7t.js",
+      "_settings-CYIvZ_Tn.js",
+      "_users-Bi2Lh05r.js",
+      "_graduation-cap-BxuxjmnL.js",
+      "_file-text-Dl_aF8u0.js",
+      "_dollar-sign-DEGfV_co.js",
+      "_send-ChQ392yu.js",
+      "_credit-card-BvkjxVWT.js",
+      "_badge-ofr1GoIX.js",
+      "_circle-check-big-CKCqbWb4.js",
+      "_info-BWBV8Gn3.js",
+      "_sun-CPhm4DAg.js"
+    ]
+  },
+  "resources/js/pages/faculty/ClassList.tsx": {
+    "file": "assets/ClassList-CJsjk-Vu.js",
+>>>>>>> Stashed changes
     "name": "ClassList",
     "src": "resources/js/pages/faculty/ClassList.tsx",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/app.tsx",
+<<<<<<< Updated upstream
       "_app-layout-C76KB2Lm.js",
       "_index-CDDLQrUy.js",
       "_index-DZZQifJx.js",
@@ -3793,24 +6815,76 @@
   },
   "resources/js/pages/faculty/submissions/defense-request/Index.tsx": {
     "file": "assets/Index-BVcy4d8k.js",
+=======
+      "_app-layout-CZ3kZ0t2.js",
+      "_index-DYEC1Owk.js",
+      "_index-DZZQifJx.js",
+      "_utils-jAU0Cazi.js",
+      "_button-C4XkiM_B.js",
+      "_input-DCrn1t-u.js",
+      "_index-DDxX9UbU.js",
+      "_index-C0AcbnKJ.js",
+      "_index-DRr-UIpQ.js",
+      "_x-gfWO9KfB.js",
+      "_createLucideIcon-B8qZ3ylK.js",
+      "_tooltip-YyHP33lU.js",
+      "_floating-ui.react-dom-qFQCHW7g.js",
+      "_separator-DAbYQnLI.js",
+      "_index-DxK34XW3.js",
+      "_chevron-right-BZod6iQK.js",
+      "_dropdown-menu-sYZpN2tC.js",
+      "_index-DGKk-Zer.js",
+      "_index-ATT6OHxL.js",
+      "_index-MX9TSR8D.js",
+      "_index-BdQOngYf.js",
+      "_check-BgnkF1LW.js",
+      "_avatar-Cz3zvE7t.js",
+      "_settings-CYIvZ_Tn.js",
+      "_users-Bi2Lh05r.js",
+      "_graduation-cap-BxuxjmnL.js",
+      "_file-text-Dl_aF8u0.js",
+      "_dollar-sign-DEGfV_co.js",
+      "_send-ChQ392yu.js",
+      "_credit-card-BvkjxVWT.js",
+      "_tabs-BvzTftzm.js",
+      "_badge-ofr1GoIX.js",
+      "_circle-check-big-CKCqbWb4.js",
+      "_info-BWBV8Gn3.js",
+      "_sun-CPhm4DAg.js"
+    ]
+  },
+  "resources/js/pages/faculty/submissions/defense-request/Index.tsx": {
+    "file": "assets/Index-CvnN4FQt.js",
+>>>>>>> Stashed changes
     "name": "Index",
     "src": "resources/js/pages/faculty/submissions/defense-request/Index.tsx",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/app.tsx",
+<<<<<<< Updated upstream
       "_button-Cw9tQIeO.js",
       "_index-CDDLQrUy.js",
+=======
+      "_button-C4XkiM_B.js",
+      "_index-DYEC1Owk.js",
+>>>>>>> Stashed changes
       "_index-DZZQifJx.js",
       "_utils-jAU0Cazi.js"
     ]
   },
+<<<<<<< Updated upstream
   "resources/js/pages/honorarium/Index.tsx": {
     "file": "assets/Index-Dk-KNqu7.js",
+=======
+  "resources/js/pages/honorarium/honorarium-summary/Index.tsx": {
+    "file": "assets/Index-ByJeR2w_.js",
+>>>>>>> Stashed changes
     "name": "Index",
     "src": "resources/js/pages/honorarium/Index.tsx",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/app.tsx",
+<<<<<<< Updated upstream
       "_app-layout-C76KB2Lm.js",
       "_table-BEEQP98I.js",
       "_avatar-DUph8BC-.js",
@@ -3853,11 +6927,66 @@
   },
   "resources/js/pages/honorarium/honorarium-modals/add-panelist-modal.tsx": {
     "file": "assets/add-panelist-modal-CFNJgah5.js",
+=======
+      "_app-layout-CZ3kZ0t2.js",
+      "_button-C4XkiM_B.js",
+      "_popover-tBQRRq13.js",
+      "_command-D56cLWk0.js",
+      "_table-C8ztdzxp.js",
+      "_avatar-Cz3zvE7t.js",
+      "_utils-jAU0Cazi.js",
+      "_search-input-Do8im2K8.js",
+      "resources/js/pages/honorarium/honorarium-summary/honorarium-modals/record-modal.tsx",
+      "_calendar-BkrqGKNC.js",
+      "_check-BgnkF1LW.js",
+      "_eye-Dkmyf9ow.js",
+      "_download-DERSZnXw.js",
+      "_chevrons-right-BiGuqRdN.js",
+      "_chevron-left-IcMAr9yn.js",
+      "_chevron-right-BZod6iQK.js",
+      "_index-DYEC1Owk.js",
+      "_index-DZZQifJx.js",
+      "_input-DCrn1t-u.js",
+      "_index-DDxX9UbU.js",
+      "_index-C0AcbnKJ.js",
+      "_index-DRr-UIpQ.js",
+      "_x-gfWO9KfB.js",
+      "_createLucideIcon-B8qZ3ylK.js",
+      "_tooltip-YyHP33lU.js",
+      "_floating-ui.react-dom-qFQCHW7g.js",
+      "_separator-DAbYQnLI.js",
+      "_index-DxK34XW3.js",
+      "_dropdown-menu-sYZpN2tC.js",
+      "_index-DGKk-Zer.js",
+      "_index-ATT6OHxL.js",
+      "_index-MX9TSR8D.js",
+      "_index-BdQOngYf.js",
+      "_settings-CYIvZ_Tn.js",
+      "_users-Bi2Lh05r.js",
+      "_graduation-cap-BxuxjmnL.js",
+      "_file-text-Dl_aF8u0.js",
+      "_dollar-sign-DEGfV_co.js",
+      "_send-ChQ392yu.js",
+      "_credit-card-BvkjxVWT.js",
+      "_tabs-BvzTftzm.js",
+      "_badge-ofr1GoIX.js",
+      "_circle-check-big-CKCqbWb4.js",
+      "_info-BWBV8Gn3.js",
+      "_sun-CPhm4DAg.js",
+      "_search-gvHM0uxt.js",
+      "_dialog-BeApitpu.js",
+      "_proxy-BIJhVlnW.js"
+    ]
+  },
+  "resources/js/pages/honorarium/honorarium-summary/honorarium-modals/add-panelist-modal.tsx": {
+    "file": "assets/add-panelist-modal-CeNCu8Mu.js",
+>>>>>>> Stashed changes
     "name": "add-panelist-modal",
     "src": "resources/js/pages/honorarium/honorarium-modals/add-panelist-modal.tsx",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/app.tsx",
+<<<<<<< Updated upstream
       "_dialog-D-tH9FDm.js",
       "_button-Cw9tQIeO.js",
       "_input-izsDzGd9.js",
@@ -3907,6 +7036,89 @@
     "file": "assets/print-button-CTj4tKxI.js",
     "name": "print-button",
     "src": "resources/js/pages/honorarium/honorarium-modals/print-button.tsx",
+=======
+      "_dialog-BeApitpu.js",
+      "_button-C4XkiM_B.js",
+      "_input-DCrn1t-u.js",
+      "_label-by1MoGWy.js",
+      "_select-BHDrHMEc.js",
+      "_popover-tBQRRq13.js",
+      "_calendar-DKOUdBib.js",
+      "_utils-jAU0Cazi.js",
+      "_alert-C_jnSLAo.js",
+      "_calendar-BkrqGKNC.js",
+      "_format-HX8DKPSU.js",
+      "_index-DDxX9UbU.js",
+      "_index-C0AcbnKJ.js",
+      "_index-DYEC1Owk.js",
+      "_index-DRr-UIpQ.js",
+      "_x-gfWO9KfB.js",
+      "_createLucideIcon-B8qZ3ylK.js",
+      "_index-DZZQifJx.js",
+      "_index-DGKk-Zer.js",
+      "_index-ATT6OHxL.js",
+      "_index-MX9TSR8D.js",
+      "_index-DxK34XW3.js",
+      "_floating-ui.react-dom-qFQCHW7g.js",
+      "_index-DFD1OPps.js",
+      "_chevron-down-DEJUajdp.js",
+      "_check-BgnkF1LW.js",
+      "_en-US-BA9orzCf.js",
+      "_endOfWeek-QFyZPl43.js",
+      "_differenceInCalendarMonths-HUNRrXGm.js",
+      "_normalizeInterval-CdMCNNY-.js",
+      "_endOfMonth-CK_ShA5m.js",
+      "_isSameDay-DUlCFK42.js",
+      "_isSameMonth-CQd3m9St.js",
+      "_chevron-left-IcMAr9yn.js",
+      "_chevron-right-BZod6iQK.js"
+    ]
+  },
+  "resources/js/pages/honorarium/honorarium-summary/honorarium-modals/record-modal.tsx": {
+    "file": "assets/record-modal-lm9Lb7dC.js",
+    "name": "record-modal",
+    "src": "resources/js/pages/honorarium/honorarium-summary/honorarium-modals/record-modal.tsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/app.tsx",
+      "_dialog-BeApitpu.js",
+      "_table-C8ztdzxp.js",
+      "_avatar-Cz3zvE7t.js",
+      "_button-C4XkiM_B.js",
+      "_utils-jAU0Cazi.js",
+      "_chevron-left-IcMAr9yn.js",
+      "_chevron-right-BZod6iQK.js",
+      "_download-DERSZnXw.js",
+      "_proxy-BIJhVlnW.js",
+      "_index-DDxX9UbU.js",
+      "_index-C0AcbnKJ.js",
+      "_index-DYEC1Owk.js",
+      "_index-DRr-UIpQ.js",
+      "_x-gfWO9KfB.js",
+      "_createLucideIcon-B8qZ3ylK.js",
+      "_index-ATT6OHxL.js",
+      "_index-DxK34XW3.js",
+      "_index-DZZQifJx.js"
+    ]
+  },
+  "resources/js/pages/honorarium/honorarium-summary/individual-record.tsx": {
+    "file": "assets/individual-record-Bb2uNZh_.js",
+    "name": "individual-record",
+    "src": "resources/js/pages/honorarium/honorarium-summary/individual-record.tsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/app.tsx",
+      "resources/js/pages/honorarium/honorarium-summary/view-panelist.tsx",
+      "_x-gfWO9KfB.js",
+      "_eye-Dkmyf9ow.js",
+      "_createLucideIcon-B8qZ3ylK.js"
+    ]
+  },
+  "resources/js/pages/honorarium/honorarium-summary/view-panelist.tsx": {
+    "file": "assets/view-panelist-DXJbK9u1.js",
+    "name": "view-panelist",
+    "src": "resources/js/pages/honorarium/honorarium-summary/view-panelist.tsx",
+>>>>>>> Stashed changes
     "isDynamicEntry": true,
     "imports": [
       "resources/js/app.tsx"
@@ -4066,7 +7278,11 @@
     ]
   },
   "resources/js/pages/landing/Index.tsx": {
+<<<<<<< Updated upstream
     "file": "assets/Index-BtE1Fhcp.js",
+=======
+    "file": "assets/Index-6FYfXQJQ.js",
+>>>>>>> Stashed changes
     "name": "Index",
     "src": "resources/js/pages/landing/Index.tsx",
     "isDynamicEntry": true,
@@ -4075,12 +7291,17 @@
     ]
   },
   "resources/js/pages/legacy/AcademicRecordsDashboard.tsx": {
+<<<<<<< Updated upstream
     "file": "assets/AcademicRecordsDashboard-DlKmJQCT.js",
+=======
+    "file": "assets/AcademicRecordsDashboard-BD2k2lLg.js",
+>>>>>>> Stashed changes
     "name": "AcademicRecordsDashboard",
     "src": "resources/js/pages/legacy/AcademicRecordsDashboard.tsx",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/app.tsx",
+<<<<<<< Updated upstream
       "_card-C_emSl4Q.js",
       "_select-Dw8a4pct.js",
       "_table-BEEQP98I.js",
@@ -4103,6 +7324,30 @@
   },
   "resources/js/pages/legacy/LinkLegacy.tsx": {
     "file": "assets/LinkLegacy-Cms-JIFY.js",
+=======
+      "_card-VQzzqn5t.js",
+      "_select-BHDrHMEc.js",
+      "_table-C8ztdzxp.js",
+      "_skeleton-eQxcUfOO.js",
+      "_refresh-cw-DFFpfEuC.js",
+      "_printer-8ps6np5W.js",
+      "_utils-jAU0Cazi.js",
+      "_index-C0AcbnKJ.js",
+      "_index-DGKk-Zer.js",
+      "_index-ATT6OHxL.js",
+      "_index-MX9TSR8D.js",
+      "_index-DxK34XW3.js",
+      "_floating-ui.react-dom-qFQCHW7g.js",
+      "_index-DFD1OPps.js",
+      "_index-DRr-UIpQ.js",
+      "_chevron-down-DEJUajdp.js",
+      "_createLucideIcon-B8qZ3ylK.js",
+      "_check-BgnkF1LW.js"
+    ]
+  },
+  "resources/js/pages/legacy/LinkLegacy.tsx": {
+    "file": "assets/LinkLegacy-DEbCUBVo.js",
+>>>>>>> Stashed changes
     "name": "LinkLegacy",
     "src": "resources/js/pages/legacy/LinkLegacy.tsx",
     "isDynamicEntry": true,
@@ -4111,12 +7356,17 @@
     ]
   },
   "resources/js/pages/messaging/Index.tsx": {
+<<<<<<< Updated upstream
     "file": "assets/Index-JwKqYMt4.js",
+=======
+    "file": "assets/Index-nSfzmYCa.js",
+>>>>>>> Stashed changes
     "name": "Index",
     "src": "resources/js/pages/messaging/Index.tsx",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/app.tsx",
+<<<<<<< Updated upstream
       "_app-layout-C76KB2Lm.js",
       "_button-Cw9tQIeO.js",
       "_input-izsDzGd9.js",
@@ -4166,11 +7416,63 @@
   },
   "resources/js/pages/payment/Index.tsx": {
     "file": "assets/Index-BevK4p0y.js",
+=======
+      "_app-layout-CZ3kZ0t2.js",
+      "_button-C4XkiM_B.js",
+      "_input-DCrn1t-u.js",
+      "_avatar-Cz3zvE7t.js",
+      "_badge-ofr1GoIX.js",
+      "_dialog-BeApitpu.js",
+      "_select-BHDrHMEc.js",
+      "_utils-jAU0Cazi.js",
+      "_search-gvHM0uxt.js",
+      "_filter-DUO50SL3.js",
+      "_x-gfWO9KfB.js",
+      "_users-Bi2Lh05r.js",
+      "_user-check-jTMUIr-7.js",
+      "_graduation-cap-BxuxjmnL.js",
+      "_plus-Bp59822C.js",
+      "_createLucideIcon-B8qZ3ylK.js",
+      "_ellipsis-vertical-BjZAtm0I.js",
+      "_paperclip-CZJ8UXmI.js",
+      "_send-ChQ392yu.js",
+      "_index-DYEC1Owk.js",
+      "_index-DZZQifJx.js",
+      "_index-DDxX9UbU.js",
+      "_index-C0AcbnKJ.js",
+      "_index-DRr-UIpQ.js",
+      "_tooltip-YyHP33lU.js",
+      "_floating-ui.react-dom-qFQCHW7g.js",
+      "_separator-DAbYQnLI.js",
+      "_index-DxK34XW3.js",
+      "_chevron-right-BZod6iQK.js",
+      "_dropdown-menu-sYZpN2tC.js",
+      "_index-DGKk-Zer.js",
+      "_index-ATT6OHxL.js",
+      "_index-MX9TSR8D.js",
+      "_index-BdQOngYf.js",
+      "_check-BgnkF1LW.js",
+      "_settings-CYIvZ_Tn.js",
+      "_file-text-Dl_aF8u0.js",
+      "_dollar-sign-DEGfV_co.js",
+      "_credit-card-BvkjxVWT.js",
+      "_tabs-BvzTftzm.js",
+      "_circle-check-big-CKCqbWb4.js",
+      "_info-BWBV8Gn3.js",
+      "_sun-CPhm4DAg.js",
+      "_index-DFD1OPps.js",
+      "_chevron-down-DEJUajdp.js"
+    ]
+  },
+  "resources/js/pages/payment/Index.tsx": {
+    "file": "assets/Index-a97kwf5X.js",
+>>>>>>> Stashed changes
     "name": "Index",
     "src": "resources/js/pages/payment/Index.tsx",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/app.tsx",
+<<<<<<< Updated upstream
       "_app-layout-C76KB2Lm.js",
       "_button-Cw9tQIeO.js",
       "resources/js/pages/payment/PaymentForm.tsx",
@@ -4213,6 +7515,50 @@
       "_label-CbqPBzn6.js",
       "_popover-C8pU6zmg.js",
       "_calendar-BpWedVzv.js",
+=======
+      "_app-layout-CZ3kZ0t2.js",
+      "_button-C4XkiM_B.js",
+      "resources/js/pages/payment/PaymentForm.tsx",
+      "resources/js/pages/payment/display-payment.tsx",
+      "_dialog-BeApitpu.js",
+      "_receipt-DWAji_2S.js",
+      "_check-BgnkF1LW.js",
+      "_index-DYEC1Owk.js",
+      "_index-DZZQifJx.js",
+      "_utils-jAU0Cazi.js",
+      "_input-DCrn1t-u.js",
+      "_index-DDxX9UbU.js",
+      "_index-C0AcbnKJ.js",
+      "_index-DRr-UIpQ.js",
+      "_x-gfWO9KfB.js",
+      "_createLucideIcon-B8qZ3ylK.js",
+      "_tooltip-YyHP33lU.js",
+      "_floating-ui.react-dom-qFQCHW7g.js",
+      "_separator-DAbYQnLI.js",
+      "_index-DxK34XW3.js",
+      "_chevron-right-BZod6iQK.js",
+      "_dropdown-menu-sYZpN2tC.js",
+      "_index-DGKk-Zer.js",
+      "_index-ATT6OHxL.js",
+      "_index-MX9TSR8D.js",
+      "_index-BdQOngYf.js",
+      "_avatar-Cz3zvE7t.js",
+      "_settings-CYIvZ_Tn.js",
+      "_users-Bi2Lh05r.js",
+      "_graduation-cap-BxuxjmnL.js",
+      "_file-text-Dl_aF8u0.js",
+      "_dollar-sign-DEGfV_co.js",
+      "_send-ChQ392yu.js",
+      "_credit-card-BvkjxVWT.js",
+      "_tabs-BvzTftzm.js",
+      "_badge-ofr1GoIX.js",
+      "_circle-check-big-CKCqbWb4.js",
+      "_info-BWBV8Gn3.js",
+      "_sun-CPhm4DAg.js",
+      "_label-by1MoGWy.js",
+      "_popover-tBQRRq13.js",
+      "_calendar-DKOUdBib.js",
+>>>>>>> Stashed changes
       "_en-US-BA9orzCf.js",
       "_endOfWeek-QFyZPl43.js",
       "_format-HX8DKPSU.js",
@@ -4221,14 +7567,22 @@
       "_endOfMonth-CK_ShA5m.js",
       "_isSameDay-DUlCFK42.js",
       "_isSameMonth-CQd3m9St.js",
+<<<<<<< Updated upstream
       "_chevron-left-BphKULEz.js",
       "_chevron-down-Bg3q2iyP.js",
       "_calendar-Bi5dAEy5.js",
       "_paperclip-DYnyPUSo.js",
+=======
+      "_chevron-left-IcMAr9yn.js",
+      "_chevron-down-DEJUajdp.js",
+      "_calendar-BkrqGKNC.js",
+      "_paperclip-CZJ8UXmI.js",
+>>>>>>> Stashed changes
       "_formatDistanceToNow-Bo4ytHt0.js",
       "_constructNow-Chb2L4Vx.js",
       "_getRoundingMethod-Btu-7J5l.js",
       "_endOfDay-UBg8OSOW.js",
+<<<<<<< Updated upstream
       "_clock-Cn1v7f4i.js",
       "_circle-x-CSxHo4yb.js",
       "_badge-check-C-EI3EoT.js"
@@ -4236,11 +7590,21 @@
   },
   "resources/js/pages/payment/PaymentForm.tsx": {
     "file": "assets/PaymentForm-sf9mY0nl.js",
+=======
+      "_clock-WdEz_qo4.js",
+      "_circle-x-BzZWIzCj.js",
+      "_badge-check-tsoLEH-7.js"
+    ]
+  },
+  "resources/js/pages/payment/PaymentForm.tsx": {
+    "file": "assets/PaymentForm-CxhhnorH.js",
+>>>>>>> Stashed changes
     "name": "PaymentForm",
     "src": "resources/js/pages/payment/PaymentForm.tsx",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/app.tsx",
+<<<<<<< Updated upstream
       "_label-CbqPBzn6.js",
       "_input-izsDzGd9.js",
       "_button-Cw9tQIeO.js",
@@ -4259,11 +7623,32 @@
       "_index-DZZQifJx.js",
       "_floating-ui.react-dom-DL84dtXf.js",
       "_index-BZgaE142.js",
+=======
+      "_label-by1MoGWy.js",
+      "_input-DCrn1t-u.js",
+      "_button-C4XkiM_B.js",
+      "_popover-tBQRRq13.js",
+      "_calendar-DKOUdBib.js",
+      "_separator-DAbYQnLI.js",
+      "_format-HX8DKPSU.js",
+      "_en-US-BA9orzCf.js",
+      "_endOfWeek-QFyZPl43.js",
+      "_calendar-BkrqGKNC.js",
+      "_paperclip-CZJ8UXmI.js",
+      "_createLucideIcon-B8qZ3ylK.js",
+      "_index-C0AcbnKJ.js",
+      "_index-DYEC1Owk.js",
+      "_utils-jAU0Cazi.js",
+      "_index-DZZQifJx.js",
+      "_floating-ui.react-dom-qFQCHW7g.js",
+      "_index-DRr-UIpQ.js",
+>>>>>>> Stashed changes
       "_differenceInCalendarMonths-HUNRrXGm.js",
       "_normalizeInterval-CdMCNNY-.js",
       "_endOfMonth-CK_ShA5m.js",
       "_isSameDay-DUlCFK42.js",
       "_isSameMonth-CQd3m9St.js",
+<<<<<<< Updated upstream
       "_chevron-left-BphKULEz.js",
       "_chevron-right-QGs8lTP5.js",
       "_chevron-down-Bg3q2iyP.js",
@@ -4272,11 +7657,22 @@
   },
   "resources/js/pages/payment/display-payment.tsx": {
     "file": "assets/display-payment-DhctKMiN.js",
+=======
+      "_chevron-left-IcMAr9yn.js",
+      "_chevron-right-BZod6iQK.js",
+      "_chevron-down-DEJUajdp.js",
+      "_index-DxK34XW3.js"
+    ]
+  },
+  "resources/js/pages/payment/display-payment.tsx": {
+    "file": "assets/display-payment-CyGzFXF_.js",
+>>>>>>> Stashed changes
     "name": "display-payment",
     "src": "resources/js/pages/payment/display-payment.tsx",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/app.tsx",
+<<<<<<< Updated upstream
       "_badge-BsPMjMb7.js",
       "_separator-CMC4qrzs.js",
       "_formatDistanceToNow-Bo4ytHt0.js",
@@ -4291,6 +7687,22 @@
       "_utils-jAU0Cazi.js",
       "_index-ahz1tZ6M.js",
       "_index-DRp-GX9j.js",
+=======
+      "_badge-ofr1GoIX.js",
+      "_separator-DAbYQnLI.js",
+      "_formatDistanceToNow-Bo4ytHt0.js",
+      "_chevron-down-DEJUajdp.js",
+      "_createLucideIcon-B8qZ3ylK.js",
+      "_clock-WdEz_qo4.js",
+      "_circle-x-BzZWIzCj.js",
+      "_badge-check-tsoLEH-7.js",
+      "_format-HX8DKPSU.js",
+      "_index-DYEC1Owk.js",
+      "_index-DZZQifJx.js",
+      "_utils-jAU0Cazi.js",
+      "_index-DxK34XW3.js",
+      "_index-C0AcbnKJ.js",
+>>>>>>> Stashed changes
       "_constructNow-Chb2L4Vx.js",
       "_en-US-BA9orzCf.js",
       "_getRoundingMethod-Btu-7J5l.js",
@@ -4300,12 +7712,17 @@
     ]
   },
   "resources/js/pages/settings/adviser.tsx": {
+<<<<<<< Updated upstream
     "file": "assets/adviser-B1RF8l6D.js",
+=======
+    "file": "assets/adviser-2xnL4iwX.js",
+>>>>>>> Stashed changes
     "name": "adviser",
     "src": "resources/js/pages/settings/adviser.tsx",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/app.tsx",
+<<<<<<< Updated upstream
       "_switch-B12NJufO.js",
       "_dialog-D-tH9FDm.js",
       "_button-Cw9tQIeO.js",
@@ -4349,12 +7766,58 @@
   },
   "resources/js/pages/settings/appearance.tsx": {
     "file": "assets/appearance-tDKZPBvx.js",
+=======
+      "_switch-CgQi2nSl.js",
+      "_dialog-BeApitpu.js",
+      "_button-C4XkiM_B.js",
+      "_input-DCrn1t-u.js",
+      "_index-B2MlTwnV.js",
+      "_app-layout-CZ3kZ0t2.js",
+      "_layout-BZxyRDf-.js",
+      "_index-C0AcbnKJ.js",
+      "_index-DYEC1Owk.js",
+      "_utils-jAU0Cazi.js",
+      "_index-DDxX9UbU.js",
+      "_index-DRr-UIpQ.js",
+      "_x-gfWO9KfB.js",
+      "_createLucideIcon-B8qZ3ylK.js",
+      "_index-DZZQifJx.js",
+      "_tooltip-YyHP33lU.js",
+      "_floating-ui.react-dom-qFQCHW7g.js",
+      "_separator-DAbYQnLI.js",
+      "_index-DxK34XW3.js",
+      "_chevron-right-BZod6iQK.js",
+      "_dropdown-menu-sYZpN2tC.js",
+      "_index-DGKk-Zer.js",
+      "_index-ATT6OHxL.js",
+      "_index-MX9TSR8D.js",
+      "_index-BdQOngYf.js",
+      "_check-BgnkF1LW.js",
+      "_avatar-Cz3zvE7t.js",
+      "_settings-CYIvZ_Tn.js",
+      "_users-Bi2Lh05r.js",
+      "_graduation-cap-BxuxjmnL.js",
+      "_file-text-Dl_aF8u0.js",
+      "_dollar-sign-DEGfV_co.js",
+      "_send-ChQ392yu.js",
+      "_credit-card-BvkjxVWT.js",
+      "_tabs-BvzTftzm.js",
+      "_badge-ofr1GoIX.js",
+      "_circle-check-big-CKCqbWb4.js",
+      "_info-BWBV8Gn3.js",
+      "_sun-CPhm4DAg.js"
+    ]
+  },
+  "resources/js/pages/settings/appearance.tsx": {
+    "file": "assets/appearance-DmqvPvSE.js",
+>>>>>>> Stashed changes
     "name": "appearance",
     "src": "resources/js/pages/settings/appearance.tsx",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/app.tsx",
       "_utils-jAU0Cazi.js",
+<<<<<<< Updated upstream
       "_sun-5m6UvoyG.js",
       "_app-layout-C76KB2Lm.js",
       "_heading-small-xTyNxbYL.js",
@@ -4395,11 +7858,54 @@
   },
   "resources/js/pages/settings/documents/Index.tsx": {
     "file": "assets/Index-CcZLbMrr.js",
+=======
+      "_sun-CPhm4DAg.js",
+      "_app-layout-CZ3kZ0t2.js",
+      "_heading-small-h3Z97KlJ.js",
+      "_layout-BZxyRDf-.js",
+      "_createLucideIcon-B8qZ3ylK.js",
+      "_index-DYEC1Owk.js",
+      "_index-DZZQifJx.js",
+      "_button-C4XkiM_B.js",
+      "_input-DCrn1t-u.js",
+      "_index-DDxX9UbU.js",
+      "_index-C0AcbnKJ.js",
+      "_index-DRr-UIpQ.js",
+      "_x-gfWO9KfB.js",
+      "_tooltip-YyHP33lU.js",
+      "_floating-ui.react-dom-qFQCHW7g.js",
+      "_separator-DAbYQnLI.js",
+      "_index-DxK34XW3.js",
+      "_chevron-right-BZod6iQK.js",
+      "_dropdown-menu-sYZpN2tC.js",
+      "_index-DGKk-Zer.js",
+      "_index-ATT6OHxL.js",
+      "_index-MX9TSR8D.js",
+      "_index-BdQOngYf.js",
+      "_check-BgnkF1LW.js",
+      "_avatar-Cz3zvE7t.js",
+      "_settings-CYIvZ_Tn.js",
+      "_users-Bi2Lh05r.js",
+      "_graduation-cap-BxuxjmnL.js",
+      "_file-text-Dl_aF8u0.js",
+      "_dollar-sign-DEGfV_co.js",
+      "_send-ChQ392yu.js",
+      "_credit-card-BvkjxVWT.js",
+      "_tabs-BvzTftzm.js",
+      "_badge-ofr1GoIX.js",
+      "_circle-check-big-CKCqbWb4.js",
+      "_info-BWBV8Gn3.js"
+    ]
+  },
+  "resources/js/pages/settings/documents/Index.tsx": {
+    "file": "assets/Index-BUo7t5vP.js",
+>>>>>>> Stashed changes
     "name": "Index",
     "src": "resources/js/pages/settings/documents/Index.tsx",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/app.tsx",
+<<<<<<< Updated upstream
       "_app-layout-C76KB2Lm.js",
       "_layout-DfjdbQgR.js",
       "_heading-small-xTyNxbYL.js",
@@ -4444,11 +7950,58 @@
   },
   "resources/js/pages/settings/documents/TemplateEditor.tsx": {
     "file": "assets/TemplateEditor-Bwfc4CV1.js",
+=======
+      "_app-layout-CZ3kZ0t2.js",
+      "_layout-BZxyRDf-.js",
+      "_heading-small-h3Z97KlJ.js",
+      "_button-C4XkiM_B.js",
+      "_select-BHDrHMEc.js",
+      "_index-DYEC1Owk.js",
+      "_index-DZZQifJx.js",
+      "_utils-jAU0Cazi.js",
+      "_input-DCrn1t-u.js",
+      "_index-DDxX9UbU.js",
+      "_index-C0AcbnKJ.js",
+      "_index-DRr-UIpQ.js",
+      "_x-gfWO9KfB.js",
+      "_createLucideIcon-B8qZ3ylK.js",
+      "_tooltip-YyHP33lU.js",
+      "_floating-ui.react-dom-qFQCHW7g.js",
+      "_separator-DAbYQnLI.js",
+      "_index-DxK34XW3.js",
+      "_chevron-right-BZod6iQK.js",
+      "_dropdown-menu-sYZpN2tC.js",
+      "_index-DGKk-Zer.js",
+      "_index-ATT6OHxL.js",
+      "_index-MX9TSR8D.js",
+      "_index-BdQOngYf.js",
+      "_check-BgnkF1LW.js",
+      "_avatar-Cz3zvE7t.js",
+      "_settings-CYIvZ_Tn.js",
+      "_users-Bi2Lh05r.js",
+      "_graduation-cap-BxuxjmnL.js",
+      "_file-text-Dl_aF8u0.js",
+      "_dollar-sign-DEGfV_co.js",
+      "_send-ChQ392yu.js",
+      "_credit-card-BvkjxVWT.js",
+      "_tabs-BvzTftzm.js",
+      "_badge-ofr1GoIX.js",
+      "_circle-check-big-CKCqbWb4.js",
+      "_info-BWBV8Gn3.js",
+      "_sun-CPhm4DAg.js",
+      "_index-DFD1OPps.js",
+      "_chevron-down-DEJUajdp.js"
+    ]
+  },
+  "resources/js/pages/settings/documents/TemplateEditor.tsx": {
+    "file": "assets/TemplateEditor-DM36G5EL.js",
+>>>>>>> Stashed changes
     "name": "TemplateEditor",
     "src": "resources/js/pages/settings/documents/TemplateEditor.tsx",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/app.tsx",
+<<<<<<< Updated upstream
       "_button-Cw9tQIeO.js",
       "_index-Chjiymov.js",
       "_index-DRp-GX9j.js",
@@ -4457,18 +8010,33 @@
       "_index-DZZQifJx.js",
       "_utils-jAU0Cazi.js",
       "_createLucideIcon-pjYyoixj.js"
+=======
+      "_button-C4XkiM_B.js",
+      "_index-Chjiymov.js",
+      "_index-C0AcbnKJ.js",
+      "_plus-Bp59822C.js",
+      "_index-DYEC1Owk.js",
+      "_index-DZZQifJx.js",
+      "_utils-jAU0Cazi.js",
+      "_createLucideIcon-B8qZ3ylK.js"
+>>>>>>> Stashed changes
     ],
     "assets": [
       "assets/pdf.worker.min-r-TJsTTt.mjs"
     ]
   },
   "resources/js/pages/settings/general.tsx": {
+<<<<<<< Updated upstream
     "file": "assets/general-BMvfXji1.js",
+=======
+    "file": "assets/general-CxXj0TPx.js",
+>>>>>>> Stashed changes
     "name": "general",
     "src": "resources/js/pages/settings/general.tsx",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/app.tsx",
+<<<<<<< Updated upstream
       "_switch-B12NJufO.js",
       "_dialog-D-tH9FDm.js",
       "_button-Cw9tQIeO.js",
@@ -4511,11 +8079,105 @@
   },
   "resources/js/pages/settings/profile.tsx": {
     "file": "assets/profile-CzTDXP87.js",
+=======
+      "_switch-CgQi2nSl.js",
+      "_dialog-BeApitpu.js",
+      "_button-C4XkiM_B.js",
+      "_input-DCrn1t-u.js",
+      "_index-B2MlTwnV.js",
+      "_app-layout-CZ3kZ0t2.js",
+      "_layout-BZxyRDf-.js",
+      "_index-C0AcbnKJ.js",
+      "_index-DYEC1Owk.js",
+      "_utils-jAU0Cazi.js",
+      "_index-DDxX9UbU.js",
+      "_index-DRr-UIpQ.js",
+      "_x-gfWO9KfB.js",
+      "_createLucideIcon-B8qZ3ylK.js",
+      "_index-DZZQifJx.js",
+      "_tooltip-YyHP33lU.js",
+      "_floating-ui.react-dom-qFQCHW7g.js",
+      "_separator-DAbYQnLI.js",
+      "_index-DxK34XW3.js",
+      "_chevron-right-BZod6iQK.js",
+      "_dropdown-menu-sYZpN2tC.js",
+      "_index-DGKk-Zer.js",
+      "_index-ATT6OHxL.js",
+      "_index-MX9TSR8D.js",
+      "_index-BdQOngYf.js",
+      "_check-BgnkF1LW.js",
+      "_avatar-Cz3zvE7t.js",
+      "_settings-CYIvZ_Tn.js",
+      "_users-Bi2Lh05r.js",
+      "_graduation-cap-BxuxjmnL.js",
+      "_file-text-Dl_aF8u0.js",
+      "_dollar-sign-DEGfV_co.js",
+      "_send-ChQ392yu.js",
+      "_credit-card-BvkjxVWT.js",
+      "_tabs-BvzTftzm.js",
+      "_badge-ofr1GoIX.js",
+      "_circle-check-big-CKCqbWb4.js",
+      "_info-BWBV8Gn3.js",
+      "_sun-CPhm4DAg.js"
+    ]
+  },
+  "resources/js/pages/settings/password.tsx": {
+    "file": "assets/password-B4_M0I2r.js",
+    "name": "password",
+    "src": "resources/js/pages/settings/password.tsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/app.tsx",
+      "_input-error-DBfxdkea.js",
+      "_app-layout-CZ3kZ0t2.js",
+      "_layout-BZxyRDf-.js",
+      "_heading-small-h3Z97KlJ.js",
+      "_button-C4XkiM_B.js",
+      "_input-DCrn1t-u.js",
+      "_label-by1MoGWy.js",
+      "_utils-jAU0Cazi.js",
+      "_index-DYEC1Owk.js",
+      "_index-DZZQifJx.js",
+      "_index-DDxX9UbU.js",
+      "_index-C0AcbnKJ.js",
+      "_index-DRr-UIpQ.js",
+      "_x-gfWO9KfB.js",
+      "_createLucideIcon-B8qZ3ylK.js",
+      "_tooltip-YyHP33lU.js",
+      "_floating-ui.react-dom-qFQCHW7g.js",
+      "_separator-DAbYQnLI.js",
+      "_index-DxK34XW3.js",
+      "_chevron-right-BZod6iQK.js",
+      "_dropdown-menu-sYZpN2tC.js",
+      "_index-DGKk-Zer.js",
+      "_index-ATT6OHxL.js",
+      "_index-MX9TSR8D.js",
+      "_index-BdQOngYf.js",
+      "_check-BgnkF1LW.js",
+      "_avatar-Cz3zvE7t.js",
+      "_settings-CYIvZ_Tn.js",
+      "_users-Bi2Lh05r.js",
+      "_graduation-cap-BxuxjmnL.js",
+      "_file-text-Dl_aF8u0.js",
+      "_dollar-sign-DEGfV_co.js",
+      "_send-ChQ392yu.js",
+      "_credit-card-BvkjxVWT.js",
+      "_tabs-BvzTftzm.js",
+      "_badge-ofr1GoIX.js",
+      "_circle-check-big-CKCqbWb4.js",
+      "_info-BWBV8Gn3.js",
+      "_sun-CPhm4DAg.js"
+    ]
+  },
+  "resources/js/pages/settings/profile.tsx": {
+    "file": "assets/profile-C9cRfAdm.js",
+>>>>>>> Stashed changes
     "name": "profile",
     "src": "resources/js/pages/settings/profile.tsx",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/app.tsx",
+<<<<<<< Updated upstream
       "_avatar-DUph8BC-.js",
       "_app-layout-C76KB2Lm.js",
       "_layout-DfjdbQgR.js",
@@ -4558,11 +8220,56 @@
   },
   "resources/js/pages/settings/signatures/Index.tsx": {
     "file": "assets/Index-HIP0jWzB.js",
+=======
+      "_avatar-Cz3zvE7t.js",
+      "_app-layout-CZ3kZ0t2.js",
+      "_layout-BZxyRDf-.js",
+      "_alert-C_jnSLAo.js",
+      "_index-B2MlTwnV.js",
+      "_info-BWBV8Gn3.js",
+      "_index-ATT6OHxL.js",
+      "_index-DxK34XW3.js",
+      "_index-C0AcbnKJ.js",
+      "_utils-jAU0Cazi.js",
+      "_index-DYEC1Owk.js",
+      "_index-DZZQifJx.js",
+      "_button-C4XkiM_B.js",
+      "_input-DCrn1t-u.js",
+      "_index-DDxX9UbU.js",
+      "_index-DRr-UIpQ.js",
+      "_x-gfWO9KfB.js",
+      "_createLucideIcon-B8qZ3ylK.js",
+      "_tooltip-YyHP33lU.js",
+      "_floating-ui.react-dom-qFQCHW7g.js",
+      "_separator-DAbYQnLI.js",
+      "_chevron-right-BZod6iQK.js",
+      "_dropdown-menu-sYZpN2tC.js",
+      "_index-DGKk-Zer.js",
+      "_index-MX9TSR8D.js",
+      "_index-BdQOngYf.js",
+      "_check-BgnkF1LW.js",
+      "_settings-CYIvZ_Tn.js",
+      "_users-Bi2Lh05r.js",
+      "_graduation-cap-BxuxjmnL.js",
+      "_file-text-Dl_aF8u0.js",
+      "_dollar-sign-DEGfV_co.js",
+      "_send-ChQ392yu.js",
+      "_credit-card-BvkjxVWT.js",
+      "_tabs-BvzTftzm.js",
+      "_badge-ofr1GoIX.js",
+      "_circle-check-big-CKCqbWb4.js",
+      "_sun-CPhm4DAg.js"
+    ]
+  },
+  "resources/js/pages/settings/signatures/Index.tsx": {
+    "file": "assets/Index-BsOg0cDO.js",
+>>>>>>> Stashed changes
     "name": "Index",
     "src": "resources/js/pages/settings/signatures/Index.tsx",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/app.tsx",
+<<<<<<< Updated upstream
       "_app-layout-C76KB2Lm.js",
       "_layout-DfjdbQgR.js",
       "_heading-small-xTyNxbYL.js",
@@ -4607,16 +8314,65 @@
       "_sun-5m6UvoyG.js",
       "_typeof-QjJsDpFa.js",
       "_index-BGXDct6C.js",
+=======
+      "_app-layout-CZ3kZ0t2.js",
+      "_layout-BZxyRDf-.js",
+      "_heading-small-h3Z97KlJ.js",
+      "_button-C4XkiM_B.js",
+      "_index-Bt9ylsuM.js",
+      "_dialog-BeApitpu.js",
+      "_tabs-BvzTftzm.js",
+      "_index-B2MlTwnV.js",
+      "_signature-HJa2c2uW.js",
+      "_createLucideIcon-B8qZ3ylK.js",
+      "_trash-2-oufS_Sxw.js",
+      "_index-DYEC1Owk.js",
+      "_index-DZZQifJx.js",
+      "_utils-jAU0Cazi.js",
+      "_input-DCrn1t-u.js",
+      "_index-DDxX9UbU.js",
+      "_index-C0AcbnKJ.js",
+      "_index-DRr-UIpQ.js",
+      "_x-gfWO9KfB.js",
+      "_tooltip-YyHP33lU.js",
+      "_floating-ui.react-dom-qFQCHW7g.js",
+      "_separator-DAbYQnLI.js",
+      "_index-DxK34XW3.js",
+      "_chevron-right-BZod6iQK.js",
+      "_dropdown-menu-sYZpN2tC.js",
+      "_index-DGKk-Zer.js",
+      "_index-ATT6OHxL.js",
+      "_index-MX9TSR8D.js",
+      "_index-BdQOngYf.js",
+      "_check-BgnkF1LW.js",
+      "_avatar-Cz3zvE7t.js",
+      "_settings-CYIvZ_Tn.js",
+      "_users-Bi2Lh05r.js",
+      "_graduation-cap-BxuxjmnL.js",
+      "_file-text-Dl_aF8u0.js",
+      "_dollar-sign-DEGfV_co.js",
+      "_send-ChQ392yu.js",
+      "_credit-card-BvkjxVWT.js",
+      "_badge-ofr1GoIX.js",
+      "_circle-check-big-CKCqbWb4.js",
+      "_info-BWBV8Gn3.js",
+      "_sun-CPhm4DAg.js",
+>>>>>>> Stashed changes
       "_index-Chjiymov.js"
     ]
   },
   "resources/js/pages/student-records/Index.tsx": {
+<<<<<<< Updated upstream
     "file": "assets/Index-DM40eJsk.js",
+=======
+    "file": "assets/Index-dpwOrEPF.js",
+>>>>>>> Stashed changes
     "name": "Index",
     "src": "resources/js/pages/student-records/Index.tsx",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/app.tsx",
+<<<<<<< Updated upstream
       "_app-layout-C76KB2Lm.js",
       "resources/js/pages/student-records/individual-records.tsx",
       "resources/js/pages/student-records/edit-student-record.tsx",
@@ -4693,11 +8449,71 @@
   },
   "resources/js/pages/student-records/delete-prompt.tsx": {
     "file": "assets/delete-prompt-Det7cbS1.js",
+=======
+      "_app-layout-CZ3kZ0t2.js",
+      "resources/js/pages/student-records/individual-records.tsx",
+      "resources/js/pages/student-records/edit-student-record.tsx",
+      "resources/js/pages/student-records/delete-prompt.tsx",
+      "_button-C4XkiM_B.js",
+      "_popover-tBQRRq13.js",
+      "_command-D56cLWk0.js",
+      "_table-C8ztdzxp.js",
+      "_avatar-Cz3zvE7t.js",
+      "_utils-jAU0Cazi.js",
+      "_search-input-Do8im2K8.js",
+      "_calendar-BkrqGKNC.js",
+      "_check-BgnkF1LW.js",
+      "_eye-Dkmyf9ow.js",
+      "_square-pen-Brbz-8qz.js",
+      "_trash-2-oufS_Sxw.js",
+      "_chevrons-right-BiGuqRdN.js",
+      "_chevron-left-IcMAr9yn.js",
+      "_chevron-right-BZod6iQK.js",
+      "_index-DYEC1Owk.js",
+      "_index-DZZQifJx.js",
+      "_input-DCrn1t-u.js",
+      "_index-DDxX9UbU.js",
+      "_index-C0AcbnKJ.js",
+      "_index-DRr-UIpQ.js",
+      "_x-gfWO9KfB.js",
+      "_createLucideIcon-B8qZ3ylK.js",
+      "_tooltip-YyHP33lU.js",
+      "_floating-ui.react-dom-qFQCHW7g.js",
+      "_separator-DAbYQnLI.js",
+      "_index-DxK34XW3.js",
+      "_dropdown-menu-sYZpN2tC.js",
+      "_index-DGKk-Zer.js",
+      "_index-ATT6OHxL.js",
+      "_index-MX9TSR8D.js",
+      "_index-BdQOngYf.js",
+      "_settings-CYIvZ_Tn.js",
+      "_users-Bi2Lh05r.js",
+      "_graduation-cap-BxuxjmnL.js",
+      "_file-text-Dl_aF8u0.js",
+      "_dollar-sign-DEGfV_co.js",
+      "_send-ChQ392yu.js",
+      "_credit-card-BvkjxVWT.js",
+      "_tabs-BvzTftzm.js",
+      "_badge-ofr1GoIX.js",
+      "_circle-check-big-CKCqbWb4.js",
+      "_info-BWBV8Gn3.js",
+      "_sun-CPhm4DAg.js",
+      "_user-Dpzu1VZB.js",
+      "resources/js/pages/student-records/success-prompt.tsx",
+      "_alert-dialog-B8yj1s4q.js",
+      "_circle-check-B5R0L350.js",
+      "_search-gvHM0uxt.js"
+    ]
+  },
+  "resources/js/pages/student-records/delete-prompt.tsx": {
+    "file": "assets/delete-prompt-_ZJoU4QU.js",
+>>>>>>> Stashed changes
     "name": "delete-prompt",
     "src": "resources/js/pages/student-records/delete-prompt.tsx",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/app.tsx",
+<<<<<<< Updated upstream
       "_alert-dialog-Bv4FR8BT.js",
       "_index-BSk2xfhC.js",
       "_index-DRp-GX9j.js",
@@ -4705,17 +8521,31 @@
       "_index-BZgaE142.js",
       "_utils-jAU0Cazi.js",
       "_button-Cw9tQIeO.js",
+=======
+      "_alert-dialog-B8yj1s4q.js",
+      "_index-DDxX9UbU.js",
+      "_index-C0AcbnKJ.js",
+      "_index-DYEC1Owk.js",
+      "_index-DRr-UIpQ.js",
+      "_utils-jAU0Cazi.js",
+      "_button-C4XkiM_B.js",
+>>>>>>> Stashed changes
       "_index-DZZQifJx.js"
     ]
   },
   "resources/js/pages/student-records/edit-student-record.tsx": {
+<<<<<<< Updated upstream
     "file": "assets/edit-student-record-C_rB2dEG.js",
+=======
+    "file": "assets/edit-student-record-ROcrCVJ3.js",
+>>>>>>> Stashed changes
     "name": "edit-student-record",
     "src": "resources/js/pages/student-records/edit-student-record.tsx",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/app.tsx",
       "resources/js/pages/student-records/success-prompt.tsx",
+<<<<<<< Updated upstream
       "_alert-dialog-Bv4FR8BT.js",
       "_index-BSk2xfhC.js",
       "_index-DRp-GX9j.js",
@@ -4730,11 +8560,28 @@
   },
   "resources/js/pages/student-records/individual-records.tsx": {
     "file": "assets/individual-records-Qp-EvNdH.js",
+=======
+      "_alert-dialog-B8yj1s4q.js",
+      "_index-DDxX9UbU.js",
+      "_index-C0AcbnKJ.js",
+      "_index-DYEC1Owk.js",
+      "_index-DRr-UIpQ.js",
+      "_utils-jAU0Cazi.js",
+      "_button-C4XkiM_B.js",
+      "_index-DZZQifJx.js",
+      "_circle-check-B5R0L350.js",
+      "_createLucideIcon-B8qZ3ylK.js"
+    ]
+  },
+  "resources/js/pages/student-records/individual-records.tsx": {
+    "file": "assets/individual-records-BMnI8-rz.js",
+>>>>>>> Stashed changes
     "name": "individual-records",
     "src": "resources/js/pages/student-records/individual-records.tsx",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/app.tsx",
+<<<<<<< Updated upstream
       "_table-BEEQP98I.js",
       "_button-Cw9tQIeO.js",
       "_dialog-D-tH9FDm.js",
@@ -4762,11 +8609,26 @@
   },
   "resources/js/pages/student-records/success-prompt.tsx": {
     "file": "assets/success-prompt-g99fOLbt.js",
+=======
+      "_table-C8ztdzxp.js",
+      "_button-C4XkiM_B.js",
+      "_user-Dpzu1VZB.js",
+      "_eye-Dkmyf9ow.js",
+      "_utils-jAU0Cazi.js",
+      "_index-DYEC1Owk.js",
+      "_index-DZZQifJx.js",
+      "_createLucideIcon-B8qZ3ylK.js"
+    ]
+  },
+  "resources/js/pages/student-records/success-prompt.tsx": {
+    "file": "assets/success-prompt-amuk0pcW.js",
+>>>>>>> Stashed changes
     "name": "success-prompt",
     "src": "resources/js/pages/student-records/success-prompt.tsx",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/app.tsx",
+<<<<<<< Updated upstream
       "_alert-dialog-Bv4FR8BT.js",
       "_button-Cw9tQIeO.js",
       "_circle-check-B6ukRmdw.js",
@@ -4781,25 +8643,53 @@
   },
   "resources/js/pages/student-records/view-panelist.tsx": {
     "file": "assets/view-panelist-DPqVavHO.js",
+=======
+      "_alert-dialog-B8yj1s4q.js",
+      "_button-C4XkiM_B.js",
+      "_circle-check-B5R0L350.js",
+      "_index-DDxX9UbU.js",
+      "_index-C0AcbnKJ.js",
+      "_index-DYEC1Owk.js",
+      "_index-DRr-UIpQ.js",
+      "_utils-jAU0Cazi.js",
+      "_index-DZZQifJx.js",
+      "_createLucideIcon-B8qZ3ylK.js"
+    ]
+  },
+  "resources/js/pages/student-records/view-panelist.tsx": {
+    "file": "assets/view-panelist-BG9xr7oM.js",
+>>>>>>> Stashed changes
     "name": "view-panelist",
     "src": "resources/js/pages/student-records/view-panelist.tsx",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/app.tsx",
+<<<<<<< Updated upstream
       "_table-BEEQP98I.js",
       "_button-Cw9tQIeO.js",
       "_utils-jAU0Cazi.js",
       "_index-CDDLQrUy.js",
+=======
+      "_table-C8ztdzxp.js",
+      "_button-C4XkiM_B.js",
+      "_utils-jAU0Cazi.js",
+      "_index-DYEC1Owk.js",
+>>>>>>> Stashed changes
       "_index-DZZQifJx.js"
     ]
   },
   "resources/js/pages/student/academic-records/academic-records.tsx": {
+<<<<<<< Updated upstream
     "file": "assets/academic-records-FXcMWfMo.js",
+=======
+    "file": "assets/academic-records-DHgG0bSW.js",
+>>>>>>> Stashed changes
     "name": "academic-records",
     "src": "resources/js/pages/student/academic-records/academic-records.tsx",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/app.tsx",
+<<<<<<< Updated upstream
       "_app-layout-C76KB2Lm.js",
       "resources/js/pages/legacy/AcademicRecordsDashboard.tsx",
       "_index-CDDLQrUy.js",
@@ -4848,11 +8738,62 @@
   },
   "resources/js/pages/student/documents/Index.tsx": {
     "file": "assets/Index-Ciu8ux8e.js",
+=======
+      "_app-layout-CZ3kZ0t2.js",
+      "resources/js/pages/legacy/AcademicRecordsDashboard.tsx",
+      "_index-DYEC1Owk.js",
+      "_index-DZZQifJx.js",
+      "_utils-jAU0Cazi.js",
+      "_button-C4XkiM_B.js",
+      "_input-DCrn1t-u.js",
+      "_index-DDxX9UbU.js",
+      "_index-C0AcbnKJ.js",
+      "_index-DRr-UIpQ.js",
+      "_x-gfWO9KfB.js",
+      "_createLucideIcon-B8qZ3ylK.js",
+      "_tooltip-YyHP33lU.js",
+      "_floating-ui.react-dom-qFQCHW7g.js",
+      "_separator-DAbYQnLI.js",
+      "_index-DxK34XW3.js",
+      "_chevron-right-BZod6iQK.js",
+      "_dropdown-menu-sYZpN2tC.js",
+      "_index-DGKk-Zer.js",
+      "_index-ATT6OHxL.js",
+      "_index-MX9TSR8D.js",
+      "_index-BdQOngYf.js",
+      "_check-BgnkF1LW.js",
+      "_avatar-Cz3zvE7t.js",
+      "_settings-CYIvZ_Tn.js",
+      "_users-Bi2Lh05r.js",
+      "_graduation-cap-BxuxjmnL.js",
+      "_file-text-Dl_aF8u0.js",
+      "_dollar-sign-DEGfV_co.js",
+      "_send-ChQ392yu.js",
+      "_credit-card-BvkjxVWT.js",
+      "_tabs-BvzTftzm.js",
+      "_badge-ofr1GoIX.js",
+      "_circle-check-big-CKCqbWb4.js",
+      "_info-BWBV8Gn3.js",
+      "_sun-CPhm4DAg.js",
+      "_card-VQzzqn5t.js",
+      "_select-BHDrHMEc.js",
+      "_index-DFD1OPps.js",
+      "_chevron-down-DEJUajdp.js",
+      "_table-C8ztdzxp.js",
+      "_skeleton-eQxcUfOO.js",
+      "_refresh-cw-DFFpfEuC.js",
+      "_printer-8ps6np5W.js"
+    ]
+  },
+  "resources/js/pages/student/documents/Index.tsx": {
+    "file": "assets/Index-CJMmq3PS.js",
+>>>>>>> Stashed changes
     "name": "Index",
     "src": "resources/js/pages/student/documents/Index.tsx",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/app.tsx",
+<<<<<<< Updated upstream
       "_app-layout-C76KB2Lm.js",
       "resources/js/pages/student/documents/show-all-documents.tsx",
       "_graduation-cap-DHFIPOzN.js",
@@ -4897,11 +8838,58 @@
   },
   "resources/js/pages/student/documents/show-all-documents.tsx": {
     "file": "assets/show-all-documents-D1Fe7lC2.js",
+=======
+      "_app-layout-CZ3kZ0t2.js",
+      "resources/js/pages/student/documents/show-all-documents.tsx",
+      "_graduation-cap-BxuxjmnL.js",
+      "_index-DYEC1Owk.js",
+      "_index-DZZQifJx.js",
+      "_utils-jAU0Cazi.js",
+      "_button-C4XkiM_B.js",
+      "_input-DCrn1t-u.js",
+      "_index-DDxX9UbU.js",
+      "_index-C0AcbnKJ.js",
+      "_index-DRr-UIpQ.js",
+      "_x-gfWO9KfB.js",
+      "_createLucideIcon-B8qZ3ylK.js",
+      "_tooltip-YyHP33lU.js",
+      "_floating-ui.react-dom-qFQCHW7g.js",
+      "_separator-DAbYQnLI.js",
+      "_index-DxK34XW3.js",
+      "_chevron-right-BZod6iQK.js",
+      "_dropdown-menu-sYZpN2tC.js",
+      "_index-DGKk-Zer.js",
+      "_index-ATT6OHxL.js",
+      "_index-MX9TSR8D.js",
+      "_index-BdQOngYf.js",
+      "_check-BgnkF1LW.js",
+      "_avatar-Cz3zvE7t.js",
+      "_settings-CYIvZ_Tn.js",
+      "_users-Bi2Lh05r.js",
+      "_file-text-Dl_aF8u0.js",
+      "_dollar-sign-DEGfV_co.js",
+      "_send-ChQ392yu.js",
+      "_credit-card-BvkjxVWT.js",
+      "_tabs-BvzTftzm.js",
+      "_badge-ofr1GoIX.js",
+      "_circle-check-big-CKCqbWb4.js",
+      "_info-BWBV8Gn3.js",
+      "_sun-CPhm4DAg.js",
+      "_dayjs.min-D6wfwQTr.js",
+      "_paperclip-CZJ8UXmI.js",
+      "_eye-Dkmyf9ow.js",
+      "_download-DERSZnXw.js"
+    ]
+  },
+  "resources/js/pages/student/documents/show-all-documents.tsx": {
+    "file": "assets/show-all-documents-D21TeuA3.js",
+>>>>>>> Stashed changes
     "name": "show-all-documents",
     "src": "resources/js/pages/student/documents/show-all-documents.tsx",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/app.tsx",
+<<<<<<< Updated upstream
       "_button-Cw9tQIeO.js",
       "_dayjs.min-C04TMi-8.js",
       "_paperclip-DYnyPUSo.js",
@@ -4915,11 +8903,27 @@
   },
   "resources/js/pages/student/notification/Index.tsx": {
     "file": "assets/Index-znGOC7n3.js",
+=======
+      "_button-C4XkiM_B.js",
+      "_dayjs.min-D6wfwQTr.js",
+      "_paperclip-CZJ8UXmI.js",
+      "_eye-Dkmyf9ow.js",
+      "_download-DERSZnXw.js",
+      "_index-DYEC1Owk.js",
+      "_index-DZZQifJx.js",
+      "_utils-jAU0Cazi.js",
+      "_createLucideIcon-B8qZ3ylK.js"
+    ]
+  },
+  "resources/js/pages/student/notification/Index.tsx": {
+    "file": "assets/Index-BfksxWo3.js",
+>>>>>>> Stashed changes
     "name": "Index",
     "src": "resources/js/pages/student/notification/Index.tsx",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/app.tsx",
+<<<<<<< Updated upstream
       "_button-Cw9tQIeO.js",
       "_app-layout-C76KB2Lm.js",
       "_index-CDDLQrUy.js",
@@ -4959,11 +8963,53 @@
   },
   "resources/js/pages/student/payment/Index.tsx": {
     "file": "assets/Index-Du80omXF.js",
+=======
+      "_button-C4XkiM_B.js",
+      "_app-layout-CZ3kZ0t2.js",
+      "_index-DYEC1Owk.js",
+      "_index-DZZQifJx.js",
+      "_utils-jAU0Cazi.js",
+      "_input-DCrn1t-u.js",
+      "_index-DDxX9UbU.js",
+      "_index-C0AcbnKJ.js",
+      "_index-DRr-UIpQ.js",
+      "_x-gfWO9KfB.js",
+      "_createLucideIcon-B8qZ3ylK.js",
+      "_tooltip-YyHP33lU.js",
+      "_floating-ui.react-dom-qFQCHW7g.js",
+      "_separator-DAbYQnLI.js",
+      "_index-DxK34XW3.js",
+      "_chevron-right-BZod6iQK.js",
+      "_dropdown-menu-sYZpN2tC.js",
+      "_index-DGKk-Zer.js",
+      "_index-ATT6OHxL.js",
+      "_index-MX9TSR8D.js",
+      "_index-BdQOngYf.js",
+      "_check-BgnkF1LW.js",
+      "_avatar-Cz3zvE7t.js",
+      "_settings-CYIvZ_Tn.js",
+      "_users-Bi2Lh05r.js",
+      "_graduation-cap-BxuxjmnL.js",
+      "_file-text-Dl_aF8u0.js",
+      "_dollar-sign-DEGfV_co.js",
+      "_send-ChQ392yu.js",
+      "_credit-card-BvkjxVWT.js",
+      "_tabs-BvzTftzm.js",
+      "_badge-ofr1GoIX.js",
+      "_circle-check-big-CKCqbWb4.js",
+      "_info-BWBV8Gn3.js",
+      "_sun-CPhm4DAg.js"
+    ]
+  },
+  "resources/js/pages/student/payment/Index.tsx": {
+    "file": "assets/Index-DZYqLsb9.js",
+>>>>>>> Stashed changes
     "name": "Index",
     "src": "resources/js/pages/student/payment/Index.tsx",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/app.tsx",
+<<<<<<< Updated upstream
       "_app-layout-C76KB2Lm.js",
       "_index-CDDLQrUy.js",
       "_index-DZZQifJx.js",
@@ -5003,11 +9049,53 @@
   },
   "resources/js/pages/student/submissions/comprehensive-exam/Index.tsx": {
     "file": "assets/Index-DD5rXnoT.js",
+=======
+      "_app-layout-CZ3kZ0t2.js",
+      "_index-DYEC1Owk.js",
+      "_index-DZZQifJx.js",
+      "_utils-jAU0Cazi.js",
+      "_button-C4XkiM_B.js",
+      "_input-DCrn1t-u.js",
+      "_index-DDxX9UbU.js",
+      "_index-C0AcbnKJ.js",
+      "_index-DRr-UIpQ.js",
+      "_x-gfWO9KfB.js",
+      "_createLucideIcon-B8qZ3ylK.js",
+      "_tooltip-YyHP33lU.js",
+      "_floating-ui.react-dom-qFQCHW7g.js",
+      "_separator-DAbYQnLI.js",
+      "_index-DxK34XW3.js",
+      "_chevron-right-BZod6iQK.js",
+      "_dropdown-menu-sYZpN2tC.js",
+      "_index-DGKk-Zer.js",
+      "_index-ATT6OHxL.js",
+      "_index-MX9TSR8D.js",
+      "_index-BdQOngYf.js",
+      "_check-BgnkF1LW.js",
+      "_avatar-Cz3zvE7t.js",
+      "_settings-CYIvZ_Tn.js",
+      "_users-Bi2Lh05r.js",
+      "_graduation-cap-BxuxjmnL.js",
+      "_file-text-Dl_aF8u0.js",
+      "_dollar-sign-DEGfV_co.js",
+      "_send-ChQ392yu.js",
+      "_credit-card-BvkjxVWT.js",
+      "_tabs-BvzTftzm.js",
+      "_badge-ofr1GoIX.js",
+      "_circle-check-big-CKCqbWb4.js",
+      "_info-BWBV8Gn3.js",
+      "_sun-CPhm4DAg.js"
+    ]
+  },
+  "resources/js/pages/student/submissions/comprehensive-exam/Index.tsx": {
+    "file": "assets/Index-DVarTbnk.js",
+>>>>>>> Stashed changes
     "name": "Index",
     "src": "resources/js/pages/student/submissions/comprehensive-exam/Index.tsx",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/app.tsx",
+<<<<<<< Updated upstream
       "_app-layout-C76KB2Lm.js",
       "_button-Cw9tQIeO.js",
       "resources/js/pages/student/submissions/comprehensive-exam/display-applications.tsx",
@@ -5052,6 +9140,52 @@
       "_hourglass-Ck8E1KPu.js",
       "_circle-x-CSxHo4yb.js",
       "_badge-check-C-EI3EoT.js",
+=======
+      "_app-layout-CZ3kZ0t2.js",
+      "_button-C4XkiM_B.js",
+      "resources/js/pages/student/submissions/comprehensive-exam/display-applications.tsx",
+      "resources/js/pages/student/submissions/comprehensive-exam/compre-exam-form.tsx",
+      "_dialog-BeApitpu.js",
+      "_badge-ofr1GoIX.js",
+      "_graduation-cap-BxuxjmnL.js",
+      "_createLucideIcon-B8qZ3ylK.js",
+      "_refresh-ccw-DkBDNhPs.js",
+      "_info-BWBV8Gn3.js",
+      "_index-DYEC1Owk.js",
+      "_index-DZZQifJx.js",
+      "_utils-jAU0Cazi.js",
+      "_input-DCrn1t-u.js",
+      "_index-DDxX9UbU.js",
+      "_index-C0AcbnKJ.js",
+      "_index-DRr-UIpQ.js",
+      "_x-gfWO9KfB.js",
+      "_tooltip-YyHP33lU.js",
+      "_floating-ui.react-dom-qFQCHW7g.js",
+      "_separator-DAbYQnLI.js",
+      "_index-DxK34XW3.js",
+      "_chevron-right-BZod6iQK.js",
+      "_dropdown-menu-sYZpN2tC.js",
+      "_index-DGKk-Zer.js",
+      "_index-ATT6OHxL.js",
+      "_index-MX9TSR8D.js",
+      "_index-BdQOngYf.js",
+      "_check-BgnkF1LW.js",
+      "_avatar-Cz3zvE7t.js",
+      "_settings-CYIvZ_Tn.js",
+      "_users-Bi2Lh05r.js",
+      "_file-text-Dl_aF8u0.js",
+      "_dollar-sign-DEGfV_co.js",
+      "_send-ChQ392yu.js",
+      "_credit-card-BvkjxVWT.js",
+      "_tabs-BvzTftzm.js",
+      "_circle-check-big-CKCqbWb4.js",
+      "_sun-CPhm4DAg.js",
+      "_chevron-down-DEJUajdp.js",
+      "_book-open-DwBftJzx.js",
+      "_hourglass-BrU7Yv6c.js",
+      "_circle-x-BzZWIzCj.js",
+      "_badge-check-tsoLEH-7.js",
+>>>>>>> Stashed changes
       "_formatDistanceToNow-Bo4ytHt0.js",
       "_constructNow-Chb2L4Vx.js",
       "_en-US-BA9orzCf.js",
@@ -5060,16 +9194,26 @@
       "_endOfDay-UBg8OSOW.js",
       "_endOfMonth-CK_ShA5m.js",
       "_format-HX8DKPSU.js",
+<<<<<<< Updated upstream
       "_heading-small-xTyNxbYL.js",
       "_label-CbqPBzn6.js",
       "_Stepper-DLUcjs0b.js",
       "_proxy-DVhXeFh8.js",
       "_popover-C8pU6zmg.js",
       "_calendar-BpWedVzv.js",
+=======
+      "_heading-small-h3Z97KlJ.js",
+      "_label-by1MoGWy.js",
+      "_Stepper-D95oqrcg.js",
+      "_proxy-BIJhVlnW.js",
+      "_popover-tBQRRq13.js",
+      "_calendar-DKOUdBib.js",
+>>>>>>> Stashed changes
       "_endOfWeek-QFyZPl43.js",
       "_normalizeInterval-CdMCNNY-.js",
       "_isSameDay-DUlCFK42.js",
       "_isSameMonth-CQd3m9St.js",
+<<<<<<< Updated upstream
       "_chevron-left-BphKULEz.js",
       "_calendar-Bi5dAEy5.js",
       "_plus-Cg0ZoNJK.js"
@@ -5077,11 +9221,21 @@
   },
   "resources/js/pages/student/submissions/comprehensive-exam/compre-exam-form.tsx": {
     "file": "assets/compre-exam-form-4tXvVPBd.js",
+=======
+      "_chevron-left-IcMAr9yn.js",
+      "_calendar-BkrqGKNC.js",
+      "_plus-Bp59822C.js"
+    ]
+  },
+  "resources/js/pages/student/submissions/comprehensive-exam/compre-exam-form.tsx": {
+    "file": "assets/compre-exam-form-Bj7CnzVk.js",
+>>>>>>> Stashed changes
     "name": "compre-exam-form",
     "src": "resources/js/pages/student/submissions/comprehensive-exam/compre-exam-form.tsx",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/app.tsx",
+<<<<<<< Updated upstream
       "_heading-small-xTyNxbYL.js",
       "_label-CbqPBzn6.js",
       "_input-izsDzGd9.js",
@@ -5105,6 +9259,31 @@
       "_x-B3RMhnUQ.js",
       "_createLucideIcon-pjYyoixj.js",
       "_floating-ui.react-dom-DL84dtXf.js",
+=======
+      "_heading-small-h3Z97KlJ.js",
+      "_label-by1MoGWy.js",
+      "_input-DCrn1t-u.js",
+      "_button-C4XkiM_B.js",
+      "_Stepper-D95oqrcg.js",
+      "_dialog-BeApitpu.js",
+      "_popover-tBQRRq13.js",
+      "_calendar-DKOUdBib.js",
+      "_separator-DAbYQnLI.js",
+      "_calendar-BkrqGKNC.js",
+      "_plus-Bp59822C.js",
+      "_check-BgnkF1LW.js",
+      "_format-HX8DKPSU.js",
+      "_index-C0AcbnKJ.js",
+      "_index-DYEC1Owk.js",
+      "_utils-jAU0Cazi.js",
+      "_index-DZZQifJx.js",
+      "_proxy-BIJhVlnW.js",
+      "_index-DDxX9UbU.js",
+      "_index-DRr-UIpQ.js",
+      "_x-gfWO9KfB.js",
+      "_createLucideIcon-B8qZ3ylK.js",
+      "_floating-ui.react-dom-qFQCHW7g.js",
+>>>>>>> Stashed changes
       "_en-US-BA9orzCf.js",
       "_endOfWeek-QFyZPl43.js",
       "_differenceInCalendarMonths-HUNRrXGm.js",
@@ -5112,6 +9291,7 @@
       "_endOfMonth-CK_ShA5m.js",
       "_isSameDay-DUlCFK42.js",
       "_isSameMonth-CQd3m9St.js",
+<<<<<<< Updated upstream
       "_chevron-left-BphKULEz.js",
       "_chevron-right-QGs8lTP5.js",
       "_chevron-down-Bg3q2iyP.js",
@@ -5120,11 +9300,22 @@
   },
   "resources/js/pages/student/submissions/comprehensive-exam/display-applications.tsx": {
     "file": "assets/display-applications-C_y46WOC.js",
+=======
+      "_chevron-left-IcMAr9yn.js",
+      "_chevron-right-BZod6iQK.js",
+      "_chevron-down-DEJUajdp.js",
+      "_index-DxK34XW3.js"
+    ]
+  },
+  "resources/js/pages/student/submissions/comprehensive-exam/display-applications.tsx": {
+    "file": "assets/display-applications-CXc-S48r.js",
+>>>>>>> Stashed changes
     "name": "display-applications",
     "src": "resources/js/pages/student/submissions/comprehensive-exam/display-applications.tsx",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/app.tsx",
+<<<<<<< Updated upstream
       "_badge-BsPMjMb7.js",
       "_separator-CMC4qrzs.js",
       "_chevron-down-Bg3q2iyP.js",
@@ -5140,6 +9331,23 @@
       "_index-ahz1tZ6M.js",
       "_index-DRp-GX9j.js",
       "_createLucideIcon-pjYyoixj.js",
+=======
+      "_badge-ofr1GoIX.js",
+      "_separator-DAbYQnLI.js",
+      "_chevron-down-DEJUajdp.js",
+      "_book-open-DwBftJzx.js",
+      "_hourglass-BrU7Yv6c.js",
+      "_circle-x-BzZWIzCj.js",
+      "_badge-check-tsoLEH-7.js",
+      "_formatDistanceToNow-Bo4ytHt0.js",
+      "_format-HX8DKPSU.js",
+      "_index-DYEC1Owk.js",
+      "_index-DZZQifJx.js",
+      "_utils-jAU0Cazi.js",
+      "_index-DxK34XW3.js",
+      "_index-C0AcbnKJ.js",
+      "_createLucideIcon-B8qZ3ylK.js",
+>>>>>>> Stashed changes
       "_constructNow-Chb2L4Vx.js",
       "_en-US-BA9orzCf.js",
       "_getRoundingMethod-Btu-7J5l.js",
@@ -5149,12 +9357,17 @@
     ]
   },
   "resources/js/pages/student/submissions/defense-requirements/Index.tsx": {
+<<<<<<< Updated upstream
     "file": "assets/Index-CcHODnaS.js",
+=======
+    "file": "assets/Index-yDs44VnF.js",
+>>>>>>> Stashed changes
     "name": "Index",
     "src": "resources/js/pages/student/submissions/defense-requirements/Index.tsx",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/app.tsx",
+<<<<<<< Updated upstream
       "_app-layout-C76KB2Lm.js",
       "_button-Cw9tQIeO.js",
       "_dialog-D-tH9FDm.js",
@@ -5216,11 +9429,75 @@
   },
   "resources/js/pages/student/submissions/defense-requirements/defense-request-form-new.tsx": {
     "file": "assets/defense-request-form-new-CQ-1qLRO.js",
+=======
+      "_app-layout-CZ3kZ0t2.js",
+      "_button-C4XkiM_B.js",
+      "_dialog-BeApitpu.js",
+      "_index-C0AcbnKJ.js",
+      "_index-DYEC1Owk.js",
+      "resources/js/pages/student/submissions/defense-requirements/submit-defense-requirements.tsx",
+      "_dayjs.min-D6wfwQTr.js",
+      "_dropdown-menu-sYZpN2tC.js",
+      "_utils-jAU0Cazi.js",
+      "_createLucideIcon-B8qZ3ylK.js",
+      "_input-DCrn1t-u.js",
+      "_skeleton-eQxcUfOO.js",
+      "_alert-C_jnSLAo.js",
+      "_DocumentGeneratorDialog-BRqfc6nx.js",
+      "_badge-ofr1GoIX.js",
+      "_info-BWBV8Gn3.js",
+      "_x-gfWO9KfB.js",
+      "_graduation-cap-BxuxjmnL.js",
+      "_plus-Bp59822C.js",
+      "_chevron-down-DEJUajdp.js",
+      "_ellipsis-vertical-BjZAtm0I.js",
+      "_users-Bi2Lh05r.js",
+      "_paperclip-CZJ8UXmI.js",
+      "_calendar-BkrqGKNC.js",
+      "_clock-WdEz_qo4.js",
+      "_map-pin-BTCBX3sh.js",
+      "_hourglass-BrU7Yv6c.js",
+      "_circle-check-big-CKCqbWb4.js",
+      "_index-DZZQifJx.js",
+      "_index-DDxX9UbU.js",
+      "_index-DRr-UIpQ.js",
+      "_tooltip-YyHP33lU.js",
+      "_floating-ui.react-dom-qFQCHW7g.js",
+      "_separator-DAbYQnLI.js",
+      "_index-DxK34XW3.js",
+      "_chevron-right-BZod6iQK.js",
+      "_avatar-Cz3zvE7t.js",
+      "_index-ATT6OHxL.js",
+      "_settings-CYIvZ_Tn.js",
+      "_file-text-Dl_aF8u0.js",
+      "_dollar-sign-DEGfV_co.js",
+      "_send-ChQ392yu.js",
+      "_credit-card-BvkjxVWT.js",
+      "_tabs-BvzTftzm.js",
+      "_sun-CPhm4DAg.js",
+      "_label-by1MoGWy.js",
+      "_Stepper-D95oqrcg.js",
+      "_proxy-BIJhVlnW.js",
+      "_alert-dialog-B8yj1s4q.js",
+      "_check-BgnkF1LW.js",
+      "_circle-alert-DF3kdfmF.js",
+      "_index-DGKk-Zer.js",
+      "_index-MX9TSR8D.js",
+      "_index-BdQOngYf.js",
+      "_select-BHDrHMEc.js",
+      "_index-DFD1OPps.js",
+      "_index-B2MlTwnV.js"
+    ]
+  },
+  "resources/js/pages/student/submissions/defense-requirements/defense-request-form-new.tsx": {
+    "file": "assets/defense-request-form-new-C8otL_5b.js",
+>>>>>>> Stashed changes
     "name": "defense-request-form-new",
     "src": "resources/js/pages/student/submissions/defense-requirements/defense-request-form-new.tsx",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/app.tsx",
+<<<<<<< Updated upstream
       "_heading-small-xTyNxbYL.js",
       "_Stepper-DLUcjs0b.js",
       "_button-Cw9tQIeO.js",
@@ -5252,11 +9529,45 @@
   },
   "resources/js/pages/student/submissions/defense-requirements/display-requests.tsx": {
     "file": "assets/display-requests-Dj0FVYNl.js",
+=======
+      "_heading-small-h3Z97KlJ.js",
+      "_Stepper-D95oqrcg.js",
+      "_button-C4XkiM_B.js",
+      "_dialog-BeApitpu.js",
+      "_input-DCrn1t-u.js",
+      "_label-by1MoGWy.js",
+      "_select-BHDrHMEc.js",
+      "_refresh-ccw-DkBDNhPs.js",
+      "_paperclip-CZJ8UXmI.js",
+      "_plus-Bp59822C.js",
+      "_check-BgnkF1LW.js",
+      "_utils-jAU0Cazi.js",
+      "_proxy-BIJhVlnW.js",
+      "_index-DYEC1Owk.js",
+      "_index-DZZQifJx.js",
+      "_index-DDxX9UbU.js",
+      "_index-C0AcbnKJ.js",
+      "_index-DRr-UIpQ.js",
+      "_x-gfWO9KfB.js",
+      "_createLucideIcon-B8qZ3ylK.js",
+      "_index-DGKk-Zer.js",
+      "_index-ATT6OHxL.js",
+      "_index-MX9TSR8D.js",
+      "_index-DxK34XW3.js",
+      "_floating-ui.react-dom-qFQCHW7g.js",
+      "_index-DFD1OPps.js",
+      "_chevron-down-DEJUajdp.js"
+    ]
+  },
+  "resources/js/pages/student/submissions/defense-requirements/display-requests.tsx": {
+    "file": "assets/display-requests-2cKfah5i.js",
+>>>>>>> Stashed changes
     "name": "display-requests",
     "src": "resources/js/pages/student/submissions/defense-requirements/display-requests.tsx",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/app.tsx",
+<<<<<<< Updated upstream
       "_badge-BsPMjMb7.js",
       "_card-C_emSl4Q.js",
       "_separator-CMC4qrzs.js",
@@ -5275,16 +9586,41 @@
       "_index-DRp-GX9j.js",
       "_floating-ui.react-dom-DL84dtXf.js",
       "_createLucideIcon-pjYyoixj.js",
+=======
+      "_badge-ofr1GoIX.js",
+      "_card-VQzzqn5t.js",
+      "_separator-DAbYQnLI.js",
+      "_tooltip-YyHP33lU.js",
+      "_circle-check-B5R0L350.js",
+      "_info-BWBV8Gn3.js",
+      "_paperclip-CZJ8UXmI.js",
+      "_clock-WdEz_qo4.js",
+      "_circle-x-BzZWIzCj.js",
+      "_badge-check-tsoLEH-7.js",
+      "_format-HX8DKPSU.js",
+      "_index-DYEC1Owk.js",
+      "_index-DZZQifJx.js",
+      "_utils-jAU0Cazi.js",
+      "_index-DxK34XW3.js",
+      "_index-C0AcbnKJ.js",
+      "_floating-ui.react-dom-qFQCHW7g.js",
+      "_createLucideIcon-B8qZ3ylK.js",
+>>>>>>> Stashed changes
       "_en-US-BA9orzCf.js"
     ]
   },
   "resources/js/pages/student/submissions/defense-requirements/submit-defense-requirements.tsx": {
+<<<<<<< Updated upstream
     "file": "assets/submit-defense-requirements-Ct9UYorp.js",
+=======
+    "file": "assets/submit-defense-requirements-fJYwM1FL.js",
+>>>>>>> Stashed changes
     "name": "submit-defense-requirements",
     "src": "resources/js/pages/student/submissions/defense-requirements/submit-defense-requirements.tsx",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/app.tsx",
+<<<<<<< Updated upstream
       "_label-CbqPBzn6.js",
       "_input-izsDzGd9.js",
       "_button-Cw9tQIeO.js",
@@ -5309,11 +9645,38 @@
   },
   "resources/js/pages/system-status.tsx": {
     "file": "assets/system-status-DXblJfVc.js",
+=======
+      "_label-by1MoGWy.js",
+      "_input-DCrn1t-u.js",
+      "_button-C4XkiM_B.js",
+      "_separator-DAbYQnLI.js",
+      "_Stepper-D95oqrcg.js",
+      "_dialog-BeApitpu.js",
+      "_alert-dialog-B8yj1s4q.js",
+      "_paperclip-CZJ8UXmI.js",
+      "_check-BgnkF1LW.js",
+      "_circle-alert-DF3kdfmF.js",
+      "_index-C0AcbnKJ.js",
+      "_index-DYEC1Owk.js",
+      "_utils-jAU0Cazi.js",
+      "_index-DZZQifJx.js",
+      "_index-DxK34XW3.js",
+      "_proxy-BIJhVlnW.js",
+      "_index-DDxX9UbU.js",
+      "_index-DRr-UIpQ.js",
+      "_x-gfWO9KfB.js",
+      "_createLucideIcon-B8qZ3ylK.js"
+    ]
+  },
+  "resources/js/pages/system-status.tsx": {
+    "file": "assets/system-status-CpaUSZJF.js",
+>>>>>>> Stashed changes
     "name": "system-status",
     "src": "resources/js/pages/system-status.tsx",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/app.tsx",
+<<<<<<< Updated upstream
       "_app-layout-C76KB2Lm.js",
       "_card-C_emSl4Q.js",
       "_button-Cw9tQIeO.js",
@@ -5357,6 +9720,51 @@
   },
   "resources/js/pages/welcome.tsx": {
     "file": "assets/welcome-Dt4vKgMy.js",
+=======
+      "_app-layout-CZ3kZ0t2.js",
+      "_card-VQzzqn5t.js",
+      "_button-C4XkiM_B.js",
+      "_badge-ofr1GoIX.js",
+      "_database-DPC1avUz.js",
+      "_users-Bi2Lh05r.js",
+      "_createLucideIcon-B8qZ3ylK.js",
+      "_circle-x-BzZWIzCj.js",
+      "_circle-check-big-CKCqbWb4.js",
+      "_circle-alert-DF3kdfmF.js",
+      "_index-DYEC1Owk.js",
+      "_index-DZZQifJx.js",
+      "_utils-jAU0Cazi.js",
+      "_input-DCrn1t-u.js",
+      "_index-DDxX9UbU.js",
+      "_index-C0AcbnKJ.js",
+      "_index-DRr-UIpQ.js",
+      "_x-gfWO9KfB.js",
+      "_tooltip-YyHP33lU.js",
+      "_floating-ui.react-dom-qFQCHW7g.js",
+      "_separator-DAbYQnLI.js",
+      "_index-DxK34XW3.js",
+      "_chevron-right-BZod6iQK.js",
+      "_dropdown-menu-sYZpN2tC.js",
+      "_index-DGKk-Zer.js",
+      "_index-ATT6OHxL.js",
+      "_index-MX9TSR8D.js",
+      "_index-BdQOngYf.js",
+      "_check-BgnkF1LW.js",
+      "_avatar-Cz3zvE7t.js",
+      "_settings-CYIvZ_Tn.js",
+      "_graduation-cap-BxuxjmnL.js",
+      "_file-text-Dl_aF8u0.js",
+      "_dollar-sign-DEGfV_co.js",
+      "_send-ChQ392yu.js",
+      "_credit-card-BvkjxVWT.js",
+      "_tabs-BvzTftzm.js",
+      "_info-BWBV8Gn3.js",
+      "_sun-CPhm4DAg.js"
+    ]
+  },
+  "resources/js/pages/welcome.tsx": {
+    "file": "assets/welcome-GgEs179-.js",
+>>>>>>> Stashed changes
     "name": "welcome",
     "src": "resources/js/pages/welcome.tsx",
     "isDynamicEntry": true,
