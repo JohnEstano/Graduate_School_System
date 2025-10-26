@@ -611,16 +611,73 @@ Route::middleware(['auth'])->group(function () {
             abort(403);
         }
 
-        // Get defense requests assigned to this coordinator
-        $defenseRequestIds = \App\Models\DefenseRequest::where('coordinator_user_id', $user->id)
+        // Get defense requests assigned to this coordinator that are approved
+        $approvedRequestIds = \App\Models\DefenseRequest::where('coordinator_user_id', $user->id)
+            ->where('coordinator_status', 'Approved')
             ->pluck('id');
 
-        // Get AA payment verifications for those requests, status pending
-        $pendingVerifications = \App\Models\AaPaymentVerification::whereIn('defense_request_id', $defenseRequestIds)
-            ->where('status', 'pending')
-            ->count();
+        // Count requests where:
+        // 1. AA verification record exists with status 'pending', OR
+        // 2. AA verification record doesn't exist yet (null status, treated as pending)
+        $pendingCount = 0;
+        foreach ($approvedRequestIds as $requestId) {
+            $aaVerification = \App\Models\AaPaymentVerification::where('defense_request_id', $requestId)->latest()->first();
+            
+            // If no record exists (null) or record exists with 'pending' status
+            if (!$aaVerification || $aaVerification->status === 'pending') {
+                $pendingCount++;
+            }
+        }
 
-        return response()->json(['pending_count' => $pendingVerifications]);
+        return response()->json(['pending_count' => $pendingCount]);
+    });
+
+    // Dean pending honorariums (all approved defense requests)
+    Route::get('/api/dean/pending-honorariums', function () {
+        $user = Auth::user();
+        if (!$user || $user->role !== 'Dean') {
+            abort(403);
+        }
+
+        // Get ALL approved defense requests
+        $approvedRequestIds = \App\Models\DefenseRequest::where('coordinator_status', 'Approved')
+            ->pluck('id');
+
+        // Count requests where AA verification is pending or doesn't exist
+        $pendingCount = 0;
+        foreach ($approvedRequestIds as $requestId) {
+            $aaVerification = \App\Models\AaPaymentVerification::where('defense_request_id', $requestId)->latest()->first();
+            
+            if (!$aaVerification || $aaVerification->status === 'pending') {
+                $pendingCount++;
+            }
+        }
+
+        return response()->json(['pending_count' => $pendingCount]);
+    });
+
+    // Assistant pending honorariums (all approved defense requests)
+    Route::get('/api/assistant/pending-honorariums', function () {
+        $user = Auth::user();
+        if (!$user || $user->role !== 'Administrative Assistant') {
+            abort(403);
+        }
+
+        // Get ALL approved defense requests
+        $approvedRequestIds = \App\Models\DefenseRequest::where('coordinator_status', 'Approved')
+            ->pluck('id');
+
+        // Count requests where AA verification is pending or doesn't exist
+        $pendingCount = 0;
+        foreach ($approvedRequestIds as $requestId) {
+            $aaVerification = \App\Models\AaPaymentVerification::where('defense_request_id', $requestId)->latest()->first();
+            
+            if (!$aaVerification || $aaVerification->status === 'pending') {
+                $pendingCount++;
+            }
+        }
+
+        return response()->json(['pending_count' => $pendingCount]);
     });
 
 

@@ -25,19 +25,15 @@ const STUDENT_ACTIONS = [
 ];
 
 const ADMIN_ACTIONS = [
-    {
-        label: "Payments",
-        href: "/payments",
-        icon: <Receipt className="size-5 text-zinc-800 dark:text-zinc-100 font-extrabold" size={20} />,
-    },
+ 
     {
         label: "Honorariums",
-        href: "/honorariums",
+        href: "/honorarium",
         icon: <BadgeDollarSign className="size-5 text-zinc-800 dark:text-zinc-100 font-extrabold" size={20} />,
     },
     {
-        label: "Panelists",
-        href: "/panelists",
+        label: "Student Records",
+        href: "/student-records",
         icon: <Users className="size-5 text-zinc-800 dark:text-zinc-100 font-extrabold" size={20} />,
     },
     {

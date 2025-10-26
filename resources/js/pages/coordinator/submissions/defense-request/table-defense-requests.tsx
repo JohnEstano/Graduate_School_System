@@ -44,9 +44,7 @@ export type TableDefenseRequestsProps = {
 };
 
 function getAaStatusBadge(status?: 'pending' | 'ready_for_finance' | 'in_progress' | 'paid' | 'completed' | null) {
-  if (!status) {
-    return <Badge className="bg-gray-100 text-gray-600 border-gray-200 flex items-center gap-1">—</Badge>;
-  }
+  // Default to 'pending' when status is null/undefined (before AA starts processing)
   if (status === 'completed') {
     return <Badge className="bg-green-100 text-green-700 border-green-200 flex items-center gap-1"><CircleCheck className="h-3 w-3" />Completed</Badge>;
   }
@@ -59,6 +57,7 @@ function getAaStatusBadge(status?: 'pending' | 'ready_for_finance' | 'in_progres
   if (status === 'in_progress') {
     return <Badge className="bg-amber-100 text-amber-700 border-amber-200 flex items-center gap-1"><Hourglass className="h-3 w-3" />In Progress</Badge>;
   }
+  // Default: pending (includes null/undefined and explicit 'pending')
   return <Badge className="bg-yellow-100 text-yellow-700 border-yellow-200 flex items-center gap-1"><Clock className="h-3 w-3" />Pending</Badge>;
 }
 
