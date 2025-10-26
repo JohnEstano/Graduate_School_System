@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Check, Users, Trash } from "lucide-react";
+import { Check, Users, Trash, Mail, X, Loader2 } from "lucide-react";
 import {
   Dialog,
   DialogTrigger,
@@ -18,10 +18,12 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { toast, Toaster } from "sonner";
 
 type Student = {
   id: number;
@@ -50,6 +52,12 @@ export default function ShowStudents() {
   // Confirmation dialog state
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [studentToRemove, setStudentToRemove] = useState<Student | null>(null);
+
+  // Accept/Reject email confirmation dialogs
+  const [acceptEmailConfirmOpen, setAcceptEmailConfirmOpen] = useState(false);
+  const [rejectEmailConfirmOpen, setRejectEmailConfirmOpen] = useState(false);
+  const [pendingAction, setPendingAction] = useState<Student | null>(null);
+  const [isProcessing, setIsProcessing] = useState(false);
 
   useEffect(() => {
     loadAccepted();
@@ -82,21 +90,65 @@ export default function ShowStudents() {
   };
 
   const acceptPending = async (s: Student) => {
+    setPendingAction(s);
+    setAcceptEmailConfirmOpen(true);
+  };
+
+  const handleConfirmAccept = async (sendEmail: boolean) => {
+    if (!pendingAction) return;
+    
+    setIsProcessing(true);
     try {
-      await axios.post(`/api/adviser/pending-students/${s.id}/accept`);
+      await axios.post(`/api/adviser/pending-students/${pendingAction.id}/accept`, {
+        send_email: sendEmail,
+      });
       await loadAccepted();
       await fetchPending();
+      setAcceptEmailConfirmOpen(false);
+      setPendingAction(null);
+      
+      if (sendEmail) {
+        toast.success('Student accepted and email sent!');
+      } else {
+        toast.success('Student accepted (no email sent)');
+      }
     } catch (err) {
       console.error(err);
+      toast.error('Failed to accept student');
+      setAcceptEmailConfirmOpen(false);
+    } finally {
+      setIsProcessing(false);
     }
   };
 
   const rejectPending = async (s: Student) => {
+    setPendingAction(s);
+    setRejectEmailConfirmOpen(true);
+  };
+
+  const handleConfirmReject = async (sendEmail: boolean) => {
+    if (!pendingAction) return;
+    
+    setIsProcessing(true);
     try {
-      await axios.post(`/api/adviser/pending-students/${s.id}/reject`);
+      await axios.post(`/api/adviser/pending-students/${pendingAction.id}/reject`, {
+        send_email: sendEmail,
+      });
       await fetchPending();
+      setRejectEmailConfirmOpen(false);
+      setPendingAction(null);
+      
+      if (sendEmail) {
+        toast.success('Student rejected and email sent');
+      } else {
+        toast.success('Student rejected (no email sent)');
+      }
     } catch (err) {
       console.error(err);
+      toast.error('Failed to reject student');
+      setRejectEmailConfirmOpen(false);
+    } finally {
+      setIsProcessing(false);
     }
   };
 
@@ -274,6 +326,112 @@ export default function ShowStudents() {
           </div>
         </TabsContent>
       </Tabs>
+
+      {/* Accept Student Email Confirmation Dialog */}
+      <Dialog open={acceptEmailConfirmOpen} onOpenChange={setAcceptEmailConfirmOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Mail className="h-5 w-5 text-green-500" />
+              Send Acceptance Email?
+            </DialogTitle>
+            <DialogDescription className="pt-2 space-y-2">
+              <p>You are accepting:</p>
+              <div className="bg-zinc-100 dark:bg-zinc-800 p-3 rounded-md space-y-1">
+                <p className="font-semibold text-zinc-900 dark:text-zinc-100">
+                  {pendingAction?.first_name} {pendingAction?.last_name}
+                </p>
+                <p className="text-sm text-zinc-600 dark:text-zinc-400">
+                  {pendingAction?.email}
+                </p>
+              </div>
+              <p className="text-sm text-zinc-600 dark:text-zinc-400">
+                Would you like to send an acceptance email notification to the student?
+              </p>
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button
+              variant="outline"
+              onClick={() => handleConfirmAccept(false)}
+              disabled={isProcessing}
+            >
+              Skip Email
+            </Button>
+            <Button
+              onClick={() => handleConfirmAccept(true)}
+              disabled={isProcessing}
+              className="bg-green-600 hover:bg-green-700"
+            >
+              {isProcessing ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Processing...
+                </>
+              ) : (
+                <>
+                  <Mail className="mr-2 h-4 w-4" />
+                  Send Email
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Reject Student Email Confirmation Dialog */}
+      <Dialog open={rejectEmailConfirmOpen} onOpenChange={setRejectEmailConfirmOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Mail className="h-5 w-5 text-red-500" />
+              Send Rejection Email?
+            </DialogTitle>
+            <DialogDescription className="pt-2 space-y-2">
+              <p>You are rejecting:</p>
+              <div className="bg-zinc-100 dark:bg-zinc-800 p-3 rounded-md space-y-1">
+                <p className="font-semibold text-zinc-900 dark:text-zinc-100">
+                  {pendingAction?.first_name} {pendingAction?.last_name}
+                </p>
+                <p className="text-sm text-zinc-600 dark:text-zinc-400">
+                  {pendingAction?.email}
+                </p>
+              </div>
+              <p className="text-sm text-zinc-600 dark:text-zinc-400">
+                Would you like to send a rejection email notification to the student?
+              </p>
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button
+              variant="outline"
+              onClick={() => handleConfirmReject(false)}
+              disabled={isProcessing}
+            >
+              Skip Email
+            </Button>
+            <Button
+              onClick={() => handleConfirmReject(true)}
+              disabled={isProcessing}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              {isProcessing ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Processing...
+                </>
+              ) : (
+                <>
+                  <Mail className="mr-2 h-4 w-4" />
+                  Send Email
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Toaster richColors position="bottom-right" />
     </div>
   );
 }

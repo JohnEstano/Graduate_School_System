@@ -688,6 +688,17 @@ class DefenseRequestController extends Controller
                 return response()->json(['error'=>'Forbidden'],403);
             }
 
+            // Map decision to status for backward compatibility
+            $decision = $request->input('decision');
+            if ($decision) {
+                $statusMap = [
+                    'approve' => 'Approved',
+                    'reject' => 'Rejected',
+                    'retrieve' => 'Pending',
+                ];
+                $request->merge(['status' => $statusMap[$decision] ?? 'Pending']);
+            }
+
             $data = $request->validate([
                 'status' => 'required|in:Pending,Approved,Rejected,Completed',
                 // Optional payloads when approving: panels and schedule
@@ -992,27 +1003,37 @@ class DefenseRequestController extends Controller
                 return;
             }
 
-            // Detect changes for re-approval
-            $prev = $defenseRequest;
-            $scheduleChanged = $prev->previous_schedule_snapshot && (
-                $prev->previous_schedule_snapshot['scheduled_date'] !== $prev->scheduled_date ||
-                $prev->previous_schedule_snapshot['scheduled_time'] !== $prev->scheduled_time ||
-                $prev->previous_schedule_snapshot['scheduled_end_time'] !== $prev->scheduled_end_time ||
-                $prev->previous_schedule_snapshot['defense_venue'] !== $prev->defense_venue
-            );
+            // Detect changes for re-approval (ONLY if snapshots exist = was previously approved)
+            $isReapproval = !empty($defenseRequest->previous_schedule_snapshot) && !empty($defenseRequest->previous_panels_snapshot);
             
-            $panelsChanged = $prev->previous_panels_snapshot && (
-                $prev->previous_panels_snapshot['defense_chairperson'] !== $prev->defense_chairperson ||
-                $prev->previous_panels_snapshot['defense_panelist1'] !== $prev->defense_panelist1 ||
-                $prev->previous_panels_snapshot['defense_panelist2'] !== $prev->defense_panelist2 ||
-                $prev->previous_panels_snapshot['defense_panelist3'] !== $prev->defense_panelist3 ||
-                $prev->previous_panels_snapshot['defense_panelist4'] !== $prev->defense_panelist4
-            );
+            $scheduleChanged = false;
+            $panelsChanged = false;
+            
+            if ($isReapproval) {
+                $scheduleChanged = (
+                    $defenseRequest->previous_schedule_snapshot['scheduled_date'] !== $defenseRequest->scheduled_date ||
+                    $defenseRequest->previous_schedule_snapshot['scheduled_time'] !== $defenseRequest->scheduled_time ||
+                    $defenseRequest->previous_schedule_snapshot['scheduled_end_time'] !== $defenseRequest->scheduled_end_time ||
+                    $defenseRequest->previous_schedule_snapshot['defense_venue'] !== $defenseRequest->defense_venue
+                );
+                
+                $panelsChanged = (
+                    $defenseRequest->previous_panels_snapshot['defense_chairperson'] !== $defenseRequest->defense_chairperson ||
+                    $defenseRequest->previous_panels_snapshot['defense_panelist1'] !== $defenseRequest->defense_panelist1 ||
+                    $defenseRequest->previous_panels_snapshot['defense_panelist2'] !== $defenseRequest->defense_panelist2 ||
+                    $defenseRequest->previous_panels_snapshot['defense_panelist3'] !== $defenseRequest->defense_panelist3 ||
+                    $defenseRequest->previous_panels_snapshot['defense_panelist4'] !== $defenseRequest->defense_panelist4
+                );
+            }
             
             Log::info('Change detection', [
-                'is_reapproval' => !!$prev->previous_schedule_snapshot,
+                'is_reapproval' => $isReapproval,
                 'schedule_changed' => $scheduleChanged,
-                'panels_changed' => $panelsChanged
+                'panels_changed' => $panelsChanged,
+                'has_snapshots' => [
+                    'schedule' => !empty($defenseRequest->previous_schedule_snapshot),
+                    'panels' => !empty($defenseRequest->previous_panels_snapshot)
+                ]
             ]);
             
             // Get all panel members by name (they're stored as names, not IDs)
@@ -1088,12 +1109,19 @@ class DefenseRequestController extends Controller
             // Send email to student
             if ($student && $student->email) {
                 Log::info('Sending email to student', ['email' => $student->email]);
+                
+                // Pass changes only if this is a reapproval with actual changes
+                $changes = null;
+                if ($isReapproval && ($scheduleChanged || $panelsChanged)) {
+                    $changes = ['schedule' => $scheduleChanged, 'panels' => $panelsChanged];
+                }
+                
                 Mail::to($student->email)->send(new DefenseScheduled(
                     $defenseRequest,
                     $student,
-                    $scheduleChanged || $panelsChanged ? ['schedule' => $scheduleChanged, 'panels' => $panelsChanged] : null
+                    $changes
                 ));
-                Log::info('Student email sent');
+                Log::info('Student email sent', ['changes' => $changes]);
                 usleep(500000);
             } else {
                 Log::warning('Student email skipped', [
@@ -1105,12 +1133,19 @@ class DefenseRequestController extends Controller
             // Send email to adviser
             if ($adviser && $adviser->email) {
                 Log::info('Sending email to adviser', ['email' => $adviser->email]);
+                
+                // Pass changes only if this is a reapproval with actual changes
+                $changes = null;
+                if ($isReapproval && ($scheduleChanged || $panelsChanged)) {
+                    $changes = ['schedule' => $scheduleChanged, 'panels' => $panelsChanged];
+                }
+                
                 Mail::to($adviser->email)->send(new DefenseScheduled(
                     $defenseRequest,
                     $adviser,
-                    $scheduleChanged || $panelsChanged ? ['schedule' => $scheduleChanged, 'panels' => $panelsChanged] : null
+                    $changes
                 ));
-                Log::info('Adviser email sent');
+                Log::info('Adviser email sent', ['changes' => $changes]);
                 usleep(500000);
             } else {
                 Log::warning('Adviser email skipped', [
@@ -1126,14 +1161,21 @@ class DefenseRequestController extends Controller
                         usleep(500000);
                     }
                     
+                    // Pass changes only if this is a reapproval with actual changes
+                    $changes = null;
+                    if ($isReapproval && ($scheduleChanged || $panelsChanged)) {
+                        $changes = ['schedule' => $scheduleChanged, 'panels' => $panelsChanged];
+                    }
+                    
                     Log::info('Sending email to panel member', [
                         'user_id' => $member->id,
-                        'email' => $member->email
+                        'email' => $member->email,
+                        'changes' => $changes
                     ]);
                     Mail::to($member->email)->send(new DefenseScheduled(
                         $defenseRequest,
                         $member,
-                        $scheduleChanged || $panelsChanged ? ['schedule' => $scheduleChanged, 'panels' => $panelsChanged] : null
+                        $changes
                     ));
                     Log::info('Panel member email sent');
                 } else {
