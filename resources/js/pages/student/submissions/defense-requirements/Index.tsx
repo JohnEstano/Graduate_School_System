@@ -172,7 +172,7 @@ export default function DefenseRequestIndex() {
     // Disable submit if no adviser assigned
     const noAdviserAssigned = !adviser;
 
-    const TERMINAL_WORKFLOW_STATES = new Set(['cancelled','adviser-rejected','coordinator-rejected','completed']);
+    const TERMINAL_WORKFLOW_STATES = new Set(['cancelled', 'adviser-rejected', 'coordinator-rejected', 'completed']);
     const hasActiveWorkflow = !!defenseRequest && !TERMINAL_WORKFLOW_STATES.has((defenseRequest.workflow_state || '').toLowerCase());
 
     const [open, setOpen] = useState(false);
@@ -186,7 +186,7 @@ export default function DefenseRequestIndex() {
     const [openItemId, setOpenItemId] = useState<number | null>(null);
 
     // Update the STATE_ORDER to match actual workflow
-    const STATE_ORDER = ['submitted','adviser-approved','panels-assigned','scheduled','coordinator-approved','completed'] as const;
+    const STATE_ORDER = ['submitted', 'adviser-approved', 'panels-assigned', 'scheduled', 'coordinator-approved', 'completed'] as const;
     type CanonicalState = typeof STATE_ORDER[number];
 
     function normalizeWorkflowState(raw?: string | null): CanonicalState | null {
@@ -204,7 +204,7 @@ export default function DefenseRequestIndex() {
     function currentStepperIndex(dr: DefenseRequest | { workflow_state?: string } | null): number {
         if (!dr) return 0;
         const wf = (dr.workflow_state || '').toLowerCase().trim();
-        
+
         // Map workflow states to their correct position
         if (wf === 'completed') return 5; // Step 6
         if (wf === 'coordinator-approved') return 4; // Step 5 - Coordinator approves AFTER scheduling
@@ -212,7 +212,7 @@ export default function DefenseRequestIndex() {
         if (wf === 'panels-assigned' || wf === 'panel-assigned') return 2; // Step 3 - Panels AFTER adviser
         if (wf === 'adviser-approved' || wf === 'coordinator-review') return 1; // Step 2
         if (wf === 'submitted' || wf === 'adviser-review' || wf === 'pending') return 0; // Step 1
-        
+
         return 0;
     }
 
@@ -232,13 +232,13 @@ export default function DefenseRequestIndex() {
                 if (!response.ok) return;
                 const updated = await response.json();
                 const keys: (keyof DefenseRequest)[] = [
-                    'workflow_state','defense_chairperson','defense_panelist1','defense_panelist2','defense_panelist3',
-                    'defense_panelist4','scheduled_date','scheduled_time','scheduled_end_time','defense_venue','defense_mode','scheduling_notes'
+                    'workflow_state', 'defense_chairperson', 'defense_panelist1', 'defense_panelist2', 'defense_panelist3',
+                    'defense_panelist4', 'scheduled_date', 'scheduled_time', 'scheduled_end_time', 'defense_venue', 'defense_mode', 'scheduling_notes'
                 ];
                 const changed = keys.some(k => (updated as any)[k] !== (defenseRequest as any)[k]);
                 if (changed) setLastUpdateTime(dayjs().format('h:mm A'));
                 setDefenseRequest(updated);
-            } catch {}
+            } catch { }
         }, 10000);
         return () => clearInterval(pollInterval);
     }, [defenseRequest?.id, defenseRequest]);
@@ -248,7 +248,7 @@ export default function DefenseRequestIndex() {
         if (!dr || dr.id !== req.id) {
             return (req.status || '').toLowerCase() === 'pending';
         }
-        const allowed = ['pending','submitted','adviser-review'];
+        const allowed = ['pending', 'submitted', 'adviser-review'];
         if ((req.status || '').toLowerCase() === 'cancelled') return false;
         if (dr.workflow_state === 'cancelled') return false;
         return (req.status || '').toLowerCase() === 'pending' || allowed.includes(dr.workflow_state);
@@ -257,18 +257,7 @@ export default function DefenseRequestIndex() {
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Defense Requirements" />
-            {/* Always show adviser notice if not assigned */}
-            {noAdviserAssigned && (
-                <Alert className="bg-rose-50 dark:bg-rose-950 border-rose-200 dark:border-rose-900 text-rose-900 dark:text-rose-100 flex items-start gap-3 px-6 py-5 rounded-xl mb-4">
-                    <InfoIcon className="h-5 w-5 text-rose-500 dark:text-rose-400 mt-1 flex-shrink-0" />
-                    <div>
-                        <AlertTitle className="font-semibold mb-1">No Adviser Assigned</AlertTitle>
-                        <AlertDescription>
-                            You are not currently assigned to an adviser. You must be registered with an adviser before you can submit defense requirements. Please contact your coordinator or adviser for assistance.
-                        </AlertDescription>
-                    </div>
-                </Alert>
-            )}
+
             {loading ? (
                 <div className="w-full min-h-[70vh] bg-zinc-100 dark:bg-zinc-900 flex flex-col gap-4 p-0 m-0">
                     <Skeleton className="h-6 w-1/6 rounded bg-zinc-300 dark:bg-zinc-800 mt-8 mx-8" />
@@ -278,6 +267,18 @@ export default function DefenseRequestIndex() {
                 </div>
             ) : (
                 <div className="flex flex-col px-7 pt-5 pb-5 w-full">
+                    {/* Always show adviser notice if not assigned */}
+                    {noAdviserAssigned && (
+                        <Alert className="bg-rose-50 dark:bg-rose-950 border-rose-200 dark:border-rose-900 text-rose-900 dark:text-rose-100 flex items-start gap-3 px-6 py-5 rounded-xl mb-4">
+                            <InfoIcon className="h-5 w-5 text-rose-500 dark:text-rose-400 mt-1 flex-shrink-0" />
+                            <div>
+                                <AlertTitle className="font-semibold mb-1">No Adviser Assigned</AlertTitle>
+                                <AlertDescription>
+                                    You are not currently assigned to an adviser. You must be registered with an adviser before you can submit defense requirements. Please contact your coordinator or adviser for assistance.
+                                </AlertDescription>
+                            </div>
+                        </Alert>
+                    )}
                     {/* Alert if submissions are closed */}
                     {!acceptDefense && showClosedAlert && (
                         <Alert
@@ -334,8 +335,8 @@ export default function DefenseRequestIndex() {
                             <SubmitDefenseRequirements
                                 open={open}
                                 onOpenChange={setOpen}
-                                onFinish={() => {}}
-                                acceptDefense={acceptDefense} 
+                                onFinish={() => { }}
+                                acceptDefense={acceptDefense}
                             />
                         </div>
                         {defenseRequirements.length === 0 ? (
@@ -816,7 +817,7 @@ export default function DefenseRequestIndex() {
                                                 });
                                                 if (res.ok) { setUnsubmitDialogOpen(false); window.location.reload(); }
                                                 else {
-                                                    let data: any = {}; try { data = await res.json(); } catch {}
+                                                    let data: any = {}; try { data = await res.json(); } catch { }
                                                     alert(data?.message || 'Failed to unsubmit.');
                                                 }
                                             } catch { alert('Network error. Please try again.'); }

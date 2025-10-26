@@ -6,11 +6,12 @@ import {
 } from "@/components/ui/table";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
-import { Pencil, Trash2, Users, Mail, MessageCircle, RefreshCw, Loader2, User } from "lucide-react";
+import { Pencil, Trash2, Users, Mail, MessageCircle, RefreshCw, Loader2, User, Calendar, Clock } from "lucide-react";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
 
 type Props = {
   panelists: Panelist[];
@@ -218,7 +219,12 @@ export default function PanelistsListTable({
           {/* Removed Tabs for Assigned and Pending */}
           <div className="mt-4">
             <div className="overflow-y-auto overflow-x-auto min-w-[400px] rounded bg-white dark:bg-zinc-900 px-2 py-2" style={{ height: "240px" }}>
-              <div className="font-semibold mb-2 text-sm">Assigned Defenses</div>
+              <div className="font-semibold mb-2 text-sm flex items-center gap-2">
+                Assigned Defenses 
+                <Badge variant="secondary" className="text-xs">
+                  {assignments?.length ?? 0}
+                </Badge>
+              </div>
               {assignmentsLoading ? (
                 <div className="text-xs flex items-center justify-center h-full dark:text-zinc-300">
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Loading defenses...
@@ -235,15 +241,54 @@ export default function PanelistsListTable({
                     const fallback = getPaymentRate(a?.program_level, (a as any)?.type ?? a?.role, a?.defense_type);
                     const amount = computed ?? fallback;
 
+                    // Format date and time
+                    const scheduledDate = (a as any)?.scheduled_date;
+                    const startTime = (a as any)?.start_time;
+                    const endTime = (a as any)?.end_time;
+                    
+                    const formatDate = (dateStr: string) => {
+                      if (!dateStr) return null;
+                      const date = new Date(dateStr);
+                      return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+                    };
+
+                    const formatTime = (timeStr: string) => {
+                      if (!timeStr) return null;
+                      // Handle time format (e.g., "14:00:00" or "14:00")
+                      const [hours, minutes] = timeStr.split(':');
+                      const hour = parseInt(hours);
+                      const ampm = hour >= 12 ? 'PM' : 'AM';
+                      const hour12 = hour % 12 || 12;
+                      return `${hour12}:${minutes} ${ampm}`;
+                    };
+
                     return (
-                      <li key={a!.id} className="py-3 px-2 flex items-start gap-3 text-sm">
-                        <div className="flex-1">
-                          <div className="font-medium text-sm">{a?.thesis_title ?? "Untitled Thesis"}</div>
-                          <div className="text-xs text-gray-600 dark:text-gray-300 mt-1">
-                            Role: <b className="mx-1">{a?.role ?? viewPanelist?.role ?? "-"}</b>
-                            • Type: <b className="mx-1">{normalizeDefenseType(a?.defense_type)}</b>
-                           
-                          </div>
+                      <li key={a!.id} className="py-3 px-2 flex flex-col gap-2 text-sm">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <Badge variant="outline" className="text-xs">
+                            Thesis
+                          </Badge>
+                          <span className="font-medium text-sm">{a?.thesis_title ?? "Untitled Thesis"}</span>
+                        </div>
+                        
+                        <div className="flex items-center gap-2 flex-wrap">
+                          {scheduledDate && (
+                            <Badge variant="secondary" className="text-xs flex items-center gap-1">
+                              <Calendar size={12} />
+                              {formatDate(scheduledDate)}
+                            </Badge>
+                          )}
+                          {startTime && endTime && (
+                            <Badge variant="secondary" className="text-xs flex items-center gap-1">
+                              <Clock size={12} />
+                              {formatTime(startTime)} - {formatTime(endTime)}
+                            </Badge>
+                          )}
+                        </div>
+                        
+                        <div className="text-xs text-gray-600 dark:text-gray-300">
+                          Role: <b className="mx-1">{a?.role ?? viewPanelist?.role ?? "-"}</b>
+                          • Type: <b className="mx-1">{normalizeDefenseType(a?.defense_type)}</b>
                         </div>
                       </li>
                     );
