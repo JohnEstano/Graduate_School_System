@@ -15,7 +15,8 @@ use Illuminate\Support\Facades\DB;
 class StudentRecordSyncService
 {
     /**
-     * Sync a completed defense request to student records
+     * Sync a defense request to student records
+     * Now triggered by AA Payment Verification status = 'ready_for_finance'
      */
     public function syncDefenseToStudentRecord(DefenseRequest $defenseRequest)
     {
@@ -23,12 +24,6 @@ class StudentRecordSyncService
             'defense_id' => $defenseRequest->id,
             'workflow_state' => $defenseRequest->workflow_state
         ]);
-
-        // Only sync if defense is completed
-        if ($defenseRequest->workflow_state !== 'completed') {
-            Log::warning('StudentRecordSyncService: Defense not completed, skipping sync');
-            return;
-        }
 
         DB::beginTransaction();
         try {
@@ -46,7 +41,7 @@ class StudentRecordSyncService
 
             Log::info('Program record created', ['id' => $programRecord->id]);
 
-            // Create or update student record
+            // Create or update student record with program_record_id and all defense info
             $studentRecord = StudentRecord::updateOrCreate(
                 ['student_id' => $defenseRequest->school_id],
                 [
@@ -54,7 +49,12 @@ class StudentRecordSyncService
                     'middle_name' => $defenseRequest->middle_name,
                     'last_name' => $defenseRequest->last_name,
                     'program' => $defenseRequest->program,
+                    'program_record_id' => $programRecord->id, // ✅ Link to program
                     'school_year' => PaymentRecord::getCurrentSchoolYear(),
+                    'defense_date' => $defenseRequest->scheduled_date, // ✅ Get from scheduled_date
+                    'defense_type' => $defenseRequest->defense_type,
+                    'defense_request_id' => $defenseRequest->id,
+                    'or_number' => $defenseRequest->reference_no, // ✅ Add OR number
                 ]
             );
 
@@ -109,12 +109,9 @@ class StudentRecordSyncService
                     'amount' => $paymentRecord->amount
                 ]);
 
-                // Link panelist to student
-                DB::table('panelist_student_records')->insertOrIgnore([
-                    'panelist_id' => $panelistRecord->id,
-                    'student_id' => $studentRecord->id,
-                    'created_at' => now(),
-                    'updated_at' => now(),
+                // Link panelist to student with role in pivot table
+                $studentRecord->panelists()->syncWithoutDetaching([
+                    $panelistRecord->id => ['role' => $honorariumPayment->role]
                 ]);
             }
 

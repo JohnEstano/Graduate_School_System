@@ -4,7 +4,9 @@ namespace App\Providers;
 
 use Illuminate\Support\ServiceProvider;
 use App\Models\DefenseRequest;
+use App\Models\AaPaymentVerification;
 use App\Observers\DefenseRequestObserver;
+use App\Observers\AaPaymentVerificationObserver;
 
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\View;
@@ -28,8 +30,9 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
 
-        // Register the DefenseRequest observer
+        // Register observers
         DefenseRequest::observe(DefenseRequestObserver::class);
+        AaPaymentVerification::observe(AaPaymentVerificationObserver::class);
 
         Inertia::share([
             'notifications' => function () {

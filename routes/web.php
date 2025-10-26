@@ -201,14 +201,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/honorarium/{programId}/download-pdf', [HonorariumSummaryController::class, 'downloadProgramPdf'])
         ->name('honorarium.downloadPDF');
 
-    // For program filter
-    Route::get('/student-records/program/{program}', [StudentRecordController::class, 'getByProgram'])
-        ->name('student-records.getByProgram');
-
-    // For DOCX download
-    Route::get('/student-records/{id}/download-docs', [StudentRecordController::class, 'downloadDocs'])
-        ->name('student-records.downloadDocs');
-
 
 
 

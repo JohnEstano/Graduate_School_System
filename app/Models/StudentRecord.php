@@ -15,6 +15,7 @@ class StudentRecord extends Model
         'last_name',
         'gender',
         'program',
+        'program_record_id',  // ✅ Added
         'school_year',
         'student_id',
         'course_section',
