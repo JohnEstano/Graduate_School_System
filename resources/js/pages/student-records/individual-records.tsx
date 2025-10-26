@@ -1,5 +1,3 @@
-"use client";
-
 import { Head } from "@inertiajs/react";
 import {
   Table,
@@ -9,10 +7,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { ChevronDown, ChevronRight, Download, Edit, X } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { ChevronDown, ChevronRight, Download } from "lucide-react";
 import { useState } from "react";
-import axios from "axios";
 import {
   Dialog,
   DialogContent,
@@ -22,25 +18,25 @@ import {
   DialogClose,
 } from "@/components/ui/dialog";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { format } from "date-fns";
-import html2canvas from "html2canvas";
-import { jsPDF } from "jspdf";
+import { X } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 interface Payment {
   id: number;
-  defense_date: string | null;
-  defense_type: string | null;
+  payment_date: string;
   defense_status: string;
-  or_number: string;
-  payment_date: string | null;
-  amount: number;
-  total_amount: number;
-  panelists: {
-    id?: number | null;
+  amount: string;
+  defense_date?: string;
+  defense_type?: string;
+  or_number?: string;
+  panelist_total?: number;
+  rec_fee?: number;
+  school_share?: number;
+  grand_total?: number;
+  panelists?: {
     role: string;
-    pfirst_name: string;
-    plast_name: string;
-    amount: number;
+    name: string;
+    amount: string;
   }[];
 }
 
@@ -68,46 +64,6 @@ interface IndividualRecordProps {
 
 export default function IndividualRecord({ record, onClose }: IndividualRecordProps) {
   const [expandedPayment, setExpandedPayment] = useState<number | null>(null);
-
-  // 🔹 PDF download function
-  const handleDownloadPDF = async (payment: Payment) => {
-    try {
-      // Attempt backend PDF first
-      const res = await axios.get(`/payments/${payment.id}/download-pdf`, {
-        responseType: "blob",
-      });
-      const url = window.URL.createObjectURL(new Blob([res.data], { type: "application/pdf" }));
-      const link = document.createElement("a");
-      link.href = url;
-      link.setAttribute("download", `payment-${payment.id}.pdf`);
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      window.URL.revokeObjectURL(url);
-    } catch (backendError) {
-      console.warn("Backend PDF failed, using client-side fallback...", backendError);
-
-      try {
-        const element = document.getElementById(`payment-${payment.id}-pdf`);
-        if (!element) return alert("PDF Export Error: content not found.");
-
-        const canvas = await html2canvas(element, { scale: 2, useCORS: true });
-        const imgData = canvas.toDataURL("image/png");
-
-        const pdf = new jsPDF("p", "mm", "a4");
-        const pageWidth = pdf.internal.pageSize.getWidth();
-        const pageHeight = pdf.internal.pageSize.getHeight();
-        const imgProps = pdf.getImageProperties(imgData);
-        const ratio = Math.min(pageWidth / imgProps.width, pageHeight / imgProps.height);
-
-        pdf.addImage(imgData, "PNG", 0, 0, imgProps.width * ratio, imgProps.height * ratio);
-        pdf.save(`payment-${payment.id}.pdf`);
-      } catch (clientError) {
-        console.error("Client-side PDF generation failed:", clientError);
-        alert("Failed to generate PDF. Please try again.");
-      }
-    }
-  };
 
   return (
     <Dialog
@@ -176,14 +132,10 @@ export default function IndividualRecord({ record, onClose }: IndividualRecordPr
                       </div>
 
                       <div>
-                        <p className="text-sm text-gray-500">Course & Section</p>
-                        <p className="font-medium">{record.course_section || '-'}</p>
-                        <p className="text-sm text-gray-500 mt-4">Birthdate</p>
+                        <p className="text-sm text-gray-500">Birthdate</p>
                         <p className="font-medium">
-                          {record.birthdate ? new Date(record.birthdate).toLocaleDateString() : '-'}
+                          {record.birthdate ? new Date(record.birthdate).toLocaleDateString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit' }) : '-'}
                         </p>
-                        <p className="text-sm text-gray-500 mt-4">Academic Status</p>
-                        <p className="font-medium">{record.academic_status || '-'}</p>
                       </div>
                     </div>
                   </div>
@@ -226,129 +178,91 @@ export default function IndividualRecord({ record, onClose }: IndividualRecordPr
                               </TableCell>
 
                               <TableCell>
-                                {payment.defense_date
-                                  ? format(new Date(payment.defense_date), "yyyy-MM-dd")
-                                  : "-"}
+                                {payment.defense_date 
+                                  ? new Date(payment.defense_date).toLocaleDateString('en-CA') 
+                                  : (record.defense_date 
+                                      ? new Date(record.defense_date).toLocaleDateString('en-CA')
+                                      : "-")}
                               </TableCell>
-                              <TableCell>{payment.defense_type || "-"}</TableCell>
+                              <TableCell>{payment.defense_type || record.defense_type || "-"}</TableCell>
                               <TableCell>{payment.defense_status || "-"}</TableCell>
-                              <TableCell>{payment.or_number || "-"}</TableCell>
+                              <TableCell>{payment.or_number || record.or_number || "-"}</TableCell>
                               <TableCell>
-                                {payment.payment_date
-                                  ? format(new Date(payment.payment_date), "yyyy-MM-dd")
+                                {payment.payment_date 
+                                  ? new Date(payment.payment_date).toLocaleDateString('en-CA')
                                   : "-"}
                               </TableCell>
                               <TableCell className="text-right">
-                                ₱{Number(payment.total_amount || 0).toFixed(2)}
+                                ₱{Number(payment.amount).toFixed(2)}
                               </TableCell>
-
                               <TableCell className="text-center">
-                                <div className="flex justify-center gap-2">
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    className="rounded-md h-auto px-2 py-1 flex items-center"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      console.log("Edit clicked for payment", payment.id);
-                                    }}
-                                  >
-                                    <Edit className="w-4 h-4" />
-                                  </Button>
-
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    className="rounded-md h-auto px-2 py-1 flex items-center"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleDownloadPDF(payment);
-                                    }}
-                                  >
-                                    <Download className="w-4 h-4" />
-                                  </Button>
-                                </div>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    window.open(`/student-records/${record.id}/download-pdf?payment_id=${payment.id}`, '_blank');
+                                  }}
+                                  className="h-8 w-8 p-0"
+                                  title="Download PDF"
+                                >
+                                  <Download className="h-4 w-4" />
+                                </Button>
                               </TableCell>
                             </TableRow>
 
-                            {/* Hidden element for client-side PDF fallback */}
-                            {/* Hidden element for client-side PDF fallback */}
-                            <div
-                              id={`payment-${payment.id}-pdf`}
-                              style={{ position: "absolute", left: "-9999px" }}
-                            >
-                              <h3>Payment Summary</h3>
-                              <p>Student: {record.first_name} {record.last_name}</p>
-                              <p>Defense Date: {record.defense_date}</p>
-                              <p>Defense Type: {record.defense_type}</p>
-                              <p>Defense Status: {payment.defense_status}</p>
-                              <p>Amount: ₱{Number(payment.amount).toFixed(2)}</p>
-                              {payment.panelists && payment.panelists.map((p, i) => (
-                                <p key={i}>{p.role}: {p.pfirst_name} {p.plast_name} ₱{Number(p.amount).toFixed(2)}</p>
-                              ))}
-                            </div>
-
-                            {/* Expanded Panelist rows */}
+                            {/* Expanded panelists row */}
                             {expandedPayment === payment.id && (
                               <TableRow>
-                                <TableCell colSpan={8}>
-                                  <div className="bg-gray-50 p-4 rounded-md">
-                                    <h4 className="font-semibold text-gray-600 mb-3">
-                                      Payment Breakdown
+                                <TableCell colSpan={8} className="bg-gray-50 dark:bg-gray-900/50 p-4">
+                                  <div className="rounded-md overflow-hidden">
+                                    <h4 className="font-semibold text-gray-600 dark:text-gray-300 mb-3 px-1">
+                                      Payment Breakdown:
                                     </h4>
-                                    <div className="border rounded-lg bg-white overflow-hidden">
-                                      <Table>
-                                        <TableHeader>
-                                          <TableRow className="bg-gray-100">
-                                            <TableHead className="font-medium w-1/4 py-3">Role</TableHead>
-                                            <TableHead className="font-medium w-1/2 py-3">Panelist Name</TableHead>
-                                            <TableHead className="font-medium w-1/4 text-right py-3">Amount</TableHead>
-                                          </TableRow>
-                                        </TableHeader>
-                                        <TableBody>
+                                    <div className="overflow-x-auto">
+                                      <table className="w-full text-sm border-separate border-spacing-0">
+                                        <thead>
+                                          <tr>
+                                            <th className="py-2 px-4 text-left font-medium text-gray-500 dark:text-gray-400">Panelist Name</th>
+                                            <th className="py-2 px-4 text-left font-medium text-gray-500 dark:text-gray-400">Role</th>
+                                            <th className="py-2 px-4 text-right font-medium text-gray-500 dark:text-gray-400">Honorarium Amount</th>
+                                          </tr>
+                                        </thead>
+                                        <tbody>
                                           {payment.panelists && payment.panelists.length > 0 ? (
                                             <>
                                               {payment.panelists.map((p, i) => (
-                                                <TableRow key={`${payment.id}-${p.id || i}`} className="hover:bg-gray-50">
-                                                  <TableCell className="font-medium py-3">{p.role || 'Not specified'}</TableCell>
-                                                  <TableCell className="py-3">
-                                                    {p.pfirst_name && p.plast_name 
-                                                      ? `${p.pfirst_name} ${p.plast_name}`
-                                                      : 'Name not available'}
-                                                  </TableCell>
-                                                  <TableCell className="text-right py-3">
-                                                    {p.amount 
-                                                      ? `₱${Number(p.amount).toFixed(2)}`
-                                                      : '₱0.00'}
-                                                  </TableCell>
-                                                </TableRow>
+                                                <tr key={i} className="hover:bg-gray-100 dark:hover:bg-gray-800">
+                                                  <td className="py-2 px-4">{p.name || '-'}</td>
+                                                  <td className="py-2 px-4">{p.role || '-'}</td>
+                                                  <td className="py-2 px-4 text-right font-medium">
+                                                    {p.amount === '-' ? '-' : `₱${Number(p.amount || 0).toLocaleString(undefined, {
+                                                      minimumFractionDigits: 2,
+                                                      maximumFractionDigits: 2
+                                                    })}`}
+                                                  </td>
+                                                </tr>
                                               ))}
-                                              <TableRow className="border-t bg-gray-50">
-                                                <TableCell colSpan={2} className="font-semibold text-right py-3 pr-4">
-                                                  Expected Amount:
-                                                </TableCell>
-                                                <TableCell className="font-semibold text-right py-3">
-                                                  ₱{payment.panelists.reduce((sum, p) => sum + Number(p.amount || 0), 0).toFixed(2)}
-                                                </TableCell>
-                                              </TableRow>
-                                              <TableRow className="bg-gray-50">
-                                                <TableCell colSpan={2} className="font-semibold text-right py-3 pr-4">
-                                                  Paid Amount:
-                                                </TableCell>
-                                                <TableCell className="font-semibold text-right py-3">
-                                                  ₱{Number(payment.total_amount || 0).toFixed(2)}
-                                                </TableCell>
-                                              </TableRow>
+                                              {/* Total Row */}
+                                              <tr className="border-t-2 border-gray-300 dark:border-gray-600 bg-gray-100 dark:bg-gray-800 font-bold">
+                                                <td className="py-3 px-4" colSpan={2}>TOTAL</td>
+                                                <td className="py-3 px-4 text-right text-lg">
+                                                  ₱{Number((payment as any).grand_total || payment.amount || 0).toLocaleString(undefined, {
+                                                    minimumFractionDigits: 2,
+                                                    maximumFractionDigits: 2
+                                                  })}
+                                                </td>
+                                              </tr>
                                             </>
                                           ) : (
-                                            <TableRow>
-                                              <TableCell colSpan={3} className="text-center py-4 text-gray-500">
-                                                No panelists found for this payment.
-                                              </TableCell>
-                                            </TableRow>
+                                            <tr>
+                                              <td colSpan={3} className="text-center py-3 text-gray-500">
+                                                No panelist breakdown available.
+                                              </td>
+                                            </tr>
                                           )}
-                                        </TableBody>
-                                      </Table>
+                                        </tbody>
+                                      </table>
                                     </div>
                                   </div>
                                 </TableCell>

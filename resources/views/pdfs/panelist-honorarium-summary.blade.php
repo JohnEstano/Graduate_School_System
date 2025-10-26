@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>University of the Immaculate Conception - Official Letterhead</title>
+  <title>University of the Immaculate Conception - Panelist Honorarium Summary</title>
 
   <style>
     /* --- General Page Setup --- */
@@ -116,115 +116,93 @@
     /* --- Main Content --- */
     .content-area {
       position: relative;
-      top: 0; /* Align directly below header line */
-      left: 4cm; /* Align with header’s left start */
-      /* width: calc(100% - 5cm); Keeps consistent left/right margins */
+      top: 0;
+      left: 4cm;
+      width: calc(100% - 5cm);
       font-family: Arial, sans-serif;
       font-size: 14px;
       color: #333;
+      padding-bottom: 3cm;
     }
 
-    .fee-document-date {
-      font-weight: bold;       /* Makes it stand out a bit */
-      margin-bottom: 24px;     /* ⬅ adds space equivalent to ~2 lines before next section */
-      margin-top: 10px;        /* optional, small top space */
-    }
-
-    /* --- Defense Info Section Styling --- */
-    .defense-info p {
-      margin: 4px 0;            /* Controls vertical spacing between lines */
-      font-size: 13px;           /* Slightly smaller than headings for readability */
-      line-height: 1.4;          /* Keeps clean spacing in PDF */
-      color: #000;               /* Ensure dark readable text */
-      font-family: 'Arial', sans-serif; /* Matches rest of document */
-    }
-
-    .defense-info strong {
-      color: #333;               /* Emphasize the label (e.g. Student’s Name:) */
-    }
-
-    /* --- Fee Breakdown --- */
-    .fee-section {
-      width: 100%;
+    .document-date {
+      font-weight: bold;
+      margin-bottom: 24px;
       margin-top: 10px;
-      clear: both;
     }
 
-    .fee-breakdown {
-      margin-top: 25px;
-      margin-bottom: 25px;
-      max-width: 600px;
-      font-family: Arial, sans-serif;
-      font-size: 12px;
-      position: relative;
+    /* --- Panelist Info Section --- */
+    .panelist-info {
+      margin-bottom: 20px;
     }
 
-    .fee-line {
-      width: 100%;
-      margin-bottom: 4px;
-      display: table;
-      table-layout: fixed;
-      clear: both;
-    }
-
-    .label-group {
-      display: table-cell;
-      width: 75%;
-      vertical-align: top;
-      position: relative;
-      padding-right: 10px;
-    }
-
-    .amount {
-      display: table-cell;
-      width: 25%;
-      text-align: right;
-      vertical-align: top;
-      white-space: nowrap;
-    }
-
-    .fee-line.total {
-      font-weight: bold;
+    .panelist-info p {
+      margin: 4px 0;
       font-size: 13px;
-      border-top: 1px solid #333;
-      padding-top: 6px;
-      margin-top: 8px;
+      line-height: 1.4;
+      color: #000;
+      font-family: 'Arial', sans-serif;
     }
 
-    .rec-fee {
-      background-color: #ffffa0;
-      display: inline-block;
-      padding: 1px 4px;
+    .panelist-info strong {
+      color: #333;
+    }
+
+    /* --- Student Payments Table --- */
+    .payments-section {
+      margin-top: 20px;
+    }
+
+    .payments-section h3 {
+      text-decoration: underline;
+      margin-bottom: 15px;
+      font-size: 14px;
       font-weight: bold;
-      margin-right: 4px;
     }
 
-    .rec-fee-note {
-      font-style: italic;
-      font-size: 11px;
-      padding-left: 6px;
-      white-space: nowrap;
-    }
-
-    .reference-line {
+    .payments-table {
       width: 100%;
-      margin-top: 15px;
-      font-family: 'Courier New', Courier, monospace;
+      border-collapse: collapse;
+      margin-bottom: 20px;
+      font-size: 11px;
+    }
+
+    .payments-table th {
+      background-color: #f5f5f5;
+      padding: 6px 8px;
+      text-align: left;
+      border: 1px solid #ccc;
+      font-size: 11px;
       font-weight: bold;
+      color: #333;
     }
 
-    .reference-line span:first-child {
-      float: left;
-      width: 80%;
+    .payments-table td {
+      padding: 6px 8px;
+      border: 1px solid #ddd;
+      font-size: 11px;
+      vertical-align: top;
     }
 
-    .reference-line span:last-child {
-      float: right;
-      width: 80%;
+    .payments-table .amount-cell {
+      text-align: right;
+      font-weight: normal;
     }
 
+    .payments-table .total-row {
+      background-color: #f0f0f0;
+      font-weight: bold;
+      border-top: 2px solid #333;
+    }
+
+    .payments-table .total-row td {
+      padding: 8px;
+      font-size: 12px;
+    }
+
+    /* --- Signatures --- */
     .signatures {
-      margin-top: 80px;
+      margin-top: 60px;
       width: 100%;
     }
 
@@ -251,7 +229,7 @@
       font-size: 0.9em;
     }
 
-        /* --- Footer --- */
+    /* --- Footer --- */
     .footer-horizontal-line {
       position: absolute;
       left: 0;
@@ -296,12 +274,15 @@
       text-align: center;
     }
 
-    .footer-logo {
-      text-align: right;
-      font-size: 0.8em;
-      color: #888;
-      margin-top: 40px;
-      padding-right: 5.5cm;
+    @media print {
+      body {
+        background-color: white;
+      }
+      .a4-container {
+        box-shadow: none;
+        width: 100%;
+        margin: 0;
+      }
     }
   </style>
 </head>
@@ -336,60 +317,47 @@
     <div class="header-right">Office of the Dean of Graduate School</div>
 
     <div class="content-area">
-      <div class="fee-document-date">{{ $today_date }}</div>
+      <div class="document-date">{{ $today_date }}</div>
 
-      <div class="defense-info">
-        <p><strong>Student's Name:</strong> {{ $student_name }} ({{ $program }})</p>
-        <p><strong>Type of Defense:</strong> {{ $defense_mode ?? 'Onsite' }} Defense</p>
-        <p><strong>Date of Defense:</strong> {{ \Carbon\Carbon::parse($defense_date)->format('F d, Y') }}</p>
+      <div class="panelist-info">
+        <p><strong>Panelist Name:</strong> {{ $panelist_name }}</p>
+        <p><strong>Role:</strong> {{ $role }}</p>
       </div>
 
-      <div class="fee-section">
-        <h3 style="text-decoration: underline;">{{ $defense_type }} Defense Fee (Thesis Writing)</h3>
+      <div class="payments-section">
+        <h3>Honorarium Summary - {{ $program_name }}</h3>
 
-        <div class="fee-breakdown">
-          @foreach($panelists as $panelist)
-            @if($panelist['role'] === 'Adviser')
-              <div class="fee-line"><span class="label-group"><strong>Adviser:</strong> {{ strtoupper($panelist['name']) }}</span><span class="amount">{{ number_format($panelist['amount'], 2) }}</span></div>
-            @elseif($panelist['role'] === 'Panel Chair')
-              <div class="fee-line"><span class="label-group"><strong>Chairman:</strong> {{ strtoupper($panelist['name']) }}</span><span class="amount">{{ number_format($panelist['amount'], 2) }}</span></div>
-            @endif
-          @endforeach
-
-          <div class="fee-line"><span class="label-group"><strong>Members:</strong></span></div>
-          @foreach($panelists as $panelist)
-            @if($panelist['role'] === 'Panel Member')
-              <div class="fee-line"><span class="label-group">{{ strtoupper($panelist['name']) }}</span><span class="amount">{{ number_format($panelist['amount'], 2) }}</span></div>
-            @endif
-          @endforeach
-
-          <br />
-          <br />
-
-          @if($rec_fee > 0)
-            <div class="fee-line"><span class="label-group"><span class="rec-fee">REC FEE</span> <span class="rec-fee-note">(PLEASE TRANSFER TO REC FUND)</span></span><span class="amount"><strong>{{ number_format($rec_fee, 2) }}</strong></span></div>
-          @endif
-          
-          @if($school_share > 0)
-            <div class="fee-line"><span class="label-group">Document Processing (UIC Share):</span><span class="amount">{{ number_format($school_share, 2) }}</span></div>
-          @endif
-          
-          <div class="fee-line total"><span class="label-group"><strong>TOTAL</strong></span><span class="amount">{{ number_format($grand_total, 2) }}</span></div>
-        </div>
-
-          <br />
-          <br />
-
-        <div class="reference-line">
-          <span>{{ $or_number }}</span>
-          <span style="float: right; margin-left= 10px;" >Php {{ number_format($grand_total, 2) }}</span>
-        </div>
+        <table class="payments-table">
+          <thead>
+            <tr>
+              <th style="width: 5%;">#</th>
+              <th style="width: 28%;">Student Name</th>
+              <th style="width: 15%;">Role</th>
+              <th style="width: 12%;">Defense Type</th>
+              <th style="width: 15%;">Defense Date</th>
+              <th style="width: 20%;">OR Number</th>
+              <th style="width: 5%;" class="amount-cell">Amount</th>
+            </tr>
+          </thead>
+          <tbody>
+            @foreach($students as $index => $student)
+            <tr>
+              <td>{{ $index + 1 }}</td>
+              <td>{{ strtoupper($student['name']) }}</td>
+              <td>{{ $student['assigned_role'] ?? 'N/A' }}</td>
+              <td>{{ $student['defense_type'] }}</td>
+              <td>{{ $student['defense_date'] }}</td>
+              <td>{{ $student['or_number'] }}</td>
+              <td class="amount-cell">{{ number_format($student['amount'], 2) }}</td>
+            </tr>
+            @endforeach
+            <tr class="total-row">
+              <td colspan="5" style="text-align: right;"><strong>TOTAL HONORARIUM:</strong></td>
+              <td class="amount-cell"><strong>{{ number_format($total_honorarium, 2) }}</strong></td>
+            </tr>
+          </tbody>
+        </table>
       </div>
-
-          <br />
-          <br />
-          <br />
-          <br />
 
       <div class="signatures">
         <div class="signature-block">
@@ -397,7 +365,7 @@
           <div class="name">MS. CATHERINE C. SEMILLA</div>
           <div class="title">Graduate School Admin Asst.</div>
         </div>
-        <div class="signature-block">
+        <div class="signature-block" style="margin-left: 80px;">
           <span class="label">Noted by:</span>
           <div class="name">DR. MARY JANE B. AMOGUIS</div>
           <div class="title">Dean, Graduate School</div>

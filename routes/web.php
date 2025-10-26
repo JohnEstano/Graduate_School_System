@@ -150,10 +150,23 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
 
 
+        // HONORARIUM ROUTES
 
+        // Page 1 - List all programs
+        Route::get('/honorarium', [HonorariumSummaryController::class, 'index'])
+            ->name('honorarium.index');
 
+        // Page 2 - Show individual program details (panelists, etc.)
+        Route::get('/honorarium/individual-record/{programId}', [HonorariumSummaryController::class, 'show'])
+            ->name('honorarium.individual-record');
 
+        // Download program PDF
+        Route::get('/honorarium/{programId}/download-pdf', [HonorariumSummaryController::class, 'downloadProgramPdf'])
+            ->name('honorarium.downloadPDF');
 
+        // Download individual panelist PDF
+        Route::get('/honorarium/panelist/{panelistId}/download-pdf', [HonorariumSummaryController::class, 'downloadPanelistPdf'])
+            ->name('honorarium.panelist.downloadPDF');
 
 
 
@@ -163,10 +176,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
 
     // HONORARIUM ROUTES
-    // Page 1 - List all programs
+   
 
 
-
+  // Download individual panelist CSV (includes per-assignment role)
+        Route::get('/honorarium/panelist/{panelistId}/download-csv', [HonorariumSummaryController::class, 'downloadPanelistCsv'])
+            ->name('honorarium.panelist.downloadCSV');
 
     Route::get('/honorarium/individual-record/{programId}', [HonorariumSummaryController::class, 'show'])
         ->name('honorarium.individual-record');
@@ -224,7 +239,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     //student-records route
     Route::get('/student-records', [StudentRecordController::class, 'index'])->name('student-records.index');
+    Route::get('/student-records/program/{programId}', [StudentRecordController::class, 'showProgramStudents'])->name('student-records.program.show');
     Route::get('/student-records/{id}', [StudentRecordController::class, 'show'])->name('student-records.show');
+    Route::get('/student-records/{id}/download-pdf', [StudentRecordController::class, 'downloadPdf'])->name('student-records.downloadPdf');
     Route::put('/student-records/{studentRecord}', [StudentRecordController::class, 'update'])->name('student-records.update');
     Route::delete('/student-records/{studentRecord}', [StudentRecordController::class, 'destroy'])->name('student-records.destroy');
 

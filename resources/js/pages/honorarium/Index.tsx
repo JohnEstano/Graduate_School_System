@@ -2,7 +2,7 @@
 
 import AppLayout from "@/layouts/app-layout";
 import { type BreadcrumbItem } from "@/types";
-import { Head } from "@inertiajs/react";
+import { Head, router } from "@inertiajs/react"; // ⬅ add router import
 import { useState, useMemo } from "react";
 
 import {
@@ -36,8 +36,9 @@ export default function Index({ records }: { records: ProgramRecord[] }) {
     );
   }, [allRecords, searchQuery]);
 
+  // ✅ Inertia navigation (no reload)
   const handleViewRecordsClick = (record: ProgramRecord) => {
-    window.location.href = `/honorarium/individual-record/${encodeURIComponent(record.program)}`;
+    router.visit(`/honorarium/individual-record/${record.id}`);
   };
 
   return (
@@ -63,8 +64,8 @@ export default function Index({ records }: { records: ProgramRecord[] }) {
             <Table className="min-w-full text-sm">
               <TableHeader className="sticky top-0 bg-white dark:bg-[#121212] z-10">
                 <TableRow>
-                  <TableHead className="w-[70%] px-1 py-2">Program</TableHead>
-                  <TableHead className="w-[30%] px-1 py-2 text-center">Date Edited</TableHead>
+                  <TableHead className="w-[70%] px-4 py-2">Program</TableHead>
+                  <TableHead className="w-[30%] px-4 py-2 text-center">Date Edited</TableHead>
                 </TableRow>
               </TableHeader>
 
@@ -76,20 +77,23 @@ export default function Index({ records }: { records: ProgramRecord[] }) {
                       className="hover:bg-muted/50 cursor-pointer"
                       onClick={() => handleViewRecordsClick(record)}
                     >
-                      <TableCell className="flex items-center space-x-4 px-1 py-2">
+                      <TableCell className="flex items-center space-x-4 px-4 py-3">
                         <Avatar className="h-10 w-10 flex-shrink-0 bg-blue-100 text-blue-600 dark:bg-blue-900 dark:text-blue-300">
                           <AvatarFallback>{record.program.charAt(0)}</AvatarFallback>
                         </Avatar>
                         <div>
                           <div className="font-medium">{record.name}</div>
-                          <div className="text-sm text-muted-foreground">{record.category}</div>
+                          <div className="text-sm text-muted-foreground">{record.program}</div>
+                          <div className="text-xs text-gray-500 dark:text-gray-400">
+                            {record.category}
+                          </div>
                         </div>
                       </TableCell>
 
-                      <TableCell className="px-1 py-2 text-center">
+                      <TableCell className="px-4 py-3 text-center">
                         {record.date_edited
                           ? new Date(record.date_edited).toLocaleDateString()
-                          : "N/A"}
+                          : new Date().toLocaleDateString()}
                       </TableCell>
                     </TableRow>
                   ))
