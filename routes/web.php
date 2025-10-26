@@ -103,7 +103,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/api/coordinator/students/search', [CoordinatorAdviserController::class, 'searchStudents']);
 
 
- 
+
 
     //PAYMENTVERIFIATION AA
     Route::prefix('aa')->group(function () {
@@ -167,17 +167,17 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
 
 
-    
-Route::get('/honorarium/individual-record/{programId}', [HonorariumSummaryController::class, 'show'])
-    ->name('honorarium.individual-record');
+
+    Route::get('/honorarium/individual-record/{programId}', [HonorariumSummaryController::class, 'show'])
+        ->name('honorarium.individual-record');
 
 
-    Route::get('/honorarium', [HonorariumSummaryController::class, 'index']) 
-        ->name('honorarium.index'); 
+    Route::get('/honorarium', [HonorariumSummaryController::class, 'index'])
+        ->name('honorarium.index');
 
     Route::get('/honorarium/individual-record/{programId}', [HonorariumSummaryController::class, 'show'])
         ->name('honorarium-record.show');
-    
+
     // Download CSV for a program
     // API route
     Route::get('/api/honorarium/{programId}/download-pdf', [HonorariumSummaryController::class, 'downloadPdfApi']);
@@ -198,7 +198,7 @@ Route::get('/honorarium/individual-record/{programId}', [HonorariumSummaryContro
 
 
 
-    
+
 
 
 
@@ -227,7 +227,7 @@ Route::get('/honorarium/individual-record/{programId}', [HonorariumSummaryContro
     Route::get('/student-records/{id}', [StudentRecordController::class, 'show'])->name('student-records.show');
     Route::put('/student-records/{studentRecord}', [StudentRecordController::class, 'update'])->name('student-records.update');
     Route::delete('/student-records/{studentRecord}', [StudentRecordController::class, 'destroy'])->name('student-records.destroy');
-    
+
     Route::get('/payments/{id}/download-pdf', [StudentRecordController::class, 'downloadPdf'])
         ->name('payments.downloadPdf');
 
@@ -243,7 +243,7 @@ Route::get('/honorarium/individual-record/{programId}', [HonorariumSummaryContro
 
 
 
-    
+
 
 
 
@@ -320,7 +320,7 @@ Route::get('/honorarium/individual-record/{programId}', [HonorariumSummaryContro
         '/defense-requests/{defenseRequest}/adviser-decision',
         [DefenseRequestController::class, 'adviserDecision']
     )->name('defense-requests.adviser-decision');
-    
+
     Route::post(
         '/defense-requests/{defenseRequest}/coordinator-decision',
         [DefenseRequestController::class, 'coordinatorDecision']
@@ -331,7 +331,7 @@ Route::get('/honorarium/individual-record/{programId}', [HonorariumSummaryContro
         '/defense-requests/{defenseRequest}/complete',
         [DefenseRequestController::class, 'completeDefense']
     )->name('defense-requests.complete')
-    ->middleware(['auth', 'verified']);
+        ->middleware(['auth', 'verified']);
 
     /* Status / priority */
     Route::patch(
@@ -605,6 +605,25 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/api/adviser/pending-students/{student}/reject', [AdviserStudentController::class, 'rejectPending']);
 
 
+    Route::get('/api/coordinator/pending-honorariums', function () {
+        $user = Auth::user();
+        if (!$user || $user->role !== 'Coordinator') {
+            abort(403);
+        }
+
+        // Get defense requests assigned to this coordinator
+        $defenseRequestIds = \App\Models\DefenseRequest::where('coordinator_user_id', $user->id)
+            ->pluck('id');
+
+        // Get AA payment verifications for those requests, status pending
+        $pendingVerifications = \App\Models\AaPaymentVerification::whereIn('defense_request_id', $defenseRequestIds)
+            ->where('status', 'pending')
+            ->count();
+
+        return response()->json(['pending_count' => $pendingVerifications]);
+    });
+
+
     // Student search for autocomplete
     Route::get('/api/students/search', [App\Http\Controllers\Api\StudentSearchController::class, 'search']);
 
@@ -708,16 +727,29 @@ Route::get('/assistant/all-defense-list/data', function () {
         ])
         ->orderByDesc('created_at')
         ->get([
-            'id','first_name','middle_name','last_name','school_id','program',
-            'thesis_title','defense_type','status','priority','workflow_state',
-            'scheduled_date','defense_mode','defense_venue','panels_assigned_at',
-            'defense_adviser','submitted_at',
+            'id',
+            'first_name',
+            'middle_name',
+            'last_name',
+            'school_id',
+            'program',
+            'thesis_title',
+            'defense_type',
+            'status',
+            'priority',
+            'workflow_state',
+            'scheduled_date',
+            'defense_mode',
+            'defense_venue',
+            'panels_assigned_at',
+            'defense_adviser',
+            'submitted_at',
             'coordinator_status',
             'amount',
             'reference_no',
             'coordinator_user_id',
         ])
-        ->map(function($r){
+        ->map(function ($r) {
             $programLevel = \App\Helpers\ProgramLevel::getLevel($r->program);
             $expectedTotal = \App\Models\PaymentRate::where('program_level', $programLevel)
                 ->where('defense_type', $r->defense_type)
@@ -755,12 +787,12 @@ Route::get('/assistant/all-defense-list/data', function () {
                 'amount' => $r->amount,
                 'reference_no' => $r->reference_no,
                 'coordinator' => $coordinator,
-            'aa_verification_status' => optional($r->aaVerification)->status ?? 'pending',
-            'aa_verification_id' => optional($r->aaVerification)->id,
+                'aa_verification_status' => optional($r->aaVerification)->status ?? 'pending',
+                'aa_verification_id' => optional($r->aaVerification)->id,
             ];
         });
 
-    return response()->json($defenseRequests);  
+    return response()->json($defenseRequests);
 })->name('assistant.all-defense-list.data');
 
 Route::get('/coordinator/defense-requests', function () {
@@ -777,7 +809,7 @@ Route::get('/assistant/all-defense-list/{id}/details', [DefenseRequestController
     ->name('assistant.all-defense-list.details');
 
 // Add this route for manual testing
-Route::post('/admin/sync-student-records', function() {
+Route::post('/admin/sync-student-records', function () {
     $service = app(\App\Services\StudentRecordSyncService::class);
     $service->syncAllCompletedDefenses();
     return response()->json(['message' => 'Sync completed']);

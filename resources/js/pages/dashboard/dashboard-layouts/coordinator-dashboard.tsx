@@ -103,6 +103,10 @@ export default function CoordinatorDashboard() {
     // Example: Assigned programs count (replace with real API if available)
     const [assignedProgramsCount, setAssignedProgramsCount] = useState<number>(0);
 
+    // Add state for AA payment verifications
+    const [aaVerifications, setAaVerifications] = useState<any[]>([]);
+    const [pendingHonorariumsCount, setPendingHonorariumsCount] = useState<number>(0);
+
     const weekDays = [
         { label: 'Sun', value: 0 },
         { label: 'Mon', value: 1 },
@@ -194,6 +198,13 @@ export default function CoordinatorDashboard() {
                 setAssignedProgramsCount(Array.isArray(data) ? data.length : 0);
             })
             .catch(() => setAssignedProgramsCount(0));
+
+       fetch('/api/coordinator/pending-honorariums', {
+            headers: { 'Accept': 'application/json' }
+        })
+            .then(res => res.ok ? res.json() : { pending_count: 0 })
+            .then((data) => setPendingHonorariumsCount(data.pending_count ?? 0))
+            .catch(() => setPendingHonorariumsCount(0));
     }, []);
 
     // Dynamic metrics
@@ -221,8 +232,8 @@ export default function CoordinatorDashboard() {
         },
         {
             title: "Pending Honorariums",
-            value: 7, // Replace with real value if available
-            description: "Honorariums not yet processed",
+            value: pendingHonorariumsCount,
+            description: "AA verifications pending",
             icon: <BadgeDollarSign className="size-5 text-amber-500" />,
             iconTheme: "bg-amber-100 text-amber-600 dark:bg-amber-900 dark:text-amber-300",
         },
