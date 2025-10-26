@@ -26,7 +26,7 @@ class PaymentVerificationController extends Controller
     public function updateStatus(Request $request, $id)
     {
         $request->validate([
-            'status' => 'required|in:pending,ready_for_finance,in_progress,completed',
+            'status' => 'required|in:pending,ready_for_finance,in_progress,paid,completed',
             'remarks' => 'nullable|string',
         ]);
 
@@ -42,6 +42,38 @@ class PaymentVerificationController extends Controller
         $verification->save();
 
         return response()->json(['success' => true, 'status' => $verification->status]);
+    }
+
+    // Update AA verification status by defense request ID
+    public function updateStatusByDefenseRequest(Request $request, $defenseRequestId)
+    {
+        $request->validate([
+            'status' => 'required|in:pending,ready_for_finance,in_progress,paid,completed',
+            'remarks' => 'nullable|string',
+        ]);
+
+        $defenseRequest = DefenseRequest::findOrFail($defenseRequestId);
+        
+        // Get or create AA verification record
+        $verification = AaPaymentVerification::firstOrCreate(
+            ['defense_request_id' => $defenseRequestId],
+            [
+                'assigned_to' => Auth::id(),
+                'status' => 'pending',
+            ]
+        );
+
+        // Update status
+        $verification->status = $request->input('status');
+        $verification->remarks = $request->input('remarks');
+        $verification->assigned_to = Auth::id(); // Ensure current user is assigned
+        $verification->save();
+
+        return response()->json([
+            'success' => true, 
+            'status' => $verification->status,
+            'aa_verification_id' => $verification->id
+        ]);
     }
 
     // Add to batch
@@ -81,7 +113,7 @@ class PaymentVerificationController extends Controller
         $request->validate([
             'verification_ids' => 'required|array',
             'verification_ids.*' => 'integer|exists:aa_payment_verifications,id',
-            'status' => 'required|in:pending,ready_for_finance,in_progress,completed',
+            'status' => 'required|in:pending,ready_for_finance,in_progress,paid,completed',
         ]);
 
         $updated = AaPaymentVerification::whereIn('id', $request->verification_ids)

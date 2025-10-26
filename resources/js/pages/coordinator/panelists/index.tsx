@@ -333,14 +333,6 @@ export default function PanelistsPage() {
                 <Trash2 size={13} />
                 <span className="hidden sm:inline">{loading ? "Deleting..." : "Delete"}</span>
               </Button>
-              <Button variant="ghost" size="icon" className="px-2 py-1 h-7 w-auto text-xs flex items-center gap-1" onClick={() => handleBulkStatus("Assigned")} aria-label="Set Assigned" disabled={loading}>
-                <CheckCircle size={13} className="text-green-500" />
-                <span className="hidden sm:inline">{loading ? "Updating..." : "Set Assigned"}</span>
-              </Button>
-              <Button variant="ghost" size="icon" className="px-2 py-1 h-7 w-auto text-xs flex items-center gap-1" onClick={() => handleBulkStatus("Not Assigned")} aria-label="Set Not Assigned" disabled={loading}>
-                <CircleX size={13} className="text-red-500" />
-                <span className="hidden sm:inline">{loading ? "Updating..." : "Set Not Assigned"}</span>
-              </Button>
               <Button variant="ghost" size="icon" className="px-1 py-1 h-7 w-auto text-xs flex items-center" onClick={() => setSelected([])} aria-label="Clear selection">
                 <X size={14} />
               </Button>

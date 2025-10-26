@@ -38,6 +38,14 @@ export default function Profile({ mustVerifyEmail, status }: { mustVerifyEmail: 
     const { auth } = usePage<SharedData>().props;
     const user = auth.user;
 
+    // Role-based settings visibility logic
+    // Student: hide general and esignature
+    // Coordinator/Dean: show document templates for esignatures
+    // AA: hide document templates, esignatures, and general
+    const showGeneral = !["Student", "AA"].includes(user.role);
+    const showEsignature = !["Student", "AA"].includes(user.role);
+    const showDocumentTemplates = ["Coordinator", "Dean"].includes(user.role);
+
     type Adviser = { name: string; email: string };
     const adviser: Adviser | null = Array.isArray(user.advisers) ? user.advisers[0] ?? null : null;
     const [adviserCode, setAdviserCode] = useState(user.adviser_code ?? "");
@@ -105,6 +113,12 @@ export default function Profile({ mustVerifyEmail, status }: { mustVerifyEmail: 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Profile settings" />
+            {/*
+                Example usage for settings navigation:
+                {showGeneral && <GeneralSettings ... />}
+                {showEsignature && <EsignatureSettings ... />}
+                {showDocumentTemplates && <DocumentTemplatesSettings ... />}
+            */}
             <SettingsLayout>
                 <div className="space-y-6">
                     <Alert className="bg-rose-50 dark:bg-rose-950 border-rose-200 dark:border-rose-900 text-rose-900 dark:text-rose-100 flex items-start gap-3 px-6 py-5 rounded-xl">

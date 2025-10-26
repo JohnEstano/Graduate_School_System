@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
@@ -114,12 +114,22 @@ export type DefenseRequestFull = {
   adviser_status?: string;
   coordinator_status?: string;
   program_level?: string; // "Masteral" | "Doctorate" from server
-  submitted_at?: string; // ADD THIS
-  coordinator?: {       // ADD THIS
+  submitted_at?: string;
+  coordinator?: {
     id: number;
     name: string;
     email: string;
   } | null;
+  attachments?: {
+    advisers_endorsement?: string;
+    rec_endorsement?: string;
+    proof_of_payment?: string;
+    manuscript_proposal?: string;
+    similarity_index?: string;
+    avisee_adviser_attachment?: string;
+    ai_detection_certificate?: string;
+    endorsement_form?: string;
+  };
 };
 
 // add: local type for payment rate to avoid cross-file type conflicts
@@ -280,7 +290,7 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
   // Build breadcrumbs, use thesis title (truncated) instead of id
   const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Dashboard', href: '/dashboard' },
-    { title: 'Defense Requests', href: '/defense-request' }
+    { title: 'Defense Requests', href: '/coordinator/defense-requests' }
   ];
   if (requestProp?.id) {
     const thesisForCrumb =
@@ -304,7 +314,7 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
           </p>
           <Button
             variant="outline"
-            onClick={() => router.visit('/defense-request')}
+            onClick={() => router.visit('/coordinator/defense-requests')}
           >
             Back to list
           </Button>
@@ -417,6 +427,27 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
   const canEdit = ['Coordinator', 'Administrative Assistant', 'Dean'].includes(
     userRole
   );
+
+  // Options for assignment comboboxes: exclude adviser-type entries
+  const panelOptionsForAssignment = useMemo(() => {
+    const adviserName = (request.defense_adviser || '').toLowerCase().trim();
+    const adviserEmail = (request.coordinator?.email || '').toLowerCase().trim();
+
+    return panelMembers.filter(pm => {
+      const t = (pm.type || '').toLowerCase();
+      const name = (pm.name || '').toLowerCase();
+      const email = (pm.email || '').toLowerCase();
+
+      // exclude adviser/advisor types (covers both spellings) - case-insensitive
+      if (t.includes('advis')) return false;
+
+      // Exclude if this panel member appears to be the request's adviser by name or email
+      if (adviserName && name && (name === adviserName || name.includes(adviserName) || adviserName.includes(name))) return false;
+      if (adviserEmail && email && email === adviserEmail) return false;
+
+      return true;
+    });
+  }, [panelMembers]);
 
   // Helper to always get a fresh CSRF token
   async function getFreshCsrfToken(): Promise<string> {
@@ -746,14 +777,14 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
 
   // Attachments (show all, including manuscript, similarity, avisee, etc.)
   const attachments = [
-    { label: "Adviser’s Endorsement", url: resolveFileUrl(request.advisers_endorsement) },
-    { label: 'REC Endorsement', url: resolveFileUrl(request.rec_endorsement) },
-    { label: 'Proof of Payment', url: resolveFileUrl(request.proof_of_payment) },
-    { label: 'Manuscript', url: resolveFileUrl(request.manuscript_proposal) },
-    { label: 'Similarity Index', url: resolveFileUrl(request.similarity_index) },
-    { label: 'Avisee-Adviser File', url: resolveFileUrl(request.avisee_adviser_attachment) },
-    { label: 'AI Detection Certificate', url: resolveFileUrl(request.ai_detection_certificate) },
-    { label: 'Endorsement Form', url: resolveFileUrl(request.endorsement_form) },
+    { label: "Adviser’s Endorsement", url: resolveFileUrl(request.attachments?.advisers_endorsement || request.advisers_endorsement) },
+    { label: 'REC Endorsement', url: resolveFileUrl(request.attachments?.rec_endorsement || request.rec_endorsement) },
+    { label: 'Proof of Payment', url: resolveFileUrl(request.attachments?.proof_of_payment || request.proof_of_payment) },
+    { label: 'Manuscript', url: resolveFileUrl(request.attachments?.manuscript_proposal || request.manuscript_proposal) },
+    { label: 'Similarity Form', url: resolveFileUrl(request.attachments?.similarity_index || request.similarity_index) },
+    { label: 'Avisee-Adviser File', url: resolveFileUrl(request.attachments?.avisee_adviser_attachment || request.avisee_adviser_attachment) },
+    { label: 'AI Declaration Form', url: resolveFileUrl(request.attachments?.ai_detection_certificate || request.ai_detection_certificate) },
+    { label: 'Endorsement Form', url: resolveFileUrl(request.attachments?.endorsement_form || request.endorsement_form) },
   ];
 
   // Helper for workflow history rendering robustness
@@ -872,6 +903,36 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
 
   // Tabs: "details" and "assign-schedule"
   const [tab, setTab] = useState<'details' | 'assign-schedule'>('details');
+
+  // Local helper to get receivable (matching AA logic)
+  function getMemberReceivable(role: string): number | null {
+    if (!request.program_level || !request.defense_type) return null;
+    
+    // Map role to payment rate type exactly as stored in DB
+    let rateType = '';
+    if (role === 'Adviser') {
+      rateType = 'Adviser';
+    } else {
+      // All panel members (chair, panelist 1-4) use "Panel Chair" rate
+      rateType = 'Panel Chair';
+    }
+    
+    // Normalize defense type for case-insensitive comparison
+    const normalizeDefenseType = (dt: string) => dt.toLowerCase().replace(/[^a-z]/g, '');
+    const targetDefenseType = normalizeDefenseType(request.defense_type);
+    
+    // Direct comparison with normalization
+    const rate = paymentRates.find(
+      r => {
+        const matchesProgram = r.program_level === request.program_level;
+        const matchesType = r.type === rateType;
+        const matchesDefense = normalizeDefenseType(r.defense_type || '') === targetDefenseType;
+        return matchesProgram && matchesType && matchesDefense;
+      }
+    );
+    
+    return rate ? Number(rate.amount) : null;
+  }
 
   const statusMap: Record<string, string> = {
     'submitted': 'Submitted',
@@ -1136,21 +1197,9 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
                       { key: 'defense_panelist4', info: memberFor(panels.defense_panelist4 || request.defense_panelist4, 'Panel Member 4') },
                     ].map(r => {
                       const namePresent = !!(r.info.rawValue || (r.info.displayName && r.info.displayName !== '—'));
-                      // const emailPresent = !!(r.info.email);
-                      // const status = namePresent ? (emailPresent ? 'Assigned' : 'Pending confirmation') : '—';
-
-                      // Use the payment rates helper with correct type mapping
-                      let rateType = r.info.role;
-                      if (r.info.role === 'Chairperson') rateType = 'Panel Chair';
                       
-                      const receivable = namePresent
-                        ? getMemberReceivableByProgramLevel(
-                            paymentRates,
-                            request.program_level || '',
-                            request.defense_type || '',
-                            rateType
-                          )
-                        : null;
+                      // Use local function for receivables (matches AA logic)
+                      const receivable = namePresent ? getMemberReceivable(r.info.role) : null;
 
                       return {
                           name: r.info.displayName,
@@ -1271,7 +1320,7 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
                         label={label}
                         value={panels[key as keyof typeof panels]}
                         onChange={v => setPanels(p => ({ ...p, [key]: v }))}
-                        options={panelMembers}
+                        options={panelOptionsForAssignment}
                         disabled={!canEdit || loadingMembers}
                         taken={taken}
                       />
@@ -1455,15 +1504,7 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
           </div>
         </div>
 
-        <div className="text-[11px] text-muted-foreground">
-          Last updated by:{' '}
-          {request.last_status_updated_by_name ||
-            request.last_status_updated_by ||
-            '—'}{' '}
-          {request.last_status_updated_at
-            ? `(${dayjs(request.last_status_updated_at).format('YYYY-MM-DD [at] h:mm A')})`
-            : ''}
-        </div>
+    
       </div>
 
       {/* Confirmation Dialog for Approve/Reject/Retrieve */}

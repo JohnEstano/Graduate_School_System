@@ -515,13 +515,22 @@ class DefenseRequestController extends Controller
 
         return response()->json([
             'id' => $defenseRequest->id,
+            'first_name' => $defenseRequest->first_name,
+            'middle_name' => $defenseRequest->middle_name,
+            'last_name' => $defenseRequest->last_name,
             'thesis_title' => $defenseRequest->thesis_title,
             'school_id' => $defenseRequest->school_id,
+            'program' => $defenseRequest->program,
+            'defense_type' => $defenseRequest->defense_type,
+            'priority' => $defenseRequest->priority,
             'status' => $defenseRequest->status,
             'workflow_state' => $defenseRequest->workflow_state,
             'workflow_state_display' => $defenseRequest->workflow_state_display ?? null,
+            'adviser_status' => $defenseRequest->adviser_status,
+            'coordinator_status' => $defenseRequest->coordinator_status,
             'adviser_comments' => $defenseRequest->adviser_comments,
             'coordinator_comments' => $defenseRequest->coordinator_comments,
+            'defense_adviser' => $defenseRequest->defense_adviser,
             'defense_chairperson' => $defenseRequest->defense_chairperson,
             'defense_panelist1' => $defenseRequest->defense_panelist1,
             'defense_panelist2' => $defenseRequest->defense_panelist2,
@@ -533,13 +542,23 @@ class DefenseRequestController extends Controller
             'formatted_time_range' => $defenseRequest->formatted_time_range,
             'defense_venue' => $defenseRequest->defense_venue,
             'defense_mode' => $defenseRequest->defense_mode,
+            'scheduling_notes' => $defenseRequest->scheduling_notes,
             'panels_assigned_at' => $defenseRequest->panels_assigned_at,
-            'request' => $defenseRequest,
-            'coordinator_status_display' => $defenseRequest->coordinator_status_display,
-            // ADD THESE:
-            'amount' => $defenseRequest->amount,
+            'submitted_at' => $defenseRequest->submitted_at?->toISOString(),
+            'workflow_history' => $defenseRequest->workflow_history,
+            'last_status_updated_by' => $defenseRequest->last_status_updated_by,
+            'last_status_updated_at' => $defenseRequest->last_status_updated_at?->toISOString(),
+            'advisers_endorsement' => $defenseRequest->advisers_endorsement,
+            'rec_endorsement' => $defenseRequest->rec_endorsement,
+            'proof_of_payment' => $defenseRequest->proof_of_payment,
             'reference_no' => $defenseRequest->reference_no,
-            // If you want to send attachments as well:
+            'manuscript_proposal' => $defenseRequest->manuscript_proposal,
+            'similarity_index' => $defenseRequest->similarity_index,
+            'avisee_adviser_attachment' => $defenseRequest->avisee_adviser_attachment,
+            'ai_detection_certificate' => $defenseRequest->ai_detection_certificate,
+            'endorsement_form' => $defenseRequest->endorsement_form,
+            'coordinator_status_display' => $defenseRequest->coordinator_status_display,
+            'amount' => $defenseRequest->amount,
             'attachments' => $defenseRequest->attachments,
         ]);
     }
@@ -1265,6 +1284,7 @@ class DefenseRequestController extends Controller
             });
         }
 
+
         $rows = $query
             ->orderByRaw("FIELD(workflow_state,'adviser-approved','coordinator-review','coordinator-approved','panels-assigned','scheduled','completed','coordinator-rejected')")
             ->orderBy('adviser_reviewed_at', 'desc')
@@ -1284,8 +1304,29 @@ class DefenseRequestController extends Controller
                 'scheduled_date',
                 'defense_mode',
                 'defense_venue',
-                'panels_assigned_at'
+                'panels_assigned_at',
+                'adviser_user_id',
+                'defense_adviser'
             ])->map(function ($r) {
+                // Adviser name: prefer adviserUser if present, else defense_adviser
+                $adviser = null;
+                if (isset($r->adviser_user_id) && $r->adviser_user_id) {
+                    $adviserUser = \App\Models\User::find($r->adviser_user_id);
+                    if ($adviserUser) {
+                        $adviser = trim(($adviserUser->first_name ?? '') . ' ' . ($adviserUser->last_name ?? ''));
+                    }
+                }
+                if (!$adviser) {
+                    $adviser = $r->defense_adviser ?? null;
+                }
+
+                // AA Status: get from AaPaymentVerification if exists
+                $aaStatus = null;
+                $aaVerification = \App\Models\AaPaymentVerification::where('defense_request_id', $r->id)->latest()->first();
+                if ($aaVerification) {
+                    $aaStatus = $aaVerification->status;
+                }
+
                 return [
                     'id' => $r->id,
                     'first_name' => $r->first_name,
@@ -1298,6 +1339,8 @@ class DefenseRequestController extends Controller
                     'status' => $r->status,
                     'scheduled_date' => $r->scheduled_date?->format('Y-m-d'),
                     'defense_mode' => $r->defense_mode,
+                    'adviser' => $adviser,
+                    'aa_status' => $aaStatus,
                 ];
             });
 
@@ -1660,20 +1703,36 @@ class DefenseRequestController extends Controller
 
     public function uploadDocuments(Request $request, DefenseRequest $defenseRequest)
     {
+        \Log::info('uploadDocuments called', [
+            'defense_request_id' => $defenseRequest->id,
+            'has_ai_certificate' => $request->hasFile('ai_detection_certificate'),
+            'has_endorsement_form' => $request->hasFile('endorsement_form'),
+            'all_files' => $request->allFiles(),
+        ]);
+
         $data = [];
         if ($request->hasFile('ai_detection_certificate')) {
             $file = $request->file('ai_detection_certificate');
             $path = $file->store('defense_documents', 'public');
             $defenseRequest->ai_detection_certificate = '/storage/' . $path;
             $data['ai_detection_certificate'] = $defenseRequest->ai_detection_certificate;
+            \Log::info('AI certificate uploaded', ['path' => $path]);
         }
         if ($request->hasFile('endorsement_form')) {
             $file = $request->file('endorsement_form');
             $path = $file->store('defense_documents', 'public');
             $defenseRequest->endorsement_form = '/storage/' . $path;
             $data['endorsement_form'] = $defenseRequest->endorsement_form;
+            \Log::info('Endorsement form uploaded', ['path' => $path]);
         }
+        
         $defenseRequest->save();
+        
+        \Log::info('uploadDocuments saved', [
+            'defense_request_id' => $defenseRequest->id,
+            'endorsement_form' => $defenseRequest->endorsement_form,
+            'data' => $data
+        ]);
 
         return response()->json($data);
     }
@@ -1849,7 +1908,27 @@ class DefenseRequestController extends Controller
             ->get();
 
         // Map to summary format expected by frontend
+
         $result = $defenseRequests->map(function ($r) {
+            // Adviser name: prefer adviserUser if present, else defense_adviser
+            $adviser = null;
+            if ($r->adviser_user_id) {
+                $adviserUser = \App\Models\User::find($r->adviser_user_id);
+                if ($adviserUser) {
+                    $adviser = trim(($adviserUser->first_name ?? '') . ' ' . ($adviserUser->last_name ?? ''));
+                }
+            }
+            if (!$adviser) {
+                $adviser = $r->defense_adviser ?? null;
+            }
+
+            // AA Status: get from AaPaymentVerification if exists
+            $aaStatus = null;
+            $aaVerification = \App\Models\AaPaymentVerification::where('defense_request_id', $r->id)->latest()->first();
+            if ($aaVerification) {
+                $aaStatus = $aaVerification->status;
+            }
+
             return [
                 'id' => $r->id,
                 'first_name' => $r->first_name,
@@ -1867,6 +1946,8 @@ class DefenseRequestController extends Controller
                 'last_status_updated_by' => $r->last_status_updated_by,
                 'last_status_updated_at' => $r->last_status_updated_at,
                 'workflow_state' => $r->workflow_state,
+                'adviser' => $adviser,
+                'aa_status' => $aaStatus,
             ];
         });
 
@@ -2070,6 +2151,20 @@ class DefenseRequestController extends Controller
             $defenseRequest->last_status_updated_at = now();
             $defenseRequest->last_status_updated_by = $user->id;
 
+            // Update or create AA verification record and set to completed
+            $aaVerification = \App\Models\AaPaymentVerification::firstOrCreate(
+                ['defense_request_id' => $defenseRequest->id],
+                ['assigned_to' => $user->id, 'status' => 'pending']
+            );
+            $aaVerification->status = 'completed';
+            $aaVerification->assigned_to = $user->id;
+            $aaVerification->save();
+
+            Log::info('completeDefense: AA verification updated', [
+                'aa_verification_id' => $aaVerification->id,
+                'status' => $aaVerification->status
+            ]);
+
             // Add workflow history
             $hist = $defenseRequest->workflow_history ?? [];
             $hist[] = [
@@ -2128,10 +2223,19 @@ class DefenseRequestController extends Controller
                     'name' => $member['name']
                 ]);
 
+                // Map role to payment rate type
+                // All panel members (chair and panelists) use "Panel Chair" rate
+                $rateType = ($member['role'] === 'Adviser') ? 'Adviser' : 'Panel Chair';
+
+                Log::info('completeDefense: Mapped rate type', [
+                    'original_role' => $member['role'],
+                    'rate_type' => $rateType
+                ]);
+
                 // Get rate for this role
                 $rate = \App\Models\PaymentRate::where('program_level', $programLevel)
                     ->where('defense_type', $defenseRequest->defense_type)
-                    ->where('type', $member['role'])
+                    ->where('type', $rateType)
                     ->first();
 
                 if (!$rate) {
