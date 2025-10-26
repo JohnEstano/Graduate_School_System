@@ -555,16 +555,7 @@ export default function DefenseRequestIndex() {
                                                                         {req.program || '—'}
                                                                     </div>
                                                                 </div>
-                                                                {/* Reference No. */}
-                                                                <div className="min-w-0">
-                                                                    <div className="text-[11px] text-muted-foreground flex items-center gap-1.5">
-                                                                        <Paperclip className="h-3.5 w-3.5" />
-                                                                        Reference No.
-                                                                    </div>
-                                                                    <div className="font-medium text-zinc-900 dark:text-zinc-100 truncate">
-                                                                        {req.reference_no || '—'}
-                                                                    </div>
-                                                                </div>
+                                                              
 
                                                                 {/* Date */}
                                                                 <div className="min-w-0">

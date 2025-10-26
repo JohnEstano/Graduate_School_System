@@ -428,6 +428,27 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
     userRole
   );
 
+  // Options for assignment comboboxes: exclude adviser-type entries
+  const panelOptionsForAssignment = useMemo(() => {
+    const adviserName = (request.defense_adviser || '').toLowerCase().trim();
+    const adviserEmail = (request.coordinator?.email || '').toLowerCase().trim();
+
+    return panelMembers.filter(pm => {
+      const t = (pm.type || '').toLowerCase();
+      const name = (pm.name || '').toLowerCase();
+      const email = (pm.email || '').toLowerCase();
+
+      // exclude adviser/advisor types (covers both spellings) - case-insensitive
+      if (t.includes('advis')) return false;
+
+      // Exclude if this panel member appears to be the request's adviser by name or email
+      if (adviserName && name && (name === adviserName || name.includes(adviserName) || adviserName.includes(name))) return false;
+      if (adviserEmail && email && email === adviserEmail) return false;
+
+      return true;
+    });
+  }, [panelMembers]);
+
   // Helper to always get a fresh CSRF token
   async function getFreshCsrfToken(): Promise<string> {
     try {
@@ -1299,7 +1320,7 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
                         label={label}
                         value={panels[key as keyof typeof panels]}
                         onChange={v => setPanels(p => ({ ...p, [key]: v }))}
-                        options={panelMembers}
+                        options={panelOptionsForAssignment}
                         disabled={!canEdit || loadingMembers}
                         taken={taken}
                       />
@@ -1483,15 +1504,7 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
           </div>
         </div>
 
-        <div className="text-[11px] text-muted-foreground">
-          Last updated by:{' '}
-          {request.last_status_updated_by_name ||
-            request.last_status_updated_by ||
-            '—'}{' '}
-          {request.last_status_updated_at
-            ? `(${dayjs(request.last_status_updated_at).format('YYYY-MM-DD [at] h:mm A')})`
-            : ''}
-        </div>
+    
       </div>
 
       {/* Confirmation Dialog for Approve/Reject/Retrieve */}

@@ -477,7 +477,7 @@ export default function EndorsementDialog({
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-full w-[90vw] h-[90vh] p-0 gap-0 flex flex-col overflow-hidden">
+        <DialogContent className="flex h-[95vh] w-full max-w-5xl flex-col p-0 gap-0 overflow-hidden">
           <div className="flex flex-1 min-h-0">
             {/* Sidebar */}
             <div className="w-72 border-r bg-muted/30 flex flex-col shrink-0">
