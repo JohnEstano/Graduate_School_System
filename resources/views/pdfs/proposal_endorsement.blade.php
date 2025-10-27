@@ -1,287 +1,264 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-<meta charset="utf-8" />
-<title>Proposal Defense - Endorsement & Application</title>
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<style>
-  /* Print/A4 friendly layout */
-  @page { size: A4; margin: 20mm; }
-  html,body { height:100%; margin:0; padding:0; }
-  body {
-    font-family: "Times New Roman", Times, serif;
-    color: #000;
-    font-size: 12pt;
-    line-height: 1.15;
-    -webkit-print-color-adjust: exact;
-    padding: 0;
-    box-sizing: border-box;
-    background: #fff;
-  }
-
-  .page {
-    width: 100%;
-    max-width: 210mm; /* A4 width */
-    margin: 0 auto;
-    padding: 18mm 18mm 12mm 18mm;
-    box-sizing: border-box;
-    page-break-after: always;
-  }
-
-  /* header */
-  .top-row {
-    display:flex;
-    align-items:center;
-    gap: 12px;
-  }
-  .logo {
-    width:72px;
-    flex: 0 0 72px;
-  }
-  .header-center {
-    flex:1;
-    text-align:center;
-  }
-  .header-center .univ { font-size:12pt; }
-  .header-center .grad { font-size:11pt; margin-top:2px; }
-  .title { font-weight:700; font-size:16pt; margin-top:8px; }
-  .subtitle { font-weight:700; font-size:14pt; margin-top:6px; }
-
-  /* main content block */
-  .content {
-    margin-top: 18px;
-    padding-left: 6mm;
-    padding-right: 6mm;
-  }
-
-  .row {
-    display:flex;
-    justify-content:space-between;
-    align-items:center;
-    margin-bottom:12px;
-  }
-  .label { font-weight:normal; display:block; margin-bottom:6px; }
-  .field-left { width:62%; }
-  .field-right { width:34%; text-align:right; }
-
-  .program { margin-bottom:10px; }
-
-  /* multiline title lines (four lines) */
-  .thesis-lines { margin-top:8px; margin-bottom:8px; }
-  .thesis-lines div {
-    border-bottom: 1px solid #000;
-    height: 14px;
-    margin-bottom:6px;
-  }
-
-  .paragraph { margin-top:8px; margin-bottom:8px; }
-
-  /* signatures */
-  .signatures {
-    display:flex;
-    justify-content:space-between;
-    gap: 12px;
-    margin-top:22px;
-  }
-  .sign-left { width:58%; }
-  .sign-right { width:40%; text-align:left; }
-
-  .signature-line {
-    display:inline-block;
-    width:260px;
-    border-bottom:1px solid #000;
-    margin-bottom:6px;
-    height:1px;
-  }
-  .small { font-size:11pt; }
-
-  /* bottom boxed two-column area */
-  .bottom-box {
-    margin-top:18px;
-    border:1px solid #000;
-    padding:10px;
-    display:flex;
-    gap:12px;
-    align-items:flex-start;
-    font-size:10pt;
-  }
-  .bottom-col { width:50%; box-sizing:border-box; }
-  .bottom-col b { display:block; margin-bottom:8px; font-size:10.5pt; }
-  .bottom-col ol { margin:0 0 0 18px; padding:0; }
-  .bottom-col li { margin-bottom:6px; }
-
-  /* application page (page 2) */
-  .app-title { font-weight:700; font-size:14pt; text-align:center; margin-top:6px; margin-bottom:6px; }
-  .app-body { margin-top:10px; font-size:11pt; padding-left:6mm; padding-right:6mm; line-height:1.25; }
-  .blank {
-    display:inline-block;
-    border-bottom:1px solid #000;
-    min-width:160px;
-    height: 12px;
-    vertical-align: middle;
-  }
-  .rec-endorse { display:flex; gap:12px; margin-top:18px; }
-  .rec-endorse .col { width:48%; }
-
-  /* prevent splitting of signature lines */
-  .avoid-break { page-break-inside: avoid; }
-
-  @media print {
-    .page { page-break-after: always; }
-  }
-</style>
+    <meta charset="UTF-8">
+    <title>Proposal Defense Endorsement Form</title>
+    <style>
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            font-size: 11pt;
+            color: #000;
+            background: #fff;
+        }
+        .page {
+            width: 170mm;
+            min-height: 297mm;
+            margin: 0 auto;
+            position: relative;
+            box-sizing: border-box;
+            padding: 0;
+        }
+        .uic-logo {
+            position: absolute;
+            top: 15mm;
+            left: 0;
+            width: 28mm;
+            height: auto;
+        }
+        .header {
+            text-align: center;
+            margin-top: 15mm;
+            margin-bottom: 0;
+        }
+        .school {
+            font-size: 12pt;
+            margin-bottom: 2px;
+        }
+        .dept {
+            font-size: 11pt;
+            margin-bottom: 12px;
+        }
+        .title {
+            font-size: 12pt;
+            font-weight: bold;
+            margin-bottom: 0;
+            margin-top: 6px;
+            letter-spacing: 0.5px;
+        }
+        .subtitle {
+            font-size: 12pt;
+            font-weight: bold;
+            margin-bottom: 20px;
+            margin-top: 0;
+            letter-spacing: 0.5px;
+        }
+        .info-table {
+            width: 100%;
+            margin: 0 auto;
+            margin-top: 18px;
+            margin-bottom: 8px;
+            border-collapse: collapse;
+        }
+        .info-table td {
+            font-size: 11pt;
+            padding: 0;
+            vertical-align: bottom;
+        }
+        .line {
+            border-bottom: 1px solid #000;
+            height: 18px;
+            width: 100%;
+            display: inline-block;
+        }
+        .label {
+            padding-right: 8px;
+            font-size: 10pt;
+        }
+        .section {
+            width: 100%;
+            margin: 0 auto;
+            margin-top: 18px;
+            margin-bottom: 0;
+            font-size: 11pt;
+        }
+        .dear {
+            font-weight: bold;
+        }
+        .thankyou {
+            margin-top: 10px;
+        }
+        .signature-block {
+            width: 100%;
+            margin: 0 auto;
+            margin-top: 22px;
+        }
+        .signature-label {
+            margin-bottom: 2px;
+            font-size: 10pt;
+        }
+        .signature-line {
+            border-bottom: 1px solid #000;
+            width: 120px;
+            margin-top: 10px;
+            margin-bottom: 2px;
+        }
+        .signature-caption {
+            font-size: 9pt;
+        }
+        .approved-block {
+            width: 100%;
+            margin: 0 auto;
+            margin-top: 18px;
+            text-align: right;
+        }
+        .approved-label {
+            margin-bottom: 8px;
+            font-size: 10pt;
+        }
+        .approved-name {
+            font-size: 10pt;
+            font-weight: bold;
+        }
+        .footer-table {
+            width: 100%;
+            margin: 0 auto;
+            border: 1px solid #000;
+            border-collapse: collapse;
+            margin-top: 18px;
+            font-size: 9pt;
+        }
+        .footer-table td {
+            vertical-align: top;
+            border: 1px solid #000;
+            padding: 4px 6px 4px 6px;
+        }
+        .footer-table ol {
+            margin: 0 0 0 16px;
+            padding: 0;
+        }
+        .footer-table li {
+            margin-bottom: 1px;
+        }
+        .centered-cell {
+            text-align: center;
+        }
+    </style>
 </head>
 <body>
+    <div class="page">
+        <img src="{{ public_path('uic-logo.png') }}" class="uic-logo">
+        <div class="header">
+            <div class="school">University of the Immaculate Conception</div>
+            <div class="dept">GRADUATE SCHOOL</div>
+            <div class="title">PROPOSAL DEFENSE</div>
+            <div class="subtitle">ENDORSEMENT FORM</div>
+        </div>
 
-  <!-- PAGE 1: ENDORSEMENT FORM -->
-  <div class="page">
-    <div class="top-row">
-      <img src="{{ public_path('uic-logo.png') }}" alt="UIC Logo" class="logo">
-      <div class="header-center">
-        <div class="univ">University of the Immaculate Conception</div>
-        <div class="grad">GRADUATE SCHOOL</div>
-        <div class="title">PROPOSAL DEFENSE</div>
-        <div class="subtitle">ENDORSEMENT FORM</div>
-      </div>
-      <!-- optional control no (right) -->
-      <div style="flex:0 0 110px; text-align:right; font-size:10pt;">Control No. ________________</div>
+        <table class="info-table">
+            <tr>
+                <td style="width:48%; text-align:left;">
+                    <div class="line" style="width:220px;"></div>
+                </td>
+                <td style="width:4%;"></td>
+                <td style="width:36%; text-align:right;">
+                    <div class="line" style="width:90px;"></div>
+                </td>
+            </tr>
+            <tr>
+                <td class="label" style="text-align:left; position:relative;">
+                    <span style="position:absolute; left:0; width:220px; text-align:center; display:inline-block;">Name of Student/ Candidate</span>
+                </td>
+                <td></td>
+                <td class="label" style="text-align:right; top:2; position:relative;">
+                    <span style="position:absolute; right:0; width:90px; text-align:center; display:inline-block;">Date</span>
+                </td>
+            </tr>
+            <tr><td colspan="3" style="height: 30px;"></td></tr>
+            <tr>
+                <td style="width:48%; text-align:left;">
+                    <div class="line" style="width:220px;"></div>
+                </td>
+                <td></td>
+                <td></td>
+            </tr>
+            <tr>
+                <td class="label" style="text-align:left; top:2; position:relative;">
+                    <span style="position:absolute; left:0; width:220px; text-align:center; display:inline-block;">Program of Study</span>
+                </td>
+                <td></td>
+                <td></td>
+            </tr>
+            <tr><td colspan="3" style="height: 30px;"></td></tr> <!-- Increased space below Program of Study -->
+            <tr>
+                <td colspan="3" style="padding-left:9px;">
+                    Title of the Thesis / Dissertation:
+                </td>
+            </tr>
+            <tr>
+                <td colspan="3" style="padding-left:8px;">
+                    <div class="line"></div>
+                </td>
+            </tr>
+            <tr>
+                <td colspan="3" style="padding-left:8px;">
+                    <div class="line"></div>
+                </td>
+            </tr>
+            <tr>
+                <td colspan="3" style="padding-left:8px;">
+                    <div class="line"></div>
+                </td>
+            </tr>
+        </table>
+
+        <div class="section">
+            Dear <span class="dear">{{ $dean_name ?? 'Dr. Amoguis' }}</span>,
+        </div>
+        <div class="section" style="margin-top: 6px;">
+            I have reviewed and fully endorsed the final manuscript attached for evaluation.
+        </div>
+        <div class="thankyou section">
+            Thank you.
+        </div>
+
+        <div class="signature-block">
+            <div class="signature-line"></div>
+            <div class="signature-label">Thesis / Dissertation Adviser</div>
+            <div class="signature-caption">(Signature over Printed Name)</div>
+        </div>
+
+        <div class="approved-block">
+            <div class="approved-label">Approved by:</div>
+            <div class="approved-name">{{ $dean_name ?? 'Dr. Mary Jane B. Amoguis' }}<br>{{ $dean_title ?? 'Dean, Graduate School' }}</div>
+        </div>
+
+        <table class="footer-table">
+            <tr>
+                <td style="width: 50%;">
+                    An applicant for Thesis / Dissertation Proposal Defense should have accomplished the following before s/he is granted approval:
+                    <ol>
+                        <li>Completed all academic requirements vouched by a Certificate of Completion issued by the Registrar</li>
+                        <li>Taken review class with the major subject teachers</li>
+                        <li>Passed the Comprehensive Examinations in all required subjects vouched by a Certification from the Graduate School Dean</li>
+                        <li>For Doctoral students, must have conducted a Public Forum</li>
+                        <li>Enrolled and attended classes in Thesis / Dissertation Writing and assigned to an adviser</li>
+                        <li>Written the Thesis / Dissertation proposal following the prescribed UIC format</li>
+                    </ol>
+                </td>
+                <td style="width: 50%;">
+                    Procedure for Proposal Defense:
+                    <ol>
+                        <li>Secures and fills up a proposal defense endorsement form from the Administrative Assistant to be signed by the adviser.</li>
+                        <li>Pays the proposal defense fee at the cashier</li>
+                        <li>Submits the receipt to the Administrative Assistant and the manuscript, (7) for Doctorate student (5) for Masteral student to the assigned panels and adviser.</li>
+                        <li>Endorses the candidate to the Program Coordinator for the schedule.</li>
+                        <li>Asks the Program Coordinator on the proposed member of the panel to be approved by the Dean</li>
+                        <li>Schedules the proposal oral defense.</li>
+                    </ol>
+                </td>
+            </tr>
+        </table>
     </div>
-
-    <div class="content">
-      <div class="row">
-        <div class="field-left">
-          <span class="label">Name of Student/ Candidate</span>
-          <div>{{ $student_name ?? '______________________________' }}</div>
-        </div>
-        <div class="field-right">
-          <span class="label">Date</span>
-          <div>{{ $defense_date ?? '_____________' }}</div>
-        </div>
-      </div>
-
-      <div class="program">
-        <span class="label">Program of Study</span>
-        <div>{{ $program ?? '______________________________' }}</div>
-      </div>
-
-      <div>
-        <span class="label">Title of the Thesis / Dissertation:</span>
-        <div class="thesis-lines">
-          <div></div>
-          <div></div>
-          <div></div>
-          <div></div>
-        </div>
-      </div>
-
-      <div class="paragraph"><strong>Dear Dr. Amoguis</strong></div>
-
-      <div class="paragraph">
-        I have reviewed and fully endorsed the final manuscript attached for evaluation.
-      </div>
-
-      <div class="paragraph">Thank you.</div>
-
-      <div class="signatures avoid-break">
-        <div class="sign-left">
-          <div class="signature-line"></div>
-          <div class="small">Thesis / Dissertation Adviser<br>(Signature over Printed Name)</div>
-        </div>
-
-        <div class="sign-right">
-          <div>Approved by:</div>
-          <div style="margin-top:14px;">
-            <div class="signature-line" style="width:200px"></div>
-            <div class="small" style="font-weight:700; margin-top:6px;">Dr. Mary Jane B. Amoguis</div>
-            <div class="small">Dean, Graduate School</div>
-          </div>
-        </div>
-      </div>
-
-      <div class="bottom-box">
-        <div class="bottom-col">
-          <b>An applicant for Thesis / Dissertation Proposal Defense should have accomplished the following before s/he is granted approval:</b>
-          <ol>
-            <li>Completed all academic requirements vouched by a Certificate of Completion issued by the Registrar</li>
-            <li>Taken review class with the major subject teachers</li>
-            <li>Passed the Comprehensive Examinations in all required subjects vouched by a Certification from the Graduate School Dean</li>
-            <li>For Doctoral students, must have conducted a Public Forum</li>
-            <li>Enrolled and attended classes in Thesis / Dissertation Writing and assigned to an adviser</li>
-            <li>Written the Thesis / Dissertation proposal following the prescribed UIC format</li>
-          </ol>
-        </div>
-
-        <div class="bottom-col">
-          <b>Procedure for Proposal Defense:</b>
-          <ol>
-            <li>Secures and fills up a proposal defense endorsement form from the Administrative Assistant to be signed by the adviser.</li>
-            <li>Pays the proposal defense fee at the cashier</li>
-            <li>Submits the receipt to the Administrative Assistant and the manuscript, (7) for Doctorate student (5) for Masteral student to the assigned panels and adviser.</li>
-            <li>Endorses the candidate to the Program Coordinator for the schedule.</li>
-            <li>Asks the Program Coordinator on the proposed member of the panel to be approved by the Dean</li>
-            <li>Schedules the proposal oral defense.</li>
-          </ol>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- PAGE 2: APPLICATION FORM -->
-  <div class="page">
-    <div class="top-row">
-      <img src="{{ public_path('uic-logo.png') }}" alt="UIC Logo" class="logo">
-      <div class="header-center">
-        <div class="univ">University of the Immaculate Conception</div>
-        <div class="grad">GRADUATE SCHOOL</div>
-        <div class="app-title">APPLICATION<br>PROPOSAL DEFENSE</div>
-      </div>
-      <div style="flex:0 0 110px; text-align:right; font-size:10pt;">Control No. ________________</div>
-    </div>
-
-    <div class="app-body">
-      <p>
-        I, <span class="blank"></span>, a student of <span class="blank" style="min-width:220px"></span>,
-        respectfully request the office of the dean of graduate school that I be given APPROVAL to present my thesis/dissertation proposal before the members of the examination/defense panel for <span class="blank" style="min-width:220px"></span>.
-      </p>
-
-      <p>
-        I swear to the best of my knowledge that I had passed the comprehensive examinations given on <span class="blank" style="min-width:170px"></span> covering all required subjects; that I had conducted my public Forum on <span class="blank" style="min-width:170px"></span> at <span class="blank" style="min-width:170px"></span>.
-      </p>
-
-      <p>
-        Furthermore, I am aware that I have to submit my manuscript with the photocopy of the receipt of payments, not later than seven (7) days before the tentative date of my defense. I further know that if I fail to submit my manuscript on the specified period, the university reserves the right to reschedule the defense in such a way that it would not be prejudicial to either party; and that I am solely responsible for the delay of my defense.
-      </p>
-
-      <p style="margin-top:18px;">
-        Date: <span class="blank" style="min-width:160px"></span>
-        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-        Applicant: <span class="blank" style="min-width:260px"></span>
-      </p>
-
-      <div class="rec-endorse">
-        <div class="col">
-          Recommended by:<br><br>
-          <span class="blank" style="min-width:240px"></span><br>
-          <div style="margin-top:6px;">Adviser</div>
-        </div>
-        <div class="col">
-          Endorsed by:<br><br>
-          <span class="blank" style="min-width:240px"></span><br>
-          <div style="margin-top:6px;">Course Coordinator</div>
-        </div>
-      </div>
-
-      <div style="margin-top:20px;">
-        Approved by:
-        <div style="margin-top:10px;">
-          <div class="signature-line" style="width:280px"></div>
-          <div class="small" style="font-weight:700; margin-top:6px;">Dr. Mary Jane Amoguis</div>
-          <div class="small">Dean, Graduate School</div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- end -->
 </body>
 </html>
