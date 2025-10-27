@@ -1,10 +1,9 @@
 import AppLayout from '@/layouts/app-layout';
-import AcademicRecordsDashboard from '@/pages/legacy/AcademicRecordsDashboard';
 import { type BreadcrumbItem } from '@/types';
 import { Head, usePage } from '@inertiajs/react';
 import React, { useEffect, useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { GraduationCap, Info, RefreshCcw, ShieldCheck, ShieldAlert, CalendarX } from 'lucide-react';
+import { GraduationCap, Info, RefreshCcw, ShieldCheck, ShieldAlert, CalendarX, Plus } from 'lucide-react';
 import DisplayApplication from './display-applications';
 import CompreExamForm from './compre-exam-form';
 
@@ -17,18 +16,11 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
-import {
-  Tabs,
-  TabsList,
-  TabsTrigger,
-  TabsContent,
-} from '@/components/ui/tabs';
 
 const breadcrumbs: BreadcrumbItem[] = [
   { title: 'Dashboard', href: '/dashboard' },
   { title: 'Comprehensive Exam', href: '/comprehensive-exam' },
 ];
-
 
 type Subject = { subject: string; date: string; startTime: string; endTime: string };
 
@@ -37,6 +29,8 @@ type ApplicationVM = {
   school_year: string;
   permit_status: string;
   final_approval_status: string;
+  final_approval_reason?: string | null;
+  registrar_reason?: string | null;
   contact_number?: string | null;
   telephone_number?: string | null;
   office_address?: string | null;
@@ -63,13 +57,22 @@ type Eligibility = {
   error?: string | null;
 };
 
+// --- Dev simulation (disable in prod) ---
+const DEV_SIMULATE = true;
+const SIM_ELIG = {
+  examOpen: true,
+  gradesComplete: true,
+  documentsComplete: true,
+  noOutstandingBalance: true
+};
+// ----------------------------------------
+
 export default function ComprehensiveExamIndex() {
   const { props } = usePage<PageProps>();
   const { application } = props;
 
   const [open, setOpen] = useState(false);
 
-  // Eligibility state (student side only)
   const [elig, setElig] = useState<Eligibility>({
     examOpen: null,
     gradesComplete: null,
@@ -82,77 +85,114 @@ export default function ComprehensiveExamIndex() {
   const [showEligDialog, setShowEligDialog] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
 
+  const allStudentFlagsNull = (e: Eligibility) =>
+    e.gradesComplete === null && e.documentsComplete === null && e.noOutstandingBalance === null;
+
+  const getCsrf = () =>
+    document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+
   async function fetchEligibility() {
     setElig((e) => ({ ...e, loading: true, error: null }));
-    
-    try {
-      // Get CSRF token
-      const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
-      
-      // Call the comprehensive exam eligibility API
-      const response = await fetch('/api/comprehensive-exam/eligibility', { 
-        credentials: 'include',
-        headers: {
-          'Accept': 'application/json',
-          'X-Requested-With': 'XMLHttpRequest',
-          'X-CSRF-TOKEN': csrfToken || '',
-        }
-      });
 
-      if (!response.ok) {
-        throw new Error(`API error: ${response.status}`);
+    try {
+      // --- Simulation short-circuit
+      if (DEV_SIMULATE) {
+        const q = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
+        const getBool = (k: string, fallback: boolean) => (q?.has(k) ? q.get(k) === '1' : fallback);
+
+        const simulated: Eligibility = {
+          examOpen: getBool('open', SIM_ELIG.examOpen),
+          gradesComplete: getBool('grades', SIM_ELIG.gradesComplete),
+          documentsComplete: getBool('docs', SIM_ELIG.documentsComplete),
+          noOutstandingBalance: getBool('bal', SIM_ELIG.noOutstandingBalance),
+          loading: false,
+          error: null,
+        };
+        setElig(simulated);
+        setRetryCount(0);
+        return;
       }
 
-      const data = await response.json();
+      const headers: HeadersInit = {
+        Accept: 'application/json',
+        'X-Requested-With': 'XMLHttpRequest',
+      };
+      // CSRF usually not required for GET, but harmless if present in Laravel setups
+      const csrf = getCsrf();
+      if (csrf) headers['X-CSRF-TOKEN'] = csrf;
 
-      // Extract eligibility from the requirements array
-      const requirements = data.requirements || [];
-      const documentsReq = requirements.find((r: any) => r.name === 'Complete documents submitted');
-      const gradesReq = requirements.find((r: any) => r.name === 'Complete grades (registrar verified)');
-      const balanceReq = requirements.find((r: any) => r.name === 'No outstanding tuition balance');
+      const [examStatusRes, studentEligRes] = await Promise.allSettled([
+        fetch('/api/comprehensive-exam/status', { credentials: 'include', headers }),
+        fetch('/api/comprehensive-exam/eligibility', { credentials: 'include', headers }),
+      ]);
 
-      const newElig = {
-        examOpen: true, // This would need to be determined from semester settings
-        gradesComplete: gradesReq?.completed ?? null,
-        documentsComplete: documentsReq?.completed ?? null,
-        noOutstandingBalance: balanceReq?.completed ?? null,
+      let examOpen: boolean | null = null;
+      if (examStatusRes.status === 'fulfilled' && examStatusRes.value.ok) {
+        const j = await examStatusRes.value.json();
+        examOpen = !!(j?.open ?? j?.isOpen);
+      }
+
+      let gradesComplete: boolean | null = null;
+      let documentsComplete: boolean | null = null;
+      let noOutstandingBalance: boolean | null = null;
+
+      if (studentEligRes.status === 'fulfilled' && studentEligRes.value.ok) {
+        const j = await studentEligRes.value.json();
+
+        // Support both array-of-requirements and flat booleans
+        if (Array.isArray(j?.requirements)) {
+          const reqs = j.requirements as Array<{ name: string; completed?: boolean }>;
+          const find = (name: string) => reqs.find((r) => r.name === name)?.completed ?? null;
+          documentsComplete = find('Complete documents submitted');
+          gradesComplete = find('Complete grades (registrar verified)');
+          noOutstandingBalance = find('No outstanding tuition balance');
+        } else {
+          gradesComplete = j?.gradesComplete ?? j?.completeGrades ?? null;
+          documentsComplete = j?.documentsComplete ?? j?.completeDocuments ?? null;
+          noOutstandingBalance = j?.noOutstandingBalance ?? j?.hasNoOutstandingBalance ?? null;
+        }
+
+        // Force booleans where possible
+        gradesComplete = gradesComplete === null ? null : !!gradesComplete;
+        documentsComplete = documentsComplete === null ? null : !!documentsComplete;
+        noOutstandingBalance = noOutstandingBalance === null ? null : !!noOutstandingBalance;
+      }
+
+      const nextElig: Eligibility = {
+        examOpen,
+        gradesComplete,
+        documentsComplete,
+        noOutstandingBalance,
         loading: false,
         error: null,
       };
-      
-      setElig(newElig);
-      
-      // If data is still loading (all null) and we haven't retried too many times, retry after 3 seconds
-      if (newElig.gradesComplete === null && newElig.documentsComplete === null && newElig.noOutstandingBalance === null) {
-        if (retryCount < 5) {
-          console.log(`Data still loading, will retry in 3 seconds (attempt ${retryCount + 1}/5)`);
-          setTimeout(() => {
-            setRetryCount(c => c + 1);
-            fetchEligibility();
-          }, 3000);
-        }
-      } else {
-        // Reset retry count on success
+
+      setElig(nextElig);
+
+      // Bounded retry only if *all three* student flags are still null
+      if (allStudentFlagsNull(nextElig) && retryCount < 5) {
+        setTimeout(() => {
+          setRetryCount((c) => c + 1);
+          fetchEligibility();
+        }, 3000);
+      } else if (!allStudentFlagsNull(nextElig)) {
         setRetryCount(0);
       }
-      
-    } catch (error) {
-      console.error('=== API ERROR ===', error);
-      
-      // Set all to null (Unknown) when API fails
+    } catch (e: any) {
       setElig({
         examOpen: null,
         gradesComplete: null,
         documentsComplete: null,
         noOutstandingBalance: null,
         loading: false,
-        error: error instanceof Error ? error.message : 'API call failed',
+        error: e?.message ?? 'Unable to verify eligibility at this time.',
       });
     }
   }
 
   useEffect(() => {
     fetchEligibility();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const canApply = useMemo(() => {
@@ -164,10 +204,11 @@ export default function ComprehensiveExamIndex() {
     );
   }, [elig]);
 
-  const examClosed = elig.examOpen === false; // NEW
-  const hasPending = application ? (application.final_approval_status?.toLowerCase() === 'pending') : false;
+  const examClosed = elig.examOpen === false;
+  const status = application?.final_approval_status?.toLowerCase() ?? null;
+  const hasPending = status === 'pending';
+  const hasApproved = status === 'approved';
 
-  // Reasons to show when not eligible
   const blockers = useMemo(() => {
     const arr: { label: string; ok: boolean | null }[] = [
       { label: 'Exam window is open', ok: elig.examOpen },
@@ -181,155 +222,186 @@ export default function ComprehensiveExamIndex() {
   return (
     <AppLayout breadcrumbs={breadcrumbs}>
       <Head title="Comprehensive Exam" />
-      <div className="flex flex-col px-7 pt-5 pb-5 w-full">
+      <div className="flex flex-col px-7 pt-5 pb-5 w/full">
         <div className="w-full bg-white border border-zinc-200 rounded-lg overflow-hidden">
-      
-         
-              {/* --- Comprehensive Exam Content --- */}
-              <div className="flex flex-row items-center justify-between w-full p-3 border-b">
-                <div className="flex items-center gap-2">
-                  <div className="h-10 w-10 flex items-center justify-center rounded-full bg-rose-500/10 border border-rose-500">
-                    <GraduationCap className="h-5 w-5 text-rose-400" />
-                  </div>
-                  <div>
-                    <span className="text-base font-semibold">Comprehensive Exam</span>
-                    <p className="block text-xs text-muted-foreground">
-                      Submit and track your comprehensive exam application.
-                    </p>
-                    <div className="mt-1 flex items-center gap-2">
-                      <Badge
-                        variant={canApply ? 'secondary' : 'outline'}
-                        className={
-                          examClosed
-                            ? 'border-rose-300 text-rose-700 bg-rose-50'
-                            : canApply
-                            ? 'border-green-300 text-green-700 bg-green-50'
-                            : ''
-                        }
-                      >
-                        {examClosed ? (
-                          <span className="flex items-center gap-1">
-                            <CalendarX className="h-3.5 w-3.5" />
-                            Closed
-                          </span>
-                        ) : canApply ? (
-                          <span className="flex items-center gap-1">
-                            <ShieldCheck className="h-3.5 w-3.5" />
-                            Eligible
-                          </span>
-                        ) : (
-                          <span className="flex items-center gap-1">
-                            <ShieldAlert className="h-3.5 w-3.5" />
-                            Not eligible
-                          </span>
-                        )}
-                      </Badge>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="h-7 px-2 text-xs"
-                        onClick={fetchEligibility}
-                        disabled={elig.loading}
-                      >
-                        <RefreshCcw className={`h-3.5 w-3.5 mr-1 ${elig.loading ? 'animate-spin' : ''}`} />
-                        Refresh
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="h-7 px-2 text-xs"
-                        onClick={() => setShowEligDialog(true)}
-                      >
-                        <Info className="h-3.5 w-3.5 mr-1" />
-                        Details
-                      </Button>
-                    </div>
-                  </div>
-                </div>
+          <div className="flex flex-row items-center justify-between w-full px-5 py-3 border-b">
+            <div className="flex items-center gap-2">
+              <div className="h-10 w-10 flex items-center justify-center rounded-full bg-rose-500/10 border border-rose-500">
+                <GraduationCap className="h-5 w-5 text-rose-400" />
               </div>
-              <div className="flex flex-col gap-4">
-                <Button
-                  className="bg-rose-500 text-sm px-5 rounded-md"
-                  onClick={() => setOpen(true)}
-                  disabled={!canApply || (!!application && hasPending)}
-                  title={
-                    examClosed
-                      ? 'Exam is closed'
-                      : !canApply
-                      ? 'You are not eligible yet'
-                      : hasPending
-                      ? 'Application pending'
-                      : 'Submit application'
-                  }
-                >
-                  Submit application
-                </Button>
-                <CompreExamForm open={open} onOpenChange={setOpen} />
-                <div>
-                  {application ? (
-                    <DisplayApplication
-                      application={{
-                        id: application.application_id,
-                        first_name: application.first_name,
-                        middle_initial: application.middle_name ? application.middle_name[0] : null,
-                        last_name: application.last_name,
-                        program: application.program,
-                        school_year: application.school_year,
-                        office_address: application.office_address ?? null,
-                        mobile_no: application.contact_number ?? null,
-                        telephone_no: application.telephone_number ?? null,
-                        email: application.email,
-                        status: (application.final_approval_status || 'Pending') as any,
-                        subjects: application.subjects,
-                        created_at: application.created_at ?? null,
-                      }}
-                    />
-                  ) : (
-                    <div className="p-6 text-center text-sm text-muted-foreground">No application submitted yet.</div>
+              <div>
+                <span className="text-base font-semibold">Comprehensive Exam</span>
+                <p className="block text-xs text-muted-foreground">
+                  Submit and track your comprehensive exam application.
+                </p>
+                <div className="mt-1 flex items-center gap-2">
+                  <Badge
+                    variant={canApply ? 'secondary' : 'outline'}
+                    className={
+                      examClosed
+                        ? 'border-rose-300 text-rose-700 bg-rose-50'
+                        : canApply
+                        ? 'border-green-300 text-green-700 bg-green-50'
+                        : ''
+                    }
+                  >
+                    {examClosed ? (
+                      <span className="flex items-center gap-1">
+                        <CalendarX className="h-3.5 w-3.5" />
+                        Closed
+                      </span>
+                    ) : canApply ? (
+                      <span className="flex items-center gap-1">
+                        <ShieldCheck className="h-3.5 w-3.5" />
+                        Eligible
+                      </span>
+                    ) : (
+                      <span className="flex items-center gap-1">
+                        <ShieldAlert className="h-3.5 w-3.5" />
+                        Not eligible
+                      </span>
+                    )}
+                  </Badge>
+
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-7 px-2 text-xs"
+                    onClick={fetchEligibility}
+                    disabled={elig.loading}
+                    title={elig.loading ? 'Checking eligibility…' : 'Refresh eligibility'}
+                  >
+                    <RefreshCcw className={`h-3.5 w-3.5 mr-1 ${elig.loading ? 'animate-spin' : ''}`} />
+                    Refresh
+                  </Button>
+
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-7 px-2 text-xs"
+                    onClick={() => setShowEligDialog(true)}
+                    title="See eligibility details"
+                  >
+                    <Info className="h-3.5 w-3.5 mr-1" />
+                    Details
+                  </Button>
+
+                  {/* Subtle sync hint when polling */}
+                  {retryCount > 0 && allStudentFlagsNull(elig) && (
+                    <span className="text-[11px] text-zinc-500">
+                      Syncing eligibility… ({retryCount}/5)
+                    </span>
                   )}
                 </div>
               </div>
-              {/* Eligibility details dialog */}
-              <Dialog open={showEligDialog} onOpenChange={setShowEligDialog}>
-                <DialogContent className="sm:max-w-md">
-                  <DialogHeader>
-                    <DialogTitle>Comprehensive Exam Eligibility</DialogTitle>
-                    <DialogDescription>
-                      You must meet all the requirements below before you can submit an application.
-                    </DialogDescription>
-                  </DialogHeader>
+            </div>
 
-                  <div className="space-y-2">
-                    {blockers.map((b, i) => (
-                      <div key={i} className="flex items-center justify-between rounded border px-3 py-2">
-                        <span className="text-sm">{b.label}</span>
-                        <Badge
-                          variant="outline"
-                          className={
-                            b.ok === true
-                              ? 'border-green-300 text-green-700 bg-green-50'
-                              : b.ok === false
-                              ? 'border-rose-300 text-rose-700 bg-rose-50'
-                              : 'text-zinc-600'
-                          }
-                        >
-                          {b.ok === true ? 'OK' : b.ok === false ? 'Missing' : 'Unknown'}
-                        </Badge>
-                      </div>
-                    ))}
-                  </div>
+            <Button
+              className="bg-rose-500 text-sm px-5 rounded-md"
+              onClick={() => setOpen(true)}
+              disabled={!canApply || (!!application && (hasPending || hasApproved))}
+              title={
+                examClosed
+                  ? 'Exam is closed'
+                  : !canApply
+                  ? 'You are not eligible yet'
+                  : hasApproved
+                  ? 'Application approved'
+                  : hasPending
+                  ? 'Application pending'
+                  : 'Submit application'
+              }
+            >
+              <Plus className="h-4 w-4" />
+              Submit application
+            </Button>
+            <CompreExamForm open={open} onOpenChange={setOpen} />
+          </div>
 
-                  <DialogFooter className="mt-2">
-                    <Button variant="outline" onClick={() => setShowEligDialog(false)}>Close</Button>
-                    <Button onClick={() => { setShowEligDialog(false); if (canApply && !hasPending) setOpen(true); }} disabled={!canApply || hasPending}>
-                      Apply Now
-                    </Button>
-                  </DialogFooter>
-                </DialogContent>
-              </Dialog>
-            
+          <div>
+            {application ? (
+              <DisplayApplication
+                application={{
+                  id: application.application_id,
+                  first_name: application.first_name,
+                  middle_initial: application.middle_name ? application.middle_name[0] : null,
+                  last_name: application.last_name,
+                  program: application.program,
+                  school_year: application.school_year,
+                  office_address: application.office_address ?? null,
+                  mobile_no: application.contact_number ?? null,
+                  telephone_no: application.telephone_number ?? null,
+                  email: application.email,
+                  status: (application.final_approval_status || 'Pending') as any,
+                  registrar_reason: application.registrar_reason ?? null,
+                  subjects: application.subjects,
+                  created_at: application.created_at ?? null,
+                }}
+              />
+            ) : (
+              <div className="p-6 text-center text-sm text-muted-foreground">
+                No application submitted yet.
+              </div>
+            )}
+          </div>
         </div>
       </div>
+
+      {/* Eligibility details dialog */}
+      <Dialog open={showEligDialog} onOpenChange={setShowEligDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Comprehensive Exam Eligibility</DialogTitle>
+            <DialogDescription>
+              You must meet all the requirements below before you can submit an application.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-2">
+            {blockers.map((b, i) => (
+              <div key={i} className="flex items-center justify-between rounded border px-3 py-2">
+                <span className="text-sm">{b.label}</span>
+                <Badge
+                  variant="outline"
+                  className={
+                    b.ok === true
+                      ? 'border-green-300 text-green-700 bg-green-50'
+                      : b.ok === false
+                      ? 'border-rose-300 text-rose-700 bg-rose-50'
+                      : 'text-zinc-600'
+                  }
+                >
+                  {b.ok === true ? 'OK' : b.ok === false ? 'Missing' : 'Unknown'}
+                </Badge>
+              </div>
+            ))}
+          </div>
+
+          <DialogFooter className="mt-2">
+            <Button variant="outline" onClick={() => setShowEligDialog(false)}>
+              Close
+            </Button>
+            <Button
+              onClick={() => {
+                setShowEligDialog(false);
+                if (canApply && !hasPending && !hasApproved) setOpen(true);
+              }}
+              disabled={!canApply || hasPending || hasApproved}
+              title={
+                !canApply
+                  ? 'You are not eligible yet'
+                  : hasApproved
+                  ? 'Application approved'
+                  : hasPending
+                  ? 'Application pending'
+                  : 'Apply now'
+              }
+            >
+              Apply Now
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </AppLayout>
   );
 }

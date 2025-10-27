@@ -5,7 +5,7 @@ import { Dialog, DialogTrigger, DialogContent } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Info, Filter, Check } from 'lucide-react';
 import { format } from 'date-fns';
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import type { CompreExamApplicationSummary } from './Index';
 import Details from './details';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@/components/ui/dropdown-menu';
@@ -15,9 +15,10 @@ type Columns = { student: boolean; program: boolean; eligibility: boolean; appli
 type Props = {
   paged: CompreExamApplicationSummary[];
   columns: Columns;
+  onVisibleCountChange?: (n: number) => void;
 };
 
-export default function TableCompreExam({ paged, columns }: Props) {
+export default function TableCompreExam({ paged, columns, onVisibleCountChange }: Props) {
   const [selected, setSelected] = useState<number[]>([]);
   const [selectedIndex, setSelectedIndex] = useState<number>(0);
   const [selectedRow, setSelectedRow] = useState<CompreExamApplicationSummary | null>(null);
@@ -28,8 +29,6 @@ export default function TableCompreExam({ paged, columns }: Props) {
   const [appliedFilter, setAppliedFilter] = useState<'all' | 'yes' | 'no'>('all');
   // Application status filter
   const [statusFilter, setStatusFilter] = useState<'all' | 'approved' | 'pending' | 'rejected' | 'not_yet_applied'>('all');
-
-  const headerChecked = selected.length > 0 && selected.length === paged.length;
 
   const sorted = useMemo(() => {
     // sort by submitted_at desc, nulls last
@@ -56,8 +55,18 @@ export default function TableCompreExam({ paged, columns }: Props) {
     return out;
   }, [sorted, eligibilityFilter, appliedFilter, statusFilter]);
 
+  // headerChecked should reflect currently visible (filtered) rows
+  const headerChecked = selected.length > 0 && selected.length === filtered.length;
+
+  // notify parent about visible count when filters/search change
+  useEffect(() => {
+    if (typeof onVisibleCountChange === 'function') {
+      onVisibleCountChange(filtered.length);
+    }
+  }, [filtered, onVisibleCountChange]);
+
   function toggleSelectAll() {
-    setSelected(headerChecked ? [] : paged.map(p => p.id));
+    setSelected(headerChecked ? [] : filtered.map(p => p.id));
   }
   function toggleSelectOne(id: number) {
     setSelected(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
@@ -179,9 +188,6 @@ export default function TableCompreExam({ paged, columns }: Props) {
       <Table className="min-w-[900px] text-sm dark:text-muted-foreground">
         <TableHeader>
           <TableRow className="dark:bg-muted/40">
-            <TableHead className="w-[4%] py-2 dark:bg-muted/30 dark:texxt-muted-foreground">
-              <Checkbox checked={headerChecked} onCheckedChange={toggleSelectAll} />
-            </TableHead>
             {columns.student && <TableHead className="w-[28%] px-2 dark:bg-muted/30 dark:text-muted-foreground">Student</TableHead>}
             {columns.program && <TableHead className="w-[22%] px-2 dark:bg-muted/30 dark:text-muted-foreground">Program</TableHead>}
             {columns.eligibility && <TableHead className="w-[14%] text-center px-1 py-2 dark:bg-muted/30 dark:text-muted-foreground">Eligibility</TableHead>}
@@ -193,9 +199,6 @@ export default function TableCompreExam({ paged, columns }: Props) {
         <TableBody>
           {filtered.map((r, i) => (
             <TableRow key={r.id} className="hover:bg-muted/50 dark:hover:bg-muted/70">
-              <TableCell className="px-2 py-2">
-                <Checkbox checked={selected.includes(r.id)} onCheckedChange={() => toggleSelectOne(r.id)} />
-              </TableCell>
 
               {columns.student && (
                 <TableCell className="px-2 py-2 font-semibold truncate leading-tight dark:text-foreground" style={{ maxWidth: '260px' }}>
@@ -254,8 +257,8 @@ export default function TableCompreExam({ paged, columns }: Props) {
                         <Info />
                       </Button>
                     </DialogTrigger>
-                    <DialogContent className="max-w-3xl min-w-260 w-full max-h-[90vh]">
-                      <div className="max-h-[80vh] overflow-y-auto px-1">
+                    <DialogContent className="max-w-md w-full max-h-[90vh]">
+                      <div className="max-h-[80vh] overflow-y-auto">
                         {selectedRow && <Details application={selectedRow} />}
                       </div>
                     </DialogContent>

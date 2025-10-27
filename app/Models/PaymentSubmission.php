@@ -12,15 +12,15 @@ class PaymentSubmission extends Model
 
     protected $fillable = [
         'student_id',
+        'payment_type',
         'or_number',
         'amount_paid',
         'payment_date',
-        'payment_type',
         'receipt_image',
-        'checked_by',
-        'checked_at',
         'status',
         'remarks',
+        'checked_by',
+        'checked_at',
     ];
 
     protected $casts = [

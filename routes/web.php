@@ -33,6 +33,12 @@ use App\Http\Controllers\PaymentRateController;
 use App\Models\PaymentRate;
 use App\Http\Controllers\AA\PaymentVerificationController;
 use App\Http\Controllers\Assistant\DefenseBatchController;
+use App\Http\Controllers\ExamSubjectOfferingController;
+use Illuminate\Http\Request;
+use App\Models\ExamSubjectOffering;
+use App\Http\Controllers\RegistrarExamApplicationController;
+use App\Http\Controllers\DeanCompreExamController;
+
 
 /*
 |--------------------------------------------------------------------------
@@ -43,13 +49,11 @@ Route::get('/', function () {
     return Auth::check()
         ? redirect()->route('dashboard')
         : redirect()->route('login');
-    return Auth::check()
-        ? redirect()->route('dashboard')
-        : redirect()->route('login');
 })->name('home');
 
-Route::post('/programs/{programId}/panelists', [HonorariumSummaryController::class, 'storePanelist'])
-    ->name('programs.panelists.store');
+// Moved to authenticated routes - must be logged in to add panelists
+// Route::post('/programs/{programId}/panelists', [HonorariumSummaryController::class, 'storePanelist'])
+//     ->name('programs.panelists.store');
 
 // The routes here means that to be rendered or accessed, you need to login or have prior authentication.
 Route::middleware('guest')->group(function () {
@@ -61,10 +65,14 @@ Route::middleware('guest')->group(function () {
 
 /*
 |--------------------------------------------------------------------------
-| Debug / Diagnostics (optional)
+| Debug / Diagnostics (DISABLE IN PRODUCTION!)
 |--------------------------------------------------------------------------
 */
+// ⚠️ TODO: Remove or protect these routes in production
 Route::get('/test-upload-limits', function () {
+    if (app()->environment('production')) {
+        abort(404);
+    }
     return response()->json([
         'upload_max_filesize' => ini_get('upload_max_filesize'),
         'post_max_size' => ini_get('post_max_size'),
@@ -285,10 +293,13 @@ Route::get('/test-email-layout/{template}', function ($template) {
     }
 });
 
-
 use Illuminate\Support\Facades\Mail;
 
+// ⚠️ TODO: Remove in production
 Route::get('/test-mail', function () {
+    if (app()->environment('production')) {
+        abort(404);
+    }
     Mail::raw('This is a test email to Mailpit!', function ($message) {
         $message->to('test@example.com')
                 ->subject('Hello Mailpit!');
@@ -305,8 +316,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/api/coordinator/code', [CoordinatorAdviserController::class, 'getCoordinatorCode']);
     Route::post('/api/adviser/register-with-coordinator-code', [\App\Http\Controllers\CoordinatorAdviserController::class, 'registerWithCode']);
     Route::get('/coordinator/defense-requests/all-defense-requests', [\App\Http\Controllers\DefenseRequestController::class, 'allForCoordinator'])->middleware('auth');
-    Route::get('/api/coordinator/code', [CoordinatorAdviserController::class, 'getCoordinatorCode']);
-    Route::post('/api/adviser/register-with-coordinator-code', [\App\Http\Controllers\CoordinatorAdviserController::class, 'registerWithCode']);
+    
+    // Removed duplicate routes (lines 314-315)
 
     // Coordinator Adviser Management Routes
     Route::get('/api/coordinator/advisers', [CoordinatorAdviserController::class, 'index']);
@@ -322,8 +333,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('/api/coordinator/advisers/{adviser}/students', [\App\Http\Controllers\CoordinatorAdviserController::class, 'storeStudent']);
     Route::delete('/api/coordinator/advisers/{adviser}/students/{student}', [\App\Http\Controllers\CoordinatorAdviserController::class, 'destroyStudent']);
     Route::get('/api/coordinator/students/search', [CoordinatorAdviserController::class, 'searchStudents']);
-
-
 
 
     //PAYMENTVERIFIATION AA
@@ -368,52 +377,23 @@ Route::middleware(['auth', 'verified'])->group(function () {
     })->name('settings.documents.edit');
 
 
-
-
-
-        // HONORARIUM ROUTES
-
-        // Page 1 - List all programs
-        Route::get('/honorarium', [HonorariumSummaryController::class, 'index'])
-            ->name('honorarium.index');
-
-        // Page 2 - Show individual program details (panelists, etc.)
-        Route::get('/honorarium/individual-record/{programId}', [HonorariumSummaryController::class, 'show'])
-            ->name('honorarium.individual-record');
-
-        // Download program PDF
-        Route::get('/honorarium/{programId}/download-pdf', [HonorariumSummaryController::class, 'downloadProgramPdf'])
-            ->name('honorarium.downloadPDF');
-
-        // Download individual panelist PDF
-        Route::get('/honorarium/panelist/{panelistId}/download-pdf', [HonorariumSummaryController::class, 'downloadPanelistPdf'])
-            ->name('honorarium.panelist.downloadPDF');
-
-
-
-
-
-
-
-
     // HONORARIUM ROUTES
-   
+    // Panelist management
+    Route::post('/programs/{programId}/panelists', [HonorariumSummaryController::class, 'storePanelist'])
+        ->name('programs.panelists.store');
+    
+    // Page 1 - List all program
+    
+Route::get('/honorarium/individual-record/{programId}', [HonorariumSummaryController::class, 'show'])
+    ->name('honorarium.individual-record');
 
 
-  // Download individual panelist CSV (includes per-assignment role)
-        Route::get('/honorarium/panelist/{panelistId}/download-csv', [HonorariumSummaryController::class, 'downloadPanelistCsv'])
-            ->name('honorarium.panelist.downloadCSV');
-
-    Route::get('/honorarium/individual-record/{programId}', [HonorariumSummaryController::class, 'show'])
-        ->name('honorarium.individual-record');
-
-
-    Route::get('/honorarium', [HonorariumSummaryController::class, 'index'])
-        ->name('honorarium.index');
+    Route::get('/honorarium', [HonorariumSummaryController::class, 'index']) 
+        ->name('honorarium.index'); 
 
     Route::get('/honorarium/individual-record/{programId}', [HonorariumSummaryController::class, 'show'])
         ->name('honorarium-record.show');
-
+    
     // Download CSV for a program
     // API route
     Route::get('/api/honorarium/{programId}/download-pdf', [HonorariumSummaryController::class, 'downloadPdfApi']);
@@ -422,33 +402,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/honorarium/{programId}/download-pdf', [HonorariumSummaryController::class, 'downloadProgramPdf'])
         ->name('honorarium.downloadPDF');
 
+    // For program filter
+    Route::get('/student-records/program/{program}', [StudentRecordController::class, 'getByProgram'])
+        ->name('student-records.getByProgram');
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    // For DOCX download
+    Route::get('/student-records/{id}/download-docs', [StudentRecordController::class, 'downloadDocs'])
+        ->name('student-records.downloadDocs');
 
     //student-records route
     Route::get('/student-records', [StudentRecordController::class, 'index'])->name('student-records.index');
@@ -460,22 +420,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::get('/payments/{id}/download-pdf', [StudentRecordController::class, 'downloadPdf'])
         ->name('payments.downloadPdf');
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
     //Emails Controller
     Route::get('send-mail', [EmailsController::class, 'welcomeEmail']);
@@ -632,14 +576,102 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('/comprehensive-exam', [ComprehensiveExamController::class, 'store'])->name('comprehensive-exam.store');
 
     /* Coordinator Comprehensive Exam */
+    Route::middleware(['auth'])->group(function () {
+        // Coordinator Comprehensive Payment route
+        Route::get('/coordinator/compre-payment', [CoordinatorComprePaymentController::class, 'index'])
+            ->name('coordinator.compre-payment.index');
+
+        Route::post('/coordinator/compre-payment/{id}/approve', [CoordinatorComprePaymentController::class, 'approve'])
+            ->name('coordinator.compre-payment.approve');
+
+        Route::post('/coordinator/compre-payment/{id}/reject', [CoordinatorComprePaymentController::class, 'reject'])
+            ->name('coordinator.compre-payment.reject');
+
+        // Bulk actions
+        Route::post('/coordinator/compre-payment/bulk-approve', [CoordinatorComprePaymentController::class, 'bulkApprove'])
+            ->name('coordinator.compre-payment.bulk-approve');
+
+        Route::post('/coordinator/compre-payment/bulk-reject', [CoordinatorComprePaymentController::class, 'bulkReject'])
+            ->name('coordinator.compre-payment.bulk-reject');
+    });
+    
+    /* Coordinator Comprehensive Exam */
     Route::get('/coordinator/compre-exam', [CoordinatorCompreExamController::class, 'index'])
         ->name('coordinator.compre-exam.index');
-    Route::get('/coordinator/compre-payment', [CoordinatorComprePaymentController::class, 'index'])
+    Route::get('/coordinator/compre-payment', [PaymentSubmissionController::class, 'coordinatorIndex'])
         ->name('coordinator.compre-payment.index');
-    Route::post('/coordinator/compre-payment/{id}/approve', [CoordinatorComprePaymentController::class, 'approve'])
+    Route::post('/coordinator/compre-payment/{id}/approve', [PaymentSubmissionController::class, 'approve'])
         ->name('coordinator.compre-payment.approve');
-    Route::post('/coordinator/compre-payment/{id}/reject', [CoordinatorComprePaymentController::class, 'reject'])
+    Route::post('/coordinator/compre-payment/{id}/reject', [PaymentSubmissionController::class, 'reject'])
         ->name('coordinator.compre-payment.reject');
+    // Page (Inertia)
+    Route::get('/coordinator/compre-exam-schedule', [ExamSubjectOfferingController::class, 'page'])
+        ->name('coordinator.compre-exam-schedule.index');
+    // CRUD for offerings (used by the page)
+    Route::post('/coordinator/compre-exam-schedule/offerings', [ExamSubjectOfferingController::class, 'store'])
+        ->name('coordinator.compre-exam-schedule.offerings.store');
+    Route::put('/coordinator/compre-exam-schedule/offerings/{offering}', [ExamSubjectOfferingController::class, 'update'])
+        ->name('coordinator.compre-exam-schedule.offerings.update');
+    Route::delete('/coordinator/compre-exam-schedule/offerings/{offering}', [ExamSubjectOfferingController::class, 'destroy'])
+        ->name('coordinator.compre-exam-schedule.offerings.destroy');
+
+    Route::middleware(['auth','verified'])->group(function () {
+        // Student-safe schedules index (active + with date/time)
+        Route::get('/student/exam-subject-offerings', function (Request $request) {
+            $validated = $request->validate([
+                'program' => ['required','string'],
+                'school_year' => ['required','regex:/^\d{4}-\d{4}$/'],
+            ]);
+
+            return ExamSubjectOffering::query()
+                ->where('program', $validated['program'])
+                ->where('school_year', $validated['school_year'])
+                ->where('is_active', true)
+                ->whereNotNull('exam_date')
+                ->whereNotNull('start_time')
+                ->whereNotNull('end_time')
+                ->orderBy('subject_name')
+                ->get([
+                    'id','program','school_year','subject_code','subject_name',
+                    'exam_date','start_time','end_time','is_active',
+                ]);
+        })->name('student.exam-subject-offerings.index');
+
+        // If you also want to keep the API index for coordinators, ensure it’s not restricted to coordinator-only middleware.
+        // Route::get('/api/exam-subject-offerings', [ExamSubjectOfferingController::class, 'index'])
+        //     ->name('api.exam-subject-offerings.index');
+    });
+
+    Route::middleware(['auth','verified'])->group(function () {
+        // Registrar Applications page
+        Route::get('/registrar/compre-exam', [RegistrarExamApplicationController::class, 'indexPage'])
+            ->name('registrar.compre-exam.index');
+
+        // JSON list + decision
+        Route::get('/api/registrar/exam-applications', [RegistrarExamApplicationController::class, 'list'])
+            ->name('api.registrar.exam-applications');
+
+        Route::post('/registrar/exam-applications/{application}/decision', [RegistrarExamApplicationController::class, 'decide'])
+            ->name('registrar.exam-applications.decide');
+
+        Route::get('/api/registrar/exam-applications/{application}/reviews', [RegistrarExamApplicationController::class, 'reviews'])
+            ->name('api.registrar.exam-applications.reviews');
+    });
+
+    Route::middleware(['auth','verified'])->group(function () {
+        // Dean page
+        Route::get('/dean/compre-exam', [DeanCompreExamController::class, 'page'])
+            ->name('dean.compre-exam.index');
+        // APIs
+        Route::get('/api/dean/exam-applications', [DeanCompreExamController::class, 'list'])
+            ->name('api.dean.exam-applications');
+        Route::post('/dean/exam-applications/{application}/decision', [DeanCompreExamController::class, 'decide'])
+            ->name('dean.exam-applications.decide');
+        Route::post('/dean/exam-applications/bulk-decision', [DeanCompreExamController::class, 'bulkDecision'])
+            ->name('dean.exam-applications.bulk-decision');
+        Route::get('/api/dean/exam-applications/{application}/reviews', [DeanCompreExamController::class, 'reviews'])
+            ->name('api.dean.exam-applications.reviews');
+    });
 
     /* Honorarium / Reports */
     Route::get('/generate-report', fn() => Inertia::render('honorarium/generate-report/Index'))
@@ -734,6 +766,9 @@ Route::middleware(['auth'])->group(function () {
 
     Route::get('/generated-documents/{doc}', [GeneratedDocumentController::class, 'show'])
         ->name('generated-documents.show');
+
+    Route::get('/api/exam-subject-offerings', [ExamSubjectOfferingController::class, 'index'])
+        ->name('api.exam-subject-offerings.index');
 });
 
 /*
