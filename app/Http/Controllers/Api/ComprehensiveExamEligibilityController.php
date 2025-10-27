@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Services\LegacyPortalClient;
+use App\Models\SystemSetting;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
@@ -15,6 +16,35 @@ class ComprehensiveExamEligibilityController extends Controller
     public function __construct(
         protected LegacyPortalClient $legacyClient
     ) {}
+
+    /**
+     * Check if exam window is open
+     */
+    public function checkExamStatus(Request $request): JsonResponse
+    {
+        try {
+            $examWindowOpen = SystemSetting::get('exam_window_open', true);
+            
+            return response()->json([
+                'open' => $examWindowOpen,
+                'isOpen' => $examWindowOpen,
+                'message' => $examWindowOpen 
+                    ? 'Comprehensive exam applications are currently open' 
+                    : 'Comprehensive exam applications are currently closed'
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Failed to check exam window status', [
+                'error' => $e->getMessage()
+            ]);
+            
+            return response()->json([
+                'open' => true, // Fail open by default
+                'isOpen' => true,
+                'message' => 'Unable to verify exam window status',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
 
     /**
      * Check comprehensive exam eligibility
