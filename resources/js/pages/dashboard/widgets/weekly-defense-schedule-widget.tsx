@@ -264,7 +264,7 @@ export default function WeeklyDefenseSchedulesWidget(props: Props) {
         {overallLoading ? (
           <div>
             {[...Array(4)].map((_, i) => (
-              <Skeleton key={i} className="h-7 w-full mb-2 bg-gray-100 dark:bg-zinc-800" />
+              <Skeleton key={i} className="h-16 w-full mb-2 bg-gray-100 dark:bg-zinc-800" />
             ))}
           </div>
         ) : combined.length === 0 ? (
@@ -274,63 +274,76 @@ export default function WeeklyDefenseSchedulesWidget(props: Props) {
             </span>
           </div>
         ) : (
-          combined.map(item => {
-            const isDefense = item.kind === 'defense';
-            const start = item.start ? timeLabel(item.start) : (item.start === null ? 'All Day' : '');
-            const end = item.end ? timeLabel(item.end) : '';
-            const timeStr = start && end ? `${start} – ${end}` : start;
-            const badge = isDefense ? 'Defense' : 'Event';
-            return (
-              <div
-                key={item.id}
-                className={cn(
-                  "group flex items-center gap-2 px-2 py-2 rounded border max-w-full text-xs",
-                  isDefense
-                    ? "border-emerald-500/60 bg-emerald-50 dark:bg-emerald-900/20"
-                    : "border-gray-300 bg-gray-50 dark:border-zinc-700 dark:bg-zinc-800/60"
-                )}
-                style={{ minWidth: 0 }}
-                title={item.title}
-              >
-                {isDefense
-                  ? <GraduationCap className={cn("flex-shrink-0", item.owner ? "text-emerald-600" : "text-emerald-500")} size={18} />
-                  : <CalendarIcon className="text-gray-500 dark:text-gray-400 flex-shrink-0" size={18} />
-                }
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-1">
-                    <span className="font-semibold truncate max-w-[200px] text-gray-800 dark:text-gray-200">
-                      {item.title}
-                    </span>
-                    <span
-                      className={cn(
-                        "px-1.5 py-[1px] rounded-full text-[9px] font-bold tracking-wide shrink-0",
-                        isDefense
-                          ? "bg-emerald-500 text-white"
-                          : "bg-gray-400 text-white dark:bg-zinc-600"
-                      )}
-                    >
-                      {badge}
-                    </span>
-                    {item.owner && (
-                      <span className="px-1 py-[1px] rounded-full text-[9px] font-semibold bg-rose-500 text-white shrink-0">
-                        You
-                      </span>
+          <>
+            {combined.slice(0, 6).map(item => {
+              const isDefense = item.kind === 'defense';
+              const start = item.start ? timeLabel(item.start) : (item.start === null ? 'All Day' : '');
+              const end = item.end ? timeLabel(item.end) : '';
+              const timeStr = start && end ? `${start} – ${end}` : start;
+              
+              return (
+                <div
+                  key={item.id}
+                  className="group flex items-start gap-3 p-3 rounded-lg border border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:shadow-sm transition-shadow"
+                >
+                  <div className={cn(
+                    "flex-shrink-0 rounded-full p-2",
+                    isDefense 
+                      ? "bg-emerald-50 dark:bg-emerald-900/20" 
+                      : "bg-blue-50 dark:bg-blue-900/20"
+                  )}>
+                    {isDefense
+                      ? <GraduationCap className="size-4 text-emerald-600 dark:text-emerald-400" />
+                      : <CalendarIcon className="size-4 text-blue-600 dark:text-blue-400" />
+                    }
+                  </div>
+                  
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-start justify-between gap-2 mb-1">
+                      <h4 className="text-sm font-semibold text-gray-900 dark:text-gray-100 line-clamp-1">
+                        {item.title}
+                      </h4>
+                      <div className="flex items-center gap-1 flex-shrink-0">
+                        {item.owner && (
+                          <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300">
+                            You
+                          </span>
+                        )}
+                        <span className={cn(
+                          "px-1.5 py-0.5 rounded text-[10px] font-semibold",
+                          isDefense
+                            ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300"
+                            : "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300"
+                        )}>
+                          {isDefense ? 'Defense' : 'Event'}
+                        </span>
+                      </div>
+                    </div>
+                    
+                    {timeStr && (
+                      <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">
+                        {timeStr}
+                      </p>
+                    )}
+                    
+                    {isDefense && canSeeRaw && item.raw.defense_type && (
+                      <p className="text-xs text-gray-500 dark:text-gray-500">
+                        {item.raw.defense_type}{item.raw.defense_mode ? ` • ${item.raw.defense_mode}` : ""}
+                      </p>
                     )}
                   </div>
-                  {timeStr && (
-                    <div className="text-[10px] text-gray-600 dark:text-gray-400 truncate">
-                      {timeStr}
-                    </div>
-                  )}
-                  {isDefense && canSeeRaw && item.raw.defense_type && (
-                    <div className="text-[10px] text-gray-500 dark:text-gray-500 truncate italic">
-                      {item.raw.defense_type}{item.raw.defense_mode ? ` • ${item.raw.defense_mode}` : ""}
-                    </div>
-                  )}
                 </div>
+              );
+            })}
+            
+            {combined.length > 6 && (
+              <div className="text-center pt-2">
+                <span className="text-xs font-medium text-rose-600 dark:text-rose-400">
+                  +{combined.length - 6} more schedule{combined.length - 6 !== 1 ? 's' : ''}
+                </span>
               </div>
-            );
-          })
+            )}
+          </>
         )}
       </div>
     </div>
