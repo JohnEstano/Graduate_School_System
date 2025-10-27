@@ -69,6 +69,10 @@ export default function CoordinatorApproveDialog({
   const [templates, setTemplates] = useState<any[]>([]);
   const [selectedTemplate, setSelectedTemplate] = useState<any | null>(null);
 
+  // Email confirmation dialog state
+  const [showEmailDialog, setShowEmailDialog] = useState(false);
+  const [sendEmail, setSendEmail] = useState(false);
+
   function csrf() {
     return (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content || '';
   }
@@ -368,7 +372,8 @@ export default function CoordinatorApproveDialog({
     }
   }
 
-  async function handleFinalApprove() {
+  function handleApproveClick() {
+    // Validate first
     if (!endorsementPdfUrl && !uploadedFile) {
       toast.error('Please generate or upload an endorsement form first');
       return;
@@ -384,7 +389,13 @@ export default function CoordinatorApproveDialog({
       return;
     }
 
+    // Show email confirmation dialog
+    setShowEmailDialog(true);
+  }
+
+  async function handleFinalApprove() {
     setIsApproving(true);
+    setShowEmailDialog(false);
     try {
       console.log('🚀 Starting coordinator approval process...');
       
@@ -433,6 +444,9 @@ export default function CoordinatorApproveDialog({
       if (coordinatorId) {
         payload.coordinator_user_id = coordinatorId;
       }
+
+      // Add send_email flag to payload
+      payload.send_email = sendEmail;
 
       console.log('📤 Updating coordinator status with payload:', payload);
       const statusRes = await fetch(
@@ -616,7 +630,7 @@ export default function CoordinatorApproveDialog({
                   className="w-full"
                   size="lg"
                   disabled={!endorsementPdfUrl && !uploadedFile || !activeSignature || isApproving || !coordinatorFullName.trim()}
-                  onClick={handleFinalApprove}
+                  onClick={handleApproveClick}
                 >
                   {isApproving ? (
                     <>
@@ -892,6 +906,58 @@ export default function CoordinatorApproveDialog({
                 </div>
               </ScrollArea>
             </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Email Confirmation Dialog */}
+      <Dialog open={showEmailDialog} onOpenChange={setShowEmailDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Send Email Notification?</DialogTitle>
+            <DialogDescription>
+              Would you like to send an email notification to the student about this approval?
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            <div className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                id="sendEmailCheck"
+                checked={sendEmail}
+                onChange={(e) => setSendEmail(e.target.checked)}
+                className="h-4 w-4 rounded border-gray-300"
+              />
+              <Label htmlFor="sendEmailCheck" className="text-sm font-normal cursor-pointer">
+                Send email notification to {defenseRequest?.first_name} {defenseRequest?.last_name}
+              </Label>
+            </div>
+          </div>
+
+          <div className="flex gap-2 justify-end">
+            <Button
+              variant="outline"
+              onClick={() => setShowEmailDialog(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleFinalApprove}
+              disabled={isApproving}
+            >
+              {isApproving ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Processing...
+                </>
+              ) : (
+                <>
+                  <Check className="mr-2 h-4 w-4" />
+                  Confirm Approval
+                </>
+              )}
+            </Button>
           </div>
         </DialogContent>
       </Dialog>
