@@ -2,7 +2,9 @@
 /bootstrap/ssr
 /node_modules
 /public/hot
+/public/build
 /public/storage
+public/build/assets
 /storage/*.key
 /storage/pail
 /vendor
