@@ -975,6 +975,11 @@ Route::post('/adviser/defense-requirements/{id}/endorsement-form', function ($id
 /* Document Generation API */
 Route::post('/api/generate-document', [GeneratedDocumentController::class, 'generateDocument']);
 
+/* NEW: Hardcoded Endorsement PDF Generation (replaces template system) */
+Route::post('/api/generate-endorsement-pdf', [\App\Http\Controllers\EndorsementPdfController::class, 'generate'])
+    ->middleware('auth')
+    ->name('api.generate-endorsement-pdf');
+
 /* Upload Endorsement Form (Web route for session auth) */
 Route::post('/api/defense-requests/{defenseRequest}/upload-endorsement', [DefenseRequestController::class, 'uploadDocuments'])
     ->middleware('auth')

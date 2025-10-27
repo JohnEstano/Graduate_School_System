@@ -62,18 +62,18 @@ export default function EndorsementDialog({
   const [isDragging, setIsDragging] = useState(false);
   const uploadInputRef = useRef<HTMLInputElement>(null);
 
-  const [templates, setTemplates] = useState<any[]>([]);
-  const [selectedTemplate, setSelectedTemplate] = useState<any | null>(null);
-
   function csrf() {
     return (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content || '';
   }
 
-  // Load templates and auto-generate document
+  // Auto-generate document when dialog opens
   useEffect(() => {
     if (open) {
-      loadTemplates();
       loadSignatures();
+      // Auto-generate the endorsement form
+      if (!generatedPdfUrl && !isGenerating) {
+        handleGenerateDocument();
+      }
     } else {
       // Reset state when dialog closes
       if (generatedPdfUrl && generatedPdfUrl.startsWith('blob:')) {
@@ -86,44 +86,6 @@ export default function EndorsementDialog({
       setIsDragging(false);
     }
   }, [open]);
-
-  // Auto-generate document when templates are loaded
-  useEffect(() => {
-    if (open && templates.length > 0 && selectedTemplate && !generatedPdfUrl && !isGenerating) {
-      handleGenerateDocument();
-    }
-  }, [open, templates, selectedTemplate]);
-
-  async function loadTemplates() {
-    try {
-      const res = await fetch('/api/document-templates');
-      if (res.ok) {
-        const data = await res.json();
-        setTemplates(data);
-        
-        // Auto-select template based on defense type
-        const defenseType = defenseRequest?.defense_type?.toLowerCase() || '';
-        const matchingTemplate = data.find((t: any) => {
-          const name = t.name.toLowerCase();
-          if (defenseType.includes('prefinal') || defenseType.includes('pre-final')) {
-            return name.includes('prefinal') || name.includes('pre-final');
-          }
-          if (defenseType.includes('final')) {
-            return name.includes('final') && !name.includes('prefinal');
-          }
-          return false;
-        });
-        
-        if (matchingTemplate) {
-          setSelectedTemplate(matchingTemplate);
-        } else if (data.length > 0) {
-          setSelectedTemplate(data[0]);
-        }
-      }
-    } catch (err) {
-      console.error('Failed to load templates:', err);
-    }
-  }
 
   async function loadSignatures() {
     setLoadingSignatures(true);
@@ -143,11 +105,6 @@ export default function EndorsementDialog({
   }
 
   async function handleGenerateDocument() {
-    if (!selectedTemplate) {
-      toast.error('No template selected');
-      return;
-    }
-
     if (!defenseRequest?.id) {
       toast.error('Invalid defense request');
       return;
@@ -155,7 +112,10 @@ export default function EndorsementDialog({
 
     setIsGenerating(true);
     try {
-      const res = await fetch('/api/generate-document', {
+      console.log('🚀 Generating endorsement PDF for request:', defenseRequest.id);
+      console.log('📋 Defense type:', defenseRequest.defense_type);
+      
+      const res = await fetch('/api/generate-endorsement-pdf', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -163,30 +123,46 @@ export default function EndorsementDialog({
           'X-CSRF-TOKEN': csrf()
         },
         body: JSON.stringify({
-          template_id: selectedTemplate.id,
           defense_request_id: defenseRequest.id,
-          fields: {},
-          role: 'adviser' // Specify role to prevent filling coordinator fields
+          role: 'adviser' // Specify role to add adviser signature only
         })
       });
 
+      console.log('📥 Response status:', res.status, res.statusText);
+      console.log('📥 Response content-type:', res.headers.get('content-type'));
+
       if (!res.ok) {
-        toast.error('Failed to generate document');
+        // Try to get error message from response
+        const contentType = res.headers.get('content-type');
+        let errorMessage = 'Failed to generate document';
+        
+        if (contentType && contentType.includes('application/json')) {
+          const errorData = await res.json();
+          console.error('❌ Error response:', errorData);
+          errorMessage = errorData.message || errorData.error || errorMessage;
+        } else {
+          const errorText = await res.text();
+          console.error('❌ Error response (text):', errorText);
+        }
+        
+        toast.error(errorMessage);
         setIsGenerating(false);
         return;
       }
 
       // Get the PDF as a blob
       const blob = await res.blob();
+      console.log('📦 PDF blob created:', blob.size, 'bytes, type:', blob.type);
       
       // Create a URL for the blob to use in iframe
       const url = window.URL.createObjectURL(blob);
       setGeneratedPdfUrl(url);
       
+      console.log('✅ PDF generated successfully');
       toast.success('Endorsement form generated successfully! Review and click "Endorse" to submit.');
     } catch (err) {
-      console.error('Generate error:', err);
-      toast.error('Failed to generate endorsement form');
+      console.error('💥 Generate error:', err);
+      toast.error('Failed to generate endorsement form: ' + (err as Error).message);
     } finally {
       setIsGenerating(false);
     }

@@ -65,10 +65,6 @@ export default function CoordinatorApproveDialog({
   const [coordinatorFullName, setCoordinatorFullName] = useState('');
   const [coordinatorTitle, setCoordinatorTitle] = useState('');
 
-  // Template state
-  const [templates, setTemplates] = useState<any[]>([]);
-  const [selectedTemplate, setSelectedTemplate] = useState<any | null>(null);
-
   // Email confirmation dialog state
   const [showEmailDialog, setShowEmailDialog] = useState(false);
   const [sendEmail, setSendEmail] = useState(false);
@@ -80,7 +76,6 @@ export default function CoordinatorApproveDialog({
   // Load existing endorsement form when dialog opens
   useEffect(() => {
     if (open) {
-      loadTemplates();
       loadEndorsementForm();
       loadSignatures();
       // Set default coordinator name
@@ -96,37 +91,6 @@ export default function CoordinatorApproveDialog({
       setUploadedFile(null);
     }
   }, [open]);
-
-  async function loadTemplates() {
-    try {
-      const res = await fetch('/api/document-templates');
-      if (res.ok) {
-        const data = await res.json();
-        setTemplates(data);
-        
-        // Auto-select template based on defense type
-        const defenseType = defenseRequest?.defense_type?.toLowerCase() || '';
-        const matchingTemplate = data.find((t: any) => {
-          const name = t.name.toLowerCase();
-          if (defenseType.includes('prefinal') || defenseType.includes('pre-final')) {
-            return name.includes('prefinal') || name.includes('pre-final');
-          }
-          if (defenseType.includes('final')) {
-            return name.includes('final') && !name.includes('prefinal');
-          }
-          return false;
-        });
-        
-        if (matchingTemplate) {
-          setSelectedTemplate(matchingTemplate);
-        } else if (data.length > 0) {
-          setSelectedTemplate(data[0]);
-        }
-      }
-    } catch (err) {
-      console.error('Failed to load templates:', err);
-    }
-  }
 
   async function loadEndorsementForm() {
     // Check both possible locations for endorsement_form
@@ -183,11 +147,6 @@ export default function CoordinatorApproveDialog({
   }
 
   async function handleGenerateDocument() {
-    if (!selectedTemplate) {
-      toast.error('No template selected');
-      return;
-    }
-
     if (!defenseRequest?.id) {
       toast.error('Invalid defense request');
       return;
@@ -200,7 +159,7 @@ export default function CoordinatorApproveDialog({
 
     setIsGenerating(true);
     try {
-      const res = await fetch('/api/generate-document', {
+      const res = await fetch('/api/generate-endorsement-pdf', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -208,13 +167,8 @@ export default function CoordinatorApproveDialog({
           'X-CSRF-TOKEN': csrf()
         },
         body: JSON.stringify({
-          template_id: selectedTemplate.id,
           defense_request_id: defenseRequest.id,
-          fields: {
-            'coordinator.full_name': coordinatorFullName,
-            'coordinator.title': coordinatorTitle
-          },
-          role: 'coordinator' // Specify coordinator role
+          role: 'coordinator' // Specify coordinator role to add coordinator signature
         })
       });
 
@@ -236,7 +190,7 @@ export default function CoordinatorApproveDialog({
       const url = URL.createObjectURL(blob);
       setEndorsementPdfUrl(url);
       
-      toast.success('Endorsement form generated successfully with coordinator info!');
+      toast.success('Endorsement form generated successfully with coordinator signature!');
     } catch (err) {
       console.error('Generate error:', err);
       toast.error('Failed to generate endorsement form');
