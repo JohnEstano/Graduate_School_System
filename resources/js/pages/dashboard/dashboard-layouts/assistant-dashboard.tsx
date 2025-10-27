@@ -7,6 +7,10 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import QuickActionsWidget from '../widgets/quick-actions-widget';
 import WeeklyDefenseSchedulesWidget from '../widgets/weekly-defense-schedule-widget';
 import PendingDefenseRequestsWidget from '../widgets/pending-defense-request-widget';
+import DefenseCountLineChart from '../widgets/visual-charts/defense-count';
+import { HonorariumPaymentTrends } from '../widgets/visual-charts/honorarium-payment-trends';
+import { DefenseTypeDistribution } from '../widgets/visual-charts/defense-type-distribution';
+import { OverallProgramActivity } from '../widgets/visual-charts/overall-program-activity';
 
 type PageProps = {
     auth: {
@@ -186,6 +190,7 @@ export default function AssistantDashboard() {
                         <Tabs value={tab} onValueChange={setTab} className="w-full">
                             <TabsList className="mb-2 ">
                                 <TabsTrigger value="overview" className="flex-1 sm:flex-none">Overview</TabsTrigger>
+                                <TabsTrigger value="analytics" className="flex-1 sm:flex-none">Analytics</TabsTrigger>
                             </TabsList>
 
                             {/* Overview Tab */}
@@ -230,6 +235,27 @@ export default function AssistantDashboard() {
                                             loading={loading}
                                         />
                                         <PendingDefenseRequestsWidget pendingRequests={pendingRequests} loading={loading} />
+                                    </div>
+                                </div>
+                            </TabsContent>
+
+                            {/* Analytics Tab */}
+                            <TabsContent value="analytics" className="w-full">
+                                <div className="flex flex-col gap-4 md:gap-6 mb-4 md:mb-6">
+                                    {/* Row 1: Defense Count */}
+                                    <div className="w-full">
+                                        <DefenseCountLineChart />
+                                    </div>
+                                    
+                                    {/* Row 2: Honorarium Payments + Defense Types */}
+                                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
+                                        <HonorariumPaymentTrends />
+                                        <DefenseTypeDistribution />
+                                    </div>
+                                    
+                                    {/* Row 3: Overall Program Activity (full width) */}
+                                    <div className="w-full">
+                                        <OverallProgramActivity />
                                     </div>
                                 </div>
                             </TabsContent>

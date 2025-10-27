@@ -1,6 +1,6 @@
 "use client"
 
-import { Bar, BarChart, XAxis, YAxis } from "recharts"
+import { Bar, BarChart, XAxis, YAxis, Cell } from "recharts"
 import { useEffect, useState } from "react"
 
 import {
@@ -19,16 +19,27 @@ import {
 } from "@/components/ui/chart"
 
 const chartConfig = {
-  requests: {
+  count: {
     label: "Requests",
     color: "#e11d48",
   },
 } satisfies ChartConfig
 
-export function CoordinatorMostActivePrograms() {
+const WORKFLOW_STATES = [
+  { key: 'submitted', label: 'Submitted', color: '#94a3b8' },
+  { key: 'adviser-review', label: 'Adviser Review', color: '#64748b' },
+  { key: 'adviser-approved', label: 'Adviser Approved', color: '#3b82f6' },
+  { key: 'coordinator-review', label: 'Coordinator Review', color: '#f59e0b' },
+  { key: 'coordinator-approved', label: 'Coordinator Approved', color: '#10b981' },
+  { key: 'panels-assigned', label: 'Panels Assigned', color: '#8b5cf6' },
+  { key: 'scheduled', label: 'Scheduled', color: '#ec4899' },
+  { key: 'completed', label: 'Completed', color: '#059669' },
+]
+
+export function WorkflowStatusFunnel() {
   const [chartData, setChartData] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
-  const [totalRequests, setTotalRequests] = useState(0)
+  const [totalActive, setTotalActive] = useState(0)
 
   useEffect(() => {
     fetch('/defense-requests', {
@@ -43,27 +54,33 @@ export function CoordinatorMostActivePrograms() {
       .then((data) => {
         const requests = Array.isArray(data) ? data : (data.defenseRequests ?? [])
         
-        const scheduledApproved = requests.filter((r: any) => 
-          r.workflow_state === 'coordinator-approved' || 
-          r.scheduled_date !== null
+        // Exclude rejected/cancelled requests
+        const activeRequests = requests.filter((r: any) => 
+          !['adviser-rejected', 'coordinator-rejected', 'cancelled'].includes(r.workflow_state?.toLowerCase())
         )
-
-        setTotalRequests(scheduledApproved.length)
-
-        const programCounts: Record<string, number> = {}
         
-        scheduledApproved.forEach((request: any) => {
-          const program = request.program || request.user?.program || 'Unknown Program'
-          programCounts[program] = (programCounts[program] || 0) + 1
+        setTotalActive(activeRequests.length)
+
+        const stateCounts: Record<string, number> = {}
+        
+        WORKFLOW_STATES.forEach(state => {
+          stateCounts[state.key] = 0
         })
 
-        const formattedData = Object.entries(programCounts)
-          .map(([program, count]) => ({
-            program: program.length > 25 ? program.substring(0, 25) + '...' : program,
-            requests: count,
+        activeRequests.forEach((request: any) => {
+          const state = request.workflow_state?.toLowerCase() || 'submitted'
+          if (stateCounts[state] !== undefined) {
+            stateCounts[state]++
+          }
+        })
+
+        const formattedData = WORKFLOW_STATES
+          .map(state => ({
+            stage: state.label,
+            count: stateCounts[state.key],
+            fill: state.color,
           }))
-          .sort((a, b) => b.requests - a.requests)
-          .slice(0, 5)
+          .filter(item => item.count > 0)
 
         setChartData(formattedData)
       })
@@ -78,9 +95,9 @@ export function CoordinatorMostActivePrograms() {
 
   if (loading) {
     return (
-      <Card className="rounded-xl shadow-none border">
+      <Card>
         <CardHeader>
-          <CardTitle>Most Active Programs</CardTitle>
+          <CardTitle>Workflow Status Pipeline</CardTitle>
           <CardDescription>Loading...</CardDescription>
         </CardHeader>
         <CardContent className="h-[300px] flex items-center justify-center">
@@ -92,23 +109,23 @@ export function CoordinatorMostActivePrograms() {
 
   if (chartData.length === 0) {
     return (
-      <Card className="rounded-xl shadow-none border">
+      <Card>
         <CardHeader>
-          <CardTitle>Most Active Programs</CardTitle>
+          <CardTitle>Workflow Status Pipeline</CardTitle>
           <CardDescription>No data available</CardDescription>
         </CardHeader>
         <CardContent className="h-[300px] flex items-center justify-center">
-          <div className="text-muted-foreground">No scheduled or approved defense requests found</div>
+          <div className="text-muted-foreground">No active defense requests found</div>
         </CardContent>
       </Card>
     )
   }
 
   return (
-    <Card className="rounded-xl shadow-none border">
+    <Card>
       <CardHeader>
-        <CardTitle>Most Active Programs</CardTitle>
-        <CardDescription>Top 5 programs by defense requests</CardDescription>
+        <CardTitle>Workflow Status Pipeline</CardTitle>
+        <CardDescription>Defense requests by workflow stage</CardDescription>
       </CardHeader>
       <CardContent>
         <ChartContainer config={chartConfig}>
@@ -117,33 +134,36 @@ export function CoordinatorMostActivePrograms() {
             data={chartData}
             layout="vertical"
             margin={{
-              left: 0,
+              left: 20,
             }}
           >
             <YAxis
-              dataKey="program"
+              dataKey="stage"
               type="category"
               tickLine={false}
               tickMargin={10}
               axisLine={false}
               tickFormatter={(value) => value}
             />
-            <XAxis dataKey="requests" type="number" hide />
+            <XAxis dataKey="count" type="number" hide />
             <ChartTooltip
               cursor={false}
               content={<ChartTooltipContent hideLabel />}
             />
             <Bar 
-              dataKey="requests" 
-              fill="var(--color-requests)"
+              dataKey="count" 
               radius={5}
-            />
+            >
+              {chartData.map((entry, index) => (
+                <Cell key={`cell-${index}`} fill={entry.fill} />
+              ))}
+            </Bar>
           </BarChart>
         </ChartContainer>
       </CardContent>
       <CardFooter className="flex-col items-start gap-2 text-sm">
         <div className="flex gap-2 font-medium leading-none">
-          Top program: {chartData[0].program} ({chartData[0].requests})
+          {totalActive} active requests in the pipeline
         </div>
       </CardFooter>
     </Card>

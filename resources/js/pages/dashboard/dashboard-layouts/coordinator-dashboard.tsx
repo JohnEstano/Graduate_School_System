@@ -17,7 +17,8 @@ import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area"; // Make sur
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { CoordinatorMostActivePrograms } from '../widgets/visual-charts/coordinator-most-active-programs';
 import { CoordinatorAdviserStudentRatio } from '../widgets/visual-charts/coordinator-adviser-student-ratio';
-import { CoordinatorDefenseScheduleTrends } from '../widgets/visual-charts/coordinator-defense-schedule-trends';
+import { DefenseTypeDistribution } from '../widgets/visual-charts/defense-type-distribution';
+import { DefenseModeBreakdown } from '../widgets/visual-charts/defense-mode-breakdown';
 
 type PageProps = {
     auth: {
@@ -361,25 +362,22 @@ export default function CoordinatorDashboard() {
 
                             {/* Analytics Tab - Mobile Responsive */}
                             <TabsContent value="analytics" className="w-full">
-                                {/* Bento Grid Layout - Power BI Style */}
-                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-4 md:mb-6">
-                                    {/* Defense Schedule Trends - Spans 2 columns on desktop */}
-                                    <div className="col-span-1 md:col-span-2">
-                                        <CoordinatorDefenseScheduleTrends />
-                                    </div>
-                                    
-                                    {/* Legacy Defense Count - Spans 2 columns on desktop */}
-                                    <div className="col-span-1 md:col-span-2">
+                                {/* Row Layout for Analytics */}
+                                <div className="flex flex-col gap-4 md:gap-6 mb-4 md:mb-6">
+                                    {/* Row 1: Defense Count (with dropdown) */}
+                                    <div className="w-full">
                                         <DefenseCountLineChart />
                                     </div>
                                     
-                                    {/* Most Active Programs - Single column */}
-                                    <div className="col-span-1 md:col-span-2 lg:col-span-2">
-                                        <CoordinatorMostActivePrograms />
+                                    {/* Row 2: Defense Type Distribution + Defense Mode Breakdown */}
+                                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
+                                        <DefenseTypeDistribution />
+                                        <DefenseModeBreakdown />
                                     </div>
                                     
-                                    {/* Adviser-Student Ratio - Single column */}
-                                    <div className="col-span-1 md:col-span-2 lg:col-span-2">
+                                    {/* Row 3: Most Active Programs and Adviser-Student Ratio */}
+                                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
+                                        <CoordinatorMostActivePrograms />
                                         <CoordinatorAdviserStudentRatio />
                                     </div>
                                 </div>

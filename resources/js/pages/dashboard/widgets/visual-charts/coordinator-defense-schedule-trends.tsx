@@ -17,6 +17,13 @@ import {
   ChartTooltip,
   ChartTooltipContent,
 } from "@/components/ui/chart"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 
 const chartConfig = {
   defenses: {
@@ -30,6 +37,7 @@ export function CoordinatorDefenseScheduleTrends() {
   const [loading, setLoading] = useState(true)
   const [totalScheduled, setTotalScheduled] = useState(0)
   const [percentageChange, setPercentageChange] = useState(0)
+  const [period, setPeriod] = useState("month")
 
   useEffect(() => {
     fetch('/defense-requests', {
@@ -47,26 +55,64 @@ export function CoordinatorDefenseScheduleTrends() {
         const scheduled = requests.filter((r: any) => r.scheduled_date !== null)
         setTotalScheduled(scheduled.length)
 
-        const monthCounts: Record<string, number> = {}
-        
-        scheduled.forEach((request: any) => {
-          const date = new Date(request.scheduled_date)
-          const monthYear = date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
-          monthCounts[monthYear] = (monthCounts[monthYear] || 0) + 1
-        })
+        let formattedData: any[] = []
 
-        const sortedMonths = Object.keys(monthCounts).sort((a, b) => {
-          const dateA = new Date(a)
-          const dateB = new Date(b)
-          return dateA.getTime() - dateB.getTime()
-        })
+        if (period === "week") {
+          const weekCounts: Record<string, number> = {}
+          const now = new Date()
+          const twelveWeeksAgo = new Date(now.getTime() - (84 * 24 * 60 * 60 * 1000))
+          
+          scheduled.forEach((request: any) => {
+            const date = new Date(request.scheduled_date)
+            if (date >= twelveWeeksAgo) {
+              const weekNum = Math.floor((now.getTime() - date.getTime()) / (7 * 24 * 60 * 60 * 1000))
+              const weekLabel = `W${12 - weekNum}`
+              weekCounts[weekLabel] = (weekCounts[weekLabel] || 0) + 1
+            }
+          })
 
-        const recentMonths = sortedMonths.slice(-6)
+          formattedData = Array.from({ length: 12 }, (_, i) => ({
+            label: `W${i + 1}`,
+            defenses: weekCounts[`W${i + 1}`] || 0
+          }))
+        } else if (period === "month") {
+          const monthCounts: Record<string, number> = {}
+          
+          scheduled.forEach((request: any) => {
+            const date = new Date(request.scheduled_date)
+            const monthYear = date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
+            monthCounts[monthYear] = (monthCounts[monthYear] || 0) + 1
+          })
 
-        const formattedData = recentMonths.map((month) => ({
-          month: month.split(' ')[0],
-          defenses: monthCounts[month],
-        }))
+          const sortedMonths = Object.keys(monthCounts).sort((a, b) => {
+            const dateA = new Date(a)
+            const dateB = new Date(b)
+            return dateA.getTime() - dateB.getTime()
+          })
+
+          const recentMonths = sortedMonths.slice(-6)
+
+          formattedData = recentMonths.map((month) => ({
+            label: month.split(' ')[0],
+            defenses: monthCounts[month],
+          }))
+        } else if (period === "year") {
+          const yearCounts: Record<string, number> = {}
+          
+          scheduled.forEach((request: any) => {
+            const date = new Date(request.scheduled_date)
+            const year = date.getFullYear().toString()
+            yearCounts[year] = (yearCounts[year] || 0) + 1
+          })
+
+          formattedData = Object.entries(yearCounts)
+            .sort(([a], [b]) => a.localeCompare(b))
+            .slice(-5)
+            .map(([year, count]) => ({
+              label: year,
+              defenses: count
+            }))
+        }
 
         setChartData(formattedData)
 
@@ -84,7 +130,7 @@ export function CoordinatorDefenseScheduleTrends() {
       .finally(() => {
         setLoading(false)
       })
-  }, [])
+  }, [period])
 
   if (loading) {
     return (
@@ -117,8 +163,24 @@ export function CoordinatorDefenseScheduleTrends() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Defense Schedule Trends</CardTitle>
-        <CardDescription>Last 6 months</CardDescription>
+        <div className="flex items-center justify-between">
+          <div>
+            <CardTitle>Defense Schedule Trends</CardTitle>
+            <CardDescription>
+              {period === "week" ? "Last 12 weeks" : period === "month" ? "Last 6 months" : "Last 5 years"}
+            </CardDescription>
+          </div>
+          <Select value={period} onValueChange={setPeriod}>
+            <SelectTrigger className="w-[120px] h-8 text-xs">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="week">Weekly</SelectItem>
+              <SelectItem value="month">Monthly</SelectItem>
+              <SelectItem value="year">Yearly</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
       </CardHeader>
       <CardContent>
         <ChartContainer config={chartConfig}>
@@ -132,7 +194,7 @@ export function CoordinatorDefenseScheduleTrends() {
           >
             <CartesianGrid vertical={false} />
             <XAxis
-              dataKey="month"
+              dataKey="label"
               tickLine={false}
               axisLine={false}
               tickMargin={8}
@@ -143,11 +205,12 @@ export function CoordinatorDefenseScheduleTrends() {
             />
             <Line
               dataKey="defenses"
-              type="natural"
+              type="monotone"
               stroke="var(--color-defenses)"
               strokeWidth={2}
               dot={{
                 fill: "var(--color-defenses)",
+                r: 4
               }}
               activeDot={{
                 r: 6,
@@ -158,7 +221,7 @@ export function CoordinatorDefenseScheduleTrends() {
       </CardContent>
       <CardFooter className="flex-col items-start gap-2 text-sm">
         <div className="flex gap-2 font-medium leading-none">
-          Total of {totalScheduled} scheduled defenses
+          Total of {totalScheduled} scheduled defenses {percentageChange >= 0 ? `(+${percentageChange}%)` : `(${percentageChange}%)`}
         </div>
       </CardFooter>
     </Card>

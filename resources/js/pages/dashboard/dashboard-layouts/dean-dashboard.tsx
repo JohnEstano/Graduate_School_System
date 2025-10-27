@@ -9,6 +9,10 @@ import { Users, CalendarDays, ClipboardList, BadgeDollarSign } from 'lucide-reac
 import WeeklyDefenseSchedulesWidget from '../widgets/weekly-defense-schedule-widget';
 import PendingDefenseRequestsWidget from '../widgets/pending-defense-request-widget';
 import DefenseCountLineChart from '../widgets/visual-charts/defense-count';
+import { DefenseTypeDistribution } from '../widgets/visual-charts/defense-type-distribution';
+import { DefenseModeBreakdown } from '../widgets/visual-charts/defense-mode-breakdown';
+import { OverallProgramActivity } from '../widgets/visual-charts/overall-program-activity';
+import { CoordinatorPerformance } from '../widgets/visual-charts/coordinator-performance';
 
 type PageProps = {
     auth: {
@@ -305,9 +309,23 @@ export default function DeanDashboard() {
 
                             {/* Analytics Tab - Mobile Responsive */}
                             <TabsContent value="analytics" className="w-full">
-                                <div className="w-full max-w-screen-xl mx-auto grid grid-cols-1 gap-4 mb-4 md:mb-6">
-                                    <DefenseCountLineChart />
-                                    {/* Add more analytics widgets here later */}
+                                <div className="flex flex-col gap-4 md:gap-6 mb-4 md:mb-6">
+                                    {/* Row 1: Defense Count */}
+                                    <div className="w-full">
+                                        <DefenseCountLineChart />
+                                    </div>
+                                    
+                                    {/* Row 2: Defense Type + Mode */}
+                                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
+                                        <DefenseTypeDistribution />
+                                        <DefenseModeBreakdown />
+                                    </div>
+                                    
+                                    {/* Row 3: Overall Program Activity + Coordinator Performance */}
+                                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
+                                        <OverallProgramActivity />
+                                        <CoordinatorPerformance />
+                                    </div>
                                 </div>
                             </TabsContent>
                         </Tabs>

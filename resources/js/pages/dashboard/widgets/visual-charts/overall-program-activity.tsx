@@ -19,16 +19,16 @@ import {
 } from "@/components/ui/chart"
 
 const chartConfig = {
-  requests: {
-    label: "Requests",
+  defenses: {
+    label: "Defenses",
     color: "#e11d48",
   },
 } satisfies ChartConfig
 
-export function CoordinatorMostActivePrograms() {
+export function OverallProgramActivity() {
   const [chartData, setChartData] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
-  const [totalRequests, setTotalRequests] = useState(0)
+  const [totalPrograms, setTotalPrograms] = useState(0)
 
   useEffect(() => {
     fetch('/defense-requests', {
@@ -43,29 +43,23 @@ export function CoordinatorMostActivePrograms() {
       .then((data) => {
         const requests = Array.isArray(data) ? data : (data.defenseRequests ?? [])
         
-        const scheduledApproved = requests.filter((r: any) => 
-          r.workflow_state === 'coordinator-approved' || 
-          r.scheduled_date !== null
-        )
-
-        setTotalRequests(scheduledApproved.length)
-
         const programCounts: Record<string, number> = {}
         
-        scheduledApproved.forEach((request: any) => {
+        requests.forEach((request: any) => {
           const program = request.program || request.user?.program || 'Unknown Program'
           programCounts[program] = (programCounts[program] || 0) + 1
         })
 
         const formattedData = Object.entries(programCounts)
           .map(([program, count]) => ({
-            program: program.length > 25 ? program.substring(0, 25) + '...' : program,
-            requests: count,
+            program: program.length > 30 ? program.substring(0, 30) + '...' : program,
+            defenses: count,
           }))
-          .sort((a, b) => b.requests - a.requests)
-          .slice(0, 5)
+          .sort((a, b) => b.defenses - a.defenses)
+          .slice(0, 8)
 
         setChartData(formattedData)
+        setTotalPrograms(Object.keys(programCounts).length)
       })
       .catch((error) => {
         console.error('Error fetching defense requests:', error)
@@ -80,7 +74,7 @@ export function CoordinatorMostActivePrograms() {
     return (
       <Card className="rounded-xl shadow-none border">
         <CardHeader>
-          <CardTitle>Most Active Programs</CardTitle>
+          <CardTitle>Program Activity Overview</CardTitle>
           <CardDescription>Loading...</CardDescription>
         </CardHeader>
         <CardContent className="h-[300px] flex items-center justify-center">
@@ -94,11 +88,11 @@ export function CoordinatorMostActivePrograms() {
     return (
       <Card className="rounded-xl shadow-none border">
         <CardHeader>
-          <CardTitle>Most Active Programs</CardTitle>
+          <CardTitle>Program Activity Overview</CardTitle>
           <CardDescription>No data available</CardDescription>
         </CardHeader>
         <CardContent className="h-[300px] flex items-center justify-center">
-          <div className="text-muted-foreground">No scheduled or approved defense requests found</div>
+          <div className="text-muted-foreground">No defense requests found</div>
         </CardContent>
       </Card>
     )
@@ -107,8 +101,8 @@ export function CoordinatorMostActivePrograms() {
   return (
     <Card className="rounded-xl shadow-none border">
       <CardHeader>
-        <CardTitle>Most Active Programs</CardTitle>
-        <CardDescription>Top 5 programs by defense requests</CardDescription>
+        <CardTitle>Program Activity Overview</CardTitle>
+        <CardDescription>Defense requests across all programs</CardDescription>
       </CardHeader>
       <CardContent>
         <ChartContainer config={chartConfig}>
@@ -128,14 +122,14 @@ export function CoordinatorMostActivePrograms() {
               axisLine={false}
               tickFormatter={(value) => value}
             />
-            <XAxis dataKey="requests" type="number" hide />
+            <XAxis dataKey="defenses" type="number" hide />
             <ChartTooltip
               cursor={false}
               content={<ChartTooltipContent hideLabel />}
             />
             <Bar 
-              dataKey="requests" 
-              fill="var(--color-requests)"
+              dataKey="defenses" 
+              fill="var(--color-defenses)"
               radius={5}
             />
           </BarChart>
@@ -143,7 +137,7 @@ export function CoordinatorMostActivePrograms() {
       </CardContent>
       <CardFooter className="flex-col items-start gap-2 text-sm">
         <div className="flex gap-2 font-medium leading-none">
-          Top program: {chartData[0].program} ({chartData[0].requests})
+          {totalPrograms} total programs active
         </div>
       </CardFooter>
     </Card>

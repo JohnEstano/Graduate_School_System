@@ -115,7 +115,7 @@ export function CoordinatorAdviserStudentRatio() {
   }
 
   return (
-    <Card>
+    <Card className="rounded-xl shadow-none border">
       <CardHeader className="items-center pb-4">
         <CardTitle>Adviser-Student Distribution</CardTitle>
         <CardDescription>

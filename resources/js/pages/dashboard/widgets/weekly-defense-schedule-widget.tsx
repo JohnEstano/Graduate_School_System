@@ -284,50 +284,40 @@ export default function WeeklyDefenseSchedulesWidget(props: Props) {
               return (
                 <div
                   key={item.id}
-                  className="group flex items-start gap-3 p-3 rounded-lg border border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:shadow-sm transition-shadow"
+                  className="group flex items-start gap-2 px-2 py-2 rounded border border-gray-200 dark:border-zinc-800"
                 >
-                  <div className={cn(
-                    "flex-shrink-0 rounded-full p-2",
-                    isDefense 
-                      ? "bg-emerald-50 dark:bg-emerald-900/20" 
-                      : "bg-blue-50 dark:bg-blue-900/20"
-                  )}>
+                  <div className="flex-shrink-0 mt-0.5">
                     {isDefense
-                      ? <GraduationCap className="size-4 text-emerald-600 dark:text-emerald-400" />
-                      : <CalendarIcon className="size-4 text-blue-600 dark:text-blue-400" />
+                      ? <GraduationCap className="size-3.5 text-gray-600 dark:text-gray-400" />
+                      : <CalendarIcon className="size-3.5 text-gray-600 dark:text-gray-400" />
                     }
                   </div>
                   
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-start justify-between gap-2 mb-1">
-                      <h4 className="text-sm font-semibold text-gray-900 dark:text-gray-100 line-clamp-1">
+                    <div className="flex items-start justify-between gap-2">
+                      <h4 className="text-xs font-medium text-gray-900 dark:text-gray-100 line-clamp-1">
                         {item.title}
                       </h4>
                       <div className="flex items-center gap-1 flex-shrink-0">
                         {item.owner && (
-                          <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300">
+                          <span className="px-1 py-0.5 rounded text-[9px] font-medium border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300">
                             You
                           </span>
                         )}
-                        <span className={cn(
-                          "px-1.5 py-0.5 rounded text-[10px] font-semibold",
-                          isDefense
-                            ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300"
-                            : "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300"
-                        )}>
+                        <span className="px-1 py-0.5 rounded text-[9px] font-medium border border-gray-300 dark:border-gray-700 text-gray-600 dark:text-gray-400">
                           {isDefense ? 'Defense' : 'Event'}
                         </span>
                       </div>
                     </div>
                     
                     {timeStr && (
-                      <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">
+                      <p className="text-[10px] text-gray-500 dark:text-gray-500 mt-0.5">
                         {timeStr}
                       </p>
                     )}
                     
                     {isDefense && canSeeRaw && item.raw.defense_type && (
-                      <p className="text-xs text-gray-500 dark:text-gray-500">
+                      <p className="text-[10px] text-gray-500 dark:text-gray-500 mt-0.5">
                         {item.raw.defense_type}{item.raw.defense_mode ? ` • ${item.raw.defense_mode}` : ""}
                       </p>
                     )}
@@ -337,8 +327,8 @@ export default function WeeklyDefenseSchedulesWidget(props: Props) {
             })}
             
             {combined.length > 6 && (
-              <div className="text-center pt-2">
-                <span className="text-xs font-medium text-rose-600 dark:text-rose-400">
+              <div className="text-center pt-1">
+                <span className="text-[10px] font-medium text-gray-600 dark:text-gray-400">
                   +{combined.length - 6} more schedule{combined.length - 6 !== 1 ? 's' : ''}
                 </span>
               </div>
