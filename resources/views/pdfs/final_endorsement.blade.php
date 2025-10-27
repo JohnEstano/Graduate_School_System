@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>Pre-Final Defense Endorsement Form</title>
+    <title>Final Defense Endorsement Form</title>
     <style>
         body {
             margin: 0;
@@ -151,7 +151,7 @@
         <div class="header">
             <div class="school">University of the Immaculate Conception</div>
             <div class="dept">GRADUATE SCHOOL</div>
-            <div class="title">PRE-FINAL DEFENSE</div>
+            <div class="title">FINAL DEFENSE</div>
             <div class="subtitle">ENDORSEMENT FORM</div>
         </div>
 
@@ -162,7 +162,7 @@
                 <td style="width:48%; vertical-align:bottom;">
                     <div class="line" style="width:220px; margin-left:8px; text-align:left;">
                         <span style="position:relative; width:220px; display:inline-block; text-align:left; font-weight:bold;">
-                            {{ $student_name ?? 'N/A' }}
+                            {{ $student_name ?? '_________________________' }}
                         </span>
                     </div>
                     <div class="label" style="text-align:center; margin-top:2px;">Name of Student/ Candidate</div>
@@ -183,7 +183,7 @@
                 <td style="width:48%; vertical-align:bottom;">
                     <div class="line" style="width:220px; margin-left:8px; text-align:left;">
                         <span style="position:relative; width:260px; display:inline-block; text-align:left; font-weight:bold;">
-                            {{ $program ?? 'N/A' }}
+                            {{ $program ?? '_________________________' }}
                         </span>
                     </div>
                     <div class="label" style="text-align:center; margin-top:2px;">Program of Study</div>
@@ -202,7 +202,7 @@
                 <td colspan="3" style="padding-left:8px;">
                     <div class="line" style="width:100%; position:relative; text-align:center;">
                         <span style="position:relative; width:100%; text-align:center; display:inline-block;">
-                            {{ $thesis_title ?? 'Untitled Manuscript' }}
+                            {{ $thesis_title ?? '_________________________________________________________' }}
                         </span>
                     </div>
                 </td>
@@ -227,7 +227,7 @@
             Dear <span class="dear">{{ $approver_name ?? 'Dr. Mary Jane B. Amoguis' }}</span>,
         </div>
         <div class="section" style="margin-top: 6px;">
-            I have reviewed and fully endorsed the pre-final manuscript attached for evaluation.
+            I have reviewed and fully endorsed the final manuscript attached for evaluation. The student has satisfactorily completed all prior defense stages and has incorporated all necessary revisions and recommendations. The manuscript is now ready for final evaluation.
         </div>
         <div class="thankyou section">
             Thank you.
@@ -259,25 +259,25 @@
         <table class="footer-table">
             <tr>
                 <td style="width: 50%;">
-                    An applicant for Thesis / Dissertation Pre-Final Defense should have accomplished the following before s/he is granted approval:
+                    An applicant for Thesis / Dissertation Final Defense should have accomplished the following before s/he is granted approval:
                     <ol>
-                        <li>Completed all academic requirements vouched by a Certificate of Completion issued by the Registrar</li>
-                        <li>Passed the Comprehensive Examinations in all required subjects vouched by a Certification from the Graduate School Dean</li>
-                        <li>Successfully defended the thesis/dissertation proposal</li>
-                        <li>Made all necessary revisions as recommended by the proposal defense panel</li>
-                        <li>Enrolled and attended classes in Thesis / Dissertation Writing with an assigned adviser</li>
-                        <li>Substantially completed the manuscript following the prescribed UIC format</li>
+                        <li>Successfully defended the thesis/dissertation proposal and pre-final defense</li>
+                        <li>Incorporated all revisions and recommendations from the pre-final defense panel</li>
+                        <li>Completed all research activities including data gathering, analysis, and interpretation</li>
+                        <li>Written the complete manuscript following the prescribed UIC format</li>
+                        <li>Received final endorsement from the thesis/dissertation adviser</li>
+                        <li>Submitted bound copies of the complete manuscript to all panel members</li>
                     </ol>
                 </td>
                 <td style="width: 50%;">
-                    Procedure for Pre-Final Defense:
+                    Procedure for Final Defense:
                     <ol>
-                        <li>Secures and fills up a pre-final defense endorsement form from the Administrative Assistant to be signed by the adviser.</li>
-                        <li>Pays the pre-final defense fee at the cashier</li>
+                        <li>Secures and fills up a final defense endorsement form from the Administrative Assistant to be signed by the adviser.</li>
+                        <li>Pays the final defense fee at the cashier</li>
                         <li>Submits the receipt to the Administrative Assistant and the manuscript, (7) for Doctorate student (5) for Masteral student to the assigned panels and adviser.</li>
                         <li>Endorses the candidate to the Program Coordinator for the schedule.</li>
-                        <li>Confirms the panel members to be approved by the Dean</li>
-                        <li>Schedules the pre-final oral defense.</li>
+                        <li>Confirms the panel composition with the Program Coordinator and Dean</li>
+                        <li>Schedules the final oral defense.</li>
                     </ol>
                 </td>
             </tr>

@@ -32,7 +32,7 @@ use App\Http\Controllers\CoordinatorAdviserController;
 use App\Http\Controllers\PaymentRateController;
 use App\Models\PaymentRate;
 use App\Http\Controllers\AA\PaymentVerificationController;
-use App\Http\Controllers\Assistant\DefenseBatchController;
+// REMOVED: use App\Http\Controllers\Assistant\DefenseBatchController;
 use App\Http\Controllers\ExamSubjectOfferingController;
 use Illuminate\Http\Request;
 use App\Models\ExamSubjectOffering;
@@ -348,9 +348,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('/assistant/aa-verification/{defenseRequestId}/status', [PaymentVerificationController::class, 'updateStatusByDefenseRequest'])
         ->name('assistant.aa-verification.update-status');
 
-    Route::get('/assistant/defense-batches', [\App\Http\Controllers\Assistant\DefenseBatchController::class, 'index']);
-    Route::post('/assistant/defense-batches', [\App\Http\Controllers\Assistant\DefenseBatchController::class, 'store']);
-    Route::post('/assistant/defense-batches/{batch}/status', [\App\Http\Controllers\Assistant\DefenseBatchController::class, 'updateStatus']);
+    // REMOVED: Defense batch routes (controller doesn't exist)
+    // Route::get('/assistant/defense-batches', [\App\Http\Controllers\Assistant\DefenseBatchController::class, 'index']);
+    // Route::post('/assistant/defense-batches', [\App\Http\Controllers\Assistant\DefenseBatchController::class, 'store']);
+    // Route::post('/assistant/defense-batches/{batch}/status', [\App\Http\Controllers\Assistant\DefenseBatchController::class, 'updateStatus']);
 
 
     //PAYMENT RATESS ETC.
@@ -402,19 +403,22 @@ Route::get('/honorarium/individual-record/{programId}', [HonorariumSummaryContro
     Route::get('/honorarium/{programId}/download-pdf', [HonorariumSummaryController::class, 'downloadProgramPdf'])
         ->name('honorarium.downloadPDF');
 
-    // For program filter
-    Route::get('/student-records/program/{program}', [StudentRecordController::class, 'getByProgram'])
-        ->name('student-records.getByProgram');
-
-    // For DOCX download
+    //student-records routes
+    Route::get('/student-records', [StudentRecordController::class, 'index'])->name('student-records.index');
+    
+    // Program students view (Inertia page) - MUST come before {id} route
+    Route::get('/student-records/program/{programId}', [StudentRecordController::class, 'showProgramStudents'])
+        ->name('student-records.showProgramStudents');
+    
+    // Individual student record view (JSON API)
+    Route::get('/student-records/{id}', [StudentRecordController::class, 'show'])->name('student-records.show');
+    
+    // Download endpoints
+    Route::get('/student-records/{id}/download-pdf', [StudentRecordController::class, 'downloadPdf'])->name('student-records.downloadPdf');
     Route::get('/student-records/{id}/download-docs', [StudentRecordController::class, 'downloadDocs'])
         ->name('student-records.downloadDocs');
-
-    //student-records route
-    Route::get('/student-records', [StudentRecordController::class, 'index'])->name('student-records.index');
-    Route::get('/student-records/program/{programId}', [StudentRecordController::class, 'showProgramStudents'])->name('student-records.program.show');
-    Route::get('/student-records/{id}', [StudentRecordController::class, 'show'])->name('student-records.show');
-    Route::get('/student-records/{id}/download-pdf', [StudentRecordController::class, 'downloadPdf'])->name('student-records.downloadPdf');
+    
+    // Update and delete
     Route::put('/student-records/{studentRecord}', [StudentRecordController::class, 'update'])->name('student-records.update');
     Route::delete('/student-records/{studentRecord}', [StudentRecordController::class, 'destroy'])->name('student-records.destroy');
 
@@ -719,6 +723,13 @@ Route::get('/honorarium/individual-record/{programId}', [HonorariumSummaryContro
             ->name('defense.panels.json');
         Route::post('/defense-requests/{defenseRequest}/schedule-json', [CoordinatorDefenseController::class, 'scheduleDefenseJson'])
             ->name('defense.schedule.json');
+        
+        // Add direct routes for coordinator panel and schedule saving
+        Route::post('/defense-requests/{id}/panels', [DefenseRequestController::class, 'savePanels'])
+            ->name('coordinator.defense-requests.panels.save');
+        Route::post('/defense-requests/{id}/schedule', [DefenseRequestController::class, 'saveSchedule'])
+            ->name('coordinator.defense-requests.schedule.save');
+        
         Route::get('/panel-members', [CoordinatorDefenseController::class, 'panelMembersAll'])
             ->name('defense.panel-members');
 

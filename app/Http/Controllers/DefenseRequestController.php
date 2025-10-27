@@ -2100,6 +2100,62 @@ class DefenseRequestController extends Controller
         ]);
     }
 
+    public function saveSchedule(Request $request, $id)
+    {
+        $user = Auth::user();
+        if (!$user || !in_array($user->role, ['Coordinator','Administrative Assistant','Dean'])) {
+            return response()->json(['error'=>'Unauthorized'],403);
+        }
+
+        $defenseRequest = DefenseRequest::findOrFail($id);
+
+        $data = $request->validate([
+            'scheduled_date' => 'nullable|date',
+            'scheduled_time' => 'nullable|string|max:50',
+            'scheduled_end_time' => 'nullable|string|max:50',
+            'defense_mode' => 'nullable|string|max:100',
+            'defense_venue' => 'nullable|string|max:255',
+            'scheduling_notes' => 'nullable|string|max:3000',
+        ]);
+
+        $originalState = $defenseRequest->workflow_state;
+
+        // Save schedule information
+        $defenseRequest->scheduled_date = $data['scheduled_date'] ?? null;
+        $defenseRequest->scheduled_time = $data['scheduled_time'] ?? null;
+        $defenseRequest->scheduled_end_time = $data['scheduled_end_time'] ?? null;
+        $defenseRequest->defense_mode = $data['defense_mode'] ?? null;
+        $defenseRequest->defense_venue = $data['defense_venue'] ?? null;
+        $defenseRequest->scheduling_notes = $data['scheduling_notes'] ?? null;
+
+        // Update workflow state to scheduled
+        $defenseRequest->workflow_state = 'scheduled';
+
+        // Add workflow history entry
+        $hist = $defenseRequest->workflow_history ?? [];
+        $hist[] = [
+            'action' => 'Defense Scheduled',
+            'timestamp' => now()->toISOString(),
+            'user_id' => $user->id,
+            'user_name' => $user->first_name . ' ' . $user->last_name,
+            'from_state' => $originalState,
+            'to_state' => 'scheduled',
+            'details' => 'Defense scheduled for ' . ($data['scheduled_date'] ?? 'TBD')
+        ];
+        $defenseRequest->workflow_history = $hist;
+
+        $defenseRequest->last_status_updated_at = now();
+        $defenseRequest->last_status_updated_by = $user->id;
+        $defenseRequest->save();
+
+        return response()->json([
+            'ok' => true,
+            'request' => $defenseRequest,
+            'workflow_history' => $defenseRequest->workflow_history,
+            'workflow_state' => $defenseRequest->workflow_state,
+        ]);
+    }
+
     public function showAADetails($id)
     {
         $user = \Auth::user();
@@ -2107,7 +2163,7 @@ class DefenseRequestController extends Controller
             abort(403);
         }
 
-        $defenseRequest = \App\Models\DefenseRequest::findOrFail($id);
+        $defenseRequest = \App\Models\DefenseRequest::with(['coordinator', 'aaVerification'])->findOrFail($id);
 
         // Use the helper to get the program level
         $programLevel = \App\Helpers\ProgramLevel::getLevel($defenseRequest->program);
@@ -2145,6 +2201,7 @@ class DefenseRequestController extends Controller
                 'last_name' => $defenseRequest->last_name,
                 'school_id' => $defenseRequest->school_id,
                 'program' => $defenseRequest->program,
+                'program_level' => $programLevel, // ✅ ADD THIS
                 'thesis_title' => $defenseRequest->thesis_title,
                 'defense_type' => $defenseRequest->defense_type,
                 'status' => $defenseRequest->status,
@@ -2172,6 +2229,15 @@ class DefenseRequestController extends Controller
                 'amount' => $defenseRequest->amount,
                 'reference_no' => $defenseRequest->reference_no,
                 'expected_rate' => $expectedRate ? $expectedRate->amount : null,
+                // ✅ ADD COORDINATOR DATA
+                'coordinator' => $defenseRequest->coordinator ? [
+                    'id' => $defenseRequest->coordinator->id,
+                    'name' => $defenseRequest->coordinator->name,
+                    'email' => $defenseRequest->coordinator->email,
+                ] : null,
+                // ✅ ADD AA VERIFICATION STATUS
+                'aa_verification_status' => optional($defenseRequest->aaVerification)->status ?? 'pending',
+                'aa_verification_id' => optional($defenseRequest->aaVerification)->id,
                 'attachments' => [
                     'advisers_endorsement' => $defenseRequest->advisers_endorsement,
                     'rec_endorsement' => $defenseRequest->rec_endorsement,
@@ -2266,6 +2332,56 @@ class DefenseRequestController extends Controller
 
             return response()->json([
                 'error' => 'Failed to add coordinator signature: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+    
+    /**
+     * Mark defense as completed
+     * Updates defense status to 'Completed' and AA verification status to 'completed'
+     */
+    public function completeDefense(DefenseRequest $defenseRequest)
+    {
+        try {
+            // Update defense request status
+            $defenseRequest->status = 'Completed';
+            $defenseRequest->workflow_state = 'completed';
+            $defenseRequest->save();
+            
+            // Get or create AA verification record
+            $verification = \App\Models\AaPaymentVerification::firstOrCreate(
+                ['defense_request_id' => $defenseRequest->id],
+                [
+                    'assigned_to' => Auth::id(),
+                    'status' => 'pending',
+                ]
+            );
+            
+            // Update AA verification to completed
+            $verification->status = 'completed';
+            $verification->assigned_to = Auth::id();
+            $verification->save();
+            
+            \Log::info('✅ Defense marked as completed', [
+                'defense_request_id' => $defenseRequest->id,
+                'aa_verification_id' => $verification->id
+            ]);
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Defense marked as completed',
+                'aa_verification_id' => $verification->id,
+                'aa_verification_status' => 'completed'
+            ]);
+            
+        } catch (\Exception $e) {
+            \Log::error('❌ Failed to mark defense as completed', [
+                'defense_request_id' => $defenseRequest->id,
+                'error' => $e->getMessage()
+            ]);
+            
+            return response()->json([
+                'error' => 'Failed to mark as completed: ' . $e->getMessage()
             ], 500);
         }
     }

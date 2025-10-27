@@ -69,6 +69,27 @@ export default function CoordinatorApproveDialog({
   const [showEmailDialog, setShowEmailDialog] = useState(false);
   const [sendEmail, setSendEmail] = useState(false);
 
+  // Helper to get fresh CSRF token
+  async function getFreshCsrfToken(): Promise<string> {
+    try {
+      await fetch('/sanctum/csrf-cookie', { 
+        credentials: 'same-origin',
+        headers: { 'Accept': 'application/json' }
+      });
+      
+      const token = (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content || '';
+      
+      if (!token) {
+        console.error('⚠️ CSRF token not found in meta tag');
+      }
+      
+      return token;
+    } catch (err) {
+      console.error('❌ Failed to refresh CSRF token:', err);
+      return '';
+    }
+  }
+
   function csrf() {
     return (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content || '';
   }
@@ -153,53 +174,83 @@ export default function CoordinatorApproveDialog({
     }
 
     if (!coordinatorFullName.trim()) {
-      toast.error('Please enter your full name');
+      toast.error('Please enter the coordinator full name');
+      return;
+    }
+
+    if (!activeSignature) {
+      toast.error('Please set an active signature first');
       return;
     }
 
     setIsGenerating(true);
     try {
+      console.log('🚀 Generating coordinator-signed endorsement PDF for request:', defenseRequest.id);
+      console.log('📋 Defense type:', defenseRequest.defense_type);
+      console.log('👤 Coordinator:', coordinatorFullName, coordinatorTitle);
+      
+      // Get fresh CSRF token
+      const token = await getFreshCsrfToken();
+      
+      // Generate new PDF with coordinator signature
       const res = await fetch('/api/generate-endorsement-pdf', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/pdf',
-          'X-CSRF-TOKEN': csrf()
+          'X-CSRF-TOKEN': token
         },
+        credentials: 'same-origin',
         body: JSON.stringify({
           defense_request_id: defenseRequest.id,
-          role: 'coordinator' // Specify coordinator role to add coordinator signature
+          role: 'coordinator'
         })
       });
 
+      console.log('📥 Response status:', res.status, res.statusText);
+      console.log('📥 Response content-type:', res.headers.get('content-type'));
+
       if (!res.ok) {
-        toast.error('Failed to generate document');
+        const contentType = res.headers.get('content-type');
+        let errorMessage = 'Failed to generate endorsement form';
+        
+        if (contentType && contentType.includes('application/json')) {
+          const errorData = await res.json();
+          console.error('❌ Error response:', errorData);
+          errorMessage = errorData.message || errorData.error || errorMessage;
+        } else {
+          const errorText = await res.text();
+          console.error('❌ Error response (text):', errorText);
+        }
+        
+        toast.error(errorMessage);
         setIsGenerating(false);
         return;
       }
 
       // Get the PDF as a blob
       const blob = await res.blob();
+      console.log('📦 PDF blob created:', blob.size, 'bytes, type:', blob.type);
       
       // Revoke old URL if exists
       if (endorsementPdfUrl && endorsementPdfUrl.startsWith('blob:')) {
-        URL.revokeObjectURL(endorsementPdfUrl);
+        window.URL.revokeObjectURL(endorsementPdfUrl);
       }
       
       // Create a URL for the blob to use in iframe
-      const url = URL.createObjectURL(blob);
+      const url = window.URL.createObjectURL(blob);
       setEndorsementPdfUrl(url);
+      setCurrentTab('preview');
       
-      toast.success('Endorsement form generated successfully with coordinator signature!');
+      console.log('✅ PDF generated successfully with coordinator signature');
+      toast.success('Endorsement form generated with your signature! Review and click "Approve" to submit.');
     } catch (err) {
-      console.error('Generate error:', err);
-      toast.error('Failed to generate endorsement form');
+      console.error('💥 Generate error:', err);
+      toast.error('Failed to generate endorsement form: ' + (err as Error).message);
     } finally {
       setIsGenerating(false);
     }
-  }
-
-  async function handleUploadFile(e: React.ChangeEvent<HTMLInputElement>) {
+  }  async function handleUploadFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -276,12 +327,16 @@ export default function CoordinatorApproveDialog({
     
     setIsSavingSignature(true);
     try {
+      // Get fresh CSRF token
+      const token = await getFreshCsrfToken();
+      
       const res = await fetch('/api/signatures', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'X-CSRF-TOKEN': csrf()
+          'X-CSRF-TOKEN': token
         },
+        credentials: 'same-origin',
         body: JSON.stringify({
           image_base64: dataUrl,
           label: 'Drawn Signature',
@@ -307,11 +362,15 @@ export default function CoordinatorApproveDialog({
 
   async function handleActivateSignature(sigId: number) {
     try {
+      // Get fresh CSRF token
+      const token = await getFreshCsrfToken();
+      
       const res = await fetch(`/api/signatures/${sigId}/activate`, {
         method: 'PATCH',
         headers: {
-          'X-CSRF-TOKEN': csrf()
-        }
+          'X-CSRF-TOKEN': token
+        },
+        credentials: 'same-origin'
       });
 
       if (res.ok) {
@@ -353,6 +412,9 @@ export default function CoordinatorApproveDialog({
     try {
       console.log('🚀 Starting coordinator approval process...');
       
+      // Get fresh CSRF token
+      const token = await getFreshCsrfToken();
+      
       // Prepare the form data
       const formData = new FormData();
       
@@ -374,9 +436,10 @@ export default function CoordinatorApproveDialog({
       const uploadRes = await fetch(`/api/defense-requests/${defenseRequest.id}/add-coordinator-signature`, {
         method: 'POST',
         headers: {
-          'X-CSRF-TOKEN': csrf(),
+          'X-CSRF-TOKEN': token,
           'Accept': 'application/json'
         },
+        credentials: 'same-origin',
         body: formData
       });
 
@@ -403,14 +466,19 @@ export default function CoordinatorApproveDialog({
       payload.send_email = sendEmail;
 
       console.log('📤 Updating coordinator status with payload:', payload);
+      
+      // Get fresh token again for second request
+      const token2 = await getFreshCsrfToken();
+      
       const statusRes = await fetch(
         `/coordinator/defense-requirements/${defenseRequest.id}/coordinator-status`,
         {
           method: 'PATCH',
           headers: {
             'Content-Type': 'application/json',
-            'X-CSRF-TOKEN': csrf()
+            'X-CSRF-TOKEN': token2
           },
+          credentials: 'same-origin',
           body: JSON.stringify(payload)
         }
       );

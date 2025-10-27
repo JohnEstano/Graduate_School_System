@@ -30,6 +30,16 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
 import { cn } from '@/lib/utils';
 import PaymentValidationSection from "./payment-validation";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 type DefenseRequestDetails = {
   id: number;
@@ -117,6 +127,61 @@ export default function Details({ defenseRequest: initialDefenseRequest }: Props
   const [panelMembers, setPanelMembers] = useState<any[]>([]);
   const [loadingMembers, setLoadingMembers] = useState(false);
   const [paymentRates, setPaymentRates] = useState<PaymentRateRow[]>([]);
+  const [isUpdating, setIsUpdating] = useState(false);
+  
+  // Confirmation dialog state
+  const [confirmDialog, setConfirmDialog] = useState<{
+    open: boolean;
+    title: string;
+    description: string;
+    action: (() => void) | null;
+  }>({
+    open: false,
+    title: '',
+    description: '',
+    action: null,
+  });
+
+  // 🐛 Debug: Log initial data
+  useEffect(() => {
+    console.log('🔍 Defense Request Details Loaded:', {
+      id: details?.id,
+      program: details?.program,
+      program_level: details?.program_level,
+      defense_type: details?.defense_type,
+      coordinator: details?.coordinator,
+      aa_verification_status: details?.aa_verification_status,
+      aa_verification_id: details?.aa_verification_id,
+      panelists: {
+        adviser: details?.defense_adviser,
+        chairperson: details?.defense_chairperson,
+        panelist1: details?.defense_panelist1,
+        panelist2: details?.defense_panelist2,
+        panelist3: details?.defense_panelist3,
+        panelist4: details?.defense_panelist4,
+      }
+    });
+    
+    console.log('🎯 Button States:', {
+      current_status: details?.aa_verification_status,
+      ready_for_finance_disabled: 
+        details?.aa_verification_status === 'ready_for_finance' || 
+        details?.aa_verification_status === 'in_progress' ||
+        details?.aa_verification_status === 'paid' ||
+        details?.aa_verification_status === 'completed',
+      in_progress_disabled:
+        details?.aa_verification_status === 'pending' ||
+        details?.aa_verification_status === 'in_progress' ||
+        details?.aa_verification_status === 'paid' ||
+        details?.aa_verification_status === 'completed',
+      paid_disabled:
+        details?.aa_verification_status === 'pending' ||
+        details?.aa_verification_status === 'ready_for_finance' ||
+        details?.aa_verification_status === 'paid' ||
+        details?.aa_verification_status === 'completed',
+      completed_disabled: details?.aa_verification_status === 'completed'
+    });
+  }, [details]);
 
   // Fetch panel members once
   useEffect(() => {
@@ -146,11 +211,15 @@ export default function Details({ defenseRequest: initialDefenseRequest }: Props
     let alive = true;
     (async () => {
       try {
+        console.log('📊 Fetching payment rates...');
         const r = await fetch('/dean/payment-rates/data', { headers: { Accept: 'application/json' } });
         const json = await r.json();
         const arr = Array.isArray(json?.rates) ? json.rates : (Array.isArray(json) ? json : []);
+        console.log('✅ Payment rates loaded:', arr.length, 'rates');
+        console.log('   Sample rates:', arr.slice(0, 3));
         if (alive) setPaymentRates(arr as any);
       } catch (e) {
+        console.error('❌ Failed to load payment rates:', e);
         if (alive) setPaymentRates([]);
       }
     })();
@@ -163,7 +232,14 @@ export default function Details({ defenseRequest: initialDefenseRequest }: Props
   }
 
   function getMemberReceivable(role: string): number | null {
-    if (!details?.program_level || !details?.defense_type) return null;
+    if (!details?.program_level || !details?.defense_type) {
+      console.warn('⚠️ Cannot calculate receivable - missing data:', {
+        program_level: details?.program_level,
+        defense_type: details?.defense_type,
+        role
+      });
+      return null;
+    }
     
     // Map role to payment rate type exactly as stored in DB
     let rateType = '';
@@ -178,15 +254,35 @@ export default function Details({ defenseRequest: initialDefenseRequest }: Props
     const normalizeDefenseType = (dt: string) => dt.toLowerCase().replace(/[^a-z]/g, '');
     const targetDefenseType = normalizeDefenseType(details.defense_type);
     
+    console.log('🔍 Looking for payment rate:', {
+      program_level: details.program_level,
+      rateType,
+      defense_type: details.defense_type,
+      normalized: targetDefenseType,
+      available_rates: paymentRates.length
+    });
+    
     // Direct comparison with normalization
     const rate = paymentRates.find(
       r => {
         const matchesProgram = r.program_level === details.program_level;
         const matchesType = r.type === rateType;
         const matchesDefense = normalizeDefenseType(r.defense_type || '') === targetDefenseType;
+        
+        console.log('   Checking rate:', {
+          rate_program: r.program_level,
+          rate_type: r.type,
+          rate_defense: r.defense_type,
+          matchesProgram,
+          matchesType,
+          matchesDefense
+        });
+        
         return matchesProgram && matchesType && matchesDefense;
       }
     );
+    
+    console.log(rate ? '✅ Found rate:' : '❌ No rate found:', rate ? rate.amount : 'N/A');
     
     return rate ? Number(rate.amount) : null;
   }
@@ -314,6 +410,11 @@ export default function Details({ defenseRequest: initialDefenseRequest }: Props
   // Mark as Completed handler - Updates BOTH defense status AND AA status
   async function handleMarkCompleted() {
     if (!details) return;
+    
+    console.log('🔄 Marking defense as completed:', details.id);
+    setIsUpdating(true);
+    const toastId = toast.loading('Marking as completed...');
+    
     try {
       const res = await fetch(`/defense-requests/${details.id}/complete`, {
         method: 'POST',
@@ -321,9 +422,12 @@ export default function Details({ defenseRequest: initialDefenseRequest }: Props
           'Content-Type': 'application/json',
           'X-CSRF-TOKEN': (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content || '',
         },
+        credentials: 'same-origin',
       });
       
       const data = await res.json();
+      
+      console.log('📥 Mark completed response:', data);
       
       if (res.ok && data.success) {
         // ✅ UPDATE LOCAL STATE IMMEDIATELY - both defense status AND AA status
@@ -331,63 +435,105 @@ export default function Details({ defenseRequest: initialDefenseRequest }: Props
           ...details, 
           status: 'Completed', 
           workflow_state: 'completed',
-          aa_verification_status: 'completed'
+          aa_verification_status: 'completed',
+          aa_verification_id: data.aa_verification_id
         });
         
-        toast.success('Defense marked as completed and honorarium payments created!');
+        toast.success('✅ Defense marked as completed!', { id: toastId });
         
-        // ✅ REDIRECT AFTER 1.5 SECONDS
-        setTimeout(() => {
-          router.visit('/assistant/all-defense-list');
-        }, 1500);
+        console.log('✅ Completed successfully');
+        
       } else {
-        toast.error(data.error || 'Failed to mark as completed');
+        console.error('❌ Failed to mark as completed:', data);
+        toast.error(data.error || 'Failed to mark as completed', { id: toastId });
       }
     } catch (error) {
-      console.error('Error marking as completed:', error);
-      toast.error('Error marking as completed');
+      console.error('❌ Error marking as completed:', error);
+      toast.error('Error marking as completed', { id: toastId });
+    } finally {
+      setIsUpdating(false);
+      setConfirmDialog({ open: false, title: '', description: '', action: null });
     }
   }
 
   // Update AA Status only
   async function handleUpdateAAStatus(newStatus: 'ready_for_finance' | 'in_progress' | 'paid' | 'completed') {
     if (!details) return;
+    
+    console.log('🔄 Updating AA status to:', newStatus);
+    console.log('🔄 Defense Request ID:', details.id);
+    
+    setIsUpdating(true);
+    const statusLabels = {
+      ready_for_finance: 'Ready for Finance',
+      in_progress: 'In Progress',
+      paid: 'Paid',
+      completed: 'Completed'
+    };
+    const toastId = toast.loading(`Updating to ${statusLabels[newStatus]}...`);
+    
     try {
-      const verificationId = details.aa_verification_id;
-      
       const res = await fetch(`/assistant/aa-verification/${details.id}/status`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'X-CSRF-TOKEN': (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content || '',
         },
+        credentials: 'same-origin',
         body: JSON.stringify({ status: newStatus }),
       });
       
+      console.log('📡 Response status:', res.status);
+      
       const data = await res.json();
       
+      console.log('📥 AA status update response:', data);
+      
       if (res.ok && data.success) {
+        // ✅ UPDATE LOCAL STATE IMMEDIATELY
         setDetails({ 
           ...details, 
           aa_verification_status: newStatus,
           aa_verification_id: data.aa_verification_id
         });
         
-        const statusLabels = {
-          ready_for_finance: 'Ready for Finance',
-          in_progress: 'In Progress',
-          paid: 'Paid',
-          completed: 'Completed'
-        };
+        // ✅ Special message for ready_for_finance (creates records)
+        if (newStatus === 'ready_for_finance') {
+          toast.success(`✅ ${statusLabels[newStatus]}\n\nHonorarium & student records created!`, { 
+            id: toastId,
+            duration: 5000 
+          });
+        } else {
+          toast.success(`✅ Status updated to ${statusLabels[newStatus]}`, { id: toastId });
+        }
         
-        toast.success(`AA status updated to ${statusLabels[newStatus]}`);
+        console.log('✅ Local state updated successfully');
+        
       } else {
-        toast.error(data.error || 'Failed to update AA status');
+        console.error('❌ Failed to update AA status:', data);
+        toast.error(data.error || 'Failed to update AA status', { id: toastId });
       }
     } catch (error) {
-      console.error('Error updating AA status:', error);
-      toast.error('Error updating AA status');
+      console.error('❌ Error updating AA status:', error);
+      toast.error('Error updating AA status', { id: toastId });
+    } finally {
+      setIsUpdating(false);
+      setConfirmDialog({ open: false, title: '', description: '', action: null });
     }
+  }
+  
+  // Open confirmation dialog
+  function openConfirmDialog(
+    title: string,
+    description: string,
+    action: () => void
+  ) {
+    setConfirmDialog({
+      open: true,
+      title,
+      description,
+      action,
+    });
   }
 
   return (
@@ -406,12 +552,25 @@ export default function Details({ defenseRequest: initialDefenseRequest }: Props
             </Button>
           </div>
           <div className="flex items-center gap-2 flex-wrap">
-            {/* AA Status Update Buttons - Always show all, disable based on status */}
+            {/* AA Status Update Buttons - Progressive workflow */}
             <Button
               size="sm"
               variant="outline"
-              onClick={() => handleUpdateAAStatus('ready_for_finance')}
-              disabled={details?.aa_verification_status === 'completed' || details?.aa_verification_status === 'ready_for_finance'}
+              onClick={() => {
+                console.log('🔘 Ready for Finance button clicked');
+                openConfirmDialog(
+                  'Mark as Ready for Finance?',
+                  'This will create honorarium payment records, sync to student and panelist records, and make records visible in Honorarium page.',
+                  () => handleUpdateAAStatus('ready_for_finance')
+                );
+              }}
+              disabled={
+                isUpdating ||
+                details?.aa_verification_status === 'ready_for_finance' || 
+                details?.aa_verification_status === 'in_progress' ||
+                details?.aa_verification_status === 'paid' ||
+                details?.aa_verification_status === 'completed'
+              }
               className="gap-2"
             >
               <ArrowRight className="h-4 w-4 text-blue-600" />
@@ -421,8 +580,21 @@ export default function Details({ defenseRequest: initialDefenseRequest }: Props
             <Button
               size="sm"
               variant="outline"
-              onClick={() => handleUpdateAAStatus('in_progress')}
-              disabled={details?.aa_verification_status === 'completed' || details?.aa_verification_status === 'in_progress'}
+              onClick={() => {
+                console.log('🔘 In Progress button clicked');
+                openConfirmDialog(
+                  'Mark as In Progress?',
+                  'This indicates the payment processing has started.',
+                  () => handleUpdateAAStatus('in_progress')
+                );
+              }}
+              disabled={
+                isUpdating ||
+                details?.aa_verification_status === 'pending' ||
+                details?.aa_verification_status === 'in_progress' ||
+                details?.aa_verification_status === 'paid' ||
+                details?.aa_verification_status === 'completed'
+              }
               className="gap-2"
             >
               <Hourglass className="h-4 w-4 text-amber-600" />
@@ -432,20 +604,40 @@ export default function Details({ defenseRequest: initialDefenseRequest }: Props
             <Button
               size="sm"
               variant="outline"
-              onClick={() => handleUpdateAAStatus('paid')}
-              disabled={details?.aa_verification_status === 'completed' || details?.aa_verification_status === 'paid'}
+              onClick={() => {
+                console.log('🔘 Paid button clicked');
+                openConfirmDialog(
+                  'Mark as Paid?',
+                  'This confirms that all honorarium payments have been processed.',
+                  () => handleUpdateAAStatus('paid')
+                );
+              }}
+              disabled={
+                isUpdating ||
+                details?.aa_verification_status === 'pending' ||
+                details?.aa_verification_status === 'ready_for_finance' ||
+                details?.aa_verification_status === 'paid' ||
+                details?.aa_verification_status === 'completed'
+              }
               className="gap-2"
             >
               <Banknote className="h-4 w-4 text-emerald-600" />
               Paid
             </Button>
             
-            {/* Mark as Completed - Updates both statuses */}
+            {/* Mark as Completed - Can be clicked from any status */}
             <Button
               size="sm"
               variant="outline"
-              onClick={handleMarkCompleted}
-              disabled={details?.aa_verification_status === 'completed'}
+              onClick={() => {
+                console.log('🔘 Mark as Completed button clicked');
+                openConfirmDialog(
+                  'Mark as Completed?',
+                  'This action will finalize the defense and AA payment status.',
+                  handleMarkCompleted
+                );
+              }}
+              disabled={isUpdating || details?.aa_verification_status === 'completed'}
               className="gap-2"
             >
               <CircleCheck className="h-4 w-4 text-green-600" />
@@ -795,6 +987,31 @@ export default function Details({ defenseRequest: initialDefenseRequest }: Props
           </div>
         </div>
       </div>
+      
+      {/* Confirmation Dialog */}
+      <AlertDialog open={confirmDialog.open} onOpenChange={(open) => !open && setConfirmDialog({ open: false, title: '', description: '', action: null })}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{confirmDialog.title}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {confirmDialog.description}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isUpdating}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (confirmDialog.action) {
+                  confirmDialog.action();
+                }
+              }}
+              disabled={isUpdating}
+            >
+              Confirm
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </AppLayout>
   );
 }

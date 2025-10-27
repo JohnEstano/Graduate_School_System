@@ -456,33 +456,72 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
   // Helper to always get a fresh CSRF token
   async function getFreshCsrfToken(): Promise<string> {
     try {
-      await fetch('/sanctum/csrf-cookie', { credentials: 'same-origin' });
+      // First, refresh the CSRF cookie
+      await fetch('/sanctum/csrf-cookie', { 
+        credentials: 'same-origin',
+        headers: {
+          'Accept': 'application/json'
+        }
+      });
+      
+      // Then get the token from the meta tag
       const token = (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content || '';
+      
+      if (!token) {
+        console.error('⚠️ CSRF token not found in meta tag');
+      }
+      
       return token;
-    } catch {
+    } catch (err) {
+      console.error('❌ Failed to refresh CSRF token:', err);
       return '';
     }
   }
 
   // Robust fetch with CSRF retry and refresh
-  async function fetchWithCsrfRetry(url: string, options: RequestInit, retry = true) {
+  async function fetchWithCsrfRetry(url: string, options: RequestInit, retry = true): Promise<Response> {
     if (!options.headers) options.headers = {};
-    (options.headers as Record<string, string>)['X-CSRF-TOKEN'] = await getFreshCsrfToken();
+    
+    // Get fresh CSRF token
+    const token = await getFreshCsrfToken();
+    (options.headers as Record<string, string>)['X-CSRF-TOKEN'] = token;
+    
+    console.log('🔑 Making request to:', url, 'with CSRF token:', token ? '✓' : '✗');
+    
     let res: Response;
     try {
-      res = await fetch(url, options);
+      res = await fetch(url, {
+        ...options,
+        credentials: 'same-origin', // Important for CSRF
+      });
+      
+      console.log('📥 Response status:', res.status, res.statusText);
     } catch (err) {
+      console.error('❌ Network error:', err);
       throw new Error('network');
     }
+    
+    // Handle CSRF token mismatch (419 error)
     if (res.status === 419 && retry) {
-      // CSRF error, try to refresh token and retry once
-      (options.headers as Record<string, string>)['X-CSRF-TOKEN'] = await getFreshCsrfToken();
+      console.warn('⚠️ CSRF token mismatch (419), retrying with fresh token...');
+      
+      // Get a completely fresh token
+      const freshToken = await getFreshCsrfToken();
+      (options.headers as Record<string, string>)['X-CSRF-TOKEN'] = freshToken;
+      
       try {
-        res = await fetch(url, options);
+        res = await fetch(url, {
+          ...options,
+          credentials: 'same-origin',
+        });
+        
+        console.log('📥 Retry response status:', res.status, res.statusText);
       } catch (err) {
+        console.error('❌ Retry network error:', err);
         throw new Error('network');
       }
     }
+    
     return res;
   }
 
@@ -564,7 +603,7 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
     setSavingSchedule(true);
     try {
       const res = await fetchWithCsrfRetry(
-        `/coordinator/defense-requests/${request.id}/schedule-json`,
+        `/coordinator/defense-requests/${request.id}/schedule`,
         {
           method: 'POST',
           headers: {
@@ -612,6 +651,110 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
     }
   }
 
+  // Auto-save panels and schedule before opening approval dialog
+  async function handleOpenApprovalDialog() {
+    if (!request.id) return;
+
+    const toastId = toast.loading('Saving panels and schedule before approval...');
+    
+    try {
+      console.log('🚀 Starting auto-save before approval...');
+      console.log('📋 Panels data:', panels);
+      console.log('📅 Schedule data:', schedule);
+      
+      // Save panels first
+      console.log('💾 Saving panels...');
+      const panelsRes = await fetchWithCsrfRetry(`/coordinator/defense-requests/${request.id}/panels`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/json'
+        },
+        body: JSON.stringify(panels)
+      });
+
+      if (!panelsRes.ok) {
+        const contentType = panelsRes.headers.get('content-type');
+        let errorMessage = 'Failed to save panel assignments';
+        
+        if (contentType && contentType.includes('application/json')) {
+          const panelsError = await panelsRes.json().catch(() => ({ error: errorMessage }));
+          errorMessage = panelsError.error || panelsError.message || errorMessage;
+          console.error('❌ Panel save error (JSON):', panelsError);
+        } else {
+          const errorText = await panelsRes.text();
+          errorMessage = errorText || errorMessage;
+          console.error('❌ Panel save error (Text):', errorText);
+        }
+        
+        toast.error(errorMessage, { id: toastId });
+        return;
+      }
+
+      console.log('✅ Panels saved successfully');
+
+      // Save schedule
+      console.log('💾 Saving schedule...');
+      const scheduleRes = await fetchWithCsrfRetry(`/coordinator/defense-requests/${request.id}/schedule`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/json'
+        },
+        body: JSON.stringify(schedule)
+      });
+
+      if (!scheduleRes.ok) {
+        const contentType = scheduleRes.headers.get('content-type');
+        let errorMessage = 'Failed to save schedule information';
+        
+        if (contentType && contentType.includes('application/json')) {
+          const scheduleError = await scheduleRes.json().catch(() => ({ error: errorMessage }));
+          errorMessage = scheduleError.error || scheduleError.message || errorMessage;
+          console.error('❌ Schedule save error (JSON):', scheduleError);
+        } else {
+          const errorText = await scheduleRes.text();
+          errorMessage = errorText || errorMessage;
+          console.error('❌ Schedule save error (Text):', errorText);
+        }
+        
+        toast.error(errorMessage, { id: toastId });
+        return;
+      }
+
+      console.log('✅ Schedule saved successfully');
+
+      toast.success('Panels and schedule saved successfully!', { id: toastId });
+      
+      // Update local state with saved data
+      const scheduleData = await scheduleRes.json();
+      console.log('📦 Received schedule data:', scheduleData);
+      
+      if (scheduleData.request) {
+        setRequest(scheduleData.request);
+        console.log('✅ Local state updated');
+      }
+      
+      // Now open the approval dialog
+      console.log('🎭 Opening approval dialog...');
+      setApproveDialogOpen(true);
+      
+    } catch (err) {
+      console.error('💥 Failed to save panels/schedule:', err);
+      
+      let errorMessage = 'Failed to save panels and schedule. Please try again.';
+      if (err instanceof Error) {
+        if (err.message === 'network') {
+          errorMessage = 'Network error. Please check your connection and try again.';
+        } else {
+          errorMessage = err.message || errorMessage;
+        }
+      }
+      
+      toast.error(errorMessage, { id: toastId });
+    }
+  }
+
   // --- Approve/Reject/Retrieve logic (robust, uses fetchWithCsrfRetry) ---
   async function handleStatusChange(action: 'approve' | 'reject' | 'retrieve', sendEmail: boolean = false) {
     if (!request.id) return;
@@ -621,7 +764,7 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
       // STEP 1: If approving, save panels and schedule FIRST
       if (action === 'approve') {
         // Save panels
-        await fetchWithCsrfRetry(`/coordinator/defense-requests/${request.id}/panels`, {
+        const panelsRes = await fetchWithCsrfRetry(`/coordinator/defense-requests/${request.id}/panels`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -630,8 +773,14 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
           body: JSON.stringify(panels)
         });
 
+        if (!panelsRes.ok) {
+          const panelsError = await panelsRes.json().catch(() => ({ error: 'Failed to save panels' }));
+          toast.error(panelsError.error || 'Failed to save panel assignments');
+          return;
+        }
+
         // Save schedule
-        await fetchWithCsrfRetry(`/coordinator/defense-requests/${request.id}/schedule-json`, {
+        const scheduleRes = await fetchWithCsrfRetry(`/coordinator/defense-requests/${request.id}/schedule`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -639,6 +788,14 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
           },
           body: JSON.stringify(schedule)
         });
+
+        if (!scheduleRes.ok) {
+          const scheduleError = await scheduleRes.json().catch(() => ({ error: 'Failed to save schedule' }));
+          toast.error(scheduleError.error || 'Failed to save schedule information');
+          return;
+        }
+
+        console.log('✅ Panels and schedule saved successfully before approval');
       }
 
       // STEP 2: Now approve/reject/retrieve
@@ -986,7 +1143,7 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
               <Button
                 size="sm"
                 variant="outline"
-                onClick={() => setApproveDialogOpen(true)}
+                onClick={handleOpenApprovalDialog}
                 disabled={
                   isLoading ||
                   request.coordinator_status === 'Approved' ||
@@ -1546,8 +1703,16 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
         coordinatorId={request.coordinator?.id}
         coordinatorName={request.coordinator?.name || 'Coordinator'}
         onApproveComplete={() => {
-          // Refresh the request data after approval
-          window.location.reload();
+          // Use Inertia reload to refresh data properly
+          console.log('🔄 Approval complete, reloading page data...');
+          toast.success('Request approved successfully!');
+          
+          router.reload({ 
+            only: ['defenseRequest'],
+            onSuccess: () => {
+              console.log('✅ Page data reloaded successfully');
+            }
+          });
         }}
       />
 

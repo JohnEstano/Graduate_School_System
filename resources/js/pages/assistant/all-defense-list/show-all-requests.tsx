@@ -516,50 +516,102 @@ function ShowAllRequestsInner({ defenseRequests: initial, onStatusChange }: Show
   }
 
   async function handleBulkStatusChange(newStatus: 'ready_for_finance' | 'in_progress' | 'paid' | 'completed') {
-    if (selected.length === 0) return;
+    if (selected.length === 0) {
+      toast.error('No requests selected');
+      return;
+    }
+    
+    const statusLabels = {
+      ready_for_finance: 'Ready for Finance',
+      in_progress: 'In Progress',
+      paid: 'Paid',
+      completed: 'Completed'
+    };
+    
+    const confirmMessages = {
+      ready_for_finance: `💰 Mark ${selected.length} request(s) as Ready for Finance?\n\nThis will:\n✅ Create honorarium payment records for all\n✅ Sync to student and panelist records\n✅ Make records visible in Honorarium page`,
+      in_progress: `⏳ Mark ${selected.length} request(s) as In Progress?`,
+      paid: `✅ Mark ${selected.length} request(s) as Paid?`,
+      completed: `🎉 Mark ${selected.length} request(s) as Completed?`
+    };
+    
+    if (!confirm(confirmMessages[newStatus])) {
+      console.log('❌ User cancelled bulk status update');
+      return;
+    }
+    
     setIsLoading(true);
+    console.log('🔄 Bulk updating status to:', newStatus);
+    console.log('🔄 Selected defense request IDs:', selected);
+    
+    const toastId = toast.loading(`Updating ${selected.length} request(s) to ${statusLabels[newStatus]}...`);
+    
     try {
-      // Map selected defense request IDs to their aa_verification_id
-      const verificationIds = defenseRequests
-        .filter(r => selected.includes(r.id))
-        .map(r => r.aa_verification_id)
-        .filter((id): id is number => !!id);
-
+      // Use defense request IDs directly - backend will handle verification record lookup
       const res = await fetch('/aa/payment-verifications/bulk-update', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'X-CSRF-TOKEN': getCsrfToken(),
         },
+        credentials: 'same-origin',
         body: JSON.stringify({
-          verification_ids: verificationIds,
+          defense_request_ids: selected, // Send defense request IDs
           status: newStatus,
         }),
       });
 
-      if (res.ok) {
+      console.log('📡 Bulk update response status:', res.status);
+      const data = await res.json();
+      console.log('📥 Bulk update response:', data);
+
+      if (res.ok && data.success) {
+        // Update local state for all selected items
         setDefenseRequests(prev =>
           prev.map(r =>
-            verificationIds.includes(r.aa_verification_id ?? -1)
-              ? ({ ...r, aa_verification_status: newStatus } as unknown as DefenseRequestSummary)
+            selected.includes(r.id)
+              ? ({ ...r, aa_verification_status: newStatus } as DefenseRequestSummary)
               : r
           )
         );
         setSelected([]);
-        toast.success(`Bulk updated to ${newStatus.replace('_', ' ')}`);
+        
+        const message = newStatus === 'ready_for_finance' 
+          ? `✅ ${data.updated_count || selected.length} request(s) updated!\n\nHonorarium & student records created.`
+          : `✅ ${data.updated_count || selected.length} request(s) updated to ${statusLabels[newStatus]}`;
+        
+        toast.success(message, { 
+          id: toastId,
+          duration: 5000 
+        });
+        
+        console.log('✅ Bulk update successful');
       } else {
-        toast.error('Bulk update failed');
+        console.error('❌ Bulk update failed:', data);
+        toast.error(data.error || 'Bulk update failed', { id: toastId });
       }
-    } catch {
-      toast.error('Bulk update error');
+    } catch (error) {
+      console.error('❌ Bulk update error:', error);
+      toast.error('Bulk update error', { id: toastId });
     } finally {
       setIsLoading(false);
     }
   }
 
   const handleBulkMarkCompleted = async () => {
-    if (selected.length === 0) return;
+    if (selected.length === 0) {
+      toast.error('No requests selected');
+      return;
+    }
+    
+    if (!confirm(`⚠️ Mark ${selected.length} defense(s) as completed?\n\nThis will finalize both the defense and AA payment status.`)) {
+      console.log('❌ User cancelled bulk mark completed');
+      return;
+    }
+    
     setIsLoading(true);
+    const toastId = toast.loading(`Marking ${selected.length} defense(s) as completed...`);
+    
     try {
       const res = await fetch('/defense-requests/bulk-status', {
         method: 'PATCH',
@@ -571,6 +623,9 @@ function ShowAllRequestsInner({ defenseRequests: initial, onStatusChange }: Show
         body: JSON.stringify({ ids: selected, status: 'Completed' })
       });
       const data = await res.json();
+      
+      console.log('📥 Bulk mark completed response:', data);
+      
       if (res.ok && data.updated_ids) {
         setDefenseRequests(prev =>
           prev.map(r =>
@@ -578,12 +633,16 @@ function ShowAllRequestsInner({ defenseRequests: initial, onStatusChange }: Show
           )
         );
         setSelected([]);
-        toast.success('Marked as Completed');
+        toast.success(`✅ ${selected.length} defense(s) marked as completed!`, { 
+          id: toastId,
+          duration: 4000 
+        });
       } else {
-        toast.error(data?.error || 'Bulk update failed');
+        toast.error(data?.error || 'Bulk update failed', { id: toastId });
       }
-    } catch {
-      toast.error('Bulk update error');
+    } catch (error) {
+      console.error('❌ Bulk mark completed error:', error);
+      toast.error('Bulk update error', { id: toastId });
     } finally {
       setIsLoading(false);
     }

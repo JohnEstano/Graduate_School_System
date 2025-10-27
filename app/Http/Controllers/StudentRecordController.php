@@ -26,6 +26,22 @@ class StudentRecordController extends Controller
         ]);
     }
 
+    // API endpoint to get students by program (used by frontend)
+    public function getByProgram($programId)
+    {
+        $program = ProgramRecord::findOrFail($programId);
+        
+        $students = StudentRecord::where('program_record_id', $programId)
+            ->with(['payments.panelist'])
+            ->orderBy('last_name', 'asc')
+            ->get();
+
+        return response()->json([
+            'program' => $program,
+            'students' => $students
+        ]);
+    }
+
     // Display students under a specific program (second page)
     public function showProgramStudents(Request $request, $programId)
     {

@@ -162,7 +162,7 @@
                 <td style="width:48%; vertical-align:bottom;">
                     <div class="line" style="width:220px; margin-left:8px; text-align:left;">
                         <span style="position:relative; width:220px; display:inline-block; text-align:left; font-weight:bold;">
-                            {{ $student_name ?? 'N/A' }}
+                            {{ $student_name ?? '_________________________' }}
                         </span>
                     </div>
                     <div class="label" style="text-align:center; margin-top:2px;">Name of Student/ Candidate</div>
@@ -183,7 +183,7 @@
                 <td style="width:48%; vertical-align:bottom;">
                     <div class="line" style="width:220px; margin-left:8px; text-align:left;">
                         <span style="position:relative; width:260px; display:inline-block; text-align:left; font-weight:bold;">
-                            {{ $program ?? 'N/A' }}
+                            {{ $program ?? '_________________________' }}
                         </span>
                     </div>
                     <div class="label" style="text-align:center; margin-top:2px;">Program of Study</div>
@@ -202,7 +202,7 @@
                 <td colspan="3" style="padding-left:8px;">
                     <div class="line" style="width:100%; position:relative; text-align:center;">
                         <span style="position:relative; width:100%; text-align:center; display:inline-block;">
-                            {{ $thesis_title ?? 'Untitled Manuscript' }}
+                            {{ $thesis_title ?? '_________________________________________________________' }}
                         </span>
                     </div>
                 </td>
@@ -227,7 +227,7 @@
             Dear <span class="dear">{{ $approver_name ?? 'Dr. Mary Jane B. Amoguis' }}</span>,
         </div>
         <div class="section" style="margin-top: 6px;">
-            I have reviewed and fully endorsed the pre-final manuscript attached for evaluation.
+            I have reviewed and fully endorsed the pre-final manuscript attached for evaluation. The student has satisfactorily completed the proposal defense and has made the necessary revisions as recommended by the panel.
         </div>
         <div class="thankyou section">
             Thank you.
@@ -261,12 +261,12 @@
                 <td style="width: 50%;">
                     An applicant for Thesis / Dissertation Pre-Final Defense should have accomplished the following before s/he is granted approval:
                     <ol>
-                        <li>Completed all academic requirements vouched by a Certificate of Completion issued by the Registrar</li>
-                        <li>Passed the Comprehensive Examinations in all required subjects vouched by a Certification from the Graduate School Dean</li>
                         <li>Successfully defended the thesis/dissertation proposal</li>
-                        <li>Made all necessary revisions as recommended by the proposal defense panel</li>
-                        <li>Enrolled and attended classes in Thesis / Dissertation Writing with an assigned adviser</li>
-                        <li>Substantially completed the manuscript following the prescribed UIC format</li>
+                        <li>Incorporated all revisions and recommendations from the proposal defense panel</li>
+                        <li>Completed substantial progress on the research methodology and data collection</li>
+                        <li>Written significant portions of the manuscript following the prescribed UIC format</li>
+                        <li>Received endorsement from the thesis/dissertation adviser</li>
+                        <li>Maintained regular consultation with the adviser throughout the research process</li>
                     </ol>
                 </td>
                 <td style="width: 50%;">
@@ -276,7 +276,7 @@
                         <li>Pays the pre-final defense fee at the cashier</li>
                         <li>Submits the receipt to the Administrative Assistant and the manuscript, (7) for Doctorate student (5) for Masteral student to the assigned panels and adviser.</li>
                         <li>Endorses the candidate to the Program Coordinator for the schedule.</li>
-                        <li>Confirms the panel members to be approved by the Dean</li>
+                        <li>Asks the Program Coordinator on the proposed member of the panel to be approved by the Dean</li>
                         <li>Schedules the pre-final oral defense.</li>
                     </ol>
                 </td>

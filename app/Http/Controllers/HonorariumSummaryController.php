@@ -79,24 +79,17 @@ public function show($programId)
     ])->findOrFail($programId);
 
     // Format panelists data with students and payments
-    // Filter out advisers - only show Panel Chair and Panel Members
+    // Exclude Advisers from honorarium page - they don't receive honorarium payments
     $panelists = $record->panelists
         ->filter(function($panelist) {
-            // Get roles from pivot assignments
+            // Get all roles for this panelist
             $roles = $panelist->students->pluck('pivot.role')->filter()->map(fn($r) => $this->normalizeRole($r))->filter()->unique()->values()->all();
+            $roleSummary = count($roles) === 1 ? $roles[0] : (count($roles) > 1 ? implode(', ', $roles) : ($this->normalizeRole($panelist->role) ?? 'N/A'));
             
-            // Include this panelist only if they have Panel Chair or Panel Member roles
-            // Exclude if they only have Adviser role
-            foreach ($roles as $role) {
-                if ($role === 'Panel Chair' || $role === 'Panel Member') {
-                    return true;
-                }
-            }
-            
-            // Also check panelist's own role field as fallback
-            $normalizedRole = $this->normalizeRole($panelist->role ?? '');
-            return $normalizedRole === 'Panel Chair' || $normalizedRole === 'Panel Member';
+            // Exclude if role is 'Adviser'
+            return $roleSummary !== 'Adviser' && !str_contains(strtolower($roleSummary), 'advis');
         })
+        ->values() // Re-index the collection after filtering
         ->map(function($panelist) {
             // derive roles from pivot assignments (panelist may have different roles per student)
             $roles = $panelist->students->pluck('pivot.role')->filter()->map(fn($r) => $this->normalizeRole($r))->filter()->unique()->values()->all();
@@ -104,6 +97,11 @@ public function show($programId)
 
             // Get defense date from the first student (assuming all students have same defense date for a panelist)
             $defenseDate = $panelist->students->first()?->defense_date;
+
+            // Calculate total amount for this panelist from all payment records
+            $totalAmount = $panelist->students->sum(function($student) use ($panelist) {
+                return $student->payments->where('panelist_record_id', $panelist->id)->sum('amount');
+            });
 
             return [
                 'id' => $panelist->id,
@@ -115,6 +113,7 @@ public function show($programId)
                 'defense_type' => 'Proposal', // Default value since column doesn't exist in DB
                 'defense_date' => $defenseDate ? date('Y-m-d', strtotime($defenseDate)) : null,
                 'received_date' => $panelist->received_date ? date('Y-m-d', strtotime($panelist->received_date)) : null,
+                'amount' => (float) $totalAmount, // Total honorarium amount for this panelist
                 'students' => $panelist->students->map(function($student) use ($panelist) {
                     $assigned = $this->normalizeRole($student->pivot->role ?? null);
                     return [
@@ -146,7 +145,8 @@ public function show($programId)
                     ];
                 })
             ];
-        });
+        })
+        ->values(); // Ensure proper array indexing for frontend
   
     return Inertia::render('honorarium/individual-record', [
         'record'    => $record,

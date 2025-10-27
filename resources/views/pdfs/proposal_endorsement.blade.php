@@ -161,7 +161,7 @@
                 <!-- Name: line left, label centered below -->
                 <td style="width:48%; vertical-align:bottom;">
                     <div class="line" style="width:220px; margin-left:8px; text-align:left;">
-                        <span style="position:relative; width:220px; display:inline-block; text-align:left;">
+                        <span style="position:relative; width:220px; display:inline-block; text-align:left; font-weight:bold;">
                             {{ $student_name ?? '_________________________' }}
                         </span>
                     </div>
@@ -171,8 +171,8 @@
                 <!-- Date: line right, label centered below -->
                 <td style="width:36%; vertical-align:bottom;">
                     <div class="line" style="width:90px; margin-right:8px; float:right; text-align:right;">
-                        <span style="position:relative; width:90px; display:inline-block; text-align:right;">
-                            {{ $defense_date ?? date('F d, Y') }}
+                        <span style="position:relative; width:90px; display:inline-block; text-align:right; font-weight:bold;">
+                            {{ $defense_date ?? now()->format('F d, Y') }}
                         </span>
                     </div>
                     <div class="label" style="text-align:center; margin-top:2px;">Date</div>
@@ -182,7 +182,7 @@
                 <!-- Program of Study: line left, label centered below, input wider -->
                 <td style="width:48%; vertical-align:bottom;">
                     <div class="line" style="width:220px; margin-left:8px; text-align:left;">
-                        <span style="position:relative; width:260px; display:inline-block; text-align:left;">
+                        <span style="position:relative; width:260px; display:inline-block; text-align:left; font-weight:bold;">
                             {{ $program ?? '_________________________' }}
                         </span>
                     </div>
@@ -192,7 +192,7 @@
                 <td></td>
             </tr>
             <tr><td colspan="3" style="height: 18px;"></td></tr>
-            <!-- Thesis Title section unchanged -->
+            <!-- Thesis Title section -->
             <tr>
                 <td colspan="3" style="text-align:left; padding-left:9px;">
                     <div class="label">Title of the Thesis / Dissertation:</div>
@@ -200,27 +200,31 @@
             </tr>
             <tr>
                 <td colspan="3" style="padding-left:8px;">
-                    <div class="line" style="width:100%; position:relative;">
+                    <div class="line" style="width:100%; position:relative; text-align:center;">
                         <span style="position:relative; width:100%; text-align:center; display:inline-block;">
                             {{ $thesis_title ?? '_________________________________________________________' }}
                         </span>
                     </div>
                 </td>
             </tr>
+            @if(strlen($thesis_title ?? '') > 80)
             <tr>
                 <td colspan="3" style="padding-left:8px;">
                     <div class="line"></div>
                 </td>
             </tr>
+            @endif
+            @if(strlen($thesis_title ?? '') > 160)
             <tr>
                 <td colspan="3" style="padding-left:8px;">
                     <div class="line"></div>
                 </td>
             </tr>
+            @endif
         </table>
 
         <div class="section">
-            Dear <span class="dear">{{ $dean_name ?? 'Dr. Amoguis' }}</span>,
+            Dear <span class="dear">{{ $approver_name ?? 'Dr. Mary Jane B. Amoguis' }}</span>,
         </div>
         <div class="section" style="margin-top: 6px;">
             I have reviewed and fully endorsed the final manuscript attached for evaluation.
@@ -240,7 +244,16 @@
 
         <div class="approved-block">
             <div class="approved-label">Approved by:</div>
-            <div class="approved-name">{{ $dean_name ?? 'Dr. Mary Jane B. Amoguis' }}<br>{{ $dean_title ?? 'Dean, Graduate School' }}</div>
+            @if(!empty($coordinator_signature_path) && !empty($coordinator_name))
+                <!-- Show coordinator signature if available -->
+                <div style="margin-bottom: 8px;">
+                    <img src="{{ $coordinator_signature_path }}" alt="Coordinator Signature" style="max-height:50px; margin-bottom:2px;">
+                </div>
+                <div class="approved-name">{{ $coordinator_name }}<br>{{ $coordinator_title ?? 'Program Coordinator' }}</div>
+            @else
+                <!-- Default to dean if no coordinator -->
+                <div class="approved-name">{{ $approver_name ?? 'Dr. Mary Jane B. Amoguis' }}<br>{{ $approver_title ?? 'Dean, Graduate School' }}</div>
+            @endif
         </div>
 
         <table class="footer-table">
