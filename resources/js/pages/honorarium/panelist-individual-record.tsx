@@ -149,9 +149,16 @@ export default function PanelistIndividualRecord({ panelist, onClose }: Props) {
         <div className="flex-1 overflow-y-auto py-2 px-6">
           <div className="rounded-md overflow-x-auto border bg-white dark:bg-[#121212] p-4">
             <div className="space-y-4">
-              {(panelist.students || []).map((student) => {
-                const payment = (student.payments || [])[0];
-                if (!payment) return null;
+              {(panelist.students || [])
+                .sort((a, b) => {
+                  // Sort by defense_date: latest first
+                  const dateA = a.defense_date ? new Date(a.defense_date).getTime() : 0;
+                  const dateB = b.defense_date ? new Date(b.defense_date).getTime() : 0;
+                  return dateB - dateA; // Descending order (latest first)
+                })
+                .map((student) => {
+                  const payment = (student.payments || [])[0];
+                  if (!payment) return null;
 
                 return (
                   <div
@@ -191,7 +198,21 @@ export default function PanelistIndividualRecord({ panelist, onClose }: Props) {
                         <Calendar className="h-4 w-4 text-gray-500 dark:text-gray-400 mt-0.5 flex-shrink-0" />
                         <div>
                           <div className="text-xs text-gray-500 dark:text-gray-400">Defense Date</div>
-                          <div className="font-medium">{payment.defense_date || student.defense_date || "-"}</div>
+                          <div className="font-medium">
+                            {payment.defense_date 
+                              ? new Date(payment.defense_date).toLocaleDateString('en-US', { 
+                                  month: 'short',
+                                  day: 'numeric',
+                                  year: 'numeric'
+                                })
+                              : (student.defense_date 
+                                  ? new Date(student.defense_date).toLocaleDateString('en-US', { 
+                                      month: 'short',
+                                      day: 'numeric',
+                                      year: 'numeric'
+                                    })
+                                  : "-")}
+                          </div>
                         </div>
                       </div>
 
@@ -199,7 +220,15 @@ export default function PanelistIndividualRecord({ panelist, onClose }: Props) {
                         <CreditCard className="h-4 w-4 text-gray-500 dark:text-gray-400 mt-0.5 flex-shrink-0" />
                         <div>
                           <div className="text-xs text-gray-500 dark:text-gray-400">Payment Date</div>
-                          <div className="font-medium">{payment.payment_date || "-"}</div>
+                          <div className="font-medium">
+                            {payment.payment_date 
+                              ? new Date(payment.payment_date).toLocaleDateString('en-US', { 
+                                  month: 'short',
+                                  day: 'numeric',
+                                  year: 'numeric'
+                                })
+                              : "-"}
+                          </div>
                         </div>
                       </div>
 

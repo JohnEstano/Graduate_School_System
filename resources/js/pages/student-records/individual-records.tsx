@@ -159,7 +159,16 @@ export default function IndividualRecord({ record, onClose }: IndividualRecordPr
                     </TableHeader>
                     <TableBody>
                       {record.payments && record.payments.length > 0 ? (
-                        record.payments.map((payment) => (
+                        record.payments
+                          .sort((a, b) => {
+                            // Sort by defense_date: latest first
+                            const dateA = a.defense_date ? new Date(a.defense_date).getTime() : 
+                                         (record.defense_date ? new Date(record.defense_date).getTime() : 0);
+                            const dateB = b.defense_date ? new Date(b.defense_date).getTime() : 
+                                         (record.defense_date ? new Date(record.defense_date).getTime() : 0);
+                            return dateB - dateA; // Descending order (latest first)
+                          })
+                          .map((payment) => (
                           <>
                             {/* Payment row */}
                             <TableRow
@@ -179,9 +188,17 @@ export default function IndividualRecord({ record, onClose }: IndividualRecordPr
 
                               <TableCell>
                                 {payment.defense_date 
-                                  ? new Date(payment.defense_date).toLocaleDateString('en-CA') 
+                                  ? new Date(payment.defense_date).toLocaleDateString('en-US', { 
+                                      month: 'short',
+                                      day: 'numeric',
+                                      year: 'numeric'
+                                    })
                                   : (record.defense_date 
-                                      ? new Date(record.defense_date).toLocaleDateString('en-CA')
+                                      ? new Date(record.defense_date).toLocaleDateString('en-US', { 
+                                          month: 'short',
+                                          day: 'numeric',
+                                          year: 'numeric'
+                                        })
                                       : "-")}
                               </TableCell>
                               <TableCell>{payment.defense_type || record.defense_type || "-"}</TableCell>
@@ -189,7 +206,11 @@ export default function IndividualRecord({ record, onClose }: IndividualRecordPr
                               <TableCell>{payment.or_number || record.or_number || "-"}</TableCell>
                               <TableCell>
                                 {payment.payment_date 
-                                  ? new Date(payment.payment_date).toLocaleDateString('en-CA')
+                                  ? new Date(payment.payment_date).toLocaleDateString('en-US', { 
+                                      month: 'short',
+                                      day: 'numeric',
+                                      year: 'numeric'
+                                    })
                                   : "-"}
                               </TableCell>
                               <TableCell className="text-right">

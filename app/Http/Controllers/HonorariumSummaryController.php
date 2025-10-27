@@ -102,6 +102,9 @@ public function show($programId)
             $roles = $panelist->students->pluck('pivot.role')->filter()->map(fn($r) => $this->normalizeRole($r))->filter()->unique()->values()->all();
             $roleSummary = count($roles) === 1 ? $roles[0] : (count($roles) > 1 ? implode(', ', $roles) : ($this->normalizeRole($panelist->role) ?? 'N/A'));
 
+            // Get defense date from the first student (assuming all students have same defense date for a panelist)
+            $defenseDate = $panelist->students->first()?->defense_date;
+
             return [
                 'id' => $panelist->id,
                 'pfirst_name' => $panelist->pfirst_name,
@@ -110,6 +113,7 @@ public function show($programId)
                 // role now summarized from assignments; keep original role fallback
                 'role' => $roleSummary,
                 'defense_type' => 'Proposal', // Default value since column doesn't exist in DB
+                'defense_date' => $defenseDate ? date('Y-m-d', strtotime($defenseDate)) : null,
                 'received_date' => $panelist->received_date ? date('Y-m-d', strtotime($panelist->received_date)) : null,
                 'students' => $panelist->students->map(function($student) use ($panelist) {
                     $assigned = $this->normalizeRole($student->pivot->role ?? null);
@@ -166,6 +170,10 @@ public function storePanelist(Request $request, $programId)
     ]);
 
     $panelist = $program->panelists()->create($validated);
+    
+    // Update program's date_edited when new panelist is added
+    $program->update(['date_edited' => now()]);
+    
     $panelist->load('program');
 
     return response()->json([
