@@ -8,9 +8,13 @@ type DefenseRequest = {
   id: number;
   thesis_title: string;
   status: string;
-  date_of_defense: string;
+  workflow_state?: string;
+  date_of_defense?: string;
+  scheduled_date?: string;
   start_time?: string;
   end_time?: string;
+  scheduled_time?: string;
+  scheduled_end_time?: string;
   defense_type?: string;
   defense_mode?: string;
   defense_venue?: string;
@@ -83,42 +87,100 @@ export default function WeeklyDefenseSchedulesWidget(props: Props) {
     const qs = `?from=${encodeURIComponent(start.toISOString())}&to=${encodeURIComponent(end.toISOString())}`;
     setEventsLoading(true);
     fetch('/api/calendar/events'+qs)
-      .then(r => r.json())
-      .then((items: any[]) => {
-        setWeekEvents(items.filter(i => i.origin === 'event'));
+      .then(r => {
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        return r.json();
       })
-      .catch(()=>{})
+      .then((items: any[]) => {
+        console.log('📅 Weekly Events Response:', items);
+        const events = Array.isArray(items) ? items : [];
+        const filtered = events.filter(i => i.origin === 'event');
+        console.log('📅 Filtered Events:', filtered);
+        setWeekEvents(filtered);
+      })
+      .catch((err) => {
+        console.error('❌ Error fetching events:', err);
+        setWeekEvents([]);
+      })
       .finally(()=> setEventsLoading(false));
   }, [referenceDate]);
 
   const selectedDate = getDateOfWeek(selectedDay, referenceDate);
 
+  // Debug: Log the input defenses
+  useEffect(() => {
+    console.log('🎯 Approved Defenses Input:', approvedDefenses);
+  }, [approvedDefenses]);
+
   // --- Combine defenses + events for selected day ---
   const combined = useMemo(() => {
     const defenseRows = approvedDefenses
-      .filter(d => d.status === 'Approved' && d.date_of_defense)
-      .filter(d => isSameDay(parseISO(d.date_of_defense), selectedDate))
-      .map(d => ({
-        id: 'def-'+d.id,
-        kind: 'defense' as const,
-        title: d.thesis_title || 'Defense',
-        start: d.start_time || null,
-        end: d.end_time || null,
-        color: '#059669',
-        raw: d,
-        owner: studentId && d.submitted_by === studentId
-      }));
+      .filter(d => {
+        // Check both status and workflow_state
+        const isApproved = d.status === 'Approved' || 
+                          d.workflow_state === 'scheduled' || 
+                          d.workflow_state === 'completed';
+        // Get date from either field
+        const defenseDate = d.date_of_defense || d.scheduled_date;
+        return isApproved && defenseDate;
+      })
+      .filter(d => {
+        const defenseDate = d.date_of_defense || d.scheduled_date;
+        if (!defenseDate) return false;
+        try {
+          // Handle both ISO and simple date formats
+          const dateObj = defenseDate.includes('T') || defenseDate.includes(' ') 
+            ? parseISO(defenseDate.replace(' ', 'T'))
+            : parseISO(defenseDate);
+          return isSameDay(dateObj, selectedDate);
+        } catch {
+          return false;
+        }
+      })
+      .map(d => {
+        // Get time from either field (prioritize specific fields)
+        const startTime = d.start_time || d.scheduled_time;
+        const endTime = d.end_time || d.scheduled_end_time;
+        
+        // Extract HH:mm from time strings (handle both 'HH:mm' and 'HH:mm:ss' formats)
+        const extractTime = (timeStr: string | undefined) => {
+          if (!timeStr) return null;
+          // Remove seconds if present
+          const parts = timeStr.split(':');
+          return parts.length >= 2 ? `${parts[0]}:${parts[1]}` : timeStr.substring(0, 5);
+        };
+        
+        return {
+          id: 'def-'+d.id,
+          kind: 'defense' as const,
+          title: d.thesis_title || 'Defense',
+          start: extractTime(startTime),
+          end: extractTime(endTime),
+          color: '#059669',
+          raw: d,
+          owner: studentId && d.submitted_by === studentId
+        };
+      });
 
     const eventRows = weekEvents
       .filter(ev => {
-        const starts = parseISO(ev.start);
-        return isSameDay(starts, selectedDate);
+        try {
+          // Handle both 'YYYY-MM-DD HH:mm:ss' and ISO formats
+          const startStr = ev.start.replace(' ', 'T');
+          const starts = parseISO(startStr);
+          return isSameDay(starts, selectedDate);
+        } catch {
+          return false;
+        }
       })
       .map(ev => {
-        const [datePart, timePart] = ev.start.split(' ');
-        const endTimePart = ev.end ? ev.end.split(' ')[1] : undefined;
-        return {
-          id: ev.id,
+        try {
+          // Parse date-time, handle both formats
+          const [datePart, timePart] = ev.start.split(' ');
+          const endTimePart = ev.end ? ev.end.split(' ')[1] : undefined;
+          
+          return {
+            id: ev.id,
             kind: 'event' as const,
             title: ev.title || 'Event',
             start: ev.allDay ? null : (timePart?.slice(0,5) || null),
@@ -126,8 +188,13 @@ export default function WeeklyDefenseSchedulesWidget(props: Props) {
             color: ev.color || '#2563eb',
             raw: ev,
             owner: false
-        };
-      });
+          };
+        } catch {
+          // If parsing fails, skip this event
+          return null;
+        }
+      })
+      .filter((ev): ev is NonNullable<typeof ev> => ev !== null);
 
     // Sort by start time (nulls/all-day first), then title
     const sorted = [...defenseRows, ...eventRows].sort((a,b) => {
@@ -135,6 +202,13 @@ export default function WeeklyDefenseSchedulesWidget(props: Props) {
       if (a.start === null) return -1;
       if (b.start === null) return 1;
       return a.start.localeCompare(b.start);
+    });
+
+    console.log('📊 Combined Schedule for', format(selectedDate, 'yyyy-MM-dd'), ':', {
+      defenseCount: defenseRows.length,
+      eventCount: eventRows.length,
+      total: sorted.length,
+      items: sorted
     });
 
     return sorted;
