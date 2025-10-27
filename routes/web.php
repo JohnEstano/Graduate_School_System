@@ -49,13 +49,11 @@ Route::get('/', function () {
     return Auth::check()
         ? redirect()->route('dashboard')
         : redirect()->route('login');
-    return Auth::check()
-        ? redirect()->route('dashboard')
-        : redirect()->route('login');
 })->name('home');
 
-Route::post('/programs/{programId}/panelists', [HonorariumSummaryController::class, 'storePanelist'])
-    ->name('programs.panelists.store');
+// Moved to authenticated routes - must be logged in to add panelists
+// Route::post('/programs/{programId}/panelists', [HonorariumSummaryController::class, 'storePanelist'])
+//     ->name('programs.panelists.store');
 
 // The routes here means that to be rendered or accessed, you need to login or have prior authentication.
 Route::middleware('guest')->group(function () {
@@ -67,10 +65,14 @@ Route::middleware('guest')->group(function () {
 
 /*
 |--------------------------------------------------------------------------
-| Debug / Diagnostics (optional)
+| Debug / Diagnostics (DISABLE IN PRODUCTION!)
 |--------------------------------------------------------------------------
 */
+// ⚠️ TODO: Remove or protect these routes in production
 Route::get('/test-upload-limits', function () {
+    if (app()->environment('production')) {
+        abort(404);
+    }
     return response()->json([
         'upload_max_filesize' => ini_get('upload_max_filesize'),
         'post_max_size' => ini_get('post_max_size'),
@@ -291,10 +293,13 @@ Route::get('/test-email-layout/{template}', function ($template) {
     }
 });
 
-
 use Illuminate\Support\Facades\Mail;
 
+// ⚠️ TODO: Remove in production
 Route::get('/test-mail', function () {
+    if (app()->environment('production')) {
+        abort(404);
+    }
     Mail::raw('This is a test email to Mailpit!', function ($message) {
         $message->to('test@example.com')
                 ->subject('Hello Mailpit!');
@@ -311,8 +316,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/api/coordinator/code', [CoordinatorAdviserController::class, 'getCoordinatorCode']);
     Route::post('/api/adviser/register-with-coordinator-code', [\App\Http\Controllers\CoordinatorAdviserController::class, 'registerWithCode']);
     Route::get('/coordinator/defense-requests/all-defense-requests', [\App\Http\Controllers\DefenseRequestController::class, 'allForCoordinator'])->middleware('auth');
-    Route::get('/api/coordinator/code', [CoordinatorAdviserController::class, 'getCoordinatorCode']);
-    Route::post('/api/adviser/register-with-coordinator-code', [\App\Http\Controllers\CoordinatorAdviserController::class, 'registerWithCode']);
+    
+    // Removed duplicate routes (lines 314-315)
 
     // Coordinator Adviser Management Routes
     Route::get('/api/coordinator/advisers', [CoordinatorAdviserController::class, 'index']);
@@ -328,8 +333,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('/api/coordinator/advisers/{adviser}/students', [\App\Http\Controllers\CoordinatorAdviserController::class, 'storeStudent']);
     Route::delete('/api/coordinator/advisers/{adviser}/students/{student}', [\App\Http\Controllers\CoordinatorAdviserController::class, 'destroyStudent']);
     Route::get('/api/coordinator/students/search', [CoordinatorAdviserController::class, 'searchStudents']);
-
-
 
 
     //PAYMENTVERIFIATION AA
@@ -374,26 +377,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
     })->name('settings.documents.edit');
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
     // HONORARIUM ROUTES
-    // Page 1 - List all programs
-
-
-
+    // Panelist management
+    Route::post('/programs/{programId}/panelists', [HonorariumSummaryController::class, 'storePanelist'])
+        ->name('programs.panelists.store');
+    
+    // Page 1 - List all program
     
 Route::get('/honorarium/individual-record/{programId}', [HonorariumSummaryController::class, 'show'])
     ->name('honorarium.individual-record');
@@ -421,34 +410,6 @@ Route::get('/honorarium/individual-record/{programId}', [HonorariumSummaryContro
     Route::get('/student-records/{id}/download-docs', [StudentRecordController::class, 'downloadDocs'])
         ->name('student-records.downloadDocs');
 
-
-
-
-
-    
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
     //student-records route
     Route::get('/student-records', [StudentRecordController::class, 'index'])->name('student-records.index');
     Route::get('/student-records/program/{programId}', [StudentRecordController::class, 'showProgramStudents'])->name('student-records.program.show');
@@ -459,22 +420,6 @@ Route::get('/honorarium/individual-record/{programId}', [HonorariumSummaryContro
 
     Route::get('/payments/{id}/download-pdf', [StudentRecordController::class, 'downloadPdf'])
         ->name('payments.downloadPdf');
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
     //Emails Controller
     Route::get('send-mail', [EmailsController::class, 'welcomeEmail']);
