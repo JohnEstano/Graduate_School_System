@@ -165,7 +165,8 @@ export default function EndorsementDialog({
         body: JSON.stringify({
           template_id: selectedTemplate.id,
           defense_request_id: defenseRequest.id,
-          fields: {}
+          fields: {},
+          role: 'adviser' // Specify role to prevent filling coordinator fields
         })
       });
 

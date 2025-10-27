@@ -34,6 +34,7 @@ class GeneratedDocumentController extends Controller {
           'template_id' => 'required|integer|exists:document_templates,id',
           'defense_request_id' => 'required|integer|exists:defense_requests,id',
           'fields' => 'array',
+          'role' => 'nullable|in:adviser,coordinator', // Add role parameter
       ]);
 
       $tpl = \App\Models\DocumentTemplate::findOrFail($request->template_id);
@@ -42,7 +43,13 @@ class GeneratedDocumentController extends Controller {
       $generator = new \App\Services\DocumentGenerator();
       
       try {
-          $generated = $generator->generate($tpl, $defenseRequest, $request->fields ?? []);
+          // Pass role to generator for field filtering
+          $generated = $generator->generate(
+              $tpl, 
+              $defenseRequest, 
+              $request->fields ?? [],
+              $request->role ?? null
+          );
           
           $pdfPath = storage_path('app/public/' . $generated->output_path);
           

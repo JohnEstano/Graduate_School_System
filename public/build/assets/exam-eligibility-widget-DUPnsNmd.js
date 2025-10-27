@@ -1,5 +1,0 @@
-<<<<<<<< Updated upstream:public/build/assets/exam-eligibility-widget-CtwRxU6b.js
-import{j as e}from"./app-CQngmq00.js";const t=({simple:i})=>i?e.jsx("span",{className:"font-bold text-2xl text-zinc-800 dark:text-zinc-100",children:"Eligible"}):e.jsx("div",{className:"border-sidebar-border/70 dark:border-sidebar-border aspect-video rounded-xl border p-5 flex flex-col justify-between bg-white dark:bg-zinc-900",children:e.jsx("h3",{className:"text-[13px] font-medium mb-2",children:"Exam Eligibility"})});export{t as default};
-========
-import{j as e}from"./app-DdPj2m7B.js";const t=({simple:i})=>i?e.jsx("span",{className:"font-bold text-2xl text-zinc-800 dark:text-zinc-100",children:"Eligible"}):e.jsx("div",{className:"border-sidebar-border/70 dark:border-sidebar-border aspect-video rounded-xl border p-5 flex flex-col justify-between bg-white dark:bg-zinc-900",children:e.jsx("h3",{className:"text-[13px] font-medium mb-2",children:"Exam Eligibility"})});export{t as default};
->>>>>>>> Stashed changes:public/build/assets/exam-eligibility-widget-DUPnsNmd.js

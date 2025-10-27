@@ -6,11 +6,12 @@ use Illuminate\Support\Facades\Storage;
 use setasign\Fpdi\Fpdi;
 
 class DocumentGenerator {
-  public function generate(DocumentTemplate $tpl, DefenseRequest $req, array $overrides = []): GeneratedDocument {
+  public function generate(DocumentTemplate $tpl, DefenseRequest $req, array $overrides = [], ?string $role = null): GeneratedDocument {
     \Log::info("DocumentGenerator: Starting generation", [
         'template_id' => $tpl->id,
         'template_name' => $tpl->name,
         'defense_request_id' => $req->id,
+        'role' => $role,
     ]);
     
     $payload = $this->payload($req);
@@ -60,6 +61,27 @@ class DocumentGenerator {
 
         foreach ($fields as $f) {
             if ($f['page'] != $p) continue;
+
+            // Role-based field filtering
+            if ($role) {
+                $fieldKey = $f['key'] ?? '';
+                
+                // If adviser is generating, skip coordinator and dean signatures
+                if ($role === 'adviser' && (
+                    str_contains($fieldKey, 'coordinator') || 
+                    str_contains($fieldKey, 'dean')
+                )) {
+                    \Log::info("DocumentGenerator: Skipping field for adviser role", ['field_key' => $fieldKey]);
+                    continue;
+                }
+                
+                // If coordinator is generating, skip adviser signature (already filled)
+                // but allow coordinator fields to be filled
+                if ($role === 'coordinator' && str_contains($fieldKey, 'signature.adviser')) {
+                    \Log::info("DocumentGenerator: Skipping adviser signature for coordinator role", ['field_key' => $fieldKey]);
+                    continue;
+                }
+            }
 
             // Convert px to mm
             $x = ($f['x'] / $canvasWidth) * $pageWidth;

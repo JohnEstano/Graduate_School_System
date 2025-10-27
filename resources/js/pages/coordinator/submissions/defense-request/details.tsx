@@ -65,6 +65,7 @@ import {
 // add: ShadCN table + program level util
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
 import { findPanelMember, getMemberReceivableByProgramLevel, getMemberReceivable } from '@/utils/payment-rates';
+import CoordinatorApproveDialog from './coordinator-approve-dialog';
 
 type PanelMemberOption = {
   id: string;
@@ -324,6 +325,9 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
   }
 
   const [request, setRequest] = useState<DefenseRequestFull>(requestProp);
+
+  // Coordinator Approve Dialog state
+  const [approveDialogOpen, setApproveDialogOpen] = useState(false);
 
   // Confirmation dialog state for approve/reject/retrieve
   const [confirm, setConfirm] = useState<{ open: boolean; action: 'approve' | 'reject' | 'retrieve' | null; sendEmail: boolean }>({
@@ -978,11 +982,11 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
           </div>
           {canEdit && (
             <div className="flex gap-2">
-              {/* Approve button: only enabled if not already approved or completed */}
+              {/* Approve button: opens the coordinator approve dialog */}
               <Button
                 size="sm"
                 variant="outline"
-                onClick={() => setConfirm({ open: true, action: 'approve', sendEmail: false })}
+                onClick={() => setApproveDialogOpen(true)}
                 disabled={
                   isLoading ||
                   request.coordinator_status === 'Approved' ||
@@ -990,7 +994,7 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
                 }
               >
                 <CheckCircle className="h-4 w-4 mr-1 text-green-600" />
-                Approve
+                Approve & Sign
               </Button>
               {/* Reject button: only enabled if not already rejected, not approved, and not completed */}
               <Button
@@ -1188,14 +1192,23 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
                       };
                     };
 
-                    const rows = [
+                    // Build rows based on program level
+                    const baseRows = [
                       { key: 'adviser', info: memberFor(request.defense_adviser, 'Adviser') },
                       { key: 'defense_chairperson', info: memberFor(panels.defense_chairperson || request.defense_chairperson, 'Panel Chair') },
                       { key: 'defense_panelist1', info: memberFor(panels.defense_panelist1 || request.defense_panelist1, 'Panel Member 1') },
                       { key: 'defense_panelist2', info: memberFor(panels.defense_panelist2 || request.defense_panelist2, 'Panel Member 2') },
-                      { key: 'defense_panelist3', info: memberFor(panels.defense_panelist3 || request.defense_panelist3, 'Panel Member 3') },
-                      { key: 'defense_panelist4', info: memberFor(panels.defense_panelist4 || request.defense_panelist4, 'Panel Member 4') },
-                    ].map(r => {
+                    ];
+
+                    // Add panelists 3 and 4 only for Doctorate
+                    if (request.program_level === 'Doctorate') {
+                      baseRows.push(
+                        { key: 'defense_panelist3', info: memberFor(panels.defense_panelist3 || request.defense_panelist3, 'Panel Member 3') },
+                        { key: 'defense_panelist4', info: memberFor(panels.defense_panelist4 || request.defense_panelist4, 'Panel Member 4') }
+                      );
+                    }
+
+                    const rows = baseRows.map(r => {
                       const namePresent = !!(r.info.rawValue || (r.info.displayName && r.info.displayName !== '—'));
                       
                       // Use local function for receivables (matches AA logic)
@@ -1307,11 +1320,31 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
                     <Users className="h-4 w-4" /> Panel Assignment
                   </h2>
                   <Separator />
+                  {/* Show program level info */}
+                  <div className="text-xs text-muted-foreground mb-2">
+                    {request.program_level === 'Doctorate' 
+                      ? 'Doctorate program: 4 panel members required (Chairperson + 3 Panelists)'
+                      : 'Masteral program: 3 panel members required (Chairperson + 2 Panelists)'}
+                  </div>
                   <div className="grid md:grid-cols-2 gap-4">
+                    {/* Always show Chairperson and first 2 panelists */}
                     {[
                       { label: 'Chairperson', key: 'defense_chairperson' },
                       { label: 'Panelist 1', key: 'defense_panelist1' },
                       { label: 'Panelist 2', key: 'defense_panelist2' },
+                    ].map(({ label, key }) => (
+                      <PanelMemberCombobox
+                        key={key}
+                        label={label}
+                        value={panels[key as keyof typeof panels]}
+                        onChange={v => setPanels(p => ({ ...p, [key]: v }))}
+                        options={panelOptionsForAssignment}
+                        disabled={!canEdit || loadingMembers}
+                        taken={taken}
+                      />
+                    ))}
+                    {/* Show Panelist 3 and 4 only for Doctorate */}
+                    {request.program_level === 'Doctorate' && [
                       { label: 'Panelist 3', key: 'defense_panelist3' },
                       { label: 'Panelist 4', key: 'defense_panelist4' }
                     ].map(({ label, key }) => (
@@ -1506,6 +1539,19 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
 
     
       </div>
+
+      {/* Coordinator Approve Dialog */}
+      <CoordinatorApproveDialog
+        open={approveDialogOpen}
+        onOpenChange={setApproveDialogOpen}
+        defenseRequest={request}
+        coordinatorId={request.coordinator?.id}
+        coordinatorName={request.coordinator?.name || 'Coordinator'}
+        onApproveComplete={() => {
+          // Refresh the request data after approval
+          window.location.reload();
+        }}
+      />
 
       {/* Confirmation Dialog for Approve/Reject/Retrieve */}
       <Dialog open={confirm.open} onOpenChange={o => { if (!o) setConfirm({ open: false, action: null, sendEmail: false }); }}>

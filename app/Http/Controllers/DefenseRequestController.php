@@ -13,6 +13,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 use Carbon\Carbon;
 use App\Jobs\GenerateDefenseDocumentsJob;
@@ -1873,6 +1874,77 @@ class DefenseRequestController extends Controller
         }
     }
 
+    public function updateCoordinatorStatus(Request $request, DefenseRequest $defenseRequest)
+    {
+        $user = Auth::user();
+        if (!$user) abort(401);
+        
+        // Authorization: Only coordinators can update coordinator status
+        if (!in_array($user->role, ['Coordinator', 'Administrative Assistant', 'Dean'])) {
+            return response()->json(['error' => 'Unauthorized'], 403);
+        }
+
+        $data = $request->validate([
+            'coordinator_status' => 'required|in:Approved,Rejected,Pending',
+            'coordinator_user_id' => 'nullable|integer|exists:users,id'
+        ]);
+
+        $previousStatus = $defenseRequest->coordinator_status;
+        
+        DB::beginTransaction();
+        try {
+            // Update coordinator status
+            $defenseRequest->coordinator_status = $data['coordinator_status'];
+            $defenseRequest->last_status_updated_at = now();
+            $defenseRequest->last_status_updated_by = $user->id;
+            
+            // Update coordinator if provided
+            if (isset($data['coordinator_user_id'])) {
+                $defenseRequest->coordinator_user_id = $data['coordinator_user_id'];
+            }
+
+            // Update workflow state based on coordinator status
+            if ($data['coordinator_status'] === 'Approved') {
+                $defenseRequest->workflow_state = 'coordinator-approved';
+            } elseif ($data['coordinator_status'] === 'Rejected') {
+                $defenseRequest->workflow_state = 'coordinator-rejected';
+            } else {
+                $defenseRequest->workflow_state = 'coordinator-review';
+            }
+
+            $defenseRequest->save();
+
+            // Log workflow history
+            $history = $defenseRequest->workflow_history ?? [];
+            $history[] = [
+                'event_type' => 'coordinator-status-update',
+                'from_state' => $previousStatus,
+                'to_state' => $data['coordinator_status'],
+                'created_at' => now()->toDateTimeString(),
+                'user_name' => $user->first_name . ' ' . $user->last_name,
+                'user_id' => $user->id,
+                'description' => "Coordinator updated status to {$data['coordinator_status']}"
+            ];
+            $defenseRequest->workflow_history = $history;
+            $defenseRequest->save();
+
+            DB::commit();
+
+            return response()->json([
+                'ok' => true,
+                'message' => 'Coordinator status updated successfully',
+                'request' => $defenseRequest->fresh()
+            ]);
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            Log::error('Failed to update coordinator status', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            return response()->json(['error' => 'Failed to update coordinator status'], 500);
+        }
+    }
+
     public function allForCoordinator(Request $request)
     {
         $user = Auth::user();
@@ -2112,5 +2184,84 @@ class DefenseRequestController extends Controller
                 'coordinator_status' => $defenseRequest->coordinator_status ?? null,
             ],
         ]);
+    }
+
+    /**
+     * Add coordinator signature to existing endorsement form
+     */
+    public function addCoordinatorSignature(Request $request, DefenseRequest $defenseRequest)
+    {
+        \Log::info('DefenseRequestController@addCoordinatorSignature called', [
+            'request_id' => $defenseRequest->id,
+            'coordinator_user_id' => $request->user()->id
+        ]);
+
+        // Verify coordinator role
+        if (!in_array($request->user()->role, ['Coordinator', 'Administrative Assistant', 'Dean'])) {
+            return response()->json(['error' => 'Unauthorized'], 403);
+        }
+
+        // Verify endorsement form exists
+        if (!$defenseRequest->endorsement_form) {
+            return response()->json([
+                'error' => 'No endorsement form found. The adviser must submit the endorsement first.'
+            ], 400);
+        }
+
+        try {
+            $overlayService = new \App\Services\PdfSignatureOverlay();
+            
+            // Try to get signature position from template if available
+            $templateId = null;
+            $generatedDoc = $defenseRequest->generatedDocuments()->latest()->first();
+            if ($generatedDoc) {
+                $templateId = $generatedDoc->document_template_id;
+            }
+            
+            $signaturePosition = null;
+            if ($templateId) {
+                $signaturePosition = $overlayService->getCoordinatorSignaturePosition($templateId);
+            }
+
+            // Clean the endorsement_form path (remove /storage/ prefix if present)
+            $endorsementPath = $defenseRequest->endorsement_form;
+            if (strpos($endorsementPath, '/storage/') === 0) {
+                $endorsementPath = substr($endorsementPath, 9); // Remove '/storage/'
+            }
+            
+            // Add coordinator signature to existing PDF
+            $newPdfPath = $overlayService->addCoordinatorSignature(
+                $endorsementPath,
+                $request->user()->id,
+                $signaturePosition
+            );
+
+            // Delete old endorsement form
+            Storage::disk('public')->delete($endorsementPath);
+
+            // Update endorsement_form path
+            $defenseRequest->endorsement_form = '/storage/' . $newPdfPath;
+            $defenseRequest->save();
+
+            \Log::info('Coordinator signature added successfully', [
+                'new_path' => $newPdfPath
+            ]);
+
+            return response()->json([
+                'ok' => true,
+                'message' => 'Coordinator signature added successfully',
+                'endorsement_form' => $defenseRequest->endorsement_form
+            ]);
+
+        } catch (\Exception $e) {
+            \Log::error('Failed to add coordinator signature', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return response()->json([
+                'error' => 'Failed to add coordinator signature: ' . $e->getMessage()
+            ], 500);
+        }
     }
 }

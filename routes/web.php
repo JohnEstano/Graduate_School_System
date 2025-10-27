@@ -982,9 +982,18 @@ Route::post('/api/defense-requests/{defenseRequest}/upload-endorsement', [Defens
 
 /* Update Adviser Status for Defense Requirements */
 Route::patch('/adviser/defense-requirements/{defenseRequest}/adviser-status', [\App\Http\Controllers\DefenseRequestController::class, 'updateAdviserStatus'])
+    ->middleware(['auth'])
     ->name('adviser.defense-requirements.update-adviser-status');
 
+/* Update Coordinator Status for Defense Requirements */
+Route::patch('/coordinator/defense-requirements/{defenseRequest}/coordinator-status', [\App\Http\Controllers\DefenseRequestController::class, 'updateCoordinatorStatus'])
+    ->middleware(['auth'])
+    ->name('coordinator.defense-requirements.coordinator-status');
 
+/* Add Coordinator Signature to Endorsement Form */
+Route::post('/api/defense-requests/{defenseRequest}/add-coordinator-signature', [\App\Http\Controllers\DefenseRequestController::class, 'addCoordinatorSignature'])
+    ->middleware(['auth'])
+    ->name('api.defense-requests.add-coordinator-signature');
 
 Route::get('/assistant/all-defense-list', function () {
     $user = Auth::user();
