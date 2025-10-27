@@ -186,11 +186,7 @@ export default function Profile({ mustVerifyEmail, status }: { mustVerifyEmail: 
                         )}
                         {(user.role === "Adviser" || user.role === "Faculty") && (
                             <>
-                                <div>
-                                    <div className="text-xs text-muted-foreground mb-1">Adviser Code</div>
-                                    <div className=" font-medium text-base">{adviserCode ? String(adviserCode) : "—"}</div>
-                                    <div className="text-xs text-muted-foreground mt-1">Share this code with your students so they can register you as their adviser.</div>
-                                </div>
+                               
                                 <div>
                                     <div className="text-xs text-muted-foreground mb-1">Coordinator</div>
                                     {coordinator ? (
