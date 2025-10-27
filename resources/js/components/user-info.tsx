@@ -6,7 +6,7 @@ function getInitials(user: any) {
     return (first + last).toUpperCase() || 'U';
 }
 
-export function UserInfo({ user }: { user: any }) {
+export function UserInfo({ user, showEmail }: { user: any; showEmail?: boolean }) {
     if (!user) return null;
     return (
         <div className="flex items-center gap-2">
@@ -18,7 +18,7 @@ export function UserInfo({ user }: { user: any }) {
             <div className="flex flex-col">
                 <span className="font-semibold">{user.first_name} {user.last_name}</span>
                 <span className="text-xs text-muted-foreground">
-                    {user.school_id ? user.school_id : user.role}
+                    {showEmail && user.email ? user.email : (user.school_id ? user.school_id : user.role)}
                 </span>
             </div>
         </div>

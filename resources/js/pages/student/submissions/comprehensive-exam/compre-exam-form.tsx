@@ -18,6 +18,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar } from '@/components/ui/calendar';
 import { format } from 'date-fns';
 import { Separator } from '@/components/ui/separator';
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 
 type Props = {
   open: boolean;
@@ -25,7 +26,25 @@ type Props = {
   onFinish?: () => void;
 };
 
-type Subject = { subject: string; date: string; startTime: string; endTime: string };
+type Subject = {
+  subject: string;
+  date: string;
+  startTime: string;
+  endTime: string;
+  offeringId?: number; // persist selected schedule
+};
+
+type OfferingOption = {
+  id: number;
+  program: string;
+  school_year: string;
+  subject_code: string | null;
+  subject_name: string;
+  exam_date: string | null;    // YYYY-MM-DD
+  start_time: string | null;   // HH:mm
+  end_time: string | null;     // HH:mm
+  is_active: boolean;
+};
 
 export default function CompreExamForm({ open, onOpenChange, onFinish }: Props) {
   const { props } = usePage<any>();
@@ -49,6 +68,9 @@ export default function CompreExamForm({ open, onOpenChange, onFinish }: Props) 
 
   const [currentStep, setCurrentStep] = useState(0);
   const [showSuccessPanel, setShowSuccessPanel] = useState(false);
+  const [schedules, setSchedules] = useState<OfferingOption[]>([]);
+  const [schedLoading, setSchedLoading] = useState(false);
+  const [schedError, setSchedError] = useState<string | null>(null);
 
   // Build School Year options 2020-2021 ... 2039-2040
   const schoolYearOptions = React.useMemo(
@@ -73,20 +95,57 @@ export default function CompreExamForm({ open, onOpenChange, onFinish }: Props) 
   }
 
   function removeSubjectRow(index: number) {
-    setData('subjects', data.subjects.filter((_, i) => i !== index));
+    setData((prev) => ({
+      ...prev,
+      subjects: prev.subjects.filter((_, i) => i !== index),
+    }));
   }
 
-  function updateSubject(index: number, field: keyof Subject, value: string) {
-    const next = data.subjects.map((s, i) => (i === index ? { ...s, [field]: value } : s));
-    setData('subjects', next);
+  function updateSubject<T extends keyof Subject>(index: number, field: T, value: Subject[T]) {
+    setData((prev) => ({
+      ...prev,
+      subjects: prev.subjects.map((s, i) => (i === index ? { ...s, [field]: value } : s)),
+    }));
   }
 
-   function handleSubmit() {
-    post(route('comprehensive-exam.store'), {
+  // Batch-apply an offering selection so nothing gets overwritten by stale state
+  function applyOfferingSelection(index: number, o: OfferingOption) {
+    setData((prev) => {
+      const subjects = prev.subjects.slice();
+      const cur = subjects[index] || { subject: '', date: '', startTime: '', endTime: '' };
+      subjects[index] = {
+        ...cur,
+        offeringId: o.id,
+        subject: o.subject_name,
+        date: o.exam_date || '',
+        startTime: o.start_time || '',
+        endTime: o.end_time || '',
+      };
+      return { ...prev, subjects };
+    });
+  }
+
+  function handleSubmit() {
+    // Only submit selected schedules (coordinator offerings)
+    const selected = (data.subjects || []).filter(s => !!s.offeringId);
+    if (selected.length === 0) {
+      alert('Please select at least one examination schedule.');
+      return;
+    }
+
+    router.post(route('comprehensive-exam.store'), {
+      schoolYear: data.schoolYear,
+      program: data.program,
+      officeAddress: data.officeAddress,
+      mobileNo: data.mobileNo,
+      telephoneNo: data.telephoneNo,
+      // Only IDs; backend will snapshot subject/date/time from the offering
+      subjects: selected.map(s => ({ offering_id: s.offeringId })),
+    }, {
       preserveScroll: true,
-      preserveState: true, // keep modal state so we can show success panel
+      preserveState: true,
       onSuccess: () => {
-        setShowSuccessPanel(true); // show the success UI like Defense
+        setShowSuccessPanel(true);
         onFinish?.();
       },
     });
@@ -103,6 +162,68 @@ export default function CompreExamForm({ open, onOpenChange, onFinish }: Props) 
   function handlePrev() {
     if (currentStep > 0) setCurrentStep((s) => s - 1);
   }
+
+  // Load coordinator-posted schedules for student's program + selected SY
+  React.useEffect(() => {
+    const program = data.program?.trim();
+    const sy = data.schoolYear?.trim();
+    if (!program || !sy) {
+      setSchedules([]);
+      return;
+    }
+    setSchedLoading(true);
+    setSchedError(null);
+
+    const qs = new URLSearchParams({ program, school_year: sy }).toString();
+    const base =
+      safeRoute('student.exam-subject-offerings.index') ||
+      safeRoute('api.exam-subject-offerings.index') ||
+      '/student/exam-subject-offerings';
+
+    fetch(`${base}?${qs}`, {
+      headers: { Accept: 'application/json' },
+      credentials: 'same-origin',
+      cache: 'no-store',
+      redirect: 'follow',
+    })
+      .then(async (r) => {
+        const ctype = r.headers.get('content-type') || '';
+        if (!r.ok || !ctype.includes('application/json')) {
+          throw new Error(`HTTP ${r.status}`);
+        }
+        return (await r.json()) as OfferingOption[];
+      })
+      .then((rows) => {
+        const filtered = (Array.isArray(rows) ? rows : []).filter(
+          (r) => r.is_active && r.exam_date && r.start_time && r.end_time
+        );
+        setSchedules(filtered);
+      })
+      .catch(() => setSchedError('Failed to load schedules'))
+      .finally(() => setSchedLoading(false));
+  }, [data.program, data.schoolYear]);
+
+  // When schedules change, hydrate subject fields from offeringId if missing
+  React.useEffect(() => {
+    if (!Array.isArray(schedules) || !schedules.length) return;
+    setData((prev) => ({
+      ...prev,
+      subjects: prev.subjects.map((s: Subject) => {
+        if (!s.offeringId) return s;
+        if (s.subject && s.date && s.startTime && s.endTime) return s;
+        const found = schedules.find((o) => o.id === s.offeringId);
+        return found
+          ? {
+              ...s,
+              subject: found.subject_name,
+              date: found.exam_date || '',
+              startTime: found.start_time || '',
+              endTime: found.end_time || '',
+            }
+          : s;
+      }),
+    }));
+  }, [schedules]);
 
   const steps = [
     {
@@ -223,128 +344,134 @@ export default function CompreExamForm({ open, onOpenChange, onFinish }: Props) 
       title: 'Examination Schedules',
       content: (
         <>
-            <HeadingSmall title="Step 3: Examination Schedules" />
-            <div className="mt-4 mb-6">
+          <HeadingSmall title="Step 3: Examination Schedules" />
+          <div className="mt-4 mb-6">
             <p className="text-sm text-gray-600 text-justify">
-              Add the subjects and schedules for your comprehensive examination. Each subject must have a specific date and time slot.
+              Select schedules posted by your coordinator for your program and school year.
             </p>
-            </div>
+          </div>
 
+          {!data.schoolYear ? (
+            <div className="text-sm text-gray-600">Please select a School Year in Step 1.</div>
+          ) : schedLoading ? (
+            <div className="text-sm text-gray-600">Loading schedules…</div>
+          ) : schedError ? (
+            <div className="text-sm text-rose-600">{schedError}</div>
+          ) : schedules.length === 0 ? (
+            <div className="text-sm text-gray-600">No available schedules yet.</div>
+          ) : (
             <div className="space-y-6">
-            {data.subjects.map((subj, idx) => (
-                <div
-                key={idx}
-                className="group relative border border-gray-200 rounded-lg p-6 bg-white shadow-sm transition-all hover:border-rose-200 hover:shadow-md"
-                >
-                {/* Subject Number Badge */}
-                <div className="absolute -top-3 -left-2 bg-rose-500 text-white text-xs font-semibold px-2 py-1 rounded">
-                  Subject {idx + 1}
-                </div>
+              {data.subjects.map((subj, idx) => {
+                // Build options; optionally disable already picked ones
+                const takenIds = new Set(
+                  data.subjects
+                    .map((s, i) => (i === idx ? null : s.offeringId))
+                    .filter((v): v is number => typeof v === 'number')
+                );
+                const selectedKey = subj.subject && subj.date && subj.startTime
+                  ? `${subj.subject}|${subj.date}|${subj.startTime}` : '';
 
-                {/* Remove Button (X) */}
-                {data.subjects.length > 1 && (
-                  <button
-                    onClick={() => removeSubjectRow(idx)}
-                    className="absolute -top-2 -right-2 h-6 w-6 rounded-full bg-white border border-gray-200 shadow-sm flex items-center justify-center text-gray-400 hover:bg-rose-50 hover:border-rose-300 hover:text-rose-500 transition-all"
-                    title="Remove Subject"
-                    type="button"
+                return (
+                  <div
+                    key={idx}
+                    className="group relative border border-gray-200 rounded-lg p-6 bg-white shadow-sm transition-all hover:border-rose-200 hover:shadow-md"
                   >
-                    <span className="sr-only">Remove Subject</span>
-                    <span className="text-lg leading-none">&times;</span>
-                  </button>
-                )}
-
-                <div className="space-y-6">
-                  {/* First Row: Subject and Date */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {/* Subject Input */}
-                    <div className="w-full">
-                      <Label className="text-sm font-medium text-gray-700">
-                        Subject Name
-                        <span className="text-rose-500 ml-1">*</span>
-                      </Label>
-                      <Input
-                        value={subj.subject}
-                        onChange={(e) => updateSubject(idx, 'subject', e.target.value)}
-                        placeholder="e.g. Advanced Mathematics"
-                        className="mt-1 w-full transition-colors focus:border-rose-300"
-                      />
+                    <div className="absolute -top-3 -left-2 bg-rose-500 text-white text-xs font-semibold px-2 py-1 rounded">
+                      Subject {idx + 1}
                     </div>
+                    {data.subjects.length > 1 && (
+                      <button
+                        onClick={() => removeSubjectRow(idx)}
+                        className="absolute -top-2 -right-2 h-6 w-6 rounded-full bg-white border border-gray-200 shadow-sm flex items-center justify-center text-gray-400 hover:bg-rose-50 hover:border-rose-300 hover:text-rose-500 transition-all"
+                        title="Remove Subject"
+                        type="button"
+                      >
+                        <span className="sr-only">Remove Subject</span>
+                        <span className="text-lg leading-none">&times;</span>
+                      </button>
+                    )}
 
-                    {/* Date Picker */}
-                    <div className="w-full">
-                      <Label className="text-sm font-medium text-gray-700">
-                        Exam Date
-                        <span className="text-rose-500 ml-1">*</span>
-                      </Label>
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <Button
-                            variant="outline"
-                            type="button"
-                            className={`mt-1 w-full justify-start text-left transition-colors ${
-                              subj.date ? 'text-gray-900' : 'text-gray-500'
-                            } hover:bg-rose-50 hover:border-rose-300`}
-                          >
-                            <CalendarIcon className="mr-2 h-4 w-4" />
-                            {subj.date ? format(new Date(subj.date), 'MMMM d, yyyy') : 'Select date'}
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0 z-[9999] pointer-events-auto" align="start" side="bottom">
-                          <Calendar
-                            mode="single"
-                            selected={subj.date ? new Date(subj.date) : undefined}
-                            onSelect={(date) => updateSubject(idx, 'date', date ? format(date, 'yyyy-MM-dd') : '')}
-                            initialFocus
-                            disabled={(date) => date < new Date()}
-                          />
-                        </PopoverContent>
-                      </Popover>
+                    <div className="space-y-4">
+                      <div className="w-full">
+                        <Label className="text-sm font-medium text-gray-700">
+                          Pick a schedule
+                          <span className="text-rose-500 ml-1">*</span>
+                        </Label>
+                        <Select
+                          // use stable id to persist selection across renders/steps
+                          value={subj.offeringId ? String(subj.offeringId) : undefined}
+                          onValueChange={(val) => {
+                            const id = parseInt(val, 10);
+                            const found = schedules.find((o) => o.id === id);
+                            if (found) {
+                              applyOfferingSelection(idx, found);
+                            }
+                          }}
+                        >
+                           <SelectTrigger className="mt-1 h-10 w-full">
+                             <SelectValue placeholder="Select from available schedules" />
+                           </SelectTrigger>
+                           <SelectContent className="max-h-72">
+                            {schedules.map((o) => {
+                              const label = `${o.subject_name} — ${format(new Date(o.exam_date as string), 'MMM d, yyyy')} • ${formatTime12hr(o.start_time || '')} - ${formatTime12hr(o.end_time || '')}`;
+                              const disabled = takenIds.has(o.id);
+                              return (
+                                <SelectItem key={o.id} value={String(o.id)} disabled={disabled} title={o.subject_name}>
+                                  {label}
+                                </SelectItem>
+                              );
+                            })}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      {/* Read-only details after selection */}
+                      {subj.offeringId && subj.subject && subj.date ? (
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                          <div>
+                            <Label className="text-sm font-medium text-gray-700">Subject</Label>
+                            <Input className="mt-1 h-10" value={subj.subject} readOnly disabled />
+                          </div>
+                          <div>
+                            <Label className="text-sm font-medium text-gray-700">Exam Date</Label>
+                            <Input
+                              className="mt-1 h-10"
+                              value={format(new Date(subj.date), 'MMMM d, yyyy')}
+                              readOnly
+                              disabled
+                            />
+                          </div>
+                          <div>
+                            <Label className="text-sm font-medium text-gray-700">Time</Label>
+                            <Input
+                              className="mt-1 h-10"
+                              value={
+                                subj.startTime && subj.endTime
+                                  ? `${formatTime12hr(subj.startTime)} - ${formatTime12hr(subj.endTime)}`
+                                  : '--'
+                              }
+                              readOnly
+                              disabled
+                            />
+                          </div>
+                        </div>
+                       ) : null}
                     </div>
                   </div>
+                );
+              })}
 
-                  {/* Second Row: Time Inputs */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
-                      <Label className="text-sm font-medium text-gray-700">
-                        Start Time
-                        <span className="text-rose-500 ml-1">*</span>
-                      </Label>
-                      <Input
-                        type="time"
-                        value={subj.startTime || ''}
-                        onChange={(e) => updateSubject(idx, 'startTime', e.target.value)}
-                        className="mt-1 w-full transition-colors focus:border-rose-300"
-                      />
-                    </div>
-                    <div>
-                      <Label className="text-sm font-medium text-gray-700">
-                        End Time
-                        <span className="text-rose-500 ml-1">*</span>
-                      </Label>
-                      <Input
-                        type="time"
-                        value={subj.endTime || ''}
-                        onChange={(e) => updateSubject(idx, 'endTime', e.target.value)}
-                        className="mt-1 w-full transition-colors focus:border-rose-300"
-                      />
-                    </div>
-                  </div>
-                </div>
-                </div>
-            ))}
-
-            {/* Add Subject Button */}
-            <Button
-              type="button"
-              onClick={addSubjectRow}
-              className="w-full mt-4 py-6 border-2 border-dashed border-gray-300 bg-gray-50 hover:bg-rose-50 hover:border-rose-300 transition-colors flex items-center justify-center gap-2 text-gray-600 hover:text-rose-600"
-              variant="outline"
-            >
-              <Plus className="h-5 w-5" />
-              Add Another Subject
-            </Button>
+              <Button
+                type="button"
+                onClick={addSubjectRow}
+                className="w-full mt-4 py-6 border-2 border-dashed border-gray-300 bg-gray-50 hover:bg-rose-50 hover:border-rose-300 transition-colors flex items-center justify-center gap-2 text-gray-600 hover:text-rose-600"
+                variant="outline"
+              >
+                <Plus className="h-5 w-5" />
+                Add Another Subject
+              </Button>
             </div>
+          )}
         </>
       ),
     },
@@ -360,7 +487,7 @@ export default function CompreExamForm({ open, onOpenChange, onFinish }: Props) 
                   <div className="text-lg font-bold text-rose-700">Personal Information</div>
                   <div className="text-gray-700">
                     <span className="font-semibold">Name:</span>{' '}
-                    {`${user.last_name || ''}, ${user.first_name || ''} ${(user.middle_name?.[0] ?? '')}`} {/* changed */}
+                    {`${user.last_name || ''}, ${user.first_name || ''} ${(user.middle_name?.[0] ?? '')}`}
                   </div>
                   <div className="text-gray-700">
                     <span className="font-semibold">School Year:</span> {data.schoolYear || '--'}
@@ -401,20 +528,30 @@ export default function CompreExamForm({ open, onOpenChange, onFinish }: Props) 
                       </tr>
                     </thead>
                     <tbody>
-                      {data.subjects.map((subj, idx) => (
-                        <tr key={idx} className="border-t border-rose-200">
-                          <td className="px-4 py-2 text-rose-700 font-bold">{idx + 1}</td>
-                          <td className="px-4 py-2">{subj.subject || '--'}</td>
-                          <td className="px-4 py-2">
-                            {subj.date ? format(new Date(subj.date), 'MMMM d, yyyy') : '--'}
-                          </td>
-                          <td className="px-4 py-2">
-                            {subj.startTime && subj.endTime
-                              ? `${formatTime12hr(subj.startTime)} - ${formatTime12hr(subj.endTime)}`
-                              : '--'}
-                          </td>
-                        </tr>
-                      ))}
+                     {data.subjects.filter(s => s.subject && s.date).length === 0 ? (
+                       <tr>
+                         <td className="px-4 py-3 text-sm text-gray-600" colSpan={4}>
+                           No schedules selected yet.
+                         </td>
+                       </tr>
+                     ) : (
+                       data.subjects
+                         .filter(s => s.subject && s.date)
+                         .map((subj, idx) => (
+                           <tr key={`${subj.subject}-${idx}`} className="border-t border-rose-200">
+                             <td className="px-4 py-2 text-rose-700 font-bold">{idx + 1}</td>
+                             <td className="px-4 py-2">{subj.subject}</td>
+                             <td className="px-4 py-2">
+                               {subj.date ? format(new Date(subj.date), 'MMMM d, yyyy') : '--'}
+                             </td>
+                             <td className="px-4 py-2">
+                               {subj.startTime && subj.endTime
+                                 ? `${formatTime12hr(subj.startTime)} - ${formatTime12hr(subj.endTime)}`
+                                 : '--'}
+                             </td>
+                           </tr>
+                         ))
+                     )}
                     </tbody>
                   </table>
                 </div>
@@ -439,7 +576,7 @@ export default function CompreExamForm({ open, onOpenChange, onFinish }: Props) 
             <Check size={48} className="text-rose-500" />
             <h2 className="text-2xl font-semibold">Application Submitted!</h2>
             <p className="text-center text-gray-600">Your comprehensive exam application has been saved successfully.</p>
-           <Button
+            <Button
               onClick={() => {
                 onOpenChange(false);
                 // Scroll to the display card after closing the dialog
@@ -454,7 +591,7 @@ export default function CompreExamForm({ open, onOpenChange, onFinish }: Props) 
           </div>
         ) : (
           <div className="flex-1 overflow-auto px-2">
-            <Stepper
+              <Stepper
               steps={steps}
               currentStep={currentStep}
               onNext={handleNext}
@@ -478,4 +615,15 @@ function formatTime12hr(timeStr?: string) {
   h = h % 12;
   if (h === 0) h = 12;
   return `${h.toString().padStart(2, '0')}:${minute} ${ampm}`;
+}
+
+function safeRoute(name: string, params?: Record<string, any>): string | null {
+  try {
+    const Ziggy = (window as any).Ziggy;
+    const routeFn = (window as any).route;
+    if (!routeFn || !Ziggy?.routes || !Ziggy.routes[name]) return null;
+    return routeFn(name, params);
+  } catch {
+    return null;
+  }
 }
