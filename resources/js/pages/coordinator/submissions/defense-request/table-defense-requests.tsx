@@ -24,6 +24,7 @@ export type DefenseRequestSummary = {
   last_status_updated_at?: string;
   workflow_state?: string;
   adviser?: string;
+  coordinator_status?: 'Pending' | 'Approved' | 'Rejected' | null;
   aa_status?: 'pending' | 'ready_for_finance' | 'in_progress' | 'paid' | 'completed' | null;
 };
 
@@ -58,6 +59,17 @@ function getAaStatusBadge(status?: 'pending' | 'ready_for_finance' | 'in_progres
     return <Badge className="bg-amber-100 text-amber-700 border-amber-200 flex items-center gap-1"><Hourglass className="h-3 w-3" />In Progress</Badge>;
   }
   // Default: pending (includes null/undefined and explicit 'pending')
+  return <Badge className="bg-yellow-100 text-yellow-700 border-yellow-200 flex items-center gap-1"><Clock className="h-3 w-3" />Pending</Badge>;
+}
+
+function getCoordinatorStatusBadge(status?: 'Pending' | 'Approved' | 'Rejected' | null) {
+  if (status === 'Approved') {
+    return <Badge className="bg-green-100 text-green-700 border-green-200 flex items-center gap-1"><CheckCircle className="h-3 w-3" />Approved</Badge>;
+  }
+  if (status === 'Rejected') {
+    return <Badge className="bg-red-100 text-red-700 border-red-200 flex items-center gap-1"><XCircle className="h-3 w-3" />Rejected</Badge>;
+  }
+  // Default: pending (includes null/undefined and explicit 'Pending')
   return <Badge className="bg-yellow-100 text-yellow-700 border-yellow-200 flex items-center gap-1"><Clock className="h-3 w-3" />Pending</Badge>;
 }
 
@@ -142,31 +154,10 @@ export default function TableDefenseRequests({
                   {/* Coordinator Status */}
                   {columns.status && (
                     <TableCell className="px-2 py-2 text-xs whitespace-nowrap text-center align-middle">
-                      <Badge
-                        className={
-                          r.status === 'Approved'
-                            ? 'bg-green-100 text-green-700 border-green-200 flex items-center gap-1'
-                            : r.status === 'Rejected'
-                            ? 'bg-red-100 text-red-700 border-red-200 flex items-center gap-1'
-                            : r.status === 'Pending'
-                            ? 'bg-yellow-100 text-yellow-700 border-yellow-200 flex items-center gap-1'
-                            : r.status === 'Needs-info'
-                            ? 'bg-blue-100 text-blue-700 border-blue-200 flex items-center gap-1'
-                            : r.status === 'In progress'
-                            ? 'bg-purple-100 text-purple-700 border-purple-200 flex items-center gap-1'
-                            : 'bg-gray-100 text-gray-700 border-gray-200 flex items-center gap-1'
-                        }
-                      >
-                        {r.status === 'Approved' && <CheckCircle size={14} className="mr-1" />}
-                        {r.status === 'Rejected' && <XCircle size={14} className="mr-1" />}
-                        {r.status === 'Pending' && <Clock size={14} className="mr-1" />}
-                        {r.status}
-                      </Badge>
+                      {getCoordinatorStatusBadge(r.coordinator_status)}
                     </TableCell>
                   )}
-                  {/* AA Status: Placeholder, replace with actual value if available */}
-                    {/* AA Status: Show actual value if available, fallback to '—' */}
-                    {/* AA Status: Show actual value if available, fallback to '—' */}
+                  {/* AA Status: Show actual value if available, fallback to '—' */}
                     <TableCell className="px-2 py-2 text-xs whitespace-nowrap text-center align-middle">
                       {getAaStatusBadge(r.aa_status)}
                   </TableCell>

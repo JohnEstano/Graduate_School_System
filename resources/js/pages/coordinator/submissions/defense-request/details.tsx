@@ -1198,12 +1198,12 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
                       { key: 'defense_chairperson', info: memberFor(panels.defense_chairperson || request.defense_chairperson, 'Panel Chair') },
                       { key: 'defense_panelist1', info: memberFor(panels.defense_panelist1 || request.defense_panelist1, 'Panel Member 1') },
                       { key: 'defense_panelist2', info: memberFor(panels.defense_panelist2 || request.defense_panelist2, 'Panel Member 2') },
+                      { key: 'defense_panelist3', info: memberFor(panels.defense_panelist3 || request.defense_panelist3, 'Panel Member 3') },
                     ];
 
-                    // Add panelists 3 and 4 only for Doctorate
+                    // Add panelist 4 only for Doctorate
                     if (request.program_level === 'Doctorate') {
                       baseRows.push(
-                        { key: 'defense_panelist3', info: memberFor(panels.defense_panelist3 || request.defense_panelist3, 'Panel Member 3') },
                         { key: 'defense_panelist4', info: memberFor(panels.defense_panelist4 || request.defense_panelist4, 'Panel Member 4') }
                       );
                     }
@@ -1323,30 +1323,16 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
                   {/* Show program level info */}
                   <div className="text-xs text-muted-foreground mb-2">
                     {request.program_level === 'Doctorate' 
-                      ? 'Doctorate program: 4 panel members required (Chairperson + 3 Panelists)'
-                      : 'Masteral program: 3 panel members required (Chairperson + 2 Panelists)'}
+                      ? 'Doctorate program: 5 panel members required (Chairperson + 4 Panelists)'
+                      : 'Masteral program: 4 panel members required (Chairperson + 3 Panelists)'}
                   </div>
                   <div className="grid md:grid-cols-2 gap-4">
-                    {/* Always show Chairperson and first 2 panelists */}
+                    {/* Always show Chairperson and first 3 panelists for Masteral */}
                     {[
                       { label: 'Chairperson', key: 'defense_chairperson' },
                       { label: 'Panelist 1', key: 'defense_panelist1' },
                       { label: 'Panelist 2', key: 'defense_panelist2' },
-                    ].map(({ label, key }) => (
-                      <PanelMemberCombobox
-                        key={key}
-                        label={label}
-                        value={panels[key as keyof typeof panels]}
-                        onChange={v => setPanels(p => ({ ...p, [key]: v }))}
-                        options={panelOptionsForAssignment}
-                        disabled={!canEdit || loadingMembers}
-                        taken={taken}
-                      />
-                    ))}
-                    {/* Show Panelist 3 and 4 only for Doctorate */}
-                    {request.program_level === 'Doctorate' && [
                       { label: 'Panelist 3', key: 'defense_panelist3' },
-                      { label: 'Panelist 4', key: 'defense_panelist4' }
                     ].map(({ label, key }) => (
                       <PanelMemberCombobox
                         key={key}
@@ -1358,6 +1344,18 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
                         taken={taken}
                       />
                     ))}
+                    {/* Show Panelist 4 only for Doctorate */}
+                    {request.program_level === 'Doctorate' && (
+                      <PanelMemberCombobox
+                        key="defense_panelist4"
+                        label="Panelist 4"
+                        value={panels.defense_panelist4}
+                        onChange={v => setPanels(p => ({ ...p, defense_panelist4: v }))}
+                        options={panelOptionsForAssignment}
+                        disabled={!canEdit || loadingMembers}
+                        taken={taken}
+                      />
+                    )}
                   </div>
                   <div className="flex justify-end mt-4">
                     <div className="text-sm text-muted-foreground">

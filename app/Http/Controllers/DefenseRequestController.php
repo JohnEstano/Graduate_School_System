@@ -1984,6 +1984,7 @@ class DefenseRequestController extends Controller
         $rows = $query
             ->orderByDesc('created_at')
             ->limit(500)
+            ->with('aaVerification') // Load AA verification relationship
             ->get([
                 'id','first_name','middle_name','last_name','school_id','program',
                 'thesis_title','defense_type','status','priority','workflow_state',
@@ -2012,6 +2013,9 @@ class DefenseRequestController extends Controller
                     }
                 }
 
+                // Get AA verification status
+                $aaStatus = optional($r->aaVerification)->status ?? null;
+
                 return [
                     'id' => $r->id,
                     'first_name' => $r->first_name,
@@ -2032,6 +2036,7 @@ class DefenseRequestController extends Controller
                     'adviser' => $r->defense_adviser ?? '—',
                     'submitted_at' => $r->submitted_at ? \Carbon\Carbon::parse($r->submitted_at)->format('Y-m-d H:i:s') : null,
                     'coordinator_status' => $r->coordinator_status,
+                    'aa_status' => $aaStatus,
                     // --- ADD THESE FIELDS ---
                     'expected_rate' => $expectedTotal,
                     'amount' => $r->amount,

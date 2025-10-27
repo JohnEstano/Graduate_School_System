@@ -59,7 +59,8 @@ export type DefenseRequestSummary = {
   last_status_updated_at?: string;
   workflow_state?: string;
   adviser?: string;
-  aa_status?: 'pending' | 'ready_for_finance' | 'in_progress' | 'completed' | null;
+  coordinator_status?: 'Pending' | 'Approved' | 'Rejected' | null;
+  aa_status?: 'pending' | 'ready_for_finance' | 'in_progress' | 'paid' | 'completed' | null;
 };
 
 interface ShowAllRequestsProps {
