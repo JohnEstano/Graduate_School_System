@@ -156,48 +156,55 @@
         </div>
 
         <table class="info-table">
+            <tr><td colspan="3" style="height:30px;"></td></tr>
             <tr>
-                <td style="width:48%; text-align:left;">
-                    <div class="line" style="width:220px;"></div>
+                <!-- Name: line left, label centered below -->
+                <td style="width:48%; vertical-align:bottom;">
+                    <div class="line" style="width:220px; margin-left:8px; text-align:left;">
+                        <span style="position:relative; width:220px; display:inline-block; text-align:left;">
+                            {{ $student_name ?? '_________________________' }}
+                        </span>
+                    </div>
+                    <div class="label" style="text-align:center; margin-top:2px;">Name of Student/ Candidate</div>
                 </td>
                 <td style="width:4%;"></td>
-                <td style="width:36%; text-align:right;">
-                    <div class="line" style="width:90px;"></div>
+                <!-- Date: line right, label centered below -->
+                <td style="width:36%; vertical-align:bottom;">
+                    <div class="line" style="width:90px; margin-right:8px; float:right; text-align:right;">
+                        <span style="position:relative; width:90px; display:inline-block; text-align:right;">
+                            {{ $defense_date ?? date('F d, Y') }}
+                        </span>
+                    </div>
+                    <div class="label" style="text-align:center; margin-top:2px;">Date</div>
                 </td>
             </tr>
             <tr>
-                <td class="label" style="text-align:left; position:relative;">
-                    <span style="position:absolute; left:0; width:220px; text-align:center; display:inline-block;">Name of Student/ Candidate</span>
-                </td>
-                <td></td>
-                <td class="label" style="text-align:right; top:2; position:relative;">
-                    <span style="position:absolute; right:0; width:90px; text-align:center; display:inline-block;">Date</span>
-                </td>
-            </tr>
-            <tr><td colspan="3" style="height: 30px;"></td></tr>
-            <tr>
-                <td style="width:48%; text-align:left;">
-                    <div class="line" style="width:220px;"></div>
-                </td>
-                <td></td>
-                <td></td>
-            </tr>
-            <tr>
-                <td class="label" style="text-align:left; top:2; position:relative;">
-                    <span style="position:absolute; left:0; width:220px; text-align:center; display:inline-block;">Program of Study</span>
+                <!-- Program of Study: line left, label centered below, input wider -->
+                <td style="width:48%; vertical-align:bottom;">
+                    <div class="line" style="width:220px; margin-left:8px; text-align:left;">
+                        <span style="position:relative; width:260px; display:inline-block; text-align:left;">
+                            {{ $program ?? '_________________________' }}
+                        </span>
+                    </div>
+                    <div class="label" style="text-align:center; margin-top:2px;">Program of Study</div>
                 </td>
                 <td></td>
                 <td></td>
             </tr>
-            <tr><td colspan="3" style="height: 30px;"></td></tr> <!-- Increased space below Program of Study -->
+            <tr><td colspan="3" style="height: 18px;"></td></tr>
+            <!-- Thesis Title section unchanged -->
             <tr>
-                <td colspan="3" style="padding-left:9px;">
-                    Title of the Thesis / Dissertation:
+                <td colspan="3" style="text-align:left; padding-left:9px;">
+                    <div class="label">Title of the Thesis / Dissertation:</div>
                 </td>
             </tr>
             <tr>
                 <td colspan="3" style="padding-left:8px;">
-                    <div class="line"></div>
+                    <div class="line" style="width:100%; position:relative;">
+                        <span style="position:relative; width:100%; text-align:center; display:inline-block;">
+                            {{ $thesis_title ?? '_________________________________________________________' }}
+                        </span>
+                    </div>
                 </td>
             </tr>
             <tr>
@@ -223,8 +230,11 @@
         </div>
 
         <div class="signature-block">
+            @if(!empty($adviser_signature_path))
+                <img src="{{ $adviser_signature_path }}" alt="Adviser Signature" style="max-height:60px; margin-bottom:4px;">
+            @endif
             <div class="signature-line"></div>
-            <div class="signature-label">Thesis / Dissertation Adviser</div>
+            <div class="signature-label">{{ $adviser_name ?? 'Thesis / Dissertation Adviser' }}</div>
             <div class="signature-caption">(Signature over Printed Name)</div>
         </div>
 
