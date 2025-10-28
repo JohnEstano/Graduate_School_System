@@ -404,6 +404,10 @@ Route::get('/honorarium/individual-record/{programId}', [HonorariumSummaryContro
     Route::get('/honorarium/{programId}/download-pdf', [HonorariumSummaryController::class, 'downloadProgramPdf'])
         ->name('honorarium.downloadPDF');
 
+    // Panelist individual PDF download
+    Route::get('/honorarium/panelist/{panelistId}/download-pdf', [HonorariumSummaryController::class, 'downloadPanelistPdf'])
+        ->name('honorarium.downloadPanelistPDF');
+
     //student-records routes
     Route::get('/student-records', [StudentRecordController::class, 'index'])->name('student-records.index');
     

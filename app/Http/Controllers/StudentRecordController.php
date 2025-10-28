@@ -111,6 +111,12 @@ class StudentRecordController extends Controller
             // Use all_payments collection
             $allPayments = $student->all_payments ?? collect();
             
+            // CRITICAL FIX: Deduplicate payments by defense_request_id + panelist_record_id
+            // This prevents counting the same panelist twice if there are duplicate student_records
+            $allPayments = $allPayments->unique(function($payment) {
+                return $payment['defense_request_id'] . '_' . $payment['panelist']->id;
+            });
+            
             foreach ($allPayments as $payment) {
                 // Use defense_request_id as the key to uniquely identify each defense
                 $key = $payment['defense_request_id'];
@@ -155,57 +161,58 @@ class StudentRecordController extends Controller
                 }
             }
             
-            // Determine program level (Masteral or Doctorate)
-            $isDoctorate = str_starts_with($student->program, 'DBM') || 
-                           str_starts_with($student->program, 'PHDED') ||
-                           stripos($student->program, 'Doctor') !== false || 
-                           stripos($student->program, 'Doctorate') !== false ||
-                           stripos($student->program, 'PhD') !== false;
-            $programLevel = $isDoctorate ? 'Doctorate' : 'Masteral';
+            // Get all unique defense_request_ids to fetch their amounts
+            $defenseRequestIds = array_keys($groupedPayments);
+            $defenseRequests = DefenseRequest::whereIn('id', $defenseRequestIds)
+                ->get()
+                ->keyBy('id');
             
-            // Add REC FEE, SCHOOL SHARE, and calculate TOTAL for each payment
-            foreach ($groupedPayments as &$payment) {
-                $panelistTotal = floatval($payment['amount']);
+            // Use defense_request amount directly (it already includes panelists + REC FEE + SCHOOL SHARE)
+            foreach ($groupedPayments as $defenseId => &$payment) {
+                $defenseRequest = $defenseRequests->get($defenseId);
                 
-                // Get REC FEE and SCHOOL SHARE from payment_rates table
-                $recFeeRate = PaymentRate::where('program_level', $programLevel)
-                    ->where('defense_type', $payment['defense_type'])
-                    ->where('type', 'REC Fee')
-                    ->first();
-                
-                $schoolShareRate = PaymentRate::where('program_level', $programLevel)
-                    ->where('defense_type', $payment['defense_type'])
-                    ->where('type', 'School Share')
-                    ->first();
-                
-                $recFee = $recFeeRate ? floatval($recFeeRate->amount) : 0;
-                $schoolShare = $schoolShareRate ? floatval($schoolShareRate->amount) : 0;
-                
-                // Always add REC FEE to panelists array (show even if 0)
-                $payment['panelists'][] = [
-                    'name' => '-',
-                    'role' => 'REC FEE',
-                    'amount' => $recFee > 0 ? number_format($recFee, 2, '.', '') : '-'
-                ];
-                
-                // Always add SCHOOL SHARE to panelists array (show even if 0)
-                $payment['panelists'][] = [
-                    'name' => '-',
-                    'role' => 'SCHOOL SHARE',
-                    'amount' => $schoolShare > 0 ? number_format($schoolShare, 2, '.', '') : '-'
-                ];
-                
-                // Calculate grand total
-                $grandTotal = $panelistTotal + $recFee + $schoolShare;
-                
-                // Update the amount to show grand total (what student actually pays)
-                $payment['amount'] = $grandTotal;
-                
-                // Store breakdown totals
-                $payment['panelist_total'] = $panelistTotal;
-                $payment['rec_fee'] = $recFee;
-                $payment['school_share'] = $schoolShare;
-                $payment['grand_total'] = $grandTotal;
+                if ($defenseRequest && $defenseRequest->amount) {
+                    // Use the defense_request amount (already calculated correctly)
+                    $grandTotal = floatval($defenseRequest->amount);
+                    
+                    // Calculate panelist total (sum of all panelist payments)
+                    $panelistTotal = floatval($payment['amount']);
+                    
+                    // Calculate REC FEE and SCHOOL SHARE by subtracting panelist total from grand total
+                    $recFeeAndSchoolShare = $grandTotal - $panelistTotal;
+                    
+                    // Estimate split (usually equal, but we can make it more accurate if needed)
+                    $recFee = round($recFeeAndSchoolShare / 2, 2);
+                    $schoolShare = $recFeeAndSchoolShare - $recFee;
+                    
+                    // Always add REC FEE to panelists array
+                    $payment['panelists'][] = [
+                        'name' => '-',
+                        'role' => 'REC FEE',
+                        'amount' => $recFee > 0 ? number_format($recFee, 2, '.', '') : '-'
+                    ];
+                    
+                    // Always add SCHOOL SHARE to panelists array
+                    $payment['panelists'][] = [
+                        'name' => '-',
+                        'role' => 'SCHOOL SHARE',
+                        'amount' => $schoolShare > 0 ? number_format($schoolShare, 2, '.', '') : '-'
+                    ];
+                    
+                    // Use defense_request amount as the grand total
+                    $payment['amount'] = $grandTotal;
+                    $payment['panelist_total'] = $panelistTotal;
+                    $payment['rec_fee'] = $recFee;
+                    $payment['school_share'] = $schoolShare;
+                    $payment['grand_total'] = $grandTotal;
+                } else {
+                    // Fallback: If defense_request not found or amount is null, keep panelist total as is
+                    $payment['amount'] = floatval($payment['amount']);
+                    $payment['panelist_total'] = floatval($payment['amount']);
+                    $payment['rec_fee'] = 0;
+                    $payment['school_share'] = 0;
+                    $payment['grand_total'] = floatval($payment['amount']);
+                }
                 
                 // Remove internal tracking array
                 unset($payment['panelist_ids']);
