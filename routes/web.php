@@ -455,6 +455,8 @@ Route::get('/honorarium/individual-record/{programId}', [HonorariumSummaryContro
     /* Notifications */
     Route::get('/notification', fn() => Inertia::render('notification/Index'))->name('notification.index');
     Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
+    Route::post('/notifications/read-all', [NotificationController::class, 'markAllAsRead'])->name('notifications.read-all');
+    Route::post('/notifications/{notification}/read', [NotificationController::class, 'markAsRead'])->name('notifications.read');
 
     /* Payments */
     Route::get('/payment', [PaymentSubmissionController::class, 'index'])->name('payment.index');
@@ -490,6 +492,12 @@ Route::get('/honorarium/individual-record/{programId}', [HonorariumSummaryContro
     /* Public Payment Rates API - accessible to all authenticated users */
     Route::get('/api/payment-rates', [\App\Http\Controllers\PaymentRateController::class, 'data'])
         ->name('api.payment-rates.data');
+
+    /* SuperAdmin API Routes */
+    Route::middleware('role:Super Admin')->group(function () {
+        Route::post('/api/superadmin/settings/exam-window', [\App\Http\Controllers\SuperAdminController::class, 'updateExamWindow'])
+            ->name('api.superadmin.settings.exam-window');
+    });
 
     /* Workflow actions */
     Route::post(

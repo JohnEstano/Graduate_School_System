@@ -218,6 +218,11 @@ class DashboardController extends Controller
             $props['coordinators'] = $this->getCoordinators();
             $props['stats'] = $this->getSuperAdminStats();
             $props['coordinatorAssignments'] = $this->getCoordinatorAssignments();
+            
+            // Add exam settings
+            $props['examSettings'] = [
+                'examWindowOpen' => \App\Models\SystemSetting::get('exam_window_open', true)
+            ];
         }
 
         return Inertia::render('dashboard/Index', $props);
