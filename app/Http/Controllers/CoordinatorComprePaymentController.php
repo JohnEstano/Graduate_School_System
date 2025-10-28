@@ -5,8 +5,16 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 use Illuminate\Http\RedirectResponse;
+use App\Models\User;
+use App\Models\PaymentSubmission;
+use App\Models\ExamApplication;
+use App\Mail\ComprehensiveExamPaymentApproved;
+use App\Mail\ComprehensiveExamPaymentRejected;
 
 class CoordinatorComprePaymentController extends Controller
 {
@@ -142,7 +150,7 @@ class CoordinatorComprePaymentController extends Controller
             ->leftJoin('users as u', 'u.id', '=', 'p.student_id')
             ->where('p.payment_id', $id)
             ->whereIn('u.program', $programs)
-            ->select('p.payment_id', 'p.status')
+            ->select('p.payment_id', 'p.status', 'p.student_id')
             ->first();
 
         if (!$row) {
@@ -158,6 +166,57 @@ class CoordinatorComprePaymentController extends Controller
                 'status' => 'approved',
                 'updated_at' => now(),
             ]);
+
+        // Send email notification
+        try {
+            $paymentSubmission = PaymentSubmission::find($id);
+            if ($paymentSubmission) {
+                // Find the student
+                $student = User::where('id', $row->student_id)
+                    ->orWhere('school_id', $row->student_id)
+                    ->first();
+
+                if ($student && $student->email) {
+                    // Get exam application
+                    $examApplication = $paymentSubmission->examApplication;
+                    
+                    if ($examApplication) {
+                        $coordinatorName = $user->first_name . ' ' . $user->last_name;
+                        
+                        Mail::to($student->email)->send(
+                            new ComprehensiveExamPaymentApproved(
+                                $examApplication,
+                                $paymentSubmission,
+                                $student,
+                                $coordinatorName
+                            )
+                        );
+                        
+                        Log::info('Comprehensive exam payment approval email sent', [
+                            'payment_id' => $id,
+                            'student_id' => $student->id,
+                            'student_email' => $student->email,
+                            'coordinator' => $coordinatorName
+                        ]);
+                    } else {
+                        Log::warning('Payment approved but no exam application found', [
+                            'payment_id' => $id
+                        ]);
+                    }
+                } else {
+                    Log::warning('Payment approved but student not found or has no email', [
+                        'payment_id' => $id,
+                        'student_id' => $row->student_id
+                    ]);
+                }
+            }
+        } catch (\Exception $e) {
+            Log::error('Failed to send payment approval email', [
+                'payment_id' => $id,
+                'error' => $e->getMessage()
+            ]);
+            // Don't fail the approval if email fails
+        }
 
         return redirect()->route('coordinator.compre-payment.index')->with('success', 'Payment approved.');
     }
@@ -184,7 +243,7 @@ class CoordinatorComprePaymentController extends Controller
             ->leftJoin('users as u', 'u.id', '=', 'p.student_id')
             ->where('p.payment_id', $id)
             ->whereIn('u.program', $programs)
-            ->select('p.payment_id', 'p.status')
+            ->select('p.payment_id', 'p.status', 'p.student_id')
             ->first();
 
         if (!$row) {
@@ -194,13 +253,68 @@ class CoordinatorComprePaymentController extends Controller
             return back()->withErrors(['status' => 'Only pending payments can be rejected.']);
         }
 
+        $remarks = $request->input('remarks');
+
         DB::table('payment_submissions')
             ->where('payment_id', $id)
             ->update([
                 'status' => 'rejected',
-                'remarks' => $request->input('remarks'),
+                'remarks' => $remarks,
                 'updated_at' => now(),
             ]);
+
+        // Send email notification
+        try {
+            $paymentSubmission = PaymentSubmission::find($id);
+            if ($paymentSubmission) {
+                // Find the student
+                $student = User::where('id', $row->student_id)
+                    ->orWhere('school_id', $row->student_id)
+                    ->first();
+
+                if ($student && $student->email) {
+                    // Get exam application
+                    $examApplication = $paymentSubmission->examApplication;
+                    
+                    if ($examApplication) {
+                        $coordinatorName = $user->first_name . ' ' . $user->last_name;
+                        
+                        Mail::to($student->email)->send(
+                            new ComprehensiveExamPaymentRejected(
+                                $examApplication,
+                                $paymentSubmission,
+                                $student,
+                                $remarks,
+                                $coordinatorName
+                            )
+                        );
+                        
+                        Log::info('Comprehensive exam payment rejection email sent', [
+                            'payment_id' => $id,
+                            'student_id' => $student->id,
+                            'student_email' => $student->email,
+                            'coordinator' => $coordinatorName,
+                            'reason' => $remarks
+                        ]);
+                    } else {
+                        Log::warning('Payment rejected but no exam application found', [
+                            'payment_id' => $id
+                        ]);
+                    }
+                } else {
+                    Log::warning('Payment rejected but student not found or has no email', [
+                        'payment_id' => $id,
+                        'student_id' => $row->student_id
+                    ]);
+                }
+            }
+        } catch (\Exception $e) {
+            Log::error('Failed to send payment rejection email', [
+                'payment_id' => $id,
+                'error' => $e->getMessage()
+            ]);
+            // Don't fail the rejection if email fails
+        }
 
         return redirect()->route('coordinator.compre-payment.index')->with('success', 'Payment rejected.');
     }

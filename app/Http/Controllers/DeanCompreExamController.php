@@ -4,9 +4,14 @@ namespace App\Http\Controllers;
 
 use App\Models\ExamApplication;
 use App\Models\ExamDeanReview;
+use App\Models\User;
+use App\Mail\ComprehensiveExamApproved;
+use App\Mail\ComprehensiveExamRejected;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 
 class DeanCompreExamController extends Controller
@@ -121,7 +126,7 @@ class DeanCompreExamController extends Controller
             'reason' => ['nullable','string','max:500'],
         ]);
 
-        DB::transaction(function () use ($application, $validated) {
+        DB::transaction(function () use ($application, $validated, $request) {
             $application->final_approval_status = $validated['status'];
             $application->final_approval_date   = now();
             $application->final_approval_reason = $validated['status'] === 'rejected' ? ($validated['reason'] ?? null) : null;
@@ -133,6 +138,60 @@ class DeanCompreExamController extends Controller
                 'reason'              => $validated['reason'] ?? null,
                 'reviewed_by'         => Auth::id(),
             ]);
+
+            // Send email notification to student
+            try {
+                // Find student by school_id (try both school_id and student_number)
+                $student = User::where('school_id', $application->student_id)
+                    ->orWhere('student_number', $application->student_id)
+                    ->first();
+
+                if ($student && $student->email) {
+                    $reviewerName = $request->user()->first_name . ' ' . $request->user()->last_name;
+
+                    if ($validated['status'] === 'approved') {
+                        Mail::to($student->email)->send(
+                            new ComprehensiveExamApproved(
+                                $application,
+                                $student,
+                                'dean',
+                                $reviewerName
+                            )
+                        );
+                        Log::info('Comprehensive exam Dean approval email sent', [
+                            'application_id' => $application->application_id,
+                            'student_email' => $student->email,
+                            'approved_by' => 'dean'
+                        ]);
+                    } else {
+                        Mail::to($student->email)->send(
+                            new ComprehensiveExamRejected(
+                                $application,
+                                $student,
+                                'dean',
+                                $validated['reason'] ?? 'Please review your application and requirements.',
+                                $reviewerName
+                            )
+                        );
+                        Log::info('Comprehensive exam Dean rejection email sent', [
+                            'application_id' => $application->application_id,
+                            'student_email' => $student->email,
+                            'rejected_by' => 'dean'
+                        ]);
+                    }
+                } else {
+                    Log::warning('Student not found or has no email for comprehensive exam notification', [
+                        'application_id' => $application->application_id,
+                        'student_id' => $application->student_id
+                    ]);
+                }
+            } catch (\Exception $e) {
+                Log::error('Failed to send comprehensive exam email notification from Dean', [
+                    'application_id' => $application->application_id,
+                    'error' => $e->getMessage()
+                ]);
+                // Don't fail the transaction if email fails
+            }
         });
 
         return response()->json(['ok' => true]);
@@ -149,7 +208,7 @@ class DeanCompreExamController extends Controller
             'reason' => ['nullable','string','max:500'],
         ]);
 
-        DB::transaction(function () use ($validated) {
+        DB::transaction(function () use ($validated, $request) {
             $ids = $validated['ids'];
             $status = $validated['status'];
             $reason = $validated['reason'] ?? null;
@@ -172,6 +231,54 @@ class DeanCompreExamController extends Controller
                 ];
             }
             ExamDeanReview::insert($rows);
+
+            // Send email notifications to all affected students
+            try {
+                $applications = ExamApplication::whereIn('application_id', $ids)->get();
+                $reviewerName = $request->user()->first_name . ' ' . $request->user()->last_name;
+
+                foreach ($applications as $application) {
+                    // Find student by school_id (try both school_id and student_number)
+                    $student = User::where('school_id', $application->student_id)
+                        ->orWhere('student_number', $application->student_id)
+                        ->first();
+
+                    if ($student && $student->email) {
+                        if ($status === 'approved') {
+                            Mail::to($student->email)->send(
+                                new ComprehensiveExamApproved(
+                                    $application,
+                                    $student,
+                                    'dean',
+                                    $reviewerName
+                                )
+                            );
+                        } else {
+                            Mail::to($student->email)->send(
+                                new ComprehensiveExamRejected(
+                                    $application,
+                                    $student,
+                                    'dean',
+                                    $reason ?? 'Please review your application and requirements.',
+                                    $reviewerName
+                                )
+                            );
+                        }
+                    }
+                }
+
+                Log::info('Bulk comprehensive exam email notifications sent', [
+                    'application_ids' => $ids,
+                    'status' => $status,
+                    'count' => count($applications)
+                ]);
+            } catch (\Exception $e) {
+                Log::error('Failed to send bulk comprehensive exam email notifications', [
+                    'application_ids' => $ids,
+                    'error' => $e->getMessage()
+                ]);
+                // Don't fail the transaction if email fails
+            }
         });
 
         return response()->json(['ok' => true]);

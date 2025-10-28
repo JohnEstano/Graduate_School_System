@@ -4,9 +4,14 @@ namespace App\Http\Controllers;
 
 use App\Models\ExamApplication;
 use App\Models\ExamRegistrarReview;
+use App\Models\User;
+use App\Mail\ComprehensiveExamApproved;
+use App\Mail\ComprehensiveExamRejected;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Log;
 
 class RegistrarExamApplicationController extends Controller
 {
@@ -134,7 +139,61 @@ class RegistrarExamApplicationController extends Controller
         $application->approved_by          = $data['status'] === 'approved' ? 'Registrar' : null;
         $application->save();
 
-        // TODO: If approved, enqueue to Dean’s queue. For now, we just return success.
+        // Send email notification to student
+        try {
+            // Find student by school_id (try both school_id and student_number)
+            $student = User::where('school_id', $application->student_id)
+                ->orWhere('student_number', $application->student_id)
+                ->first();
+
+            if ($student && $student->email) {
+                $reviewerName = $request->user()->first_name . ' ' . $request->user()->last_name;
+
+                if ($data['status'] === 'approved') {
+                    Mail::to($student->email)->send(
+                        new ComprehensiveExamApproved(
+                            $application,
+                            $student,
+                            'registrar',
+                            $reviewerName
+                        )
+                    );
+                    Log::info('Comprehensive exam approval email sent', [
+                        'application_id' => $application->application_id,
+                        'student_email' => $student->email,
+                        'approved_by' => 'registrar'
+                    ]);
+                } else {
+                    Mail::to($student->email)->send(
+                        new ComprehensiveExamRejected(
+                            $application,
+                            $student,
+                            'registrar',
+                            $data['reason'] ?? 'Please review your application and requirements.',
+                            $reviewerName
+                        )
+                    );
+                    Log::info('Comprehensive exam rejection email sent', [
+                        'application_id' => $application->application_id,
+                        'student_email' => $student->email,
+                        'rejected_by' => 'registrar'
+                    ]);
+                }
+            } else {
+                Log::warning('Student not found or has no email for comprehensive exam notification', [
+                    'application_id' => $application->application_id,
+                    'student_id' => $application->student_id
+                ]);
+            }
+        } catch (\Exception $e) {
+            Log::error('Failed to send comprehensive exam email notification', [
+                'application_id' => $application->application_id,
+                'error' => $e->getMessage()
+            ]);
+            // Don't fail the request if email fails
+        }
+
+        // TODO: If approved, enqueue to Dean's queue. For now, we just return success.
 
         if ($request->expectsJson()) {
             return response()->json(['ok' => true, 'review_id' => $review->id], 201);

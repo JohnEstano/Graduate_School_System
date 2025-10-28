@@ -174,7 +174,7 @@
             <span class="header-title">Graduate School System</span>
         </div>
 
-        <h1>Welcome to Your Academic Journey!</h1>
+        <h1>Welcome to {{ $adviserFullName }}'s Advisery</h1>
 
         <div class="content">
             <p class="message">

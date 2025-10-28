@@ -49,6 +49,12 @@ class ExamApplication extends Model
         return $this->hasOne(\App\Models\ExamRegistrarReview::class, 'exam_application_id', 'application_id')->latestOfMany();
     }
 
+    // Payment submission for this exam application
+    public function paymentSubmission(): HasOne
+    {
+        return $this->hasOne(\App\Models\PaymentSubmission::class, 'exam_application_id', 'application_id');
+    }
+
     
     public function getRouteKeyName(): string
     {
