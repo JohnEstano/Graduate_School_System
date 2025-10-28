@@ -170,35 +170,69 @@ class StudentRecordController extends Controller
             // Use defense_request amount directly (it already includes panelists + REC FEE + SCHOOL SHARE)
             foreach ($groupedPayments as $defenseId => &$payment) {
                 $defenseRequest = $defenseRequests->get($defenseId);
-                
+
+                // If we couldn't find by id, try to find a matching defense request by student and date
+                if (!$defenseRequest && !empty($payment['defense_date']) && isset($student->student_id)) {
+                    $possible = DefenseRequest::where('school_id', $student->student_id)
+                        ->whereDate('scheduled_date', $payment['defense_date'])
+                        ->where('workflow_state', 'completed')
+                        ->first();
+
+                    if ($possible) {
+                        $defenseRequest = $possible;
+                    }
+                }
+
                 if ($defenseRequest && $defenseRequest->amount) {
                     // Use the defense_request amount (already calculated correctly)
                     $grandTotal = floatval($defenseRequest->amount);
-                    
+
                     // Calculate panelist total (sum of all panelist payments)
                     $panelistTotal = floatval($payment['amount']);
-                    
-                    // Calculate REC FEE and SCHOOL SHARE by subtracting panelist total from grand total
-                    $recFeeAndSchoolShare = $grandTotal - $panelistTotal;
-                    
-                    // Estimate split (usually equal, but we can make it more accurate if needed)
-                    $recFee = round($recFeeAndSchoolShare / 2, 2);
-                    $schoolShare = $recFeeAndSchoolShare - $recFee;
-                    
-                    // Always add REC FEE to panelists array
+
+                    // Try to use configured REC Fee and School Share rates for this defense's program + type
+                    $programLevelForDefense = ProgramLevel::getLevel($defenseRequest->program);
+                    $recFeeRate = PaymentRate::where('program_level', $programLevelForDefense)
+                        ->where('defense_type', $defenseRequest->defense_type)
+                        ->where('type', 'REC Fee')
+                        ->first();
+                    $schoolShareRate = PaymentRate::where('program_level', $programLevelForDefense)
+                        ->where('defense_type', $defenseRequest->defense_type)
+                        ->where('type', 'School Share')
+                        ->first();
+
+                    $recFee = $recFeeRate ? floatval($recFeeRate->amount) : null;
+                    $schoolShare = $schoolShareRate ? floatval($schoolShareRate->amount) : null;
+
+                    // If both rates are available, trust them and compute panelist total as remainder
+                    if (!is_null($recFee) || !is_null($schoolShare)) {
+                        $recFee = $recFee ?? 0;
+                        $schoolShare = $schoolShare ?? 0;
+
+                        // Ensure panelist total doesn't go negative
+                        $calculatedPanelistTotal = $grandTotal - $recFee - $schoolShare;
+                        $panelistTotal = $calculatedPanelistTotal > 0 ? $calculatedPanelistTotal : $panelistTotal;
+                    } else {
+                        // Fallback: split the difference if rates not configured
+                        $recFeeAndSchoolShare = $grandTotal - $panelistTotal;
+                        $recFee = round($recFeeAndSchoolShare / 2, 2);
+                        $schoolShare = $recFeeAndSchoolShare - $recFee;
+                    }
+
+                    // Add REC FEE entry (use numeric 0 if none so frontend formats it)
                     $payment['panelists'][] = [
                         'name' => '-',
                         'role' => 'REC FEE',
-                        'amount' => $recFee > 0 ? number_format($recFee, 2, '.', '') : '-'
+                        'amount' => $recFee > 0 ? $recFee : 0
                     ];
-                    
-                    // Always add SCHOOL SHARE to panelists array
+
+                    // Add SCHOOL SHARE entry
                     $payment['panelists'][] = [
                         'name' => '-',
                         'role' => 'SCHOOL SHARE',
-                        'amount' => $schoolShare > 0 ? number_format($schoolShare, 2, '.', '') : '-'
+                        'amount' => $schoolShare > 0 ? $schoolShare : 0
                     ];
-                    
+
                     // Use defense_request amount as the grand total
                     $payment['amount'] = $grandTotal;
                     $payment['panelist_total'] = $panelistTotal;
@@ -213,7 +247,7 @@ class StudentRecordController extends Controller
                     $payment['school_share'] = 0;
                     $payment['grand_total'] = floatval($payment['amount']);
                 }
-                
+
                 // Remove internal tracking array
                 unset($payment['panelist_ids']);
             }
@@ -528,13 +562,17 @@ class StudentRecordController extends Controller
             ]);
         }
         
-        // Determine program level
-        $isDoctorate = str_starts_with($student->program, 'DBM') || 
-                       str_starts_with($student->program, 'PHDED') ||
-                       stripos($student->program, 'Doctor') !== false || 
-                       stripos($student->program, 'Doctorate') !== false ||
-                       stripos($student->program, 'PhD') !== false;
-        $programLevel = $isDoctorate ? 'Doctorate' : 'Masteral';
+        // Determine program level. Prefer defense request program when available so REC/School Share rates are dynamic.
+        if ($defenseRequest) {
+            $programLevel = ProgramLevel::getLevel($defenseRequest->program);
+        } else {
+            $isDoctorate = str_starts_with($student->program, 'DBM') || 
+                           str_starts_with($student->program, 'PHDED') ||
+                           stripos($student->program, 'Doctor') !== false || 
+                           stripos($student->program, 'Doctorate') !== false ||
+                           stripos($student->program, 'PhD') !== false;
+            $programLevel = $isDoctorate ? 'Doctorate' : 'Masteral';
+        }
         
         // Calculate panelist total
         $panelistTotal = collect($panelists)->sum('amount');
