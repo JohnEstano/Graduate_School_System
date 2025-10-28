@@ -1184,3 +1184,19 @@ Route::get('/test-mailpit', function () {
     });
     return 'Email sent! Check Mailpit at <a href="http://localhost:8025" target="_blank">http://localhost:8025</a>';
 });
+
+// Check UIC API Bearer Token
+Route::middleware('auth')->get('/check-bearer-token', function () {
+    $user = Auth::user();
+    $token = \App\Helpers\UicApiHelper::getToken();
+    
+    return response()->json([
+        'has_token' => $token !== null,
+        'token_preview' => $token ? substr($token, 0, 30) . '...' : null,
+        'full_token' => $token, // ⚠️ REMOVE IN PRODUCTION!
+        'is_valid' => $token ? \App\Helpers\UicApiHelper::isTokenValid() : false,
+        'user_id' => $user->id,
+        'user_email' => $user->email,
+        'cache_key' => 'uic_bearer_token_' . $user->id,
+    ]);
+})->name('check.bearer.token');

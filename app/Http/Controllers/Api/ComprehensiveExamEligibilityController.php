@@ -4,17 +4,20 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Services\LegacyPortalClient;
+use App\Services\UicApiClient;
 use App\Models\SystemSetting;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Http;
 
 class ComprehensiveExamEligibilityController extends Controller
 {
     public function __construct(
-        protected LegacyPortalClient $legacyClient
+        protected LegacyPortalClient $legacyClient,
+        protected UicApiClient $uicApiClient
     ) {}
 
     /**
@@ -68,93 +71,88 @@ class ComprehensiveExamEligibilityController extends Controller
         Log::info('Eligibility check started', ['user_id' => $user->id, 'user_email' => $user->email]);
 
         try {
-            // Get legacy session
-            $legacySession = Cache::get('legacy_session_' . $user->id);
+            // Get UIC API bearer token
+            $bearerToken = Cache::get('uic_bearer_token_' . $user->id);
             
-            Log::info('Legacy session check', [
+            Log::info('UIC API token check', [
                 'user_id' => $user->id,
-                'session_exists' => !empty($legacySession),
-                'session_keys' => $legacySession ? array_keys($legacySession) : []
+                'token_exists' => !empty($bearerToken)
             ]);
             
-            if (!$legacySession) {
-                Log::warning('No legacy session found for user', ['user_id' => $user->id]);
+            if (!$bearerToken) {
+                Log::warning('No UIC API token found for user', ['user_id' => $user->id]);
                 return response()->json([
                     'eligible' => false,
                     'requirements' => [
                         [
                             'name' => 'Complete grades (registrar verified)',
                             'completed' => null,
-                            'description' => 'Cannot verify - no legacy session'
-                        ],
-                        [
-                            'name' => 'Complete documents submitted',
-                            'completed' => null,
-                            'description' => 'Cannot verify - no legacy session'
+                            'description' => 'Cannot verify - please login again'
                         ],
                         [
                             'name' => 'No outstanding tuition balance',
                             'completed' => null,
-                            'description' => 'Cannot verify - no legacy session'
+                            'description' => 'Cannot verify - please login again'
                         ]
                     ],
-                    'error' => 'Legacy session not available'
+                    'error' => 'Authentication required - please login again'
                 ]);
             }
 
-            // Check if data scraping is needed (but don't wait for it)
-            $this->triggerDataScrapingIfNeeded($legacySession, $user);
-
-            // Log if cached grade check exists
-            $cacheKey = "grades_completion_check_{$user->id}";
-            $hasCachedGradeCheck = Cache::has($cacheKey);
-            Log::info('Grade check cache status', [
-                'user_id' => $user->id,
-                'cached' => $hasCachedGradeCheck,
-                'cache_key' => $cacheKey
-            ]);
-
-            // Check all three requirements (database-first, then fallback to legacy API)
-            $gradesComplete = $this->checkGradesCompletionFromDb($user) ?? $this->checkGradesCompletion($legacySession);
-            $documentsComplete = $this->checkClearanceStatusFromDb($user) ?? $this->checkClearanceStatus($legacySession);
-            $noOutstandingBalance = $this->checkTuitionBalance($user);
+            // Get student number from user
+            $studentNumber = $user->student_number ?? $user->username;
             
-            Log::info('=== ELIGIBILITY CHECK RESULT ===', [
+            if (!$studentNumber) {
+                Log::error('No student number found for user', ['user_id' => $user->id]);
+                return response()->json([
+                    'eligible' => false,
+                    'requirements' => [
+                        [
+                            'name' => 'Complete grades (registrar verified)',
+                            'completed' => null,
+                            'description' => 'Student number not found'
+                        ],
+                        [
+                            'name' => 'No outstanding tuition balance',
+                            'completed' => null,
+                            'description' => 'Student number not found'
+                        ]
+                    ],
+                    'error' => 'Student number not found'
+                ]);
+            }
+
+            // Check requirements using UIC API
+            $gradesComplete = $this->checkGradesClearanceFromUicApi($bearerToken, $studentNumber);
+            $noOutstandingBalance = $this->checkTuitionClearanceFromUicApi($bearerToken, $studentNumber);
+            
+            Log::info('=== ELIGIBILITY CHECK RESULT (UIC API) ===', [
                 'user_id' => $user->id,
+                'student_number' => $studentNumber,
                 'gradesComplete' => $gradesComplete,
                 'gradesComplete_type' => gettype($gradesComplete),
-                'documentsComplete' => $documentsComplete,
-                'documentsComplete_type' => gettype($documentsComplete),
                 'noOutstandingBalance' => $noOutstandingBalance,
                 'noOutstandingBalance_type' => gettype($noOutstandingBalance),
-                'clearance_statuscode' => $user->clearance_statuscode,
-                'balance' => $user->balance
             ]);
             
             return response()->json([
-                'eligible' => $gradesComplete && $documentsComplete && $noOutstandingBalance,
+                'eligible' => $gradesComplete && $noOutstandingBalance,
                 'requirements' => [
                     [
                         'name' => 'Complete grades (registrar verified)',
                         'completed' => $gradesComplete,
-                        'description' => 'All academic records must show completed grades (no grade "40")'
-                    ],
-                    [
-                        'name' => 'Complete documents submitted',
-                        'completed' => $documentsComplete,
-                        'description' => 'All clearance requirements must be satisfied (except tuition)'
+                        'description' => 'All academic records must show completed grades verified by registrar'
                     ],
                     [
                         'name' => 'No outstanding tuition balance',
                         'completed' => $noOutstandingBalance,
-                        'description' => 'Cashier clearance must show "Full Payment" as cleared'
+                        'description' => 'Tuition clearance must be approved by cashier'
                     ]
                 ],
                 'debug' => [
-                    'legacy_session_available' => true,
                     'user_id' => $user->id,
-                    'semester_info' => $this->getSemesterMappingInfo($legacySession),
-                    'cached_data_available' => $this->legacyClient->getCachedScrapedData($user->id) !== null
+                    'student_number' => $studentNumber,
+                    'source' => 'UIC API v2'
                 ]
             ]);
             
@@ -169,11 +167,6 @@ class ComprehensiveExamEligibilityController extends Controller
                 'requirements' => [
                     [
                         'name' => 'Complete grades (registrar verified)',
-                        'completed' => null,
-                        'description' => 'Error checking status'
-                    ],
-                    [
-                        'name' => 'Complete documents submitted',
                         'completed' => null,
                         'description' => 'Error checking status'
                     ],
@@ -1145,6 +1138,125 @@ class ComprehensiveExamEligibilityController extends Controller
                 'error' => $e->getMessage()
             ]);
             // Don't throw - continue with normal flow
+        }
+    }
+
+    /**
+     * Check grades clearance from UIC API v2
+     * 
+     * @param string $bearerToken UIC API bearer token
+     * @param string $studentNumber Student number
+     * @return bool|null True if cleared, false if not cleared, null on error
+     */
+    private function checkGradesClearanceFromUicApi(string $bearerToken, string $studentNumber): ?bool
+    {
+        try {
+            $endpoint = "/students-portal/students/{$studentNumber}/clearance/grades";
+            
+            Log::info('Checking grades clearance from UIC API', [
+                'student_number' => $studentNumber,
+                'endpoint' => $endpoint
+            ]);
+
+            $response = Http::withHeaders([
+                'X-API-Client-ID' => config('uic-api.client_id'),
+                'X-API-Client-Secret' => config('uic-api.client_secret'),
+                'Content-Type' => 'application/json',
+                'Authorization' => 'Bearer ' . $bearerToken,
+            ])->timeout(config('uic-api.timeout', 30))
+              ->get(config('uic-api.base_url') . $endpoint);
+
+            if (!$response->successful()) {
+                Log::error('UIC API grades clearance check failed', [
+                    'student_number' => $studentNumber,
+                    'status' => $response->status(),
+                    'body' => $response->body()
+                ]);
+                return null;
+            }
+
+            $data = $response->json();
+            
+            Log::info('UIC API grades clearance response', [
+                'student_number' => $studentNumber,
+                'success' => $data['success'] ?? false,
+                'data' => $data['data'] ?? null,
+                'message' => $data['message'] ?? 'No message'
+            ]);
+
+            // The API returns {"success":true,"data":false,"message":"The student's grades clearance has not been cleared."}
+            // So we need to check the 'data' field which is the boolean clearance status
+            if (isset($data['success']) && $data['success'] === true) {
+                return (bool) ($data['data'] ?? false);
+            }
+
+            return null;
+
+        } catch (\Exception $e) {
+            Log::error('Exception checking grades clearance from UIC API', [
+                'student_number' => $studentNumber,
+                'error' => $e->getMessage()
+            ]);
+            return null;
+        }
+    }
+
+    /**
+     * Check tuition clearance from UIC API v2
+     * 
+     * @param string $bearerToken UIC API bearer token
+     * @param string $studentNumber Student number
+     * @return bool|null True if cleared, false if not cleared, null on error
+     */
+    private function checkTuitionClearanceFromUicApi(string $bearerToken, string $studentNumber): ?bool
+    {
+        try {
+            $endpoint = "/students-portal/students/{$studentNumber}/clearance/tuition";
+            
+            Log::info('Checking tuition clearance from UIC API', [
+                'student_number' => $studentNumber,
+                'endpoint' => $endpoint
+            ]);
+
+            $response = Http::withHeaders([
+                'X-API-Client-ID' => config('uic-api.client_id'),
+                'X-API-Client-Secret' => config('uic-api.client_secret'),
+                'Content-Type' => 'application/json',
+                'Authorization' => 'Bearer ' . $bearerToken,
+            ])->timeout(config('uic-api.timeout', 30))
+              ->get(config('uic-api.base_url') . $endpoint);
+
+            if (!$response->successful()) {
+                Log::error('UIC API tuition clearance check failed', [
+                    'student_number' => $studentNumber,
+                    'status' => $response->status(),
+                    'body' => $response->body()
+                ]);
+                return null;
+            }
+
+            $data = $response->json();
+            
+            Log::info('UIC API tuition clearance response', [
+                'student_number' => $studentNumber,
+                'success' => $data['success'] ?? false,
+                'data' => $data['data'] ?? null,
+                'message' => $data['message'] ?? 'No message'
+            ]);
+
+            // Same format as grades - check the 'data' field for boolean clearance status
+            if (isset($data['success']) && $data['success'] === true) {
+                return (bool) ($data['data'] ?? false);
+            }
+
+            return null;
+
+        } catch (\Exception $e) {
+            Log::error('Exception checking tuition clearance from UIC API', [
+                'student_number' => $studentNumber,
+                'error' => $e->getMessage()
+            ]);
+            return null;
         }
     }
 }
