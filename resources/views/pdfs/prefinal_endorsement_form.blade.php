@@ -256,13 +256,20 @@
             <div class="approved-label">Approved by:</div>
             @if(!empty($coordinator_signature_path) && !empty($coordinator_name))
                 <!-- Show coordinator signature if available -->
-                <div class="approved-name" style="margin-bottom: 4px;">{{ $coordinator_name }}<br>{{ $coordinator_title ?? 'Program Coordinator' }}</div>
-                <div style="margin-bottom: 8px;">
-                    <img src="{{ $coordinator_signature_path }}" alt="Coordinator Signature" style="max-height:50px; margin-bottom:2px;">
+                <div style="position: relative; display: inline-block; text-align: right;">
+                    <div class="approved-name" style="margin-bottom: 4px; text-align: right;">{{ $coordinator_name }}</div>
+                    <img src="{{ $coordinator_signature_path }}" alt="Coordinator Signature" style="position: absolute; top: -30px; right: 0; max-height:60px; z-index: 10;">
+                    <div style="border-bottom: 1px solid #000; width: 180px; margin-top: 10px; margin-bottom: 2px; margin-left: auto;"></div>
+                    <div style="font-size: 9pt; margin-top: 2px; text-align: right;">{{ $coordinator_title ?? 'Program Coordinator' }}</div>
                 </div>
             @else
-                <!-- Show dynamic approver -->
-                <div class="approved-name" style="margin-bottom: 4px;">{{ $approver_name ?? '' }}<br>{{ $approver_title ?? '' }}</div>
+                <!-- Show empty lines for manual signature -->
+                <div style="text-align: right; display: inline-block;">
+                    <div style="border-bottom: 1px solid #000; width: 180px; height: 20px; margin-bottom: 2px; margin-left: auto;"></div>
+                    <div style="font-size: 9pt; text-align: right;">Name and Signature</div>
+                    <div style="border-bottom: 1px solid #000; width: 180px; height: 18px; margin-top: 8px; margin-bottom: 2px; margin-left: auto;"></div>
+                    <div style="font-size: 9pt; text-align: right;">Position/Designation</div>
+                </div>
             @endif
         </div>
 

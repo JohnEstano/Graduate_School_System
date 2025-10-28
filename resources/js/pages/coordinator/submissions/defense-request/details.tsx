@@ -1679,16 +1679,8 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
         panelsData={panels}
         scheduleData={schedule}
         onApproveComplete={() => {
-          // Use Inertia reload to refresh data properly
-          console.log('🔄 Approval complete, reloading page data...');
-          toast.success('Request approved successfully!');
-          
-          router.reload({ 
-            only: ['defenseRequest'],
-            onSuccess: () => {
-              console.log('✅ Page data reloaded successfully');
-            }
-          });
+          // The dialog already handles the reload, but this is a fallback
+          console.log('🔄 Approval complete callback triggered');
         }}
       />
 

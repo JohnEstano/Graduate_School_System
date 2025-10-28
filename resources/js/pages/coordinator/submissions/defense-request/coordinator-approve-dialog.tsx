@@ -88,14 +88,14 @@ export default function CoordinatorApproveDialog({
   const [showEmailDialog, setShowEmailDialog] = useState(false);
   const [sendEmail, setSendEmail] = useState(false);
 
-  // Load existing endorsement form when dialog opens
+  // Auto-generate document with coordinator signature when dialog opens (like adviser workflow)
   useEffect(() => {
     if (open) {
-      loadEndorsementForm();
       loadSignatures();
-      // Set default coordinator name
-      setCoordinatorFullName(coordinatorName || '');
-      setCoordinatorTitle('Program Coordinator');
+      // Auto-generate the endorsement form with coordinator signature
+      if (!endorsementPdfUrl && !isGenerating) {
+        handleGenerateDocument();
+      }
     } else {
       // Reset state when dialog closes
       if (endorsementPdfUrl && endorsementPdfUrl.startsWith('blob:')) {
@@ -106,43 +106,6 @@ export default function CoordinatorApproveDialog({
       setUploadedFile(null);
     }
   }, [open]);
-
-  async function loadEndorsementForm() {
-    // Check both possible locations for endorsement_form
-    const endorsementForm = defenseRequest?.attachments?.endorsement_form || defenseRequest?.endorsement_form;
-    
-    if (!endorsementForm) {
-      toast.error('No endorsement form found. The adviser must submit the endorsement first.');
-      return;
-    }
-
-    setIsLoadingPdf(true);
-    try {
-      // Load the existing endorsement form from storage
-      const endorsementPath = endorsementForm.startsWith('/storage/') 
-        ? endorsementForm 
-        : `/storage/${endorsementForm}`;
-      
-      console.log('📄 Loading endorsement form from:', endorsementPath);
-      
-      const response = await fetch(endorsementPath);
-      if (!response.ok) {
-        throw new Error('Failed to load endorsement form');
-      }
-      
-      const blob = await response.blob();
-      const url = URL.createObjectURL(blob);
-      setEndorsementPdfUrl(url);
-      
-      console.log('✅ Endorsement form loaded successfully');
-      toast.success('Endorsement form loaded successfully!');
-    } catch (err) {
-      console.error('❌ Failed to load endorsement form:', err);
-      toast.error('Failed to load endorsement form');
-    } finally {
-      setIsLoadingPdf(false);
-    }
-  }
 
   async function loadSignatures() {
     setLoadingSignatures(true);
@@ -167,16 +130,10 @@ export default function CoordinatorApproveDialog({
       return;
     }
 
-    if (!activeSignature) {
-      toast.error('Please set an active signature first');
-      return;
-    }
-
     setIsGenerating(true);
     try {
       console.log('🚀 Generating coordinator-signed endorsement PDF for request:', defenseRequest.id);
       console.log('📋 Defense type:', defenseRequest.defense_type);
-      console.log('👤 Coordinator:', coordinatorFullName, coordinatorTitle);
       
       // Generate new PDF with coordinator signature using centralized CSRF utility
       const res = await postWithCsrf('/api/generate-endorsement-pdf', {
@@ -359,8 +316,19 @@ export default function CoordinatorApproveDialog({
   }
 
   async function handleFinalApprove() {
+    if (!endorsementPdfUrl) {
+      toast.error('Please wait for the endorsement form to generate');
+      return;
+    }
+
+    if (!activeSignature) {
+      toast.error('Please set an active signature first');
+      return;
+    }
+
     setIsApproving(true);
     setShowEmailDialog(false);
+    
     try {
       console.log('🚀 Starting coordinator approval process...');
       
@@ -393,39 +361,77 @@ export default function CoordinatorApproveDialog({
         console.log('✅ Schedule saved successfully');
       }
 
-      // STEP 2: Prepare the form data for signature
-      const formData = new FormData();
+      // STEP 2: Upload the generated PDF with coordinator signature (like adviser workflow)
+      console.log('📤 Uploading coordinator-signed endorsement form...');
       
-      // If uploaded file exists, use it. Otherwise use the generated/loaded one
+      let endorsementFormSaved = false;
+      
+      // Check if we have an uploaded file to save
       if (uploadedFile) {
-        formData.append('endorsement_form', uploadedFile, 'coordinator-signed-endorsement.pdf');
-      } else if (endorsementPdfUrl) {
-        const response = await fetch(endorsementPdfUrl);
-        const blob = await response.blob();
-        formData.append('endorsement_form', blob, 'endorsement-form-signed.pdf');
-      }
-      
-      formData.append('add_coordinator_signature', 'true');
-      formData.append('coordinator_full_name', coordinatorFullName);
-      formData.append('coordinator_title', coordinatorTitle);
-      
-      console.log('📤 Uploading PDF with coordinator signature overlay...');
-      
-      // Use centralized CSRF utility for FormData upload
-      const uploadRes = await postFormWithCsrf(
-        `/api/defense-requests/${defenseRequest.id}/add-coordinator-signature`,
-        formData
-      );
+        console.log('📤 Uploading user-selected file:', uploadedFile.name);
+        
+        const formData = new FormData();
+        formData.append('endorsement_form', uploadedFile);
 
-      if (!uploadRes.ok) {
-        const errorText = await uploadRes.text();
-        console.error('❌ Failed to add coordinator signature:', errorText);
-        toast.error('Failed to sign the endorsement form');
+        const uploadRes = await postFormWithCsrf(
+          `/api/defense-requests/${defenseRequest.id}/upload-endorsement`,
+          formData
+        );
+
+        if (uploadRes.ok) {
+          console.log('✅ User file uploaded successfully');
+          endorsementFormSaved = true;
+        } else {
+          const errorText = await uploadRes.text();
+          console.error('❌ Upload failed:', errorText);
+          toast.error('Failed to save endorsement form');
+          setIsApproving(false);
+          return;
+        }
+      } else if (endorsementPdfUrl) {
+        // Convert the generated blob to a file and upload
+        console.log('📤 Uploading generated PDF blob...');
+        
+        try {
+          const response = await fetch(endorsementPdfUrl);
+          const blob = await response.blob();
+          
+          console.log('📦 Blob created:', blob.type, blob.size, 'bytes');
+          
+          const formData = new FormData();
+          formData.append('endorsement_form', blob, 'coordinator-signed-endorsement.pdf');
+
+          const uploadRes = await postFormWithCsrf(
+            `/api/defense-requests/${defenseRequest.id}/upload-endorsement`,
+            formData
+          );
+
+          if (uploadRes.ok) {
+            console.log('✅ Generated PDF uploaded successfully');
+            endorsementFormSaved = true;
+          } else {
+            const errorText = await uploadRes.text();
+            console.error('❌ Upload failed:', errorText);
+            toast.error('Failed to save endorsement form');
+            setIsApproving(false);
+            return;
+          }
+        } catch (err) {
+          console.error('❌ Error uploading generated PDF:', err);
+          toast.error('Failed to save endorsement form');
+          setIsApproving(false);
+          return;
+        }
+      }
+
+      if (!endorsementFormSaved) {
+        console.error('❌ No endorsement form was saved');
+        toast.error('Failed to save endorsement form');
         setIsApproving(false);
         return;
       }
 
-      console.log('✅ Coordinator signature added successfully');
+      console.log('✅ Endorsement form saved successfully, updating coordinator status...');
 
       // STEP 3: Update coordinator status to approved
       const payload: any = {
@@ -451,12 +457,20 @@ export default function CoordinatorApproveDialog({
         const data = await statusRes.json();
         console.log('✅ Approval successful:', data);
         
+        toast.success('Defense request approved successfully! Your signature has been added to the endorsement form.');
+        
+        // Close dialog
+        onOpenChange(false);
+        
+        // Force full page reload to show updated data
         if (onApproveComplete) {
-          await onApproveComplete();
+          onApproveComplete();
         }
         
-        onOpenChange(false);
-        toast.success('Defense request approved successfully! Panels, schedule, and signature have been saved.');
+        // Additional fallback: force full page reload after a short delay
+        setTimeout(() => {
+          window.location.reload();
+        }, 500);
       } else {
         const error = await statusRes.json();
         console.error('❌ Status update failed:', error);

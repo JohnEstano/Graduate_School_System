@@ -2310,12 +2310,13 @@ class DefenseRequestController extends Controller
             // Delete old endorsement form
             Storage::disk('public')->delete($endorsementPath);
 
-            // Update endorsement_form path
-            $defenseRequest->endorsement_form = '/storage/' . $newPdfPath;
+            // Update endorsement_form path (store WITHOUT /storage/ prefix for consistency)
+            $defenseRequest->endorsement_form = $newPdfPath;
             $defenseRequest->save();
 
             \Log::info('Coordinator signature added successfully', [
-                'new_path' => $newPdfPath
+                'new_path' => $newPdfPath,
+                'stored_path' => $defenseRequest->endorsement_form
             ]);
 
             return response()->json([

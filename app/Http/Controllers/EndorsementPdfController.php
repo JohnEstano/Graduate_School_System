@@ -151,18 +151,19 @@ class EndorsementPdfController extends Controller
             }
         }
 
-        // Coordinator information - only filled if coordinator is involved
+        // Coordinator information - get from authenticated user when role is coordinator
         $coordinator_name = null;
         $coordinator_title = null;
         $coordinator_signature_path = null;
         
-        if ($role === 'coordinator' && $defenseRequest->coordinator_user_id) {
-            $coordinator = $defenseRequest->coordinator;
+        if ($role === 'coordinator') {
+            // Get coordinator from authenticated user
+            $coordinator = auth()->user();
             if ($coordinator) {
                 $coordinator_name = trim(($coordinator->first_name ?? '') . ' ' . ($coordinator->middle_name ?? '') . ' ' . ($coordinator->last_name ?? ''));
                 $coordinator_title = 'Program Coordinator';
                 
-                $coordinatorSignature = $this->getActiveSignature($defenseRequest->coordinator_user_id);
+                $coordinatorSignature = $this->getActiveSignature($coordinator->id);
                 if ($coordinatorSignature && $coordinatorSignature->image_path) {
                     $fullPath = storage_path('app/public/' . $coordinatorSignature->image_path);
                     
@@ -171,7 +172,7 @@ class EndorsementPdfController extends Controller
                     } else {
                         Log::warning('Coordinator signature file not found', [
                             'path' => $fullPath,
-                            'user_id' => $defenseRequest->coordinator_user_id
+                            'user_id' => $coordinator->id
                         ]);
                     }
                 }
