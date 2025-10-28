@@ -17,6 +17,7 @@ use App\Http\Controllers\PanelistController;
 use App\Http\Controllers\ComprehensiveExamController;
 use App\Http\Controllers\PaymentSubmissionController;
 use App\Http\Controllers\CoordinatorCompreExamController;
+use App\Http\Controllers\CoordinatorExamScoreController;
 use App\Http\Controllers\CoordinatorComprePaymentController;
 use App\Http\Controllers\AcademicRecordController;
 use App\Http\Controllers\CoordinatorDefenseController;
@@ -877,7 +878,6 @@ Route::get('/faculty/class-list', [\App\Http\Controllers\InstructorClassListCont
 Route::get('/legacy/faculty/class-list', [\App\Http\Controllers\InstructorClassListController::class, 'index'])
     ->name('legacy.faculty.class-list');
 
-// Temporary test route for comprehensive exam eligibility
 // Temporary test route for comprehensive exam eligibility (uses default controller)
 Route::get('/test-eligibility', [ApiCompreEligController::class, 'checkEligibility'])
     ->middleware('auth');
