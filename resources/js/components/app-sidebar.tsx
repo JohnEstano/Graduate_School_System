@@ -86,7 +86,7 @@ const coordinatorNavItems: MainNavItem[] = [
 
 const registrarNavItems: MainNavItem[] = [
     { title: 'Applications', href: '/registrar/compre-exam', icon: LayoutGrid },
-    { title: 'Settings', href: '/registrar/settings', icon: LayoutGrid },
+  
 ];
 
 const assistantNavItems: MainNavItem[] = [

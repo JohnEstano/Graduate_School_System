@@ -124,17 +124,19 @@ class EndorsementPdfController extends Controller
         $program = $defenseRequest->student->program ?? 'N/A';
         
         // Thesis/Dissertation title - always filled
-        $thesis_title = $defenseRequest->manuscript_title ?? 'Untitled Manuscript';
+        $thesis_title = $defenseRequest->thesis_title ?? 'Untitled Manuscript';
 
         // Adviser information - always filled
         $adviser_name = $defenseRequest->adviserUser 
             ? trim(($defenseRequest->adviserUser->first_name ?? '') . ' ' . ($defenseRequest->adviserUser->middle_name ?? '') . ' ' . ($defenseRequest->adviserUser->last_name ?? ''))
             : 'Thesis / Dissertation Adviser';
         
-        // Adviser signature - only show if adviser is the one generating
+        // Adviser signature - ALWAYS show if available (not just when adviser is generating)
         $adviser_signature_path = null;
-        if ($role === 'adviser' && $defenseRequest->adviser_id) {
-            $adviserSignature = $this->getActiveSignature($defenseRequest->adviser_id);
+        $adviser_id = $defenseRequest->adviser_id ?? $defenseRequest->adviser_user_id;
+        
+        if ($adviser_id) {
+            $adviserSignature = $this->getActiveSignature($adviser_id);
             if ($adviserSignature && $adviserSignature->image_path) {
                 $fullPath = storage_path('app/public/' . $adviserSignature->image_path);
                 
@@ -143,7 +145,7 @@ class EndorsementPdfController extends Controller
                 } else {
                     Log::warning('Adviser signature file not found', [
                         'path' => $fullPath,
-                        'user_id' => $defenseRequest->adviser_id
+                        'user_id' => $adviser_id
                     ]);
                 }
             }
