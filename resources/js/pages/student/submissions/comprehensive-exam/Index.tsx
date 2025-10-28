@@ -58,7 +58,7 @@ type Eligibility = {
 };
 
 // --- Dev simulation (disable in prod) ---
-const DEV_SIMULATE = true;
+const DEV_SIMULATE = false; // Changed to false to use real UIC API data
 const SIM_ELIG = {
   examOpen: true,
   gradesComplete: true,
@@ -76,7 +76,7 @@ export default function ComprehensiveExamIndex() {
   const [elig, setElig] = useState<Eligibility>({
     examOpen: null,
     gradesComplete: null,
-    documentsComplete: null,
+    documentsComplete: true, // No longer checking this requirement
     noOutstandingBalance: null,
     loading: true,
     error: null,
@@ -86,7 +86,7 @@ export default function ComprehensiveExamIndex() {
   const [retryCount, setRetryCount] = useState(0);
 
   const allStudentFlagsNull = (e: Eligibility) =>
-    e.gradesComplete === null && e.documentsComplete === null && e.noOutstandingBalance === null;
+    e.gradesComplete === null && e.noOutstandingBalance === null;
 
   const getCsrf = () =>
     document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
@@ -143,25 +143,22 @@ export default function ComprehensiveExamIndex() {
         if (Array.isArray(j?.requirements)) {
           const reqs = j.requirements as Array<{ name: string; completed?: boolean }>;
           const find = (name: string) => reqs.find((r) => r.name === name)?.completed ?? null;
-          documentsComplete = find('Complete documents submitted');
           gradesComplete = find('Complete grades (registrar verified)');
           noOutstandingBalance = find('No outstanding tuition balance');
         } else {
           gradesComplete = j?.gradesComplete ?? j?.completeGrades ?? null;
-          documentsComplete = j?.documentsComplete ?? j?.completeDocuments ?? null;
           noOutstandingBalance = j?.noOutstandingBalance ?? j?.hasNoOutstandingBalance ?? null;
         }
 
         // Force booleans where possible
         gradesComplete = gradesComplete === null ? null : !!gradesComplete;
-        documentsComplete = documentsComplete === null ? null : !!documentsComplete;
         noOutstandingBalance = noOutstandingBalance === null ? null : !!noOutstandingBalance;
       }
 
       const nextElig: Eligibility = {
         examOpen,
         gradesComplete,
-        documentsComplete,
+        documentsComplete: true, // Always true now, no longer checking
         noOutstandingBalance,
         loading: false,
         error: null,
@@ -169,8 +166,8 @@ export default function ComprehensiveExamIndex() {
 
       setElig(nextElig);
 
-      // Bounded retry only if *all three* student flags are still null
-      if (allStudentFlagsNull(nextElig) && retryCount < 5) {
+      // Bounded retry only if student flags are still null (excluding documentsComplete)
+      if ((gradesComplete === null || noOutstandingBalance === null) && retryCount < 5) {
         setTimeout(() => {
           setRetryCount((c) => c + 1);
           fetchEligibility();
@@ -182,7 +179,7 @@ export default function ComprehensiveExamIndex() {
       setElig({
         examOpen: null,
         gradesComplete: null,
-        documentsComplete: null,
+        documentsComplete: true, // No longer checking this requirement
         noOutstandingBalance: null,
         loading: false,
         error: e?.message ?? 'Unable to verify eligibility at this time.',
@@ -199,7 +196,6 @@ export default function ComprehensiveExamIndex() {
     return !!(
       elig.examOpen &&
       elig.gradesComplete &&
-      elig.documentsComplete &&
       elig.noOutstandingBalance
     );
   }, [elig]);
@@ -213,7 +209,6 @@ export default function ComprehensiveExamIndex() {
     const arr: { label: string; ok: boolean | null }[] = [
       { label: 'Exam window is open', ok: elig.examOpen },
       { label: 'Complete grades (registrar verified)', ok: elig.gradesComplete },
-      { label: 'Complete documents submitted', ok: elig.documentsComplete },
       { label: 'No outstanding tuition balance', ok: elig.noOutstandingBalance },
     ];
     return arr;

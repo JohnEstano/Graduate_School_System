@@ -1,52 +1,5 @@
 <?php
 
-// app/Services/HonorariumService.php
-
-namespace App\Services;
-
-class HonorariumService {
-    public static function computeReceivables($level, $defense) {
-        $rates = self::getRates()[$level][$defense];
-        $total = 0;
-        $breakdown = [];
-
-        foreach ($rates as $role => $value) {
-            if (is_array($value)) {
-                $sum = array_sum($value);
-                $breakdown[$role] = $sum;
-                $total += $sum;
-            } else {
-                $breakdown[$role] = $value;
-                $total += $value;
-            }
-        }
-
-        return [
-            'breakdown' => $breakdown,
-            'totalReceivables' => $total,
-        ];
-    }
-
-    private static function getRates() {
-        return [
-            "masteral" => [
-                "proposal" => [
-                    "ADVISER" => 3000,
-                    "PANEL CHAIR" => 2000,
-                    "PANEL MEMBER" => [1200, 1200, 1200],
-                    "REC FEE" => 2200,
-                    "SCHOOL SHARE" => 450,
-                ],
-                // ...
-            ],
-            "doctorate" => [
-                // ...
-            ],
-        ];
-    }
-}
-
-
 return [
 
     /*

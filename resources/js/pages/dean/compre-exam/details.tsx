@@ -139,10 +139,6 @@ export default function Details({ application }: { application: CompreExamApplic
 							{chip(elig.gradesComplete)}
 						</div>
 						<div className="flex items-center justify-between rounded border px-3 py-2">
-							<span>Complete documents submitted</span>
-							{chip(elig.documentsComplete)}
-						</div>
-						<div className="flex items-center justify-between rounded border px-3 py-2">
 							<span>No outstanding tuition balance</span>
 							{chip(elig.noOutstandingBalance)}
 						</div>
