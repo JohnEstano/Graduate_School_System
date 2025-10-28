@@ -19,6 +19,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
@@ -154,6 +155,8 @@ export default function CoordinatorCompreExamScheduleIndex() {
     () => (Array.isArray(props.programs) ? props.programs.filter(Boolean) : []),
     [props.programs]
   );
+  // Display list includes an "All" option for filtering
+  const displayPrograms = useMemo(() => ['All', ...programs], [programs]);
 
   const defaultSY = getDefaultSY();
   const syOptions = props.schoolYears?.length ? props.schoolYears : getSYOptions(4, defaultSY);
@@ -162,23 +165,19 @@ export default function CoordinatorCompreExamScheduleIndex() {
   const [q, setQ] = useState('');
   const dq = useDeferredValue(q);
 
-  // URL-driven tab + search (match Compre Payments behavior)
-  const [scheduleTab, setScheduleTab] = useState<'all' | 'scheduled' | 'unscheduled'>('all');
+  // URL-driven search (match Compre Payments behavior)
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    const t = (params.get('tab') || '').toLowerCase();
-    if (t === 'scheduled' || t === 'unscheduled' || t === 'all') setScheduleTab(t as any);
     const qs = params.get('q');
     if (qs) setQ(qs);
   }, []);
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    params.set('tab', scheduleTab);
     if (dq) params.set('q', dq);
     else params.delete('q');
     const url = `${window.location.pathname}?${params.toString()}`;
     window.history.replaceState(null, '', url);
-  }, [scheduleTab, dq]);
+  }, [dq]);
 
   // --- filters
   const programOptions = useMemo(() => programs, [programs]);
@@ -190,13 +189,14 @@ export default function CoordinatorCompreExamScheduleIndex() {
   const [program, setProgram] = useState<string>(
     props.currentProgram && programs.includes(props.currentProgram)
       ? props.currentProgram
-      : (programOptions[0] || programs[0] || '')
+      : 'All'
   );
 
   // ensure current program is valid if list changes
   useEffect(() => {
-    if (!programOptions.includes(program)) {
-      setProgram(programOptions[0] || '');
+    // keep current selection valid; allow 'All'
+    if (!['All', ...programOptions].includes(program)) {
+      setProgram('All');
     }
   }, [programOptions]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -210,9 +210,11 @@ export default function CoordinatorCompreExamScheduleIndex() {
 
   // helper to reset non-program filters
   function resetFilters() {
-    setQ('');
+    // Program -> All, SY -> current default, Status -> All, Search -> empty
+    setProgram('All');
+    setSchoolYear(defaultSY);
     setStatusFilter('all');
-    setScheduleTab('all');
+    setQ('');
   }
 
   // --- dialog state
@@ -238,36 +240,48 @@ export default function CoordinatorCompreExamScheduleIndex() {
 
   /* ------------------ Load offerings (JSON API) ------------------ */
   useEffect(() => {
-    if (!program || !schoolYear) { setRows([]); return; }
+    if (!schoolYear) { setRows([]); return; }
     setLoading(true);
     const url =
       (window as any).route?.('api.exam-subject-offerings.index') ||
       '/api/exam-subject-offerings';
-    const qs = new URLSearchParams({ program, school_year: schoolYear, _ts: String(Date.now()) }).toString();
-    fetch(`${url}?${qs}`, {
-      headers: { Accept: 'application/json', 'Cache-Control': 'no-cache' },
-      cache: 'no-store',
-    })
-      .then(async (r) => {
-        // handle non-JSON errors gracefully
+
+    async function fetchFor(prog: string): Promise<Offering[]> {
+      const qs = new URLSearchParams({ program: prog, school_year: schoolYear, _ts: String(Date.now()) }).toString();
+      try {
+        const r = await fetch(`${url}?${qs}`, {
+          headers: { Accept: 'application/json', 'Cache-Control': 'no-cache' },
+          cache: 'no-store',
+        });
         try { return await r.json(); } catch { return []; }
-      })
-      .then((data: Offering[]) => setRows(Array.isArray(data) ? normalizeRows(data) : []))
-      .catch(() => setRows([]))
-      .finally(() => setLoading(false));
-  }, [program, schoolYear]);
+      } catch {
+        return [];
+      }
+    }
+
+    (async () => {
+      let lists: Offering[] = [];
+      if (program === 'All') {
+        // fetch for each actual program and merge
+        const uniqueProgs = Array.from(new Set(programOptions)).filter(Boolean);
+        const chunks = await Promise.all(uniqueProgs.map(p => fetchFor(p)));
+        lists = chunks.flat();
+      } else {
+        lists = await fetchFor(program);
+      }
+      setRows(Array.isArray(lists) ? normalizeRows(dedupeById(lists)) : []);
+      setLoading(false);
+    })();
+  }, [program, schoolYear, programOptions]);
 
   // ------------------ Derivations ------------------
-  const scheduledCount = useMemo(() => rows.filter(r => !!r.exam_date).length, [rows]);
-  const unscheduledCount = useMemo(() => rows.length - scheduledCount, [rows, scheduledCount]);
 
   const filtered = useMemo(() => {
     const s = (dq || '').toLowerCase().trim();
     let list = rows;
     if (statusFilter === 'active') list = list.filter(r => !!r.is_active);
     if (statusFilter === 'inactive') list = list.filter(r => !r.is_active);
-    if (scheduleTab === 'scheduled') list = list.filter(r => r.exam_date);
-    if (scheduleTab === 'unscheduled') list = list.filter(r => !r.exam_date);
+  // Removed scheduleTab filter (All/Scheduled/Unscheduled)
     if (!s) return sortRows(list);
     return sortRows(
       list.filter(r =>
@@ -283,11 +297,11 @@ export default function CoordinatorCompreExamScheduleIndex() {
           .includes(s),
       ),
     );
-  }, [rows, dq, statusFilter, scheduleTab]);
+  }, [rows, dq, statusFilter]);
 
   const [page, setPage] = useState(1);
   const pageSize = 10;
-  useEffect(() => setPage(1), [dq, statusFilter, scheduleTab, rows]);
+  useEffect(() => setPage(1), [dq, statusFilter, rows]);
   const total = filtered.length;
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
   const pageStart = (page - 1) * pageSize;
@@ -308,7 +322,7 @@ export default function CoordinatorCompreExamScheduleIndex() {
     const first = presets[0];
     setEditing(null);
     setForm({
-      program: program || '',
+      program: program === 'All' ? (programOptions[0] || '') : (program || ''),
       school_year: schoolYear || '',
       subject_code: first?.code ?? '',
       subject_name: first?.name ?? '',
@@ -396,11 +410,8 @@ export default function CoordinatorCompreExamScheduleIndex() {
       .then(() => {
         const msg = editing ? 'Saved changes' : 'Posted schedule';
         const desc = `${payload.subject_name || ''} • ${payload.program} • ${payload.school_year}`;
-        if (editing) {
-          toast.warning(msg, { description: desc }); // yellow
-        } else {
-          toast.success(msg, { description: desc }); // green
-        }
+        // Use success style for both add and edit confirmations
+        toast.success(msg, { description: desc });
         closeDialog();
         refresh();
       })
@@ -429,20 +440,36 @@ export default function CoordinatorCompreExamScheduleIndex() {
     const url = zig
       ? zig('coordinator.compre-exam-schedule.offerings.destroy', { offering: deleteTarget.id })
       : `/coordinator/compre-exam-schedule/offerings/${deleteTarget.id}`;
-    router.delete(url, {
-      preserveScroll: true,
-      onSuccess: () => {
-        toast.error('Deleted schedule', { // red
-          description: `${deleteTarget.subject_name} • ${deleteTarget.program} • ${deleteTarget.school_year}`,
-        });
-        closeDelete();
-        refresh();
-      },
-      onError: () => {
-        toast.error('Failed to delete schedule');
-      },
-      onFinish: () => setSubmitting(false),
-    });
+
+    try {
+      const res = await fetch(url, {
+        method: 'DELETE',
+        headers: {
+          Accept: 'application/json',
+          'X-Requested-With': 'XMLHttpRequest',
+          'X-CSRF-Token': getCsrfToken(),
+        },
+        credentials: 'same-origin',
+      });
+
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+      // Optimistically update UI immediately
+      setRows(prev => prev.filter(r => r.id !== deleteTarget.id));
+
+      toast.success('Deleted schedule', {
+        description: `${deleteTarget.subject_name} • ${deleteTarget.program} • ${deleteTarget.school_year}`,
+      });
+
+      closeDelete();
+      // Re-sync with server to be safe (in case of cross-program effects)
+      refresh();
+    } catch (e) {
+      console.error(e);
+      toast.error('Failed to delete schedule');
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   // Optional helper used elsewhere
@@ -453,47 +480,146 @@ export default function CoordinatorCompreExamScheduleIndex() {
     const url = zig
       ? zig('coordinator.compre-exam-schedule.offerings.destroy', { offering: row.id })
       : `/coordinator/compre-exam-schedule/offerings/${row.id}`;
-    router.delete(url, {
-      preserveScroll: true,
-      onSuccess: () => {
-        toast.error('Deleted schedule', {
+
+    fetch(url, {
+      method: 'DELETE',
+      headers: {
+        Accept: 'application/json',
+        'X-Requested-With': 'XMLHttpRequest',
+        'X-CSRF-Token': getCsrfToken(),
+      },
+      credentials: 'same-origin',
+    })
+      .then(r => {
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        // Optimistically update list
+        setRows(prev => prev.filter(it => it.id !== row.id));
+        toast.success('Deleted schedule', {
           description: `${row.subject_name} • ${row.program} • ${row.school_year}`,
         });
         refresh();
-      },
-      onError: () => toast.error('Failed to delete schedule'),
-      onFinish: () => setSubmitting(false),
-    });
+      })
+      .catch((e) => {
+        console.error(e);
+        toast.error('Failed to delete schedule');
+      })
+      .finally(() => setSubmitting(false));
   }
 
   function refresh() {
     const url =
       (window as any).route?.('api.exam-subject-offerings.index') ||
       '/api/exam-subject-offerings';
-    const qs = new URLSearchParams({ program, school_year: schoolYear, _ts: String(Date.now()) }).toString();
-    fetch(`${url}?${qs}`, {
-      headers: { Accept: 'application/json', 'Cache-Control': 'no-cache' },
-      cache: 'no-store',
-    })
-      .then((r) => r.json())
-      .then((data: Offering[]) => setRows(Array.isArray(data) ? normalizeRows(data) : []))
-      .catch(() => {})
-      .finally(() => setSubmitting(false));
+
+    // Helper to fetch for a specific program value
+    const fetchFor = async (prog: string): Promise<Offering[]> => {
+      const qs = new URLSearchParams({ program: prog, school_year: schoolYear, _ts: String(Date.now()) }).toString();
+      try {
+        const r = await fetch(`${url}?${qs}`, {
+          headers: { Accept: 'application/json', 'Cache-Control': 'no-cache' },
+          cache: 'no-store',
+        });
+        try { return await r.json(); } catch { return []; }
+      } catch {
+        return [];
+      }
+    };
+
+    (async () => {
+      try {
+        let lists: Offering[] = [];
+        if (program === 'All') {
+          const uniqueProgs = Array.from(new Set(programOptions)).filter(Boolean);
+          const chunks = await Promise.all(uniqueProgs.map(p => fetchFor(p)));
+          lists = chunks.flat();
+        } else {
+          lists = await fetchFor(program);
+        }
+        setRows(Array.isArray(lists) ? normalizeRows(dedupeById(lists)) : []);
+      } finally {
+        setSubmitting(false);
+      }
+    })();
   }
 
   // Suggestions based on selected program in form (fallback to page program)
   const subjectSuggestions = React.useMemo(() => {
-    const key = String(form.program || program);
+    const effProg = String(form.program || (program === 'All' ? (programOptions[0] || '') : program));
+    const key = effProg;
     return SUBJECT_PRESETS[key] || [];
-  }, [form.program, program]);
+  }, [form.program, program, programOptions]);
+
+  // Effective context for validations
+  const effectiveProgram = String(form.program || (program === 'All' ? (programOptions[0] || '') : program));
+  const effectiveSY = String(form.school_year || schoolYear);
+  const selectedExamYMD = String(form.exam_date || '');
+
+  // Duplicate prevention: same program + school year + subject (matches backend unique index)
+  const duplicateConflict = useMemo(() => {
+    if (!effectiveProgram || !effectiveSY) return false;
+    const subjCode = String(form.subject_code || '').trim().toLowerCase();
+    const subjName = String(form.subject_name || '').trim().toLowerCase();
+    if (!subjName && !subjCode) return false;
+    return rows.some(r => {
+      if (!r) return false;
+      if (editing && r.id === editing.id) return false;
+      const rCode = String(r.subject_code || '').trim().toLowerCase();
+      const rName = String(r.subject_name || '').trim().toLowerCase();
+      const sameSubject = (subjCode && rCode && subjCode === rCode) || (!subjCode && rName === subjName);
+      return (
+        r.program === effectiveProgram &&
+        r.school_year === effectiveSY &&
+        sameSubject
+      );
+    });
+  }, [rows, editing, effectiveProgram, effectiveSY, form.subject_code, form.subject_name]);
+
+  // Venue overlap prevention: same venue, same date, overlapping times (any subject)
+  const venueConflict = useMemo(() => {
+    const venue = String(form.venue || '').trim().toLowerCase();
+    if (!venue || !selectedExamYMD) return false;
+    const st = toHHmm(form.start_time || '');
+    const et = toHHmm(form.end_time || '');
+    if (!st || !et) return false;
+    const aStart = hhmmToMinutes(st);
+    const aEnd = hhmmToMinutes(et);
+    if (!(aStart < aEnd)) return false; // invalid/empty time handled elsewhere
+    return rows.some(r => {
+      if (!r) return false;
+      if (editing && r.id === editing.id) return false;
+      const rVenue = String(r.venue || '').trim().toLowerCase();
+      if (!rVenue || rVenue !== venue) return false;
+      if (r.exam_date !== selectedExamYMD) return false;
+      const bStart = hhmmToMinutes(toHHmm(r.start_time));
+      const bEnd = hhmmToMinutes(toHHmm(r.end_time));
+      return timesOverlap(aStart, aEnd, bStart, bEnd);
+    });
+  }, [rows, editing, form.venue, selectedExamYMD, form.start_time, form.end_time]);
 
   const isFormValid = useMemo(() => {
     const prog = String((form.program ?? '') || program).trim();
     const sy = String((form.school_year ?? '') || schoolYear).trim();
     const name = String(form.subject_name ?? '').trim();
     const syOk = /^\d{4}-\d{4}$/.test(sy);
-    return !!(prog && syOk && name);
-    }, [form.program, form.school_year, form.subject_name, program, schoolYear]);
+    // time ordering: if both provided, end must be after start
+    const st = toHHmm(form.start_time || '');
+    const et = toHHmm(form.end_time || '');
+    const bothTimes = !!(st && et);
+    const invalidTime = bothTimes && hhmmToMinutes(et)! <= hhmmToMinutes(st)!;
+    // date must not be in the past (if provided)
+    const invalidDate = (() => {
+      const ymd = String(form.exam_date || '');
+      if (!ymd) return false;
+      const d = toDate(ymd);
+      if (!d) return false;
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      d.setHours(0, 0, 0, 0);
+      return d < today;
+    })();
+    // Duplicate and venue conflicts block save
+    return !!(prog && syOk && name) && !invalidTime && !invalidDate && !duplicateConflict && !venueConflict;
+    }, [form.program, form.school_year, form.subject_name, form.start_time, form.end_time, form.exam_date, program, schoolYear, duplicateConflict, venueConflict]);
 
   // Helper to apply a suggestion
   function applySuggestion(val: string) {
@@ -511,9 +637,10 @@ export default function CoordinatorCompreExamScheduleIndex() {
 
   // subjects for currently selected program (in form if set, otherwise page program)
   const programSubjects = React.useMemo(() => {
-    const key = String(form.program || program);
+    const effProg = String(form.program || (program === 'All' ? (programOptions[0] || '') : program));
+    const key = effProg;
     return SUBJECT_PRESETS[key] || [];
-  }, [form.program, program]);
+  }, [form.program, program, programOptions]);
 
   // keep subject dropdown value in sync with current form values
   const selectedSubjectName = React.useMemo(() => form.subject_name || '', [form.subject_name]);
@@ -545,13 +672,30 @@ export default function CoordinatorCompreExamScheduleIndex() {
   }, [open, form.program, program]);
 
   /* ------------------ UI ------------------ */
+  // Derived UI state for time validation
+  const startHHmm = toHHmm(form.start_time || '');
+  const endHHmm = toHHmm(form.end_time || '');
+  const timeOrderInvalid = !!(startHHmm && endHHmm) && hhmmToMinutes(endHHmm)! <= hhmmToMinutes(startHHmm)!;
+  // Derived UI state for date validation
+  const examDateInvalid = (() => {
+    const ymd = String(form.exam_date || '');
+    if (!ymd) return false;
+    const d = toDate(ymd);
+    if (!d) return false;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    d.setHours(0, 0, 0, 0);
+    return d < today;
+  })();
+
+  // Note: duplicateConflict and venueConflict defined earlier above isFormValid
 
   return (
     <AppLayout>
       <Head title="Coordinator • Compre Exam Schedules" />
       <Toaster position="bottom-right" duration={5000} richColors closeButton />
       <div className="px-7 pt-5 pb-6">
-        {/* Title + Search + Tabs (mirrors Compre Payments) */}
+  {/* Title + Search */}
         <div className="flex flex-wrap items-center gap-3">
           {/* Title */}
           <div className="flex items-center gap-2 min-w-0 flex-1">
@@ -580,75 +724,15 @@ export default function CoordinatorCompreExamScheduleIndex() {
             <Search className="absolute left-2 top-2.5 h-4 w-4 text-slate-400" />
           </div>
 
-          {/* Tabs: All / Scheduled / Unscheduled */}
-          <div
-            className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white p-1 shadow dark:border-slate-800 dark:bg-slate-900"
-            role="tablist"
-            aria-label="Schedule Filters"
-          >
-            <Button
-              role="tab"
-              aria-selected={scheduleTab === 'all'}
-              variant="ghost"
-              className={`h-9 px-3 rounded-md transition ${
-                scheduleTab === 'all'
-                  ? 'bg-rose-50 text-rose-700 ring-1 ring-rose-100 hover:bg-rose-50 dark:bg-rose-950/40 dark:text-rose-300 dark:ring-rose-900'
-                  : 'text-slate-600 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-800/60'
-              }`}
-              onClick={() => setScheduleTab('all')}
-            >
-              <span className="mr-2">All</span>
-              <span className={`inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[11px] font-semibold ${
-                scheduleTab === 'all'
-                  ? 'bg-rose-600 text-white dark:bg-rose-500'
-                  : 'border border-rose-200 text-rose-700 dark:border-rose-900 dark:text-rose-300'
-              }`}>{rows.length}</span>
-            </Button>
-            <Button
-              role="tab"
-              aria-selected={scheduleTab === 'scheduled'}
-              variant="ghost"
-              className={`h-9 px-3 rounded-md transition ${
-                scheduleTab === 'scheduled'
-                  ? 'bg-rose-50 text-rose-700 ring-1 ring-rose-100 hover:bg-rose-50 dark:bg-rose-950/40 dark:text-rose-300 dark:ring-rose-900'
-                  : 'text-slate-600 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-800/60'
-              }`}
-              onClick={() => setScheduleTab('scheduled')}
-            >
-              <span className="mr-2">Scheduled</span>
-              <span className={`inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[11px] font-semibold ${
-                scheduleTab === 'scheduled'
-                  ? 'bg-rose-600 text-white dark:bg-rose-500'
-                  : 'border border-rose-200 text-rose-700 dark:border-rose-900 dark:text-rose-300'
-              }`}>{scheduledCount}</span>
-            </Button>
-            <Button
-              role="tab"
-              aria-selected={scheduleTab === 'unscheduled'}
-              variant="ghost"
-              className={`h-9 px-3 rounded-md transition ${
-                scheduleTab === 'unscheduled'
-                  ? 'bg-rose-50 text-rose-700 ring-1 ring-rose-100 hover:bg-rose-50 dark:bg-rose-950/40 dark:text-rose-300 dark:ring-rose-900'
-                  : 'text-slate-600 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-800/60'
-              }`}
-              onClick={() => setScheduleTab('unscheduled')}
-            >
-              <span className="mr-2">Unscheduled</span>
-              <span className={`inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[11px] font-semibold ${
-                scheduleTab === 'unscheduled'
-                  ? 'bg-rose-600 text-white dark:bg-rose-500'
-                  : 'border border-rose-200 text-rose-700 dark:border-rose-900 dark:text-rose-300'
-              }`}>{unscheduledCount}</span>
-            </Button>
-          </div>
         </div>
 
         {/* Secondary toolbar: Program, SY, Status, Clear/Add */}
-        <div className="mt-3 grid grid-cols-1 md:grid-cols-[auto_auto_auto_auto] gap-3 items-end">
-          {programOptions.length > 1 && (
-            <div className="min-w-0 w-full sm:w-[22rem]">
-               <Label className="text-xs text-muted-foreground">Program</Label>
-               <Select value={program} onValueChange={setProgram}>
+        <div className="mt-3 flex flex-wrap items-end gap-3 justify-between">
+          {/* Left compact filters */}
+          <div className="flex items-end gap-3">
+            <div className="min-w-0 w-56">
+              <Label className="text-xs text-muted-foreground">Program</Label>
+              <Select value={program} onValueChange={setProgram}>
                 <SelectTrigger
                   className="h-9 mt-1 w-full overflow-hidden text-ellipsis whitespace-nowrap"
                   title={program}
@@ -656,7 +740,7 @@ export default function CoordinatorCompreExamScheduleIndex() {
                   <SelectValue placeholder="Select program" />
                 </SelectTrigger>
                 <SelectContent className="max-h-72 w-[min(28rem,calc(100vw-2rem))]">
-                  {programOptions.map((p) => (
+                  {displayPrograms.map((p) => (
                     <SelectItem
                       key={p}
                       value={p}
@@ -667,30 +751,34 @@ export default function CoordinatorCompreExamScheduleIndex() {
                     </SelectItem>
                   ))}
                 </SelectContent>
-               </Select>
-             </div>
-          )}
-          <div className="w-36">
-            <Label className="text-xs text-muted-foreground">School Year</Label>
-            <Select value={schoolYear} onValueChange={setSchoolYear}>
-              <SelectTrigger className="h-9 mt-1"><SelectValue placeholder="YYYY-YYYY" /></SelectTrigger>
-              <SelectContent>
-                {syOptions.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
-              </SelectContent>
-            </Select>
+              </Select>
+            </div>
+
+            <div className="w-40">
+              <Label className="text-xs text-muted-foreground">School Year</Label>
+              <Select value={schoolYear} onValueChange={setSchoolYear}>
+                <SelectTrigger className="h-9 mt-1"><SelectValue placeholder="YYYY-YYYY" /></SelectTrigger>
+                <SelectContent>
+                  {syOptions.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="w-40">
+              <Label className="text-xs text-muted-foreground">Status</Label>
+              <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as any)}>
+                <SelectTrigger className="h-9 mt-1"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All</SelectItem>
+                  <SelectItem value="active">Active</SelectItem>
+                  <SelectItem value="inactive">Inactive</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
-          <div className="w-40">
-            <Label className="text-xs text-muted-foreground">Status</Label>
-            <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as any)}>
-              <SelectTrigger className="h-9 mt-1"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All</SelectItem>
-                <SelectItem value="active">Active</SelectItem>
-                <SelectItem value="inactive">Inactive</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="flex items-center gap-2 justify-end">
+
+          {/* Right actions */}
+          <div className="flex items-center gap-2">
             <Button variant="outline" type="button" className="h-9" onClick={resetFilters}>Clear</Button>
             <Button type="button" onClick={openCreate} className="h-9"><Plus className="h-4 w-4 mr-1" /> Add schedule</Button>
           </div>
@@ -802,9 +890,16 @@ export default function CoordinatorCompreExamScheduleIndex() {
           <DialogContent
             className="sm:max-w-xl w-[min(96vw,720px)] overflow-x-hidden"
             onOpenAutoFocus={(e) => e.preventDefault()} // avoid unexpected auto-focus shifting
+            onCloseAutoFocus={(e) => e.preventDefault()} // avoid focus restore loop to a removed trigger
           >
             <DialogHeader>
               <DialogTitle>{editing ? 'Edit offering' : 'Add offering'}</DialogTitle>
+              {/* Provide an accessible description to satisfy Radix a11y warning */}
+              <DialogDescription className="sr-only">
+                {editing
+                  ? 'Update the comprehensive exam offering details and save your changes.'
+                  : 'Fill out the comprehensive exam offering details and post the schedule.'}
+              </DialogDescription>
             </DialogHeader>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -863,12 +958,17 @@ export default function CoordinatorCompreExamScheduleIndex() {
                   onValueChange={onSelectSubjectName}
                   disabled={subjectOptions.length === 0}
                 >
-                  <SelectTrigger className="h-9 mt-1">
+                  <SelectTrigger className="h-9 mt-1 w-full overflow-hidden text-ellipsis whitespace-nowrap">
                     <SelectValue placeholder={subjectOptions.length ? 'Select subject' : 'No subjects'} />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="max-h-72 w-[min(28rem,calc(100vw-2rem))]">
                     {subjectOptions.map((s, i) => (
-                      <SelectItem key={`${s.name}-${i}`} value={s.name}>
+                      <SelectItem
+                        key={`${s.name}-${i}`}
+                        value={s.name}
+                        className="whitespace-normal break-words text-sm leading-snug py-2"
+                        title={s.name}
+                      >
                         {s.name}
                       </SelectItem>
                     ))}
@@ -884,6 +984,7 @@ export default function CoordinatorCompreExamScheduleIndex() {
                   value={form.subject_code || ''}
                   onChange={(e) => onFormChange('subject_code', e.target.value)}
                   placeholder="Auto-filled"
+                  readOnly
                 />
               </div>
 
@@ -892,7 +993,11 @@ export default function CoordinatorCompreExamScheduleIndex() {
                 <Label className="text-xs text-muted-foreground">Exam Date</Label>
                 <Popover modal={false} open={dateOpen} onOpenChange={setDateOpen}>
                   <PopoverTrigger asChild>
-                    <Button variant="outline" className="mt-1 h-9 w-full justify-start">
+                    <Button
+                      variant="outline"
+                      className={`mt-1 h-9 w-full justify-start ${examDateInvalid ? 'border-rose-300 focus-visible:ring-rose-500' : ''}`}
+                      aria-invalid={examDateInvalid}
+                    >
                       {form.exam_date ? fmtDate(form.exam_date) : 'Pick a date'}
                     </Button>
                   </PopoverTrigger>
@@ -913,26 +1018,51 @@ export default function CoordinatorCompreExamScheduleIndex() {
                     />
                   </PopoverContent>
                 </Popover>
+                {examDateInvalid && (
+                  <p className="mt-1 text-xs text-rose-600">Exam date cannot be in the past.</p>
+                )}
               </div>
 
               <div className="min-w-0">
                 <Label className="text-xs text-muted-foreground">Start Time</Label>
-                <Input type="time" className="mt-1 h-9" value={toHHmm(form.start_time || '')} onChange={(e) => onFormChange('start_time', e.target.value)} />
+                <Input
+                  type="time"
+                  className={`mt-1 h-9 ${timeOrderInvalid ? 'border-rose-300 focus-visible:ring-rose-500' : ''}`}
+                  aria-invalid={timeOrderInvalid}
+                  value={toHHmm(form.start_time || '')}
+                  onChange={(e) => onFormChange('start_time', e.target.value)}
+                />
               </div>
 
               <div className="min-w-0">
                 <Label className="text-xs text-muted-foreground">End Time</Label>
-                <Input type="time" className="mt-1 h-9" value={toHHmm(form.end_time || '')} onChange={(e) => onFormChange('end_time', e.target.value)} />
+                <Input
+                  type="time"
+                  className={`mt-1 h-9 ${(timeOrderInvalid || duplicateConflict) ? 'border-rose-300 focus-visible:ring-rose-500' : ''}`}
+                  aria-invalid={timeOrderInvalid || duplicateConflict}
+                  value={toHHmm(form.end_time || '')}
+                  onChange={(e) => onFormChange('end_time', e.target.value)}
+                />
+                {timeOrderInvalid && (
+                  <p className="mt-1 text-xs text-rose-600">End time must be after start time.</p>
+                )}
+                {!timeOrderInvalid && duplicateConflict && (
+                  <p className="mt-1 text-xs text-rose-600">A schedule for this subject already exists on the selected date/time.</p>
+                )}
               </div>
 
             <div className="sm:col-span-2 min-w-0">
                 <Label className="text-xs text-muted-foreground">Venue (optional)</Label>
                 <Input
-                  className="mt-1 h-9"
+                  className={`mt-1 h-9 ${venueConflict ? 'border-rose-300 focus-visible:ring-rose-500' : ''}`}
+                  aria-invalid={venueConflict}
                   value={form.venue || ''}
                   onChange={(e) => onFormChange('venue', e.target.value)}
                   placeholder="e.g., Room 204, Lab A"
                 />
+                {venueConflict && (
+                  <p className="mt-1 text-xs text-rose-600">This venue is already booked at the selected date/time.</p>
+                )}
               </div>
             </div>
 
@@ -1054,9 +1184,40 @@ function toHHmm(t?: string | null) {
   return parts.length >= 2 ? `${parts[0].padStart(2, '0')}:${parts[1].padStart(2, '0')}` : t;
 }
 
+// Convert HH:mm to total minutes since 00:00; returns 0 for invalid but Inputs enforce valid time
+function hhmmToMinutes(t: string): number {
+  const m = /^(\d{1,2}):(\d{2})$/.exec(t);
+  if (!m) return 0;
+  const h = Math.max(0, Math.min(23, Number(m[1])));
+  const min = Math.max(0, Math.min(59, Number(m[2])));
+  return h * 60 + min;
+}
+
+// Interval overlap helper (strict overlap when ranges intersect)
+function timesOverlap(aStart: number, aEnd: number, bStart: number, bEnd: number): boolean {
+  // Treat invalid intervals as non-overlapping
+  if (!(aStart < aEnd) || !(bStart < bEnd)) return false;
+  return aStart < bEnd && bStart < aEnd;
+}
+
 function emptyToNull(s?: string | null) {
   const v = (s ?? '').toString().trim();
   return v === '' ? null : v;
+}
+
+// Remove duplicate offerings by id while preserving order
+function dedupeById(list: Offering[]): Offering[] {
+  const seen = new Set<number>();
+  const out: Offering[] = [];
+  for (const item of list) {
+    // Guard against nullish entries and ensure numeric ids per type
+    if (!item || typeof item.id !== 'number') continue;
+    if (!seen.has(item.id)) {
+      seen.add(item.id);
+      out.push(item);
+    }
+  }
+  return out;
 }
 
 function normalizeRows(list: Offering[]): Offering[] {

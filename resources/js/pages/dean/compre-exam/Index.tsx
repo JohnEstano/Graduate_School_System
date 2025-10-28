@@ -51,6 +51,7 @@ export default function DeanCompreExamIndex({ programs = UIC_PROGRAMS }: { progr
   const [hasRemarks, setHasRemarks] = useState<'all'|'yes'|'no'>('all');
   const [sortDir, setSortDir] = useState<'asc'|'desc'>('desc');
   const [openInsights, setOpenInsights] = useState(false);
+  const [programFilter, setProgramFilter] = useState<'all'|string>('all');
 
   const fetchRows = React.useCallback(() => {
     const p = new URLSearchParams();
@@ -133,8 +134,9 @@ export default function DeanCompreExamIndex({ programs = UIC_PROGRAMS }: { progr
     if (fromDate) out = out.filter(r => r.created_at && new Date(r.created_at) >= new Date(fromDate.setHours(0,0,0,0)));
     if (toDate) out = out.filter(r => r.created_at && new Date(r.created_at) <= new Date(toDate.setHours(23,59,59,999)));
     if (hasRemarks !== 'all') out = out.filter(r => (r.final_approval_reason && r.final_approval_reason.trim().length > 0) === (hasRemarks === 'yes'));
+    if (programFilter !== 'all') out = out.filter(r => (r.program || '') === programFilter);
     return out;
-  }, [srcForTabRows, schoolYear, fromDate, toDate, hasRemarks]);
+  }, [srcForTabRows, schoolYear, fromDate, toDate, hasRemarks, programFilter]);
 
   const searchedRows = useMemo(() => {
     const term = dq.trim().toLowerCase();
@@ -292,10 +294,29 @@ export default function DeanCompreExamIndex({ programs = UIC_PROGRAMS }: { progr
             tabType={tab}
             showStatusFilter={false}
             programOptions={programsFromRows}
+            programValue={programFilter}
+            onProgramChange={(v)=>{ setProgramFilter(v as any); setPage(1); }}
             onApprove={onApprove}
             onReject={onReject}
             onApproveMany={onApproveMany}
             onRejectMany={onRejectMany}
+            onRetrieve={async (id:number)=>{
+              await fetch(`/dean/exam-applications/${id}/revert`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', Accept: 'application/json', 'X-CSRF-Token': csrf() },
+                credentials: 'same-origin',
+              }).then(r => { if (!r.ok) throw new Error('Revert failed'); });
+              fetchRows();
+            }}
+            onRetrieveMany={async (ids:number[])=>{
+              await fetch('/dean/exam-applications/bulk-revert', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', Accept: 'application/json', 'X-CSRF-Token': csrf() },
+                credentials: 'same-origin',
+                body: JSON.stringify({ ids }),
+              }).then(r => { if (!r.ok) throw new Error('Bulk revert failed'); });
+              fetchRows();
+            }}
             loading={loading}
             schoolYearOptions={schoolYears}
             schoolYearValue={schoolYear}
@@ -308,7 +329,7 @@ export default function DeanCompreExamIndex({ programs = UIC_PROGRAMS }: { progr
             onHasRemarksChange={(v)=>setHasRemarks(v)}
             sortDir={sortDir}
             onSortDirChange={(d)=>setSortDir(d)}
-            onResetFilters={()=>{ setSchoolYear('all'); setFromDate(null); setToDate(null); setHasRemarks('all'); setSortDir('desc'); }}
+            onResetFilters={()=>{ setSchoolYear('all'); setFromDate(null); setToDate(null); setHasRemarks('all'); setSortDir('desc'); setProgramFilter('all'); setPage(1); }}
           />
           {/* Pagination footer */}
           <div className="px-1 py-2 flex items-center justify-between text-sm text-muted-foreground">

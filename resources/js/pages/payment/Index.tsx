@@ -30,7 +30,7 @@ type PageProps = {
 };
 
 // DEV ONLY: simulate approval/opening the form (remove when API is ready)
-const DEV_SIMULATE_PAYMENT = false;
+const DEV_SIMULATE_PAYMENT = true;
 // Default simulation values (used when no URL params are provided)
 const SIM_DEFAULTS = {
   canSubmit: true,   // pretend the comprehensive application is approved
@@ -140,7 +140,13 @@ export default function Index() {
           if (!isOpen) setShowSuccessPanel(false);
         }}
       >
-        <DialogContent className="flex h-[70vh] w-full max-w-3xl flex-col"> {/* slightly shorter modal */}
+        <DialogContent className="flex h-[70vh] w-full max-w-3xl flex-col" aria-describedby={undefined}> {/* slightly shorter modal */}
+          <DialogHeader>
+            <DialogTitle>{showSuccessPanel ? 'Payment submitted' : 'Submit payment'}</DialogTitle>
+            <DialogDescription>
+              {showSuccessPanel ? 'Your payment has been saved successfully.' : 'Fill out your receipt details below.'}
+            </DialogDescription>
+          </DialogHeader>
 
           {showSuccessPanel ? (
             <div className="flex flex-1 flex-col items-center justify-center space-y-6 px-4">

@@ -3,6 +3,7 @@ import AppLayout from '@/layouts/app-layout';
 import { Head, usePage } from '@inertiajs/react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
   Search,
   PaperclipIcon,
@@ -15,6 +16,7 @@ import {
   ChevronRight,
 } from 'lucide-react';
 import TableComprePayment from './table-compre-payment';
+import { Toaster } from '@/components/ui/sonner';
 
 export type ComprePaymentSummary = {
   id: number;
@@ -44,15 +46,15 @@ type PageProps = {
 
 export default function CoordinatorComprePaymentIndex() {
   const { props } = usePage<PageProps>();
-  const { programs = [], pending = [], approved = [], rejected = [], counts } = props;
+  const { pending = [], approved = [], rejected = [] } = props;
 
   // --- URL-driven tab + search ---
-  const [tab, setTab] = useState<'pending' | 'rejected' | 'approved'>('pending');
+  const [status, setStatus] = useState<'all' | 'pending' | 'rejected' | 'approved'>('pending');
   const [q, setQ] = useState('');
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    const t = (params.get('tab') || '').toLowerCase();
-    if (t === 'approved' || t === 'rejected' || t === 'pending') setTab(t as any);
+    const raw = (params.get('status') || params.get('tab') || '').toLowerCase();
+    if (raw === 'approved' || raw === 'rejected' || raw === 'pending' || raw === 'all') setStatus(raw as any);
     const qs = params.get('q');
     if (qs) setQ(qs);
   }, []);
@@ -60,19 +62,24 @@ export default function CoordinatorComprePaymentIndex() {
   const dq = useDeferredValue(q);
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    params.set('tab', tab);
+    params.set('status', status);
+    // keep legacy param in sync for backward-compat
+    params.set('tab', status);
     if (dq) params.set('q', dq);
     else params.delete('q');
     const url = `${window.location.pathname}?${params.toString()}`;
     window.history.replaceState(null, '', url);
-  }, [tab, dq]);
+  }, [status, dq]);
 
   // --- Data source by tab + search ---
   const all = { pending, rejected, approved } as const;
 
   // 1) full filtered list (for "Showing N")
   const filtered = useMemo(() => {
-    const src = all[tab] || [];
+    const src =
+      status === 'all'
+        ? ([] as ComprePaymentSummary[]).concat(pending || [], rejected || [], approved || [])
+        : (all[status as 'pending' | 'rejected' | 'approved'] || []);
     const query = dq.trim().toLowerCase();
     if (!query) return src;
     return src.filter((r) =>
@@ -89,7 +96,7 @@ export default function CoordinatorComprePaymentIndex() {
         .toLowerCase()
         .includes(query)
     );
-  }, [tab, dq, pending, approved, rejected]);
+  }, [status, dq, pending, approved, rejected]);
 
   // 2) pagination over filtered list
   const [page, setPage] = useState(1);
@@ -97,7 +104,7 @@ export default function CoordinatorComprePaymentIndex() {
   useEffect(() => {
     // reset to first page when tab or search changes
     setPage(1);
-  }, [tab, dq]);
+  }, [status, dq]);
 
   const total = filtered.length;
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
@@ -123,10 +130,10 @@ export default function CoordinatorComprePaymentIndex() {
       maximumFractionDigits: 2,
     });
 
-    // Per-tab amount (helps understand magnitude for current view)
-    const tabArr =
-      tab === 'approved' ? approved : tab === 'rejected' ? rejected : pending;
-    const tabAmountFmt = currency.format(sum(tabArr));
+    // Per-filter amount (helps understand magnitude for current view)
+    const filterArr =
+      status === 'approved' ? approved : status === 'rejected' ? rejected : status === 'pending' ? pending : ([] as ComprePaymentSummary[]).concat(pending, approved, rejected);
+    const tabAmountFmt = currency.format(sum(filterArr));
 
     return {
       total: totalAll,
@@ -136,7 +143,7 @@ export default function CoordinatorComprePaymentIndex() {
       approvalRate,
       tabAmountFmt,
     };
-  }, [pending, approved, rejected, tab]);
+  }, [pending, approved, rejected, status]);
 
   const columns = {
     student: true,
@@ -181,80 +188,19 @@ export default function CoordinatorComprePaymentIndex() {
             <Search className="absolute left-2 top-2.5 h-4 w-4 text-slate-400" />
           </div>
 
-          {/* Tabs */}
-          <div
-            className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white p-1 shadow dark:border-slate-800 dark:bg-slate-900"
-            role="tablist"
-            aria-label="Comprehensive Exam Filters"
-          >
-            <Button
-              role="tab"
-              aria-selected={tab === 'pending'}
-              variant="ghost"
-              className={`h-9 px-3 rounded-md transition ${
-                tab === 'pending'
-                  ? 'bg-rose-50 text-rose-700 ring-1 ring-rose-100 hover:bg-rose-50 dark:bg-rose-950/40 dark:text-rose-300 dark:ring-rose-900'
-                  : 'text-slate-600 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-800/60'
-              }`}
-              onClick={() => setTab('pending')}
-            >
-              <span className="mr-2">Pending</span>
-              <span
-                className={`inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[11px] font-semibold ${
-                  tab === 'pending'
-                    ? 'bg-rose-600 text-white dark:bg-rose-500'
-                    : 'border border-rose-200 text-rose-700 dark:border-rose-900 dark:text-rose-300'
-                }`}
-              >
-                {counts?.pending ?? pending.length}
-              </span>
-            </Button>
-
-            <Button
-              role="tab"
-              aria-selected={tab === 'rejected'}
-              variant="ghost"
-              className={`h-9 px-3 rounded-md transition ${
-                tab === 'rejected'
-                  ? 'bg-rose-50 text-rose-700 ring-1 ring-rose-100 hover:bg-rose-50 dark:bg-rose-950/40 dark:text-rose-300 dark:ring-rose-900'
-                  : 'text-slate-600 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-800/60'
-              }`}
-              onClick={() => setTab('rejected')}
-            >
-              <span className="mr-2">Rejected</span>
-              <span
-                className={`inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[11px] font-semibold ${
-                  tab === 'rejected'
-                    ? 'bg-rose-600 text-white dark:bg-rose-500'
-                    : 'border border-rose-200 text-rose-700 dark:border-rose-900 dark:text-rose-300'
-                }`}
-              >
-                {counts?.rejected ?? rejected.length}
-              </span>
-            </Button>
-
-            <Button
-              role="tab"
-              aria-selected={tab === 'approved'}
-              variant="ghost"
-              className={`h-9 px-3 rounded-md transition ${
-                tab === 'approved'
-                  ? 'bg-rose-50 text-rose-700 ring-1 ring-rose-100 hover:bg-rose-50 dark:bg-rose-950/40 dark:text-rose-300 dark:ring-rose-900'
-                  : 'text-slate-600 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-800/60'
-              }`}
-              onClick={() => setTab('approved')}
-            >
-              <span className="mr-2">Approved</span>
-              <span
-                className={`inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[11px] font-semibold ${
-                  tab === 'approved'
-                    ? 'bg-rose-600 text-white dark:bg-rose-500'
-                    : 'border border-rose-200 text-rose-700 dark:border-rose-900 dark:text-rose-300'
-                }`}
-              >
-                {counts?.approved ?? approved.length}
-              </span>
-            </Button>
+          {/* Status dropdown */}
+          <div className="w-full sm:w-48">
+            <Select value={status} onValueChange={(v: any) => setStatus(v)}>
+              <SelectTrigger aria-label="Filter by status">
+                <SelectValue placeholder="Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All</SelectItem>
+                <SelectItem value="pending">Pending</SelectItem>
+                <SelectItem value="rejected">Rejected</SelectItem>
+                <SelectItem value="approved">Approved</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         </div>
 
@@ -291,7 +237,7 @@ export default function CoordinatorComprePaymentIndex() {
             sub={<ProgressBar value={kpis.approvalRate} />}
           />
           <CardSmall
-            label={tab === 'approved' ? 'Approved amount (tab)' : 'Amount (tab)'}
+            label={status === 'approved' ? 'Approved amount (filter)' : 'Amount (filter)'}
             value={kpis.tabAmountFmt}
             accent="bg-indigo-50"
             icon={<CircleDollarSign className="h-4 w-4 text-indigo-700" />}
@@ -303,7 +249,7 @@ export default function CoordinatorComprePaymentIndex() {
           <TableComprePayment
             paged={pageItems}
             columns={columns}
-            tabType={tab}
+            tabType={status === 'all' ? undefined : (status as 'pending' | 'rejected' | 'approved')}
             showStatusFilter={false}
           />
         </div>
@@ -340,6 +286,8 @@ export default function CoordinatorComprePaymentIndex() {
           </div>
         </div>
       </div>
+      {/* Toasts for bottom-right success messages */}
+      <Toaster position="bottom-right" duration={5000} richColors closeButton />
     </AppLayout>
   );
 }

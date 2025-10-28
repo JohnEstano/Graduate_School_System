@@ -12,29 +12,45 @@ use Illuminate\Support\Carbon;
 use Database\Seeders\CoordinatorProgramSeeder;
 use App\Models\CoordinatorProgram;
 use App\Models\CoordinatorProgramAssignment;
+use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 
 class PaymentSubmissionController extends Controller
 {
+    /**
+     * Determine if the current user has an approved comprehensive exam application
+     * matching any of their known identifiers (school_id, student_number, or id).
+     */
+    private function userHasApprovedExamApplication($user): bool
+    {
+        if (!Schema::hasTable('exam_application')) return false;
+
+        $ids = array_values(array_unique(array_filter([
+            $user->student_id ? trim((string) $user->student_id) : null,
+            $user->school_id ? trim((string) $user->school_id) : null,
+            $user->student_number ? trim((string) $user->student_number) : null,
+            (string) $user->id,
+        ])));
+
+        if (empty($ids)) return false;
+
+        return DB::table('exam_application')
+            ->where(function ($q) use ($ids) {
+                foreach ($ids as $i => $val) {
+                    $i === 0
+                        ? $q->whereRaw('TRIM(student_id) = ?', [$val])
+                        : $q->orWhereRaw('TRIM(student_id) = ?', [$val]);
+                }
+            })
+            ->where('final_approval_status', 'approved')
+            ->exists();
+    }
     public function index(Request $request)
     {
         $user = Auth::user();
 
-        // Accept either users.id or users.student_number stored in exam_application.student_id
-        $ids = array_values(array_unique(array_filter([
-            (string) $user->id,
-            $user->student_number ? (string) $user->student_number : null,
-        ])));
-
-        $hasApp = false;
-        if (Schema::hasTable('exam_application')) {
-            $hasApp = DB::table('exam_application')
-                ->where(function ($q) use ($ids) {
-                    foreach ($ids as $i => $val) {
-                        $i === 0 ? $q->where('student_id', $val) : $q->orWhere('student_id', $val);
-                    }
-                })
-                ->exists();
-        }
+        // Require an approved comprehensive exam application (Dean-approved)
+        $hasApp = $this->userHasApprovedExamApplication($user);
 
         $payment = PaymentSubmission::where('student_id', $user->id)
             ->where('payment_type', 'exam')
@@ -65,27 +81,12 @@ class PaymentSubmissionController extends Controller
     {
         $user = $request->user();
 
-        // Must have an application first (either users.id or users.student_number saved as student_id)
-        $ids = array_values(array_unique(array_filter([
-            (string) $user->id,
-            $user->student_number ? (string) $user->student_number : null,
-        ])));
-
-        $hasApp = false;
-        if (Schema::hasTable('exam_application')) {
-            $hasApp = DB::table('exam_application')
-                ->where(function ($q) use ($ids) {
-                    foreach ($ids as $i => $val) {
-                        $i === 0 ? $q->where('student_id', $val) : $q->orWhere('student_id', $val);
-                    }
-                })
-                ->exists();
-        }
-
-        if (! $hasApp) {
-            return back()->withErrors([
-                'form' => 'You can only submit payment after submitting your comprehensive application.',
-            ])->withInput();
+        // Must have a dean-approved comprehensive exam application first
+        if (! $this->userHasApprovedExamApplication($user)) {
+            // Return a proper 422 validation error so Inertia useForm captures it
+            throw ValidationException::withMessages([
+                'form' => 'You can submit payment only after your comprehensive application is approved.',
+            ]);
         }
 
         $existing = PaymentSubmission::where('student_id', $user->id)
@@ -93,7 +94,10 @@ class PaymentSubmissionController extends Controller
             ->first();
 
         $validated = $request->validate([
-            'or_number'     => ['required','string','max:50'],
+            'or_number'     => ['required','string','max:50',
+                Rule::unique('payment_submissions','or_number')
+                    ->ignore(optional($existing)->payment_id, 'payment_id')
+            ],
             'payment_date'  => ['required','date'],
             'amount_paid'   => ['required','numeric','min:0'],
             'receipt_image' => [$existing && $existing->receipt_image ? 'nullable' : 'required', 'image', 'max:5120'],
@@ -102,7 +106,7 @@ class PaymentSubmissionController extends Controller
         $payload = [
             'student_id'   => $user->id,
             'payment_type' => 'exam',
-            'or_number'    => $validated['or_number'],
+            'or_number'    => strtoupper(trim($validated['or_number'])),
             'payment_date' => $validated['payment_date'],
             'amount_paid'  => $validated['amount_paid'],
             'status'       => 'pending',
@@ -255,6 +259,29 @@ class PaymentSubmissionController extends Controller
         return back()->with('success', 'Payment rejected.');
     }
 
+    public function retrieve(Request $request, int $id)
+    {
+        $user = $request->user();
+        // if (method_exists($user, 'isCoordinator') && ! $user->isCoordinator()) abort(403);
+
+        $row = PaymentSubmission::where('payment_id', $id)
+            ->where('payment_type', 'exam')
+            ->firstOrFail();
+
+        if (strtolower($row->status) !== 'rejected') {
+            return back()->withErrors(['status' => 'Only rejected payments can be retrieved.']);
+        }
+
+        $row->status = 'pending';
+        $row->remarks = null;
+        // Reset check metadata when moving back to pending
+        $row->checked_by = null;
+        $row->checked_at = null;
+        $row->save();
+
+        return back()->with('success', 'Payment retrieved for review.');
+    }
+
     public function bulkApprove(Request $request)
     {
         $user = $request->user();
@@ -296,5 +323,47 @@ class PaymentSubmissionController extends Controller
             ]);
 
         return back()->with('success', 'Selected payments rejected.');
+    }
+
+    public function bulkRetrieve(Request $request)
+    {
+        $user = $request->user();
+        $ids = (array) $request->input('ids', []);
+        if (! count($ids)) return back()->withErrors(['ids' => 'No records selected.']);
+
+        DB::table('payment_submissions')
+            ->whereIn('payment_id', $ids)
+            ->where('payment_type', 'exam')
+            ->where('status', 'rejected')
+            ->update([
+                'status' => 'pending',
+                'remarks' => null,
+                'checked_by' => null,
+                'checked_at' => null,
+                'updated_at' => Carbon::now(),
+            ]);
+
+        return back()->with('success', 'Selected payments retrieved for review.');
+    }
+
+    // Lightweight API for async client validation of OR number uniqueness
+    public function checkOrUnique(Request $request)
+    {
+        $user = $request->user();
+        $or = strtoupper(trim((string) $request->query('or')));
+        if ($or === '') {
+            return response()->json(['unique' => false, 'reason' => 'empty'], 400);
+        }
+
+        // Exclude the caller's existing exam payment row (so updating same OR passes)
+        $own = PaymentSubmission::where('student_id', $user->id)
+            ->where('payment_type', 'exam')
+            ->first();
+
+        $conflict = PaymentSubmission::whereRaw('UPPER(or_number) = ?', [$or])
+            ->when($own, function ($q) use ($own) { $q->where('payment_id', '!=', $own->payment_id); })
+            ->exists();
+
+        return response()->json(['unique' => !$conflict]);
     }
 }

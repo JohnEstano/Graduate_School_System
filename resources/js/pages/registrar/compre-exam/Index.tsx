@@ -151,7 +151,7 @@ export default function RegistrarCompreExamIndex() {
   }, [rows]);
 
   // Bulk actions from table
-  const handleBulkAction = (ids: number[], action: 'approve'|'reject') => {
+  const handleBulkAction = (ids: number[], action: 'approve'|'reject', reasonArg?: string) => {
     if (ids.length === 0) return;
     // naive sequential calls; can be optimized/batched server-side later
     const doOne = (id: number) => fetch(`/registrar/exam-applications/${id}/decision`, {
@@ -162,10 +162,13 @@ export default function RegistrarCompreExamIndex() {
       },
       credentials: 'same-origin',
       body: JSON.stringify({
+        // For bulk operations, record completeness flags and overall aggregate booleans for audit trail
         doc_photo_clear: true, doc_transcript: true, doc_psa_birth: true, doc_honorable_dismissal: true,
         doc_prof_exam: false, doc_marriage_cert: false,
         grades_complete: true,
-        status: action, reason: action === 'reject' ? 'Bulk review: incomplete requirements.' : null,
+        documents_complete: true,
+        status: action,
+        reason: action === 'reject' ? (reasonArg && reasonArg.trim() ? reasonArg.trim() : 'Bulk review: incomplete requirements.') : null,
       }),
     }).then(r => { if (!r.ok) throw new Error(String(r.status)); });
 
@@ -200,11 +203,29 @@ export default function RegistrarCompreExamIndex() {
       .then((json) => { if (json && typeof json.gradesComplete === 'boolean') setGradesComplete(json.gradesComplete); })
       .catch(() => {});
 
-    // Audit trail
-    fetch(`/api/registrar/exam-applications/${cur.application_id}/reviews`, {
-      headers: { Accept: 'application/json' }, credentials: 'same-origin',
-    }).then((r) => r.ok ? r.json() : [])
-      .then(setAudit)
+    // Audit trail (normalize, with fallback endpoint if API 500s)
+    const normalizeAudit = (data: any) => {
+      const list = Array.isArray(data) ? data : (Array.isArray((data as any)?.data) ? (data as any).data : []);
+      return list.map((a: any) => ({
+        id: a.id ?? a.review_id ?? a.log_id ?? `${a.status || a.decision || 'entry'}-${a.created_at || a.timestamp || Math.random()}`,
+        status: (a.status ?? a.decision ?? a.application_status ?? '').toString().toLowerCase(),
+        reason: a.reason ?? a.remarks ?? a.message ?? null,
+        created_at: a.created_at ?? a.createdAt ?? a.timestamp ?? new Date().toISOString(),
+        grades_complete: a.grades_complete ?? a.grade_complete ?? a.grades ?? false,
+        documents_complete: a.documents_complete ?? a.docs_complete ?? a.documents ?? false,
+      }));
+    };
+    const apiUrl = `/api/registrar/exam-applications/${cur.application_id}/reviews`;
+    const altUrl = `/registrar/exam-applications/${cur.application_id}/reviews`;
+    fetch(apiUrl, { headers: { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' }, credentials: 'same-origin' })
+      .then(async (res) => {
+        if (res.ok) return res.json();
+        // fallback to non-API route if available
+        const alt = await fetch(altUrl, { headers: { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' }, credentials: 'same-origin' });
+        if (alt.ok) return alt.json();
+        throw new Error('audit fetch failed');
+      })
+      .then((data) => setAudit(normalizeAudit(data)))
       .catch(() => setAudit([]));
   }
 
@@ -222,6 +243,7 @@ export default function RegistrarCompreExamIndex() {
   function submitDecision() {
     if (!current || !decision) return;
     const auto = decision === 'rejected' && !reason.trim() ? buildAutoReject() : null;
+    const documentsComplete = !!(doc.photo && doc.tor && doc.psa && doc.hd);
     const body = {
       doc_photo_clear: doc.photo,
       doc_transcript: doc.tor,
@@ -230,6 +252,7 @@ export default function RegistrarCompreExamIndex() {
       doc_prof_exam: doc.prof,
       doc_marriage_cert: doc.marriage,
       grades_complete: gradesComplete,
+      documents_complete: documentsComplete,
       status: decision,
       reason: (reason || auto) || null,
     };
@@ -247,6 +270,18 @@ export default function RegistrarCompreExamIndex() {
       .then(() => {
         if (decision === 'approved') toast.success('Application approved (to Dean next).');
         else toast.error('Application rejected', { description: (reason || auto) || undefined });
+        // Optimistically append to audit trail for immediate feedback
+        setAudit((prev) => [
+          {
+            id: `local-${Date.now()}`,
+            status: decision,
+            reason: (reason || auto) || null,
+            created_at: new Date().toISOString(),
+            grades_complete: gradesComplete,
+            documents_complete: documentsComplete,
+          },
+          ...prev,
+        ]);
         setOpen(false);
         fetchRows();
       })

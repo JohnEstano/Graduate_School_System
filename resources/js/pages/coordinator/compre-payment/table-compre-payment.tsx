@@ -11,6 +11,7 @@ import Details from './details';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@/components/ui/dropdown-menu';
 import { router } from '@inertiajs/react';
 import { Textarea } from '@/components/ui/textarea';
+import { toast } from '@/components/ui/sonner';
 import {
   AlertDialog, AlertDialogTrigger, AlertDialogContent, AlertDialogHeader,
   AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction
@@ -35,6 +36,7 @@ export default function TableComprePayment({
   const [selectedRow, setSelectedRow] = useState<ComprePaymentSummary | null>(null);
   const [approveId, setApproveId] = useState<number | null>(null);
   const [rejectId, setRejectId] = useState<number | null>(null);
+  const [retrieveId, setRetrieveId] = useState<number | null>(null);
   const [rejectReason, setRejectReason] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
@@ -42,6 +44,7 @@ export default function TableComprePayment({
   const [approveManyOpen, setApproveManyOpen] = useState(false);
   const [rejectManyOpen, setRejectManyOpen] = useState(false);
   const [rejectManyReason, setRejectManyReason] = useState('');
+  const [retrieveManyOpen, setRetrieveManyOpen] = useState(false);
 
   // Filters
   const [statusFilter, setStatusFilter] = useState<'all' | 'approved' | 'pending' | 'rejected'>('all');
@@ -104,7 +107,10 @@ export default function TableComprePayment({
     setSubmitting(true);
     router.post(route('coordinator.compre-payment.approve', id), {}, {
       preserveScroll: true,
-      onSuccess: refreshLight,
+      onSuccess: () => {
+        toast.success('Payment approved.');
+        refreshLight();
+      },
       onFinish: () => {
         setSubmitting(false);
         setApproveId(null);
@@ -116,11 +122,29 @@ export default function TableComprePayment({
     setSubmitting(true);
     router.post(route('coordinator.compre-payment.reject', id), { remarks: rejectReason.trim() }, {
       preserveScroll: true,
-      onSuccess: refreshLight,
+      onSuccess: () => {
+        toast.success('Payment rejected.');
+        refreshLight();
+      },
       onFinish: () => {
         setSubmitting(false);
         setRejectId(null);
         setRejectReason('');
+      },
+    });
+  }
+
+  function doRetrieve(id: number) {
+    setSubmitting(true);
+    router.post(route('coordinator.compre-payment.retrieve', id), {}, {
+      preserveScroll: true,
+      onSuccess: () => {
+        toast.success('Payment retrieved for review.');
+        refreshLight();
+      },
+      onFinish: () => {
+        setSubmitting(false);
+        setRetrieveId(null);
       },
     });
   }
@@ -134,6 +158,11 @@ export default function TableComprePayment({
       onSuccess: () => {
         setSelected([]);
         refreshLight();
+        toast.success(`Approved ${ids.length} payment(s).`);
+      },
+      onError: (errors) => {
+        const msg = (errors && (errors as any).status) || 'Bulk approve failed.';
+        toast.error(String(msg));
       },
       onFinish: () => {
         setSubmitting(false);
@@ -149,6 +178,11 @@ export default function TableComprePayment({
       onSuccess: () => {
         setSelected([]);
         refreshLight();
+        toast.success(`Rejected ${ids.length} payment(s).`);
+      },
+      onError: (errors) => {
+        const msg = (errors && (errors as any).status) || 'Bulk reject failed.';
+        toast.error(String(msg));
       },
       onFinish: () => {
         setSubmitting(false);
@@ -158,13 +192,49 @@ export default function TableComprePayment({
     });
   }
 
+  function doRetrieveMany(ids: number[]) {
+    if (!ids.length) return;
+    setSubmitting(true);
+    router.post(route('coordinator.compre-payment.bulk-retrieve'), { ids }, {
+      preserveScroll: true,
+      onSuccess: () => {
+        setSelected([]);
+        refreshLight();
+        toast.success(`Retrieved ${ids.length} payment(s) for review.`);
+      },
+      onError: (errors) => {
+        const msg = (errors && (errors as any).status) || 'Bulk retrieve failed.';
+        toast.error(String(msg));
+      },
+      onFinish: () => {
+        setSubmitting(false);
+        setRetrieveManyOpen(false);
+      },
+    });
+  }
+
   // Keep selection in sync with visible rows
   useEffect(() => {
     setSelected(prev => prev.filter(id => filtered.some(r => r.id === id)));
   }, [/* filtered list change should prune invalid selections */ filtered]);
 
-  // Show bulk bar only on Pending tab with selections
-  const showBulk = tabType === 'pending' && selected.length > 0;
+  // Determine selection subsets for bulk actions
+  const selectedRows = useMemo(
+    () => filtered.filter((r) => selected.includes(r.id)),
+    [filtered, selected]
+  );
+  const selectedPendingIds = useMemo(
+    () => selectedRows.filter((r) => r.status === 'pending').map((r) => r.id),
+    [selectedRows]
+  );
+  const selectedRejectedIds = useMemo(
+    () => selectedRows.filter((r) => r.status === 'rejected').map((r) => r.id),
+    [selectedRows]
+  );
+
+  // Show bulk bar on Pending tab or All filter when there are selections
+  const isBulkContext = tabType === 'pending' || tabType === 'rejected' || !tabType; // include Rejected and All
+  const showBulk = isBulkContext && selected.length > 0;
 
   // NEW: toggle date sort
   function toggleDateSort() {
@@ -181,7 +251,21 @@ export default function TableComprePayment({
   return (
     <div className="rounded-md overflow-x-auto border border-border bg-white dark:bg-background dark:border-border w-full max-w-full">
       {/* Toolbar: only status dropdown on the right */}
-      <div className="flex items-center justify-end gap-2 px-3 py-2 border-b bg-muted/20 dark:bg-muted/10">
+      <div className="flex items-center justify-between gap-2 px-3 py-2 border-b bg-muted/20 dark:bg-muted/10">
+        {/* Left: Reset controls */}
+        <div className="flex items-center gap-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8"
+            onClick={() => setSort({ by: 'date', dir: 'desc' })}
+            title="Reset date sort"
+          >
+            Reset date
+          </Button>
+        </div>
+        
+        {/* Right: Status filter (optional) */}
         {shouldShowStatusFilter && (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -297,7 +381,8 @@ export default function TableComprePayment({
                       </DialogContent>
                     </Dialog>
 
-                    {tabType === 'pending' && (
+                    {/* Determine actions based on explicit tab or row status when in All */}
+                    {((tabType ?? (r.status as any)) === 'pending') && (
                       <>
                         <Button
                           size="sm"
@@ -364,8 +449,8 @@ export default function TableComprePayment({
                       </>
                     )}
 
-                    {tabType === 'rejected' && (
-                      <Button size="sm" variant="outline" title="Retrieve" onClick={() => onRowRetrieve && onRowRetrieve(r.id)} className="text-blue-500 hover:text-blue-500">
+                    {((tabType ?? (r.status as any)) === 'rejected') && (
+                      <Button size="sm" variant="outline" title="Retrieve" onClick={() => setRetrieveId(r.id)} className="text-blue-500 hover:text-blue-500">
                         <CircleArrowLeft size={16} />
                       </Button>
                     )}
@@ -398,14 +483,14 @@ export default function TableComprePayment({
                      dark:border-slate-800 dark:bg-slate-900/95 transition-shadow"
         >
           <span className="text-sm text-muted-foreground">
-            {selected.length} selected
+            {selected.length} selected{isBulkContext ? ` • ${selectedPendingIds.length} pending • ${selectedRejectedIds.length} rejected` : ''}
           </span>
 
           <Button
             size="sm"
             variant="outline"
             onClick={() => setApproveManyOpen(true)}
-            disabled={submitting}
+            disabled={submitting || selectedPendingIds.length === 0}
             className="gap-1 hover:bg-rose-500 hover:text-white disabled:opacity-50"
             aria-disabled={submitting}
             title="Approve selected"
@@ -418,13 +503,26 @@ export default function TableComprePayment({
             size="sm"
             variant="destructive"
             onClick={() => setRejectManyOpen(true)}
-            disabled={submitting}
+            disabled={submitting || selectedPendingIds.length === 0}
             className="gap-1"
             aria-disabled={submitting}
             title="Reject selected"
           >
             <CircleX className="h-4 w-4" />
             Reject
+          </Button>
+
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => setRetrieveManyOpen(true)}
+            disabled={submitting || selectedRejectedIds.length === 0}
+            className="gap-1"
+            aria-disabled={submitting}
+            title="Retrieve selected"
+          >
+            <CircleArrowLeft className="h-4 w-4" />
+            Retrieve
           </Button>
 
           <Button
@@ -446,12 +544,12 @@ export default function TableComprePayment({
       <AlertDialog open={approveManyOpen} onOpenChange={setApproveManyOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Approve {selected.length} selected payment(s)?</AlertDialogTitle>
-            <AlertDialogDescription>This will mark all selected pending payments as approved.</AlertDialogDescription>
+            <AlertDialogTitle>Approve {selectedPendingIds.length} pending payment(s)?</AlertDialogTitle>
+            <AlertDialogDescription>Only pending selections will be approved.</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={submitting}>Cancel</AlertDialogCancel>
-            <AlertDialogAction disabled={submitting} onClick={() => doApproveMany(selected)}>
+            <AlertDialogAction disabled={submitting} onClick={() => doApproveMany(selectedPendingIds)}>
               {submitting ? 'Approving…' : 'Approve selected'}
             </AlertDialogAction>
           </AlertDialogFooter>
@@ -462,8 +560,8 @@ export default function TableComprePayment({
       <Dialog open={rejectManyOpen} onOpenChange={setRejectManyOpen}>
         <DialogContent className="max-w-md">
           <div className="space-y-2">
-            <h3 className="text-base font-semibold">Reject {selected.length} selected payment(s)</h3>
-            <p className="text-sm text-muted-foreground">Provide a reason. The student will see this message.</p>
+            <h3 className="text-base font-semibold">Reject {selectedPendingIds.length} pending payment(s)</h3>
+            <p className="text-sm text-muted-foreground">Provide a reason. Only pending selections will be rejected. The student will see this message.</p>
             <Textarea
               value={rejectManyReason}
               onChange={(e) => setRejectManyReason(e.target.value)}
@@ -476,8 +574,8 @@ export default function TableComprePayment({
               </Button>
               <Button
                 variant="destructive"
-                onClick={() => doRejectMany(selected, rejectManyReason)}
-                disabled={submitting || rejectManyReason.trim().length < 3}
+                onClick={() => doRejectMany(selectedPendingIds, rejectManyReason)}
+                disabled={submitting || rejectManyReason.trim().length < 3 || selectedPendingIds.length === 0}
               >
                 {submitting ? 'Rejecting…' : 'Confirm Reject'}
               </Button>
@@ -485,6 +583,42 @@ export default function TableComprePayment({
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Bulk Retrieve dialog */}
+      <AlertDialog open={retrieveManyOpen} onOpenChange={setRetrieveManyOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Retrieve {selectedRejectedIds.length} rejected payment(s)?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will move rejected selections back to Pending for re-review.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={submitting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction disabled={submitting || selectedRejectedIds.length === 0} onClick={() => doRetrieveMany(selectedRejectedIds)}>
+              {submitting ? 'Retrieving…' : 'Retrieve selected'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Retrieve confirmation dialog */}
+      <AlertDialog open={retrieveId != null} onOpenChange={(open) => !open && setRetrieveId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Retrieve this payment?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will move the submission back to Pending for re-review. The student will see the status update.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={submitting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction disabled={submitting || retrieveId == null} onClick={() => retrieveId != null && doRetrieve(retrieveId)}>
+              {submitting ? 'Retrieving…' : 'Retrieve'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
