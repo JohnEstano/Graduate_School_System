@@ -1727,12 +1727,18 @@ class DefenseRequestController extends Controller
             $data = $request->validate([
                 'adviser_status' => 'required|in:Pending,Approved,Rejected',
                 'coordinator_user_id' => 'nullable|integer|exists:users,id',
+                'adviser_comments' => 'nullable|string|max:500',
             ]);
             
             \Log::info('updateAdviserStatus: Validation passed', ['data' => $data]);
 
         $fromState = $defenseRequest->workflow_state;
         $defenseRequest->adviser_status = $data['adviser_status'];
+        
+        // Store rejection reason if provided
+        if (isset($data['adviser_comments'])) {
+            $defenseRequest->adviser_comments = $data['adviser_comments'];
+        }
 
         // Update workflow_state based on status
         if ($data['adviser_status'] === 'Approved') {
@@ -1754,7 +1760,7 @@ class DefenseRequestController extends Controller
 
         // Add workflow entry
         $hist = $defenseRequest->workflow_history ?? [];
-        $hist[] = [
+        $historyEntry = [
             'action' => 'adviser-status-updated',
             'adviser_status' => $data['adviser_status'],
             'timestamp' => now()->toISOString(),
@@ -1763,6 +1769,13 @@ class DefenseRequestController extends Controller
             'from_state' => $fromState,
             'to_state' => $defenseRequest->workflow_state
         ];
+        
+        // Add rejection reason to workflow history if rejecting
+        if ($data['adviser_status'] === 'Rejected' && isset($data['adviser_comments'])) {
+            $historyEntry['comment'] = $data['adviser_comments'];
+        }
+        
+        $hist[] = $historyEntry;
         $defenseRequest->workflow_history = $hist;
 
         // --- FIX: Use coordinator_user_id from request if present ---
@@ -1886,10 +1899,13 @@ class DefenseRequestController extends Controller
 
         $data = $request->validate([
             'coordinator_status' => 'required|in:Approved,Rejected,Pending',
-            'coordinator_user_id' => 'nullable|integer|exists:users,id'
+            'coordinator_user_id' => 'nullable|integer|exists:users,id',
+            'send_email' => 'nullable|boolean',
+            'coordinator_comments' => 'nullable|string|max:500'
         ]);
 
         $previousStatus = $defenseRequest->coordinator_status;
+        $sendEmail = $data['send_email'] ?? false;
         
         DB::beginTransaction();
         try {
@@ -1897,6 +1913,11 @@ class DefenseRequestController extends Controller
             $defenseRequest->coordinator_status = $data['coordinator_status'];
             $defenseRequest->last_status_updated_at = now();
             $defenseRequest->last_status_updated_by = $user->id;
+            
+            // Store rejection reason if provided
+            if (isset($data['coordinator_comments'])) {
+                $defenseRequest->coordinator_comments = $data['coordinator_comments'];
+            }
             
             // Update coordinator if provided
             if (isset($data['coordinator_user_id'])) {
@@ -1916,7 +1937,7 @@ class DefenseRequestController extends Controller
 
             // Log workflow history
             $history = $defenseRequest->workflow_history ?? [];
-            $history[] = [
+            $historyEntry = [
                 'event_type' => 'coordinator-status-update',
                 'from_state' => $previousStatus,
                 'to_state' => $data['coordinator_status'],
@@ -1925,10 +1946,22 @@ class DefenseRequestController extends Controller
                 'user_id' => $user->id,
                 'description' => "Coordinator updated status to {$data['coordinator_status']}"
             ];
+            
+            // Add rejection reason to workflow history if rejecting
+            if ($data['coordinator_status'] === 'Rejected' && isset($data['coordinator_comments'])) {
+                $historyEntry['comment'] = $data['coordinator_comments'];
+            }
+            
+            $history[] = $historyEntry;
             $defenseRequest->workflow_history = $history;
             $defenseRequest->save();
 
             DB::commit();
+
+            // Send email notifications if requested (only for approve/reject)
+            if ($sendEmail && ($data['coordinator_status'] === 'Approved' || $data['coordinator_status'] === 'Rejected')) {
+                $this->sendApprovalNotifications($defenseRequest, $data['coordinator_status']);
+            }
 
             return response()->json([
                 'ok' => true,

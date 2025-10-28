@@ -114,7 +114,9 @@ export type DefenseRequestFull = {
   last_status_updated_at?: string;
   workflow_history?: any[];
   adviser_status?: string;
+  adviser_comments?: string;
   coordinator_status?: string;
+  coordinator_comments?: string;
   program_level?: string; // "Masteral" | "Doctorate" from server
   submitted_at?: string;
   coordinator?: {
@@ -336,6 +338,7 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
     action: null,
     sendEmail: false,
   });
+  const [rejectionReason, setRejectionReason] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
   // Panel members simple load
@@ -748,18 +751,24 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
         console.log('✅ Panels and schedule saved successfully before approval');
       }
 
-      // STEP 2: Now approve/reject/retrieve
-      const res = await fetchWithCsrfRetry(`/defense-requests/${request.id}/status`, {
+      // STEP 2: Now approve/reject/retrieve via coordinator-status endpoint
+      const payload: any = { 
+        coordinator_status: action === 'approve' ? 'Approved' : action === 'reject' ? 'Rejected' : 'Pending',
+        send_email: sendEmail
+      };
+      
+      // Add rejection reason if rejecting
+      if (action === 'reject' && rejectionReason.trim()) {
+        payload.coordinator_comments = rejectionReason.trim();
+      }
+
+      const res = await fetchWithCsrfRetry(`/coordinator/defense-requirements/${request.id}/coordinator-status`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
           Accept: 'application/json'
         },
-        body: JSON.stringify({ 
-          decision: action === 'approve' ? 'approve' : action === 'reject' ? 'reject' : 'retrieve',
-          comment: null,
-          send_email: sendEmail
-        }),
+        body: JSON.stringify(payload),
       });
       
       let data: any = {};
@@ -791,6 +800,11 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
           });
         }
         toast.success(`Defense request ${action === 'approve' ? 'approved' : action === 'reject' ? 'rejected' : 'retrieved'} successfully`);
+        setConfirm({ open: false, action: null, sendEmail: false });
+        setRejectionReason(''); // Clear reason after submission
+        
+        // Reload to show updated data
+        setTimeout(() => window.location.reload(), 500);
       } else {
         if (data.missing_fields) {
           toast.error('Missing required fields: ' + data.missing_fields.join(', '));
@@ -806,7 +820,6 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
       }
     } finally {
       setIsLoading(false);
-      setConfirm({ open: false, action: null, sendEmail: false });
     }
   }
 
@@ -965,6 +978,16 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
       icon: <UserCheck className="h-5 w-5" />,
     },
     {
+      key: 'adviser-rejected',
+      label: 'Rejected by Adviser',
+      icon: <XCircle className="h-5 w-5" />,
+    },
+    {
+      key: 'adviser-retrieved',
+      label: 'Retrieved by Adviser',
+      icon: <CircleArrowLeft className="h-5 w-5" />,
+    },
+    {
       key: 'panels-assigned',
       label: 'Panels Assigned',
       icon: <UsersIcon className="h-5 w-5" />,
@@ -980,25 +1003,42 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
       icon: <Signature className="h-5 w-5" />, 
     },
     {
-      key: 'rejected',
+      key: 'coordinator-rejected',
       label: 'Rejected by Coordinator',
       icon: <XCircle className="h-5 w-5" />,
     },
     {
-      key: 'retrieved',
-      label: 'Retrieved',
+      key: 'coordinator-retrieved',
+      label: 'Retrieved by Coordinator',
       icon: <CircleArrowLeft className="h-5 w-5" />,
     },
   ];
 
   // Update this function:
-  function getStepForEvent(event: string) {
+  function getStepForEvent(event: string, toState?: string) {
     event = (event || '').toLowerCase();
+    const state = (toState || '').toLowerCase();
+    
     if (event.includes('submit')) return 'submitted';
-    if (event.includes('adviser')) return 'adviser-approved';
+    
+    // Handle adviser actions based on to_state
+    if (event.includes('adviser')) {
+      if (state.includes('reject')) return 'adviser-rejected';
+      if (state.includes('retrieved') || state.includes('pending')) return 'adviser-retrieved';
+      if (state.includes('approved') || state.includes('endorsed')) return 'adviser-approved';
+      return 'adviser-approved'; // default for adviser actions
+    }
+    
+    // Handle coordinator actions based on to_state
+    if (event.includes('coordinator')) {
+      if (state.includes('reject')) return 'coordinator-rejected';
+      if (state.includes('retrieved') || state.includes('pending')) return 'coordinator-retrieved';
+      if (state.includes('approved')) return 'coordinator-approved';
+      return 'coordinator-approved'; // default for coordinator actions
+    }
+    
     if (event.includes('rejected')) return 'rejected';
     if (event.includes('retrieved')) return 'retrieved';
-    if (event.includes('coordinator')) return 'coordinator-approved';
     if (event.includes('panel')) return 'panels-assigned';
     if (event.includes('schedule')) return 'scheduled'; 
     return '';
@@ -1625,14 +1665,15 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
               <div className="flex flex-col gap-0 relative">
                 {Array.isArray(request.workflow_history) && request.workflow_history.length > 0 ? (
                   request.workflow_history.map((item: any, idx: number) => {
-                    const { event, created, userName } = resolveHistoryFields(item);
-                    const stepKey = getStepForEvent(event);
+                    const { event, created, userName, to } = resolveHistoryFields(item);
+                    const stepKey = getStepForEvent(event, to);
                     const step = workflowSteps.find(s => s.key === stepKey) || {
                       label: event.charAt(0).toUpperCase() + event.slice(1),
                       icon: <Clock className="h-5 w-5 text-gray-500" />,
                     };
                     const isLast = Array.isArray(request.workflow_history) && idx === request.workflow_history.length - 1;
                     const iconBoxColor = 'bg-gray-100 text-gray-500';
+                    const comment = item.comment || item.rejection_reason || '';
                     return (
                       <div key={idx} className="flex items-start gap-3 relative">
                         <div className="flex flex-col items-center">
@@ -1643,7 +1684,7 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
                             <div className="h-8 border-l-2 border-dotted border-gray-300 dark:border-zinc-700 mx-auto"></div>
                           )}
                         </div>
-                        <div className="pb-4">
+                        <div className="pb-4 flex-1">
                           <div className="font-semibold text-xs">{step.label}</div>
                           <div className="text-[11px] text-muted-foreground">
                             {userName && <span>{userName}</span>}
@@ -1654,6 +1695,11 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
                               </span>
                             )}
                           </div>
+                          {comment && (
+                            <div className="mt-2 p-2 bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 rounded text-[11px] text-amber-900 dark:text-amber-100">
+                              {comment}
+                            </div>
+                          )}
                         </div>
                       </div>
                     );
@@ -1685,27 +1731,32 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
       />
 
       {/* Confirmation Dialog for Approve/Reject/Retrieve */}
-      <Dialog open={confirm.open} onOpenChange={o => { if (!o) setConfirm({ open: false, action: null, sendEmail: false }); }}>
+      <Dialog open={confirm.open} onOpenChange={o => { 
+        if (!o) {
+          setConfirm({ open: false, action: null, sendEmail: false });
+          setRejectionReason(''); // Clear reason when closing
+        }
+      }}>
         <DialogContent>
           <DialogTitle>Confirm Action</DialogTitle>
           <DialogDescription>
             {confirm.action === 'approve'
               ? 'Please review before approving.'
               : confirm.action === 'reject'
-              ? 'Are you sure you want to reject this defense request?'
+              ? 'Please provide a reason for rejecting this defense request.'
               : 'Apply this status change?'}
           </DialogDescription>
           <div className="mt-3 text-sm space-y-3">
-            <p>
-              Set request to{' '}
-              <span className="font-semibold">
-                {confirm.action === 'approve'
-                  ? 'Approved'
-                  : confirm.action === 'reject'
-                  ? 'Rejected'
-                  : 'Pending'}
-              </span>?
-            </p>
+            {confirm.action !== 'reject' && (
+              <p>
+                Set request to{' '}
+                <span className="font-semibold">
+                  {confirm.action === 'approve'
+                    ? 'Approved'
+                    : 'Pending'}
+                </span>?
+              </p>
+            )}
             {confirm.action === 'approve' && (
               <div className="flex flex-col items-center gap-3 rounded-md border bg-muted/40 p-5">
                 <div className="rounded-full bg-primary/10 p-4">
@@ -1717,58 +1768,72 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
                 </p>
               </div>
             )}
+            
+            {confirm.action === 'reject' && (
+              <div className="space-y-2">
+                <Label htmlFor="rejectionReason" className="text-sm font-medium">
+                  Rejection Reason <span className="text-red-500">*</span>
+                </Label>
+                <textarea
+                  id="rejectionReason"
+                  value={rejectionReason}
+                  onChange={(e) => setRejectionReason(e.target.value)}
+                  placeholder="Explain why this defense request is being rejected..."
+                  className="w-full min-h-[120px] p-3 text-sm border rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-primary"
+                  maxLength={500}
+                />
+                <p className="text-xs text-muted-foreground">
+                  {rejectionReason.length}/500 characters
+                </p>
+              </div>
+            )}
           </div>
           
-          {/* Action buttons - Only show for approve/reject actions */}
-          {(confirm.action === 'approve' || confirm.action === 'reject') ? (
-            <div className="flex flex-col gap-2 mt-4">
-              <p className="text-sm text-muted-foreground mb-2">
-                Would you like to send email notifications to all parties?
-              </p>
-              <div className="flex gap-2">
-                <Button 
-                  variant="ghost" 
-                  className="flex-1"
-                  onClick={() => setConfirm({ open: false, action: null, sendEmail: false })}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  variant="outline"
-                  className="flex-1"
-                  onClick={() => {
-                    if (confirm.action) {
-                      handleStatusChange(confirm.action, false); // Pass sendEmail=false directly
-                    }
-                  }}
-                  disabled={isLoading}
-                >
-                  Skip Email
-                </Button>
-                <Button
-                  className="flex-1"
-                  onClick={() => {
-                    if (confirm.action) {
-                      handleStatusChange(confirm.action, true); // Pass sendEmail=true directly
-                    }
-                  }}
-                  disabled={isLoading}
-                >
-                  Send Emails
-                </Button>
-              </div>
+          {/* Action buttons */}
+          {confirm.action === 'reject' ? (
+            <div className="flex justify-end gap-2 mt-4">
+              <Button 
+                variant="ghost" 
+                onClick={() => {
+                  setConfirm({ open: false, action: null, sendEmail: false });
+                  setRejectionReason('');
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={() => handleStatusChange('reject', false)}
+                disabled={isLoading || !rejectionReason.trim()}
+                variant="destructive"
+              >
+                {isLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Processing...
+                  </>
+                ) : (
+                  'Reject Request'
+                )}
+              </Button>
             </div>
-          ) : (
+          ) : confirm.action === 'retrieve' ? (
             <div className="flex justify-end gap-2 mt-4">
               <Button variant="ghost" onClick={() => setConfirm({ open: false, action: null, sendEmail: false })}>Cancel</Button>
               <Button
-                onClick={() => confirm.action && handleStatusChange(confirm.action, false)}
+                onClick={() => handleStatusChange('retrieve', false)}
                 disabled={isLoading}
               >
-                Confirm
+                {isLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Processing...
+                  </>
+                ) : (
+                  'Confirm Retrieve'
+                )}
               </Button>
             </div>
-          )}
+          ) : null}
         </DialogContent>
       </Dialog>
     </AppLayout>

@@ -6,6 +6,7 @@ import { Separator } from '@/components/ui/separator';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
+import { Switch } from '@/components/ui/switch';
 import SignatureCanvas from 'react-signature-canvas';
 import { 
   Eye, 
@@ -18,7 +19,9 @@ import {
   Send,
   Upload,
   RefreshCw,
-  FileText
+  FileText,
+  Mail,
+  Users
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -86,7 +89,7 @@ export default function CoordinatorApproveDialog({
 
   // Email confirmation dialog state
   const [showEmailDialog, setShowEmailDialog] = useState(false);
-  const [sendEmail, setSendEmail] = useState(false);
+  const [sendEmail, setSendEmail] = useState(true); // Default to true - emails are important!
 
   // Auto-generate document with coordinator signature when dialog opens (like adviser workflow)
   useEffect(() => {
@@ -793,27 +796,59 @@ export default function CoordinatorApproveDialog({
 
       {/* Email Confirmation Dialog */}
       <Dialog open={showEmailDialog} onOpenChange={setShowEmailDialog}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle>Send Email Notification?</DialogTitle>
+            <DialogTitle className="flex items-center gap-2">
+              <Mail className="h-5 w-5" />
+              Send Email Notifications?
+            </DialogTitle>
             <DialogDescription>
-              Would you like to send an email notification to the student about this approval?
+              Notify all parties about this defense approval
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-4 py-4">
-            <div className="flex items-center space-x-2">
-              <input
-                type="checkbox"
-                id="sendEmailCheck"
+          <div className="space-y-6 py-4">
+            {/* Toggle Switch */}
+            <div className="flex items-center justify-between space-x-4 rounded-lg border p-4">
+              <div className="flex-1 space-y-1">
+                <div className="flex items-center gap-2">
+                  <Users className="h-4 w-4 text-muted-foreground" />
+                  <Label htmlFor="sendEmailSwitch" className="text-sm font-medium cursor-pointer">
+                    Send email to all parties
+                  </Label>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Emails will be sent to student, adviser, and all panel members
+                </p>
+              </div>
+              <Switch
+                id="sendEmailSwitch"
                 checked={sendEmail}
-                onChange={(e) => setSendEmail(e.target.checked)}
-                className="h-4 w-4 rounded border-gray-300"
+                onCheckedChange={setSendEmail}
               />
-              <Label htmlFor="sendEmailCheck" className="text-sm font-normal cursor-pointer">
-                Send email notification to {defenseRequest?.first_name} {defenseRequest?.last_name}
-              </Label>
             </div>
+
+            {/* Who will receive emails */}
+            {sendEmail && (
+              <Alert>
+                <Mail className="h-4 w-4" />
+                <AlertDescription className="text-xs">
+                  <div className="font-medium mb-2">The following parties will receive email notifications:</div>
+                  <ul className="list-disc list-inside space-y-1 ml-2">
+                    <li>Student: {defenseRequest?.first_name} {defenseRequest?.last_name}</li>
+                    <li>Adviser: {defenseRequest?.defense_adviser || 'Not assigned'}</li>
+                    <li>Defense Chairperson: {panelsData?.defense_chairperson || 'Not assigned'}</li>
+                    {panelsData?.defense_panelist1 && <li>Panelist 1: {panelsData.defense_panelist1}</li>}
+                    {panelsData?.defense_panelist2 && <li>Panelist 2: {panelsData.defense_panelist2}</li>}
+                    {panelsData?.defense_panelist3 && <li>Panelist 3: {panelsData.defense_panelist3}</li>}
+                    {panelsData?.defense_panelist4 && <li>Panelist 4: {panelsData.defense_panelist4}</li>}
+                  </ul>
+                  <p className="mt-3 text-muted-foreground">
+                    Each email will include defense schedule, venue details, and panel assignments.
+                  </p>
+                </AlertDescription>
+              </Alert>
+            )}
           </div>
 
           <div className="flex gap-2 justify-end">
@@ -835,7 +870,7 @@ export default function CoordinatorApproveDialog({
               ) : (
                 <>
                   <Check className="mr-2 h-4 w-4" />
-                  Confirm Approval
+                  {sendEmail ? 'Approve & Send Emails' : 'Approve Without Emails'}
                 </>
               )}
             </Button>
