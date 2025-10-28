@@ -358,7 +358,7 @@
 
           <div class="fee-line"><span class="label-group"><strong>Members:</strong></span></div>
           @foreach($panelists as $panelist)
-            @if($panelist['role'] === 'Panel Member')
+            @if(str_starts_with($panelist['role'], 'Panel Member') || $panelist['role'] === 'Panel Member')
               <div class="fee-line"><span class="label-group">{{ strtoupper($panelist['name']) }}</span><span class="amount">{{ number_format($panelist['amount'], 2) }}</span></div>
             @endif
           @endforeach
