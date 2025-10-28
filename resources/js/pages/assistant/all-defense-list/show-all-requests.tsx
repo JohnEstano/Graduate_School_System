@@ -145,7 +145,7 @@ function ShowAllRequestsInner({ defenseRequests: initial, onStatusChange }: Show
   }, []);
 
   const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string[]>([]);
+  const [statusFilter, setStatusFilter] = useState<string[]>([]); // AA Status filter
   const [typeFilter, setTypeFilter] = useState<string[]>([]);
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
   const [sortDir, setSortDir] = useState<'asc' | 'desc' | null>(null);
@@ -236,7 +236,7 @@ function ShowAllRequestsInner({ defenseRequests: initial, onStatusChange }: Show
     if (!initial) fetchDefenseRequests();
   }, [fetchDefenseRequests, initial]);
 
-  // Filtered and sorted requests (all in one)
+    // Filtered and sorted requests (all in one)
   const filtered = useMemo(() => {
     let result = defenseRequests;
     if (search) {
@@ -245,11 +245,11 @@ function ShowAllRequestsInner({ defenseRequests: initial, onStatusChange }: Show
         (`${r.first_name} ${r.last_name} ${r.thesis_title}`).toLowerCase().includes(q)
       );
     }
-    // This will match the three statuses above
+    // Filter by AA verification status
     if (statusFilter.length)
       result = result.filter(r =>
         statusFilter.some(f =>
-          (r.aa_verification_status || '').trim().toLowerCase() === f.trim().toLowerCase()
+          (r.aa_verification_status || 'pending').trim().toLowerCase() === f.trim().toLowerCase()
         )
       );
     if (typeFilter.length)
@@ -764,7 +764,7 @@ function ShowAllRequestsInner({ defenseRequests: initial, onStatusChange }: Show
                 className="max-w-xs text-sm h-8"
                 disabled={isLoading}
               />
-              {/* Status filter */}
+              {/* AA Status filter */}
               <Popover>
                 <PopoverTrigger asChild>
                   <Button
@@ -772,7 +772,7 @@ function ShowAllRequestsInner({ defenseRequests: initial, onStatusChange }: Show
                     className="h-8 px-3 rounded-md border-dashed text-xs flex items-center gap-1"
                   >
                     <CirclePlus className="h-4 w-4 mr-1" />
-                    Status
+                    AA Status
                     {statusFilter.length > 0 && (
                       <span className="ml-1 px-2 py-0.5 rounded-full text-xs bg-muted">
                         {statusFilter.length > 1 ? `${statusFilter.length} selected` : statusFilter[0]}
@@ -781,8 +781,8 @@ function ShowAllRequestsInner({ defenseRequests: initial, onStatusChange }: Show
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-44 p-1" side="bottom" align="start">
-                  {/* Only show Pending, Verified, Rejected */}
-                  {['Pending', 'Verified', 'Rejected'].map(s => (
+                  {/* AA Status options */}
+                  {['pending', 'ready_for_finance', 'in_progress', 'paid', 'completed'].map(s => (
                     <div
                       key={s}
                       onClick={() =>
@@ -793,7 +793,7 @@ function ShowAllRequestsInner({ defenseRequests: initial, onStatusChange }: Show
                       className="flex items-center gap-2 p-2 rounded hover:bg-muted cursor-pointer"
                     >
                       <Checkbox checked={statusFilter.includes(s)} />
-                      <span className="text-sm">{s}</span>
+                      <span className="text-sm capitalize">{s.replace(/_/g, ' ')}</span>
                     </div>
                   ))}
                   <Button size="sm" variant="ghost" className="w-full mt-2" onClick={() => setStatusFilter([])}>
@@ -921,16 +921,19 @@ function ShowAllRequestsInner({ defenseRequests: initial, onStatusChange }: Show
                 <Banknote size={13} className="text-emerald-600" />
                 Paid
               </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="px-3 py-1 h-7 w-auto text-xs flex items-center gap-1"
-                onClick={() => openBulkStatusDialog('completed')}
-                disabled={isLoading}
-              >
-                <CircleCheck size={13} className="text-green-600" />
-                Mark as Completed
-              </Button>
+              {/* Hidden but functional - Mark as Completed */}
+              {false && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="px-3 py-1 h-7 w-auto text-xs flex items-center gap-1"
+                  onClick={() => openBulkStatusDialog('completed')}
+                  disabled={isLoading}
+                >
+                  <CircleCheck size={13} className="text-green-600" />
+                  Mark as Completed
+                </Button>
+              )}
               <Button
                 variant="ghost"
                 size="sm"

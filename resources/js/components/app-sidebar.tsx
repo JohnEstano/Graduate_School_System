@@ -91,7 +91,7 @@ const registrarNavItems: MainNavItem[] = [
 
 const assistantNavItems: MainNavItem[] = [
     { title: 'Dashboard', href: '/dashboard', icon: LayoutGrid },
-    { title: 'Defense Requests', href: '/assistant/all-defense-list', icon: FileText }, 
+    { title: 'Defense Requests', href: '/assistant/all-defense-list', icon: Send }, 
     {
         title: 'Applications',
         href: '/defense',

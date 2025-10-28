@@ -88,17 +88,8 @@ class StudentRecordSyncService
                     continue;
                 }
 
-                // ✅ CRITICAL: Skip Advisers from honorarium/panelist records
-                // Advisers are tracked separately and don't appear in honorarium pages
                 $role = $honorariumPayment->role;
-                if ($role && (strtolower($role) === 'adviser' || str_contains(strtolower($role), 'advis'))) {
-                    Log::info('⏭️ Skipping Adviser from panelist records (honorarium page only shows Panel Chair/Members)', [
-                        'payment_id' => $honorariumPayment->id,
-                        'role' => $role,
-                        'name' => $honorariumPayment->panelist_name
-                    ]);
-                    continue;
-                }
+                $isAdviser = $role && (strtolower($role) === 'adviser' || str_contains(strtolower($role), 'advis'));
 
                 // Get panelist name (prefer panelist relation, fall back to panelist_name)
                 $panelistName = $honorariumPayment->panelist 
@@ -116,10 +107,8 @@ class StudentRecordSyncService
                 $lastName = count($nameParts) > 1 ? $nameParts[count($nameParts) - 1] : '';
                 $middleName = count($nameParts) > 2 ? implode(' ', array_slice($nameParts, 1, -1)) : '';
 
-                // ✅ Create/find panelist record with UNIQUE constraint per defense
-                // This ensures each defense creates its own panelist entries
-                // ONLY for Panel Chair and Panel Members (Advisers excluded)
-                // NOTE: defense_type was removed from panelist_records table
+                // ✅ Create/find panelist record for ALL roles (including Advisers)
+                // Advisers will be filtered out in HonorariumSummaryController
                 $panelistRecord = PanelistRecord::firstOrCreate(
                     [
                         'pfirst_name' => $firstName,
@@ -137,10 +126,11 @@ class StudentRecordSyncService
                     'id' => $panelistRecord->id,
                     'name' => "{$firstName} {$middleName} {$lastName}",
                     'role' => $honorariumPayment->role,
-                    'program_record_id' => $programRecord->id
+                    'program_record_id' => $programRecord->id,
+                    'is_adviser' => $isAdviser
                 ]);
 
-                // ✅ Create payment record with role
+                // ✅ Create payment record with role (for ALL including Advisers)
                 $paymentRecord = PaymentRecord::create([
                     'student_record_id' => $studentRecord->id,
                     'panelist_record_id' => $panelistRecord->id,
@@ -157,10 +147,11 @@ class StudentRecordSyncService
                     'amount' => $paymentRecord->amount,
                     'role' => $honorariumPayment->role,
                     'panelist_id' => $panelistRecord->id,
-                    'student_id' => $studentRecord->id
+                    'student_id' => $studentRecord->id,
+                    'is_adviser' => $isAdviser
                 ]);
 
-                // ✅ Link panelist to student with role in pivot table
+                // ✅ Link panelist to student with role in pivot table (for ALL including Advisers)
                 $studentRecord->panelists()->attach($panelistRecord->id, [
                     'role' => $honorariumPayment->role
                 ]);
@@ -168,7 +159,8 @@ class StudentRecordSyncService
                 Log::info('✅ Panelist linked to student via pivot table', [
                     'student_id' => $studentRecord->id,
                     'panelist_id' => $panelistRecord->id,
-                    'role' => $honorariumPayment->role
+                    'role' => $honorariumPayment->role,
+                    'is_adviser' => $isAdviser
                 ]);
             }
 
@@ -181,7 +173,7 @@ class StudentRecordSyncService
                 'defense_id' => $defenseRequest->id,
                 'student_record_id' => $studentRecord->id,
                 'program_record_id' => $programRecord->id,
-                'panelists_created' => $honorariumPayments->count() - ($defenseRequest->defense_adviser ? 1 : 0)
+                'total_payments_created' => $honorariumPayments->count()
             ]);
 
         } catch (\Exception $e) {

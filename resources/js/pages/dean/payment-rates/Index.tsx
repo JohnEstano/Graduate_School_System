@@ -9,7 +9,7 @@ import { toast } from "sonner";
 import { router } from "@inertiajs/react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"; // Add this import
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "@/components/ui/dropdown-menu";
-import { FileDown } from "lucide-react"; 
+import { FileDown, Upload } from "lucide-react"; 
 import { Pencil } from "lucide-react"; // Add this import for the edit icon
 import { Printer } from "lucide-react"; // Add this import for the printer icon
 
@@ -48,6 +48,8 @@ export default function PaymentRatesPage({ rates: initialRates }: Props) {
   } | null>(null);
   const [saving, setSaving] = useState(false);
   const [tab, setTab] = useState<string>(PROGRAM_LEVELS[0]); // Add state for tab
+  const [importing, setImporting] = useState(false);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   function openEdit(program_level: string, type: string, idxs: { [defense_type: string]: number }) {
     setEdit({
@@ -245,6 +247,195 @@ export default function PaymentRatesPage({ rates: initialRates }: Props) {
     }
   }
 
+  function exportToCSV() {
+    // CSV Format with clear structure
+    // Header: program_level,type,defense_type,amount
+    const csvRows = ["program_level,type,defense_type,amount"];
+    
+    rates.forEach(rate => {
+      const row = [
+        rate.program_level,
+        `"${rate.type}"`, // Quote to handle commas in type names
+        rate.defense_type,
+        rate.amount || 0
+      ];
+      csvRows.push(row.join(","));
+    });
+
+    const csvContent = csvRows.join("\n");
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    
+    link.setAttribute("href", url);
+    link.setAttribute("download", `payment_rates_${new Date().toISOString().split("T")[0]}.csv`);
+    link.style.visibility = "hidden";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    toast.success("Rates exported to CSV successfully!");
+  }
+
+  function exportToJSON() {
+    // JSON Format with clear structure and metadata
+    const exportData = {
+      metadata: {
+        exported_at: new Date().toISOString(),
+        version: "1.0",
+        format: "payment_rates",
+        description: "Payment rates export for Graduate School System"
+      },
+      rates: rates.map(rate => ({
+        program_level: rate.program_level,
+        type: rate.type,
+        defense_type: rate.defense_type,
+        amount: parseFloat(String(rate.amount)) || 0
+      }))
+    };
+
+    const jsonContent = JSON.stringify(exportData, null, 2);
+    const blob = new Blob([jsonContent], { type: "application/json;charset=utf-8;" });
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    
+    link.setAttribute("href", url);
+    link.setAttribute("download", `payment_rates_${new Date().toISOString().split("T")[0]}.json`);
+    link.style.visibility = "hidden";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    toast.success("Rates exported to JSON successfully!");
+  }
+
+  async function handleImport(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setImporting(true);
+    
+    try {
+      const content = await file.text();
+      let importedRates: Rate[] = [];
+
+      if (file.name.endsWith(".csv")) {
+        // Parse CSV
+        const lines = content.split("\n").filter(line => line.trim());
+        const headers = lines[0].split(",").map(h => h.trim());
+        
+        // Validate CSV format
+        const expectedHeaders = ["program_level", "type", "defense_type", "amount"];
+        const isValidFormat = expectedHeaders.every(h => headers.includes(h));
+        
+        if (!isValidFormat) {
+          toast.error("Invalid CSV format. Expected headers: program_level, type, defense_type, amount");
+          setImporting(false);
+          return;
+        }
+
+        // Parse data rows
+        for (let i = 1; i < lines.length; i++) {
+          const line = lines[i];
+          if (!line.trim()) continue;
+          
+          // Handle quoted values
+          const values = line.match(/(".*?"|[^,]+)(?=\s*,|\s*$)/g)?.map(v => v.replace(/^"(.*)"$/, "$1").trim()) || [];
+          
+          if (values.length >= 4) {
+            importedRates.push({
+              program_level: values[0],
+              type: values[1],
+              defense_type: values[2],
+              amount: parseFloat(values[3]) || 0
+            });
+          }
+        }
+      } else if (file.name.endsWith(".json")) {
+        // Parse JSON
+        const data = JSON.parse(content);
+        
+        // Validate JSON structure
+        if (!data.rates || !Array.isArray(data.rates)) {
+          toast.error("Invalid JSON format. Expected structure: { rates: [...] }");
+          setImporting(false);
+          return;
+        }
+
+        importedRates = data.rates.map((rate: any) => ({
+          program_level: rate.program_level,
+          type: rate.type,
+          defense_type: rate.defense_type,
+          amount: parseFloat(String(rate.amount)) || 0
+        }));
+      } else {
+        toast.error("Unsupported file format. Please use .csv or .json files.");
+        setImporting(false);
+        return;
+      }
+
+      // Validate imported data
+      const isValid = importedRates.every(rate => 
+        rate.program_level && 
+        rate.type && 
+        rate.defense_type &&
+        !isNaN(parseFloat(String(rate.amount)))
+      );
+
+      if (!isValid) {
+        toast.error("Invalid data format. Please check your file and try again.");
+        setImporting(false);
+        return;
+      }
+
+      // Send to backend
+      const res = await fetch("/dean/payment-rates", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-CSRF-TOKEN": (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content || "",
+        },
+        body: JSON.stringify({ rates: importedRates }),
+      });
+
+      let data = null;
+      try {
+        data = await res.json();
+      } catch (e) {
+        const text = await res.text();
+        toast.error("Server error: " + text);
+        setImporting(false);
+        return;
+      }
+
+      if (res.ok && data.success) {
+        // Fetch the latest rates from the backend
+        const ratesRes = await fetch("/dean/payment-rates/data", {
+          headers: {
+            "Accept": "application/json",
+          },
+        });
+        const latest = await ratesRes.json();
+        setRates(latest.rates);
+        toast.success(`Successfully imported ${importedRates.length} rates!`);
+      } else if (res.status === 422 && data && data.errors) {
+        const messages = Object.values(data.errors).flat().join(" | ");
+        toast.error("Validation error: " + messages);
+      } else {
+        toast.error("Failed to import rates: " + (data?.message || res.status));
+      }
+    } catch (e) {
+      const message = typeof e === "object" && e !== null && "message" in e ? (e as any).message : String(e);
+      toast.error("Error importing file: " + message);
+    } finally {
+      setImporting(false);
+      // Reset file input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    }
+  }
+
   return (
     <AppLayout breadcrumbs={[{ title: "Payment Rates", href: "/dean/payment-rates" }]}>
       <Head title="Payment Rates" />
@@ -267,14 +458,53 @@ export default function PaymentRatesPage({ rates: initialRates }: Props) {
               ))}
             </TabsList>
           </Tabs>
-          <Button
-            variant="outline"
-            className="flex items-center gap-2 text-sm"
-            onClick={() => exportTableToPrint(tab)}
-          >
-            <Printer className="w-4 h-4" />
-            Print
-          </Button>
+          <div className="flex items-center gap-2">
+            {/* Export Dropdown */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" className="flex items-center gap-2 text-sm">
+                  <FileDown className="w-4 h-4" />
+                  Export
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={exportToCSV}>
+                  Export as CSV
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={exportToJSON}>
+                  Export as JSON
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            {/* Import Button */}
+            <Button
+              variant="outline"
+              className="flex items-center gap-2 text-sm"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={importing}
+            >
+              <Upload className="w-4 h-4" />
+              {importing ? "Importing..." : "Import"}
+            </Button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".csv,.json"
+              onChange={handleImport}
+              className="hidden"
+            />
+
+            {/* Print Button */}
+            <Button
+              variant="outline"
+              className="flex items-center gap-2 text-sm"
+              onClick={() => exportTableToPrint(tab)}
+            >
+              <Printer className="w-4 h-4" />
+              Print
+            </Button>
+          </div>
         </div>
         {/* Responsive Table */}
         <Tabs value={tab} onValueChange={setTab} className="px-2 sm:px-6">

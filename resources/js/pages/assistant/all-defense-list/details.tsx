@@ -591,23 +591,25 @@ export default function Details({ defenseRequest: initialDefenseRequest }: Props
               Paid
             </Button>
             
-            {/* Mark as Completed - Can be clicked from any status */}
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => {
-                openConfirmDialog(
-                  'Mark as Completed?',
-                  'This action will finalize the defense and AA payment status.',
-                  handleMarkCompleted
-                );
-              }}
-              disabled={isUpdating}
-              className="gap-2"
-            >
-              <CircleCheck className="h-4 w-4 text-green-600" />
-              Mark as Completed
-            </Button>
+            {/* Hidden but functional - Mark as Completed */}
+            {false && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  openConfirmDialog(
+                    'Mark as Completed?',
+                    'This action will finalize the defense and AA payment status.',
+                    handleMarkCompleted
+                  );
+                }}
+                disabled={isUpdating}
+                className="gap-2"
+              >
+                <CircleCheck className="h-4 w-4 text-green-600" />
+                Mark as Completed
+              </Button>
+            )}
           </div>
         </div>
 
