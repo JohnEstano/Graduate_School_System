@@ -40,6 +40,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { postWithCsrf, fetchWithCsrf } from '@/utils/csrf';
 
 type DefenseRequestDetails = {
   id: number;
@@ -356,32 +357,11 @@ export default function Details({ defenseRequest: initialDefenseRequest }: Props
     const toastId = toast.loading('Marking as completed...');
     
     try {
-      // Refresh CSRF token first
-      console.log('🔄 Refreshing CSRF token...');
-      await fetch('/sanctum/csrf-cookie', {
-        credentials: 'same-origin',
-      });
-      
-      const csrfToken = (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content || '';
-      
-      console.log('🔑 CSRF Token:', csrfToken ? '✓ Found' : '✗ Not found');
-      
-      if (!csrfToken) {
-        throw new Error('CSRF token not found. Please refresh the page.');
-      }
-
       const url = `/defense-requests/${details.id}/complete`;
       console.log('📡 Sending request to:', url);
       
-      const res = await fetch(url, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-CSRF-TOKEN': csrfToken,
-          'Accept': 'application/json',
-        },
-        credentials: 'same-origin',
-      });
+      // Use the centralized CSRF utility
+      const res = await postWithCsrf(url, {});
       
       console.log('📥 Response status:', res.status, res.statusText);
       
@@ -456,34 +436,12 @@ export default function Details({ defenseRequest: initialDefenseRequest }: Props
     const toastId = toast.loading(`Updating to ${statusLabels[newStatus]}...`);
     
     try {
-      // Refresh CSRF token first
-      console.log('🔄 Refreshing CSRF token...');
-      await fetch('/sanctum/csrf-cookie', {
-        credentials: 'same-origin',
-      });
-      
-      const csrfToken = (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content || '';
-      
-      console.log('🔑 CSRF Token:', csrfToken ? '✓ Found' : '✗ Not found');
-      
-      if (!csrfToken) {
-        throw new Error('CSRF token not found. Please refresh the page.');
-      }
-
       const url = `/assistant/aa-verification/${details.id}/status`;
       console.log('📡 Sending request to:', url);
       console.log('📦 Payload:', { status: newStatus });
       
-      const res = await fetch(url, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-CSRF-TOKEN': csrfToken,
-          'Accept': 'application/json',
-        },
-        credentials: 'same-origin',
-        body: JSON.stringify({ status: newStatus }),
-      });
+      // Use the centralized CSRF utility
+      const res = await postWithCsrf(url, { status: newStatus });
       
       console.log('📥 Response status:', res.status, res.statusText);
       

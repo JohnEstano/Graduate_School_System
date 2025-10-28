@@ -58,6 +58,7 @@ import {
   DropdownMenuCheckboxItem,
 } from '@/components/ui/dropdown-menu';
 import type { DefenseRequestSummary } from './table-all-defense-list';
+import { postWithCsrf, patchWithCsrf, fetchWithCsrf } from '@/utils/csrf';
 
 interface ShowAllRequestsProps {
   defenseRequests?: DefenseRequestSummary[];
@@ -112,11 +113,6 @@ function ShowAllRequestsInner({ defenseRequests: initial, onStatusChange }: Show
     title: '',
     description: '',
   });
-
-  function getCsrfToken(): string {
-    const el = document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement | null;
-    return el?.content || '';
-  }
 
   // --- FINAL FIX: Only use expected_rate and amount ---
   const normalizeRequests = (list: DefenseRequestSummary[]) =>
@@ -334,15 +330,7 @@ function ShowAllRequestsInner({ defenseRequests: initial, onStatusChange }: Show
 
   const bulkUpdateStatus = async (status: string) => {
     try {
-      const res = await fetch('/defense-requests/bulk-status', {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-CSRF-TOKEN': getCsrfToken(),
-          Accept: 'application/json'
-        },
-        body: JSON.stringify({ ids: selected, status })
-      });
+      const res = await patchWithCsrf('/defense-requests/bulk-status', { ids: selected, status });
       const data = await res.json();
       if (res.ok && data.updated_ids) {
         setDefenseRequests(prev =>
@@ -362,11 +350,10 @@ function ShowAllRequestsInner({ defenseRequests: initial, onStatusChange }: Show
 
   const handleBulkDelete = async () => {
     try {
-      const res = await fetch('/defense-requests/bulk-remove', {
+      const res = await fetchWithCsrf('/defense-requests/bulk-remove', {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
-          'X-CSRF-TOKEN': getCsrfToken(),
           Accept: 'application/json'
         },
         body: JSON.stringify({ ids: selected })
@@ -407,16 +394,9 @@ function ShowAllRequestsInner({ defenseRequests: initial, onStatusChange }: Show
         : 'pending';
 
       // POST to the correct endpoint for AA payment verification
-      const res = await fetch('/aa/payment-verifications/bulk-update', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-CSRF-TOKEN': getCsrfToken(),
-        },
-        body: JSON.stringify({
-          verification_ids: verificationIds,
-          status,
-        }),
+      const res = await postWithCsrf('/aa/payment-verifications/bulk-update', {
+        verification_ids: verificationIds,
+        status,
       });
 
       if (res.ok) {
@@ -443,15 +423,7 @@ function ShowAllRequestsInner({ defenseRequests: initial, onStatusChange }: Show
 
   const onPriorityChange = async (id: number, priority: string) => {
     try {
-      const res = await fetch(`/defense-requests/${id}/priority`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-CSRF-TOKEN': getCsrfToken(),
-          Accept: 'application/json'
-        },
-        body: JSON.stringify({ priority })
-      });
+      const res = await patchWithCsrf(`/defense-requests/${id}/priority`, { priority });
       if (res.ok) {
         setDefenseRequests(prev => prev.map(r => (r.id === id ? { ...r, priority: priority as any } : r)));
         toast.success('Priority updated');
@@ -500,15 +472,7 @@ function ShowAllRequestsInner({ defenseRequests: initial, onStatusChange }: Show
 
   const updateOneStatus = useCallback(async (id: number, status: DefenseRequestSummary['status']) => {
     try {
-      const res = await fetch(`/defense-requests/${id}/status`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-CSRF-TOKEN': getCsrfToken(),
-          Accept: 'application/json'
-        },
-        body: JSON.stringify({ status })
-      });
+      const res = await patchWithCsrf(`/defense-requests/${id}/status`, { status });
       if (res.ok) {
         setDefenseRequests(prev => prev.map(r => r.id === id ? { ...r, status } : r));
         onStatusChange?.(id, status);
@@ -588,17 +552,9 @@ function ShowAllRequestsInner({ defenseRequests: initial, onStatusChange }: Show
     const toastId = toast.loading(`Updating ${selected.length} request${selected.length !== 1 ? 's' : ''}...`);
     
     try {
-      const res = await fetch('/aa/payment-verifications/bulk-update', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-CSRF-TOKEN': getCsrfToken(),
-        },
-        credentials: 'same-origin',
-        body: JSON.stringify({
-          defense_request_ids: selected,
-          status: newStatus,
-        }),
+      const res = await postWithCsrf('/aa/payment-verifications/bulk-update', {
+        defense_request_ids: selected,
+        status: newStatus,
       });
 
       const data = await res.json();
@@ -652,15 +608,7 @@ function ShowAllRequestsInner({ defenseRequests: initial, onStatusChange }: Show
     const toastId = toast.loading(`Marking ${selected.length} defense(s) as completed...`);
     
     try {
-      const res = await fetch('/defense-requests/bulk-status', {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-CSRF-TOKEN': getCsrfToken(),
-          Accept: 'application/json'
-        },
-        body: JSON.stringify({ ids: selected, status: 'Completed' })
-      });
+      const res = await patchWithCsrf('/defense-requests/bulk-status', { ids: selected, status: 'Completed' });
       const data = await res.json();
       
       console.log('📥 Bulk mark completed response:', data);

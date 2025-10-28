@@ -88,11 +88,11 @@ class StudentRecordController extends Controller
                 // Add to total amount
                 $groupedPayments[$key]['amount'] += floatval($payment->amount);
                 
-                // Add panelist info
+                // Add panelist info with role from payment record (more accurate than panelist record role)
                 if ($payment->panelist) {
                     $groupedPayments[$key]['panelists'][] = [
                         'name' => trim("{$payment->panelist->pfirst_name} {$payment->panelist->pmiddle_name} {$payment->panelist->plast_name}"),
-                        'role' => $payment->panelist->role,
+                        'role' => $payment->role ?? $payment->panelist->role, // Use payment.role first, fallback to panelist.role
                         'amount' => $payment->amount
                     ];
                 }

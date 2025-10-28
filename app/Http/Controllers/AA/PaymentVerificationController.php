@@ -104,11 +104,29 @@ class PaymentVerificationController extends Controller
      */
     private function createHonorariumRecords(DefenseRequest $defenseRequest)
     {
+        // Calculate program level from program name
+        $programLevel = \App\Helpers\ProgramLevel::getLevel($defenseRequest->program);
+        
+        \Log::info('Creating honorarium records', [
+            'defense_id' => $defenseRequest->id,
+            'program' => $defenseRequest->program,
+            'program_level' => $programLevel,
+            'defense_type' => $defenseRequest->defense_type,
+        ]);
+        
         // Get payment rates
-        $paymentRates = \App\Models\PaymentRate::where('program_level', $defenseRequest->program_level)
+        $paymentRates = \App\Models\PaymentRate::where('program_level', $programLevel)
             ->where('defense_type', $defenseRequest->defense_type)
             ->get()
             ->keyBy('type');
+        
+        if ($paymentRates->isEmpty()) {
+            \Log::error('No payment rates found', [
+                'program_level' => $programLevel,
+                'defense_type' => $defenseRequest->defense_type,
+            ]);
+            throw new \Exception("No payment rates found for {$programLevel} - {$defenseRequest->defense_type}");
+        }
         
         $studentName = trim("{$defenseRequest->first_name} {$defenseRequest->middle_name} {$defenseRequest->last_name}");
         
@@ -135,32 +153,14 @@ class PaymentVerificationController extends Controller
             }
         }
         
-        // Panel members (chairperson and panelists 1-4) all get Panel Chair rate
+        // Panel Chair
         $panelChairRate = $paymentRates->get('Panel Chair');
-        if (!$panelChairRate) {
-            \Log::warning('No Panel Chair rate found', [
-                'program_level' => $defenseRequest->program_level,
-                'defense_type' => $defenseRequest->defense_type
-            ]);
-            return;
-        }
-        
-        $panelMembers = [
-            ['name' => $defenseRequest->defense_chairperson, 'role' => 'Panel Chair'],
-            ['name' => $defenseRequest->defense_panelist1, 'role' => 'Panel Member'],
-            ['name' => $defenseRequest->defense_panelist2, 'role' => 'Panel Member'],
-            ['name' => $defenseRequest->defense_panelist3, 'role' => 'Panel Member'],
-            ['name' => $defenseRequest->defense_panelist4, 'role' => 'Panel Member'],
-        ];
-        
-        foreach ($panelMembers as $member) {
-            if (!$member['name']) continue;
-            
+        if ($defenseRequest->defense_chairperson && $panelChairRate) {
             \App\Models\HonorariumPayment::updateOrCreate(
                 [
                     'defense_request_id' => $defenseRequest->id,
-                    'panelist_name' => $member['name'],
-                    'role' => $member['role'],
+                    'panelist_name' => $defenseRequest->defense_chairperson,
+                    'role' => 'Panel Chair',
                 ],
                 [
                     'panelist_type' => 'faculty',
@@ -174,9 +174,58 @@ class PaymentVerificationController extends Controller
             );
         }
         
+        // Panel Members - each with their own numbered rate (Panel Member 1, 2, 3, 4)
+        $panelMembers = [
+            ['name' => $defenseRequest->defense_panelist1, 'role' => 'Panel Member 1'],
+            ['name' => $defenseRequest->defense_panelist2, 'role' => 'Panel Member 2'],
+            ['name' => $defenseRequest->defense_panelist3, 'role' => 'Panel Member 3'],
+            ['name' => $defenseRequest->defense_panelist4, 'role' => 'Panel Member 4'],
+        ];
+        
+        foreach ($panelMembers as $member) {
+            if (!$member['name']) continue;
+            
+            // Try to find specific rate (Panel Member 1, 2, etc.) or fall back to Panel Member 1
+            $memberRate = $paymentRates->get($member['role']) ?? $paymentRates->get('Panel Member 1') ?? $paymentRates->get('Panel Member');
+            
+            if (!$memberRate) {
+                \Log::warning('No Panel Member rate found', [
+                    'role' => $member['role'],
+                    'program' => $defenseRequest->program,
+                    'program_level' => $programLevel,
+                    'defense_type' => $defenseRequest->defense_type
+                ]);
+                continue;
+            }
+            
+            \App\Models\HonorariumPayment::updateOrCreate(
+                [
+                    'defense_request_id' => $defenseRequest->id,
+                    'panelist_name' => $member['name'],
+                    'role' => $member['role'],
+                ],
+                [
+                    'panelist_type' => 'faculty',
+                    'amount' => $memberRate->amount,
+                    'payment_status' => 'pending',
+                    'defense_date' => $defenseRequest->scheduled_date,
+                    'student_name' => $studentName,
+                    'program' => $defenseRequest->program,
+                    'defense_type' => $defenseRequest->defense_type,
+                ]
+            );
+        }
+        
         \Log::info('✅ Honorarium records created', [
             'defense_request_id' => $defenseRequest->id,
-            'total_records' => count($panelMembers) + ($defenseRequest->defense_adviser ? 1 : 0)
+            'adviser_count' => $defenseRequest->defense_adviser ? 1 : 0,
+            'panel_chair_count' => $defenseRequest->defense_chairperson ? 1 : 0,
+            'panel_members_count' => count(array_filter([
+                $defenseRequest->defense_panelist1,
+                $defenseRequest->defense_panelist2,
+                $defenseRequest->defense_panelist3,
+                $defenseRequest->defense_panelist4,
+            ])),
         ]);
     }
 

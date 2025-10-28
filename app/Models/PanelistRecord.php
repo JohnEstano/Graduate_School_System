@@ -15,7 +15,6 @@ class PanelistRecord extends Model
         'pmiddle_name', 
         'plast_name', 
         'role', 
-        'defense_type', 
         'received_date'
     ];
 
