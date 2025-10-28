@@ -208,16 +208,16 @@ export default function ComprehensiveExamIndex() {
   return (
     <AppLayout breadcrumbs={breadcrumbs}>
       <Head title="Comprehensive Exam" />
-      <div className="flex flex-col px-7 pt-5 pb-5 w/full">
-        <div className="w-full bg-white border border-zinc-200 rounded-lg overflow-hidden">
-          <div className="flex flex-row items-center justify-between w-full px-5 py-3 border-b">
+      <div className="flex flex-col px-7 pt-5 pb-5 w-full">
+        <div className="w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg overflow-hidden shadow-sm">
+          <div className="flex flex-row items-center justify-between w-full px-5 py-3 border-b border-zinc-200 dark:border-zinc-800">
             <div className="flex items-center gap-2">
-              <div className="h-10 w-10 flex items-center justify-center rounded-full bg-rose-500/10 border border-rose-500">
-                <GraduationCap className="h-5 w-5 text-rose-400" />
+              <div className="h-10 w-10 flex items-center justify-center rounded-full bg-rose-500/10 dark:bg-rose-500/20 border border-rose-500 dark:border-rose-600">
+                <GraduationCap className="h-5 w-5 text-rose-500 dark:text-rose-400" />
               </div>
               <div>
-                <span className="text-base font-semibold">Comprehensive Exam</span>
-                <p className="block text-xs text-muted-foreground">
+                <span className="text-base font-semibold text-zinc-900 dark:text-zinc-100">Comprehensive Exam</span>
+                <p className="block text-xs text-muted-foreground dark:text-zinc-400">
                   Submit and track your comprehensive exam application.
                 </p>
                 <div className="mt-1 flex items-center gap-2">
@@ -225,10 +225,10 @@ export default function ComprehensiveExamIndex() {
                     variant={canApply ? 'secondary' : 'outline'}
                     className={
                       examClosed
-                        ? 'border-rose-300 text-rose-700 bg-rose-50'
+                        ? 'border-rose-300 dark:border-rose-700 text-rose-700 dark:text-rose-400 bg-rose-50 dark:bg-rose-950'
                         : canApply
-                        ? 'border-green-300 text-green-700 bg-green-50'
-                        : ''
+                        ? 'border-green-300 dark:border-green-700 text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-950'
+                        : 'dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300'
                     }
                   >
                     {examClosed ? (
@@ -274,7 +274,7 @@ export default function ComprehensiveExamIndex() {
 
                   {/* Subtle sync hint when polling */}
                   {retryCount > 0 && allStudentFlagsNull(elig) && (
-                    <span className="text-[11px] text-zinc-500">
+                    <span className="text-[11px] text-zinc-500 dark:text-zinc-400">
                       Syncing eligibility… ({retryCount}/5)
                     </span>
                   )}
@@ -283,7 +283,7 @@ export default function ComprehensiveExamIndex() {
             </div>
 
             <Button
-              className="bg-rose-500 text-sm px-5 rounded-md"
+              className="bg-rose-500 hover:bg-rose-600 dark:bg-rose-600 dark:hover:bg-rose-700 text-white text-sm px-5 rounded-md"
               onClick={() => setOpen(true)}
               disabled={!canApply || (!!application && (hasPending || hasApproved))}
               title={
@@ -304,7 +304,7 @@ export default function ComprehensiveExamIndex() {
             <CompreExamForm open={open} onOpenChange={setOpen} />
           </div>
 
-          <div>
+          <div className="dark:bg-zinc-900">
             {application ? (
               <DisplayApplication
                 application={{
@@ -327,7 +327,7 @@ export default function ComprehensiveExamIndex() {
                 }}
               />
             ) : (
-              <div className="p-6 text-center text-sm text-muted-foreground">
+              <div className="p-6 text-center text-sm text-muted-foreground dark:text-zinc-400">
                 No application submitted yet.
               </div>
             )}
@@ -337,26 +337,26 @@ export default function ComprehensiveExamIndex() {
 
       {/* Eligibility details dialog */}
       <Dialog open={showEligDialog} onOpenChange={setShowEligDialog}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-md dark:bg-zinc-900 dark:border-zinc-800">
           <DialogHeader>
-            <DialogTitle>Comprehensive Exam Eligibility</DialogTitle>
-            <DialogDescription>
+            <DialogTitle className="dark:text-zinc-100">Comprehensive Exam Eligibility</DialogTitle>
+            <DialogDescription className="dark:text-zinc-400">
               You must meet all the requirements below before you can submit an application.
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-2">
             {blockers.map((b, i) => (
-              <div key={i} className="flex items-center justify-between rounded border px-3 py-2">
-                <span className="text-sm">{b.label}</span>
+              <div key={i} className="flex items-center justify-between rounded border border-zinc-200 dark:border-zinc-700 px-3 py-2 dark:bg-zinc-800/50">
+                <span className="text-sm dark:text-zinc-300">{b.label}</span>
                 <Badge
                   variant="outline"
                   className={
                     b.ok === true
-                      ? 'border-green-300 text-green-700 bg-green-50'
+                      ? 'border-green-300 dark:border-green-700 text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-950'
                       : b.ok === false
-                      ? 'border-rose-300 text-rose-700 bg-rose-50'
-                      : 'text-zinc-600'
+                      ? 'border-rose-300 dark:border-rose-700 text-rose-700 dark:text-rose-400 bg-rose-50 dark:bg-rose-950'
+                      : 'text-zinc-600 dark:text-zinc-400 dark:border-zinc-700 dark:bg-zinc-800'
                   }
                 >
                   {b.ok === true ? 'OK' : b.ok === false ? 'Missing' : 'Unknown'}
@@ -366,7 +366,7 @@ export default function ComprehensiveExamIndex() {
           </div>
 
           <DialogFooter className="mt-2">
-            <Button variant="outline" onClick={() => setShowEligDialog(false)}>
+            <Button variant="outline" onClick={() => setShowEligDialog(false)} className="dark:border-zinc-700 dark:hover:bg-zinc-800">
               Close
             </Button>
             <Button
@@ -384,6 +384,7 @@ export default function ComprehensiveExamIndex() {
                   ? 'Application pending'
                   : 'Apply now'
               }
+              className="bg-rose-500 hover:bg-rose-600 dark:bg-rose-600 dark:hover:bg-rose-700"
             >
               Apply Now
             </Button>
