@@ -33,6 +33,8 @@ export default function Login(props: LoginProps) {
 
     const submit: FormEventHandler = (e) => {
         e.preventDefault();
+        // Use the unified auth endpoint which supports modes: auto | local | api
+        // This fixes local login by avoiding the API-only route when not needed
         post(route('login'), {
             onSuccess: () => {
                 reset('password');

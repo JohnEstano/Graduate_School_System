@@ -153,6 +153,7 @@ class CoordinatorCompreExamController extends Controller
                 'lacking'    => $elig['lacking'],
 
                 'applied'            => (bool) $latest,
+                'application_id'     => $latest->application_id ?? null,
                 'submitted_at'       => $latest->created_at ?? null,
                 'application_status' => $latest
                     ? strtolower($latest->final_approval_status ?? 'pending')

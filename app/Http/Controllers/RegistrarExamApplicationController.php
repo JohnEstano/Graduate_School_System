@@ -201,6 +201,39 @@ class RegistrarExamApplicationController extends Controller
         return back()->with('success', 'Decision saved.');
     }
 
+    // Retrieve decision back to pending (Registrar)
+    public function retrieve(Request $request, ExamApplication $application)
+    {
+        // Create a lightweight audit entry marking retrieval to pending
+        $review = ExamRegistrarReview::create([
+            'exam_application_id'     => $application->application_id,
+            'doc_photo_clear'         => false,
+            'doc_transcript'          => false,
+            'doc_psa_birth'           => false,
+            'doc_honorable_dismissal' => false,
+            'doc_prof_exam'           => false,
+            'doc_marriage_cert'       => false,
+            'documents_complete'      => false,
+            'grades_complete'         => false,
+            'status'                  => 'pending',
+            'reason'                  => null,
+            'reviewed_by'             => $request->user()->id,
+        ]);
+
+        // Update snapshot
+        $application->registrar_status       = 'pending';
+        $application->registrar_reason       = null;
+        $application->registrar_reviewer_id  = $request->user()->id;
+        $application->registrar_reviewed_at  = now();
+        $application->approved_by            = null;
+        $application->save();
+
+        if ($request->expectsJson()) {
+            return response()->json(['ok' => true, 'review_id' => $review->id], 201);
+        }
+        return back()->with('success', 'Application retrieved for re-review.');
+    }
+
     // Reviews history for an application (Registrar)
     public function reviews(ExamApplication $application)
     {

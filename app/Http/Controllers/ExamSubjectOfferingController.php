@@ -73,7 +73,7 @@ class ExamSubjectOfferingController extends Controller
             ->orderBy('subject_name')
             ->get([
                 'id','program','school_year','subject_code','subject_name',
-                'exam_date','start_time','end_time','venue','is_active'
+                'exam_date','start_time','end_time','venue','proctor','is_active'
             ]);
 
         return response()->json($rows);
@@ -91,6 +91,7 @@ class ExamSubjectOfferingController extends Controller
             'exam_date'    => ['nullable','date'],
             'start_time'   => ['nullable','date_format:H:i'],
             'end_time'     => ['nullable','date_format:H:i'],
+            'proctor'      => ['nullable','string','max:255'],
             'venue'        => ['nullable','string','max:255'],
             'is_active'    => ['boolean'],
         ]);
@@ -123,6 +124,7 @@ class ExamSubjectOfferingController extends Controller
             'exam_date'    => ['nullable','date'],
             'start_time'   => ['nullable','date_format:H:i'],
             'end_time'     => ['nullable','date_format:H:i'],
+            'proctor'      => ['nullable','string','max:255'],
             'venue'        => ['nullable','string','max:255'],
             'is_active'    => ['boolean'],
         ]);

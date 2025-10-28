@@ -39,6 +39,7 @@ use Illuminate\Http\Request;
 use App\Models\ExamSubjectOffering;
 use App\Http\Controllers\RegistrarExamApplicationController;
 use App\Http\Controllers\DeanCompreExamController;
+use App\Http\Controllers\Api\ComprehensiveExamEligibilityController as ApiCompreEligController;
 
 
 /*
@@ -630,6 +631,16 @@ Route::get('/honorarium/individual-record/{programId}', [HonorariumSummaryContro
     Route::delete('/coordinator/compre-exam-schedule/offerings/{offering}', [ExamSubjectOfferingController::class, 'destroy'])
         ->name('coordinator.compre-exam-schedule.offerings.destroy');
 
+    // Coordinator: Post Scores workflow
+    Route::middleware(['auth'])->group(function () {
+        // fetch subjects for an application (JSON)
+        Route::get('/api/exam-applications/{application}/subjects', [CoordinatorExamScoreController::class, 'subjects'])
+            ->name('api.exam-applications.subjects');
+        // save posted scores
+        Route::post('/coordinator/exam-applications/{application}/scores', [CoordinatorExamScoreController::class, 'save'])
+            ->name('coordinator.exam-applications.scores');
+    });
+
     Route::middleware(['auth','verified'])->group(function () {
         // Student-safe schedules index (active + with date/time)
         Route::get('/student/exam-subject-offerings', function (Request $request) {
@@ -668,6 +679,8 @@ Route::get('/honorarium/individual-record/{programId}', [HonorariumSummaryContro
 
         Route::post('/registrar/exam-applications/{application}/decision', [RegistrarExamApplicationController::class, 'decide'])
             ->name('registrar.exam-applications.decide');
+        Route::post('/registrar/exam-applications/{application}/retrieve', [RegistrarExamApplicationController::class, 'retrieve'])
+            ->name('registrar.exam-applications.retrieve');
 
         Route::get('/api/registrar/exam-applications/{application}/reviews', [RegistrarExamApplicationController::class, 'reviews'])
             ->name('api.registrar.exam-applications.reviews');
@@ -816,6 +829,11 @@ Route::get('/api/faculty-search', function (\Illuminate\Http\Request $request) {
         ->get(['id', 'first_name', 'middle_name', 'last_name']);
 })->name('api.faculty-search');
 
+// Comprehensive Exam status and eligibility APIs (student + registrar UIs)
+// Use the default controller for both pages
+Route::get('/api/comprehensive-exam/status', [ApiCompreEligController::class, 'checkExamStatus']);
+Route::get('/api/comprehensive-exam/eligibility', [ApiCompreEligController::class, 'checkEligibility']);
+
 Route::get('/api/coordinator/defense-requests', function () {
     $user = Auth::user();
     $roles = ['Coordinator', 'Administrative Assistant', 'Dean'];
@@ -860,7 +878,8 @@ Route::get('/legacy/faculty/class-list', [\App\Http\Controllers\InstructorClassL
     ->name('legacy.faculty.class-list');
 
 // Temporary test route for comprehensive exam eligibility
-Route::get('/test-eligibility', [\App\Http\Controllers\Api\ComprehensiveExamEligibilityController::class, 'checkEligibility'])
+// Temporary test route for comprehensive exam eligibility (uses default controller)
+Route::get('/test-eligibility', [ApiCompreEligController::class, 'checkEligibility'])
     ->middleware('auth');
 
 // Debug route to check academic records data
@@ -976,11 +995,7 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/api/students/search', [App\Http\Controllers\Api\StudentSearchController::class, 'search']);
 
     // Comprehensive exam eligibility APIs
-    Route::get('/api/comprehensive-exam/status', [App\Http\Controllers\Api\ComprehensiveExamEligibilityController::class, 'checkExamStatus']);
-    Route::get('/api/comprehensive-exam/eligibility', [App\Http\Controllers\Api\ComprehensiveExamEligibilityController::class, 'checkEligibility']);
-
-    // Manual data scraping endpoint for testing
-    Route::post('/api/comprehensive-exam/scrape-data', [App\Http\Controllers\Api\ComprehensiveExamEligibilityController::class, 'manualDataScraping']);
+    // Removed legacy duplicates that conflicted with V2 endpoints and caused 500s
 
 });
 

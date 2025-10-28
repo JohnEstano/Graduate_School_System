@@ -17,6 +17,7 @@ class ExamSubjectOffering extends Model
         'exam_date',
         'start_time',
         'end_time',
+        'proctor',
         'venue',
         'is_active',
     ];

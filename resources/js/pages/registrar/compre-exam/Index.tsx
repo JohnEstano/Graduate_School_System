@@ -63,8 +63,13 @@ export default function RegistrarCompreExamIndex() {
   const [decision, setDecision] = React.useState<'approved'|'rejected'|null>(null);
   const [reason, setReason] = React.useState<string>('');
   const [submitting, setSubmitting] = React.useState(false);
+  const [retrieving, setRetrieving] = React.useState(false);
   const [audit, setAudit] = React.useState<any[]>([]);
   const [tab, setTab] = React.useState<'checklist'|'audit'>('checklist');
+  // Eligibility alignment with student criteria
+  const [examOpen, setExamOpen] = React.useState<boolean | null>(null);
+  const [eligMap, setEligMap] = React.useState<Record<number, { gradesComplete: boolean | null; noOutstandingBalance: boolean | null }>>({});
+  const [eligLoading, setEligLoading] = React.useState<boolean>(false);
 
   function fetchRows() {
     setLoading(true);
@@ -86,6 +91,73 @@ export default function RegistrarCompreExamIndex() {
   }
 
   React.useEffect(() => { fetchRows(); }, []);
+
+  // Fetch exam open/close status (same as student page)
+  React.useEffect(() => {
+    fetch('/api/comprehensive-exam/status', { headers: { Accept: 'application/json' }, credentials: 'same-origin' })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((j) => setExamOpen(j ? !!(j.open ?? j.isOpen) : null))
+      .catch(() => setExamOpen(null));
+  }, []);
+
+  // Parse eligibility JSON similar to student page
+  function parseEligibility(json: any): { gradesComplete: boolean | null; noOutstandingBalance: boolean | null } {
+    let gradesComplete: boolean | null = null;
+    let noOutstandingBalance: boolean | null = null;
+    if (Array.isArray(json?.requirements)) {
+      const reqs = json.requirements as Array<{ name: string; completed?: boolean }>;
+      const find = (name: string) => reqs.find((r) => r.name === name)?.completed ?? null;
+      gradesComplete = find('Complete grades (registrar verified)');
+      noOutstandingBalance = find('No outstanding tuition balance');
+    } else {
+      gradesComplete = json?.gradesComplete ?? json?.completeGrades ?? null;
+      noOutstandingBalance = json?.noOutstandingBalance ?? json?.hasNoOutstandingBalance ?? null;
+    }
+    return {
+      gradesComplete: gradesComplete === null ? null : !!gradesComplete,
+      noOutstandingBalance: noOutstandingBalance === null ? null : !!noOutstandingBalance,
+    };
+  }
+
+  // Fetch per-application eligibility using the same API (bounded concurrency)
+  React.useEffect(() => {
+    if (!rows.length) { setEligMap({}); return; }
+    const appIds = rows.map((r) => r.application_id);
+    const pending = appIds.filter((id) => eligMap[id] === undefined);
+    if (!pending.length) return;
+    setEligLoading(true);
+
+    const maxConcurrent = 5;
+    let idx = 0;
+    const results: Record<number, { gradesComplete: boolean | null; noOutstandingBalance: boolean | null }> = {};
+
+    const runBatch = (): Promise<void> => {
+      const batch = [] as Array<Promise<void>>;
+      for (let i = 0; i < maxConcurrent && idx < pending.length; i += 1) {
+        const appId = pending[idx++];
+        const p = fetch(`/api/comprehensive-exam/eligibility?application_id=${encodeURIComponent(String(appId))}`,
+          { headers: { Accept: 'application/json' }, credentials: 'same-origin' })
+          .then((r) => (r.ok ? r.json() : null))
+          .then((j) => {
+            const parsed = j ? parseEligibility(j) : { gradesComplete: null, noOutstandingBalance: null };
+            results[appId] = parsed;
+          })
+          .catch(() => { results[appId] = { gradesComplete: null, noOutstandingBalance: null }; });
+        batch.push(p);
+      }
+      return Promise.allSettled(batch).then(() => {
+        if (idx < pending.length) return runBatch();
+        return undefined as unknown as void;
+      });
+    };
+
+    runBatch()
+      .finally(() => {
+        setEligMap((prev) => ({ ...prev, ...results }));
+        setEligLoading(false);
+      });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rows]);
 
   // Quick search (client-side like coordinator)
   const filtered = React.useMemo(() => {
@@ -129,7 +201,14 @@ export default function RegistrarCompreExamIndex() {
     const rejected = rejectedRows.length;
     const decided = approved + rejected;
 
-    const eligible = rows.filter((r: any) => r.latest_review?.documents_complete && r.latest_review?.grades_complete).length;
+    // Align eligible with student criteria: exam open + complete grades + no outstanding balance
+    const eligible = rows.filter((r) => {
+      const e = eligMap[r.application_id];
+      if (!e) return false;
+      // If examOpen is explicitly closed, treat as not eligible; if null, ignore the flag
+      const openOk = examOpen === null ? true : examOpen === true;
+      return openOk && e.gradesComplete === true && e.noOutstandingBalance === true;
+    }).length;
 
     const approvalRate = decided ? Math.round((approved / decided) * 100) : 0;
     const pendingPct = total ? Math.round((pending / total) * 100) : 0;
@@ -148,7 +227,7 @@ export default function RegistrarCompreExamIndex() {
     );
 
     return { total, pending, approved, rejected, decided, eligible, approvalRate, pendingPct, decidedLast7, medPendingAge, avgDecisionTime };
-  }, [rows]);
+  }, [rows, eligMap, examOpen]);
 
   // Bulk actions from table
   const handleBulkAction = (ids: number[], action: 'approve'|'reject', reasonArg?: string) => {
@@ -289,6 +368,41 @@ export default function RegistrarCompreExamIndex() {
       .finally(() => setSubmitting(false));
   }
 
+  // Retrieve a rejected decision back to Pending (like compre payment)
+  function retrieveDecision() {
+    if (!current) return;
+    setRetrieving(true);
+    fetch(`/registrar/exam-applications/${current.application_id}/retrieve`, {
+      method: 'POST',
+      headers: {
+        Accept: 'application/json','Content-Type': 'application/json','X-Requested-With': 'XMLHttpRequest',
+        'X-CSRF-Token': (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content || '',
+      },
+      credentials: 'same-origin',
+      body: JSON.stringify({}),
+    })
+      .then(async (r) => { if (!r.ok) throw new Error(await r.text()); })
+      .then(() => {
+        toast.success('Application retrieved for re-review.');
+        // Optimistic audit entry
+        setAudit((prev) => [
+          {
+            id: `local-${Date.now()}`,
+            status: 'pending',
+            reason: null,
+            created_at: new Date().toISOString(),
+            grades_complete: gradesComplete,
+            documents_complete: !!(doc.photo && doc.tor && doc.psa && doc.hd),
+          },
+          ...prev,
+        ]);
+        setOpen(false);
+        fetchRows();
+      })
+      .catch(() => toast.error('Failed to retrieve application'))
+      .finally(() => setRetrieving(false));
+  }
+
   return (
     <AppLayout>
       <Head title="Registrar • Comprehensive Exam Applications" />
@@ -350,7 +464,7 @@ export default function RegistrarCompreExamIndex() {
             label="Eligible"
             value={kpis.eligible}
             accent="bg-emerald-50"
-            sub="Docs + grades complete"
+            sub={eligLoading ? 'Checking eligibility…' : 'Grades + no outstanding balance'}
           />
           <CardKPI
             label="Decision time"
@@ -392,33 +506,69 @@ export default function RegistrarCompreExamIndex() {
                 <TabsContent value="checklist">
                   <Separator className="my-3" />
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    <label className="flex items-center gap-2 text-sm"><Checkbox checked={doc.photo} onCheckedChange={(v) => setDoc(s => ({ ...s, photo: !!v }))} /> Clear whole body picture</label>
-                    <label className="flex items-center gap-2 text-sm"><Checkbox checked={doc.tor} onCheckedChange={(v) => setDoc(s => ({ ...s, tor: !!v }))} /> Transcript of record</label>
-                    <label className="flex items-center gap-2 text-sm"><Checkbox checked={doc.psa} onCheckedChange={(v) => setDoc(s => ({ ...s, psa: !!v }))} /> PSA birth certificate</label>
-                    <label className="flex items-center gap-2 text-sm"><Checkbox checked={doc.hd} onCheckedChange={(v) => setDoc(s => ({ ...s, hd: !!v }))} /> Honorable dismissal</label>
-                    <label className="flex items-center gap-2 text-sm"><Checkbox checked={doc.prof} onCheckedChange={(v) => setDoc(s => ({ ...s, prof: !!v }))} /> Passed professional exam (optional)</label>
-                    <label className="flex items-center gap-2 text-sm"><Checkbox checked={doc.marriage} onCheckedChange={(v) => setDoc(s => ({ ...s, marriage: !!v }))} /> Marriage certificate (optional)</label>
+                    {(() => {
+                      const decided = (current?.registrar_status === 'approved' || current?.registrar_status === 'rejected');
+                      const itemCls = 'flex items-center gap-2 text-sm';
+                      return (
+                        <>
+                          <label className={itemCls}><Checkbox checked={doc.photo} onCheckedChange={(v) => !decided && setDoc(s => ({ ...s, photo: !!v }))} disabled={decided} /> Clear whole body picture</label>
+                          <label className={itemCls}><Checkbox checked={doc.tor} onCheckedChange={(v) => !decided && setDoc(s => ({ ...s, tor: !!v }))} disabled={decided} /> Transcript of record</label>
+                          <label className={itemCls}><Checkbox checked={doc.psa} onCheckedChange={(v) => !decided && setDoc(s => ({ ...s, psa: !!v }))} disabled={decided} /> PSA birth certificate</label>
+                          <label className={itemCls}><Checkbox checked={doc.hd} onCheckedChange={(v) => !decided && setDoc(s => ({ ...s, hd: !!v }))} disabled={decided} /> Honorable dismissal</label>
+                          <label className={itemCls}><Checkbox checked={doc.prof} onCheckedChange={(v) => !decided && setDoc(s => ({ ...s, prof: !!v }))} disabled={decided} /> Passed professional exam (optional)</label>
+                          <label className={itemCls}><Checkbox checked={doc.marriage} onCheckedChange={(v) => !decided && setDoc(s => ({ ...s, marriage: !!v }))} disabled={decided} /> Marriage certificate (optional)</label>
+                        </>
+                      );
+                    })()}
                   </div>
 
                   <div className="text-sm mt-2">Grades complete: <span className={gradesComplete ? 'text-green-700' : 'text-rose-700'}>{gradesComplete ? 'Yes' : 'No'}</span></div>
 
                   <Separator className="my-3" />
 
-                  <div className="flex items-center gap-2">
-                    <Button variant={decision === 'approved' ? 'default' : 'outline'} onClick={() => setDecision('approved')}><Check className="h-4 w-4 mr-1" /> Approve</Button>
-                    <Button variant={decision === 'rejected' ? 'destructive' : 'outline'} onClick={() => setDecision('rejected')}><X className="h-4 w-4 mr-1" /> Reject</Button>
-                  </div>
+                  {(() => {
+                    const decided = (current?.registrar_status === 'approved' || current?.registrar_status === 'rejected');
+                    if (decided) {
+                      return (
+                        <div className="flex flex-col gap-2">
+                          <div className="text-sm">
+                            Status: <span className={current?.registrar_status === 'approved' ? 'text-green-700' : 'text-rose-700'}>
+                              {current?.registrar_status?.[0]?.toUpperCase()}{current?.registrar_status?.slice(1)}
+                            </span>
+                          </div>
+                          {current?.registrar_reason && (
+                            <div className="text-sm">Reason: {current.registrar_reason}</div>
+                          )}
+                          {current?.registrar_status === 'rejected' && (
+                            <div className="flex justify-end gap-2 pt-3">
+                              <Button variant="outline" onClick={retrieveDecision} disabled={retrieving}>
+                                {retrieving ? 'Retrieving…' : 'Retrieve (back to Pending)'}
+                              </Button>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    }
+                    return (
+                      <>
+                        <div className="flex items-center gap-2">
+                          <Button variant={decision === 'approved' ? 'default' : 'outline'} onClick={() => setDecision('approved')}><Check className="h-4 w-4 mr-1" /> Approve</Button>
+                          <Button variant={decision === 'rejected' ? 'destructive' : 'outline'} onClick={() => setDecision('rejected')}><X className="h-4 w-4 mr-1" /> Reject</Button>
+                        </div>
 
-                  {decision === 'rejected' && (
-                    <div className="space-y-1 mt-2">
-                      <Input value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Reason for rejection…" />
-                      {!reason && <div className="text-xs text-muted-foreground">Tip: leave empty to auto-fill based on missing requirements.</div>}
-                    </div>
-                  )}
+                        {decision === 'rejected' && (
+                          <div className="space-y-1 mt-2">
+                            <Input value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Reason for rejection…" />
+                            {!reason && <div className="text-xs text-muted-foreground">Tip: leave empty to auto-fill based on missing requirements.</div>}
+                          </div>
+                        )}
 
-                  <div className="flex justify-end gap-2 pt-3">
-                    <Button onClick={submitDecision} disabled={!decision || submitting}>{submitting ? 'Saving…' : 'Save decision'}</Button>
-                  </div>
+                        <div className="flex justify-end gap-2 pt-3">
+                          <Button onClick={submitDecision} disabled={!decision || submitting}>{submitting ? 'Saving…' : 'Save decision'}</Button>
+                        </div>
+                      </>
+                    );
+                  })()}
                 </TabsContent>
 
                 <TabsContent value="audit">

@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import TableCompreExam from './table-compre-exam';
 import { PaperclipIcon } from 'lucide-react';
+import { Toaster } from '@/components/ui/sonner';
 // add dialog ui
 import {
   Dialog,
@@ -51,6 +52,7 @@ export type CompreExamApplicationSummary = {
   eligible: boolean;
   lacking: string[]; // e.g., ["Grades","Documents","Outstanding Balance"]
   applied: boolean;
+  application_id?: number | null;
   submitted_at: string | null; // ISO
   application_status: 'approved' | 'pending' | 'rejected' | 'not_yet_applied';
   permit_status: 'approved' | 'pending' | 'rejected' | null;
@@ -384,6 +386,8 @@ export default function CoordinatorCompreExamIndex() {
           </DialogContent>
         </Dialog>
       </div>
+      {/* Toasts for bottom-right success messages */}
+      <Toaster position="bottom-right" duration={5000} richColors closeButton />
     </AppLayout>
   );
 }

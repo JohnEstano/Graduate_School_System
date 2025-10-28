@@ -14,9 +14,14 @@ class ExamApplicationSubject extends Model
         'application_id',
         'offering_id',
         'subject_name',
+        'score',
         'exam_date',
         'start_time',
         'end_time',
+    ];
+
+    protected $casts = [
+        'score' => 'integer',
     ];
 
     public function application(): BelongsTo
