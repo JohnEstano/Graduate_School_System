@@ -248,6 +248,10 @@ class DefenseRequestController extends Controller
                 ]]
             ]);
 
+            // Calculate and set the expected amount based on payment rates
+            $defenseRequest->calculateAndSetAmount();
+            $defenseRequest->save();
+
             // Find adviser using flexible name matching
             Log::info('Defense Request: Looking for adviser', [
                 'defense_request_id' => $defenseRequest->id,

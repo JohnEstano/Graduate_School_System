@@ -215,14 +215,23 @@ export default function SubmitDefenseRequirements({ onFinish, open, onOpenChange
 
     // Fetch payment rates on mount
     useEffect(() => {
-        fetch('/dean/payment-rates/data')
-            .then(res => res.json())
+        fetch('/api/payment-rates')
+            .then(res => {
+                if (!res.ok) {
+                    throw new Error(`HTTP error! status: ${res.status}`);
+                }
+                return res.json();
+            })
             .then(data => {
+                console.log('Payment rates fetched successfully:', data);
                 if (data.rates) {
                     setPaymentRates(data.rates);
                 }
             })
-            .catch(err => console.error('Failed to fetch payment rates:', err));
+            .catch(err => {
+                console.error('Failed to fetch payment rates:', err);
+                console.error('Make sure you are logged in and the route /api/payment-rates is accessible');
+            });
     }, []);
 
     // Auto-calculate payment amount when defense type or program changes

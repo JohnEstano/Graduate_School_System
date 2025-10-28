@@ -7,7 +7,7 @@ import SettingsLayout from '@/layouts/settings/layout';
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { Info } from "lucide-react";
 import { useState } from "react";
-import axios from "axios";
+import axios from "@/lib/axios";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 

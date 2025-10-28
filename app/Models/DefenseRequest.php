@@ -517,4 +517,30 @@ class DefenseRequest extends Model
     {
         return $this->hasOne(\App\Models\AAPaymentVerification::class, 'defense_request_id');
     }
+
+    /**
+     * Calculate and set the expected amount based on payment rates
+     * Returns the calculated amount
+     */
+    public function calculateAndSetAmount(): float
+    {
+        // Get program level (Masteral or Doctorate)
+        $programLevel = ProgramLevel::getLevel($this->program);
+        
+        // Normalize defense type (Prefinal -> Pre-final)
+        $defenseType = $this->defense_type;
+        if (strtolower($defenseType) === 'prefinal') {
+            $defenseType = 'Pre-final';
+        }
+        
+        // Sum all rates for this program level and defense type
+        $totalAmount = PaymentRate::where('program_level', $programLevel)
+            ->where('defense_type', $defenseType)
+            ->sum('amount');
+        
+        // Set the amount on this model
+        $this->amount = $totalAmount;
+        
+        return (float) $totalAmount;
+    }
 }

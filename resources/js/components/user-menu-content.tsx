@@ -2,8 +2,9 @@ import { DropdownMenuGroup, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSep
 import { UserInfo } from '@/components/user-info';
 import { useMobileNavigation } from '@/hooks/use-mobile-navigation';
 import { type User } from '@/types';
-import { Link, router } from '@inertiajs/react';
+import { Link } from '@inertiajs/react';
 import { LogOut, Settings } from 'lucide-react';
+import axios from '@/lib/axios';
 
 interface UserMenuContentProps {
     user: User;
@@ -12,9 +13,44 @@ interface UserMenuContentProps {
 export function UserMenuContent({ user }: UserMenuContentProps) {
     const cleanup = useMobileNavigation();
 
-    const handleLogout = () => {
+    const handleLogout = async (e: React.MouseEvent<HTMLButtonElement>) => {
+        e.preventDefault();
         cleanup();
-        router.flushAll();
+        
+        try {
+            // Get fresh CSRF token from server
+            await axios.get('/sanctum/csrf-cookie');
+            
+            // Small delay to ensure cookie is set
+            await new Promise(resolve => setTimeout(resolve, 150));
+            
+            // Get the fresh token from meta tag
+            const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+            
+            if (!csrfToken) {
+                console.error('No CSRF token found');
+                window.location.href = '/login';
+                return;
+            }
+            
+            // Create and submit form with fresh token
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = '/logout';
+            
+            const tokenInput = document.createElement('input');
+            tokenInput.type = 'hidden';
+            tokenInput.name = '_token';
+            tokenInput.value = csrfToken;
+            form.appendChild(tokenInput);
+            
+            document.body.appendChild(form);
+            form.submit();
+        } catch (error) {
+            console.error('Logout error:', error);
+            // Force redirect on error
+            window.location.href = '/login';
+        }
     };
 
     return (
@@ -35,10 +71,13 @@ export function UserMenuContent({ user }: UserMenuContentProps) {
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
             <DropdownMenuItem asChild>
-                <Link className="block w-full" method="post" href={route('logout')} as="button" onClick={handleLogout}>
+                <button 
+                    className="block w-full text-left cursor-pointer flex items-center"
+                    onClick={handleLogout}
+                >
                     <LogOut className="mr-2" />
                     Log out
-                </Link>
+                </button>
             </DropdownMenuItem>
         </>
     );
