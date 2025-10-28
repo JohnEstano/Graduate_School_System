@@ -36,7 +36,9 @@ type ApplicationVM = {
   office_address?: string | null;
   program: string;
   created_at?: string;
-  subjects: Subject[];
+  subjects: (Subject & { score?: number | null })[];
+  average_score?: number | null;
+  result_status?: 'passed' | 'failed' | null;
   first_name: string;
   middle_name?: string | null;
   last_name: string;
@@ -51,7 +53,6 @@ type PageProps = {
 type Eligibility = {
   examOpen: boolean | null;
   gradesComplete: boolean | null;
-  documentsComplete: boolean | null;
   noOutstandingBalance: boolean | null;
   loading: boolean;
   error?: string | null;
@@ -62,7 +63,6 @@ const DEV_SIMULATE = false; // Changed to false to use real UIC API data
 const SIM_ELIG = {
   examOpen: true,
   gradesComplete: true,
-  documentsComplete: true,
   noOutstandingBalance: true
 };
 // ----------------------------------------
@@ -76,7 +76,6 @@ export default function ComprehensiveExamIndex() {
   const [elig, setElig] = useState<Eligibility>({
     examOpen: null,
     gradesComplete: null,
-    documentsComplete: true, // No longer checking this requirement
     noOutstandingBalance: null,
     loading: true,
     error: null,
@@ -103,7 +102,6 @@ export default function ComprehensiveExamIndex() {
         const simulated: Eligibility = {
           examOpen: getBool('open', SIM_ELIG.examOpen),
           gradesComplete: getBool('grades', SIM_ELIG.gradesComplete),
-          documentsComplete: getBool('docs', SIM_ELIG.documentsComplete),
           noOutstandingBalance: getBool('bal', SIM_ELIG.noOutstandingBalance),
           loading: false,
           error: null,
@@ -132,9 +130,8 @@ export default function ComprehensiveExamIndex() {
         examOpen = !!(j?.open ?? j?.isOpen);
       }
 
-      let gradesComplete: boolean | null = null;
-      let documentsComplete: boolean | null = null;
-      let noOutstandingBalance: boolean | null = null;
+  let gradesComplete: boolean | null = null;
+  let noOutstandingBalance: boolean | null = null;
 
       if (studentEligRes.status === 'fulfilled' && studentEligRes.value.ok) {
         const j = await studentEligRes.value.json();
@@ -158,7 +155,6 @@ export default function ComprehensiveExamIndex() {
       const nextElig: Eligibility = {
         examOpen,
         gradesComplete,
-        documentsComplete: true, // Always true now, no longer checking
         noOutstandingBalance,
         loading: false,
         error: null,
@@ -179,7 +175,6 @@ export default function ComprehensiveExamIndex() {
       setElig({
         examOpen: null,
         gradesComplete: null,
-        documentsComplete: true, // No longer checking this requirement
         noOutstandingBalance: null,
         loading: false,
         error: e?.message ?? 'Unable to verify eligibility at this time.',
@@ -193,11 +188,7 @@ export default function ComprehensiveExamIndex() {
   }, []);
 
   const canApply = useMemo(() => {
-    return !!(
-      elig.examOpen &&
-      elig.gradesComplete &&
-      elig.noOutstandingBalance
-    );
+    return !!(elig.examOpen && elig.gradesComplete && elig.noOutstandingBalance);
   }, [elig]);
 
   const examClosed = elig.examOpen === false;
@@ -323,6 +314,8 @@ export default function ComprehensiveExamIndex() {
                   last_name: application.last_name,
                   program: application.program,
                   school_year: application.school_year,
+                  average_score: application.average_score ?? null,
+                  result_status: application.result_status ?? null,
                   office_address: application.office_address ?? null,
                   mobile_no: application.contact_number ?? null,
                   telephone_no: application.telephone_number ?? null,

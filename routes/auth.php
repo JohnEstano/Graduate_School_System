@@ -13,6 +13,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use App\Models\User;
+use App\Http\Controllers\Auth\AuthenticatedSessionV2Controller;
 
 Route::middleware('guest')->group(function () {
     Route::get('register', [RegisteredUserController::class, 'create'])
@@ -24,6 +25,8 @@ Route::middleware('guest')->group(function () {
         ->name('login');
 
     Route::post('login', [AuthenticatedSessionController::class, 'store']);
+    Route::post('login-with-uic-api', [AuthenticatedSessionV2Controller::class, 'loginWithUICAPI'])
+        ->name('login.uic.api');
 
     // V2 Debug login (no OAuth) - only enabled when DEBUG_LOGIN_V2=true or APP_ENV != production
     Route::get('login-v2', [\App\Http\Controllers\Auth\AuthenticatedSessionV2Controller::class, 'create'])

@@ -12,6 +12,7 @@ export type ExamSubject = {
   date: string;       
   startTime: string; 
   endTime: string;  
+  score?: number | null;
 };
 
 export type ExamApplicationFull = {
@@ -21,6 +22,8 @@ export type ExamApplicationFull = {
   last_name: string;
   program: string;
   school_year: string;
+  average_score?: number | null;
+  result_status?: 'passed' | 'failed' | null;
   office_address?: string | null;
   mobile_no?: string | null;
   telephone_no?: string | null;
@@ -77,6 +80,8 @@ export default function DisplayApplication({ application }: Props) {
   }
 
   const subjects = application.subjects ?? [];
+  const avg = application.average_score ?? null;
+  const result = (application.result_status ?? undefined) as 'passed' | 'failed' | undefined;
   // Use parseServerDate for subject date when available (preserve local interpretation)
   const firstDate = subjects[0]?.date ? parseServerDate(subjects[0].date + (subjects[0].date.length === 10 ? 'T00:00:00' : '')) : null;
 
@@ -139,6 +144,16 @@ export default function DisplayApplication({ application }: Props) {
             {subjects.length > 0 && (
               <Badge variant="secondary">
                 {subjects.length} Subject{subjects.length > 1 ? 's' : ''}
+              </Badge>
+            )}
+            {typeof avg === 'number' && (
+              <Badge variant="secondary" className={avg <= 74 ? 'border-rose-300 text-rose-700 bg-rose-50' : 'border-green-300 text-green-700 bg-green-50'}>
+                Average: {avg}
+              </Badge>
+            )}
+            {result && (
+              <Badge className={result === 'failed' ? 'bg-rose-100 text-rose-700 border border-rose-200' : 'bg-green-100 text-green-700 border border-green-200'}>
+                {result === 'failed' ? 'Failed' : 'Passed'}
               </Badge>
             )}
           </div>
@@ -205,6 +220,15 @@ export default function DisplayApplication({ application }: Props) {
                           <div className="text-xs text-muted-foreground">
                             {d ? format(d, 'PPP') : '—'} • {formatTime12hr(s.startTime)} - {formatTime12hr(s.endTime)}
                           </div>
+                        </div>
+                        <div className="pl-3">
+                          {typeof s.score === 'number' ? (
+                            <Badge variant="outline" className={s.score <= 74 ? 'border-rose-300 text-rose-700 bg-rose-50' : 'border-green-300 text-green-700 bg-green-50'}>
+                              Score: {s.score}
+                            </Badge>
+                          ) : (
+                            <span className="text-xs text-zinc-500">No score</span>
+                          )}
                         </div>
                       </div>
                     );

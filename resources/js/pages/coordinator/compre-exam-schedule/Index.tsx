@@ -56,6 +56,7 @@ type Offering = {
   exam_date: string | null;
   start_time: string | null;
   end_time: string | null;
+  proctor?: string | null;
   venue?: string | null;        // added back
   is_active: boolean;
 };
@@ -228,6 +229,7 @@ export default function CoordinatorCompreExamScheduleIndex() {
     exam_date: '',
     start_time: '',
     end_time: '',
+    proctor: '',
     venue: '',                    // added
     is_active: true,
   });
@@ -329,6 +331,7 @@ export default function CoordinatorCompreExamScheduleIndex() {
       exam_date: '',
       start_time: '',
       end_time: '',
+      proctor: '',
       venue: '',                  // added
       is_active: true,
     });
@@ -346,6 +349,7 @@ export default function CoordinatorCompreExamScheduleIndex() {
         exam_date: row.exam_date || '',
         start_time: toHHmm(row.start_time),
         end_time: toHHmm(row.end_time),
+    proctor: row.proctor || '',
         venue: row.venue || '',             // <-- add this
         is_active: !!row.is_active,
     });
@@ -375,6 +379,7 @@ export default function CoordinatorCompreExamScheduleIndex() {
       exam_date: emptyToNull(form.exam_date),
       start_time: emptyToNull(toHHmm(form.start_time || '')),
       end_time: emptyToNull(toHHmm(form.end_time || '')),
+      proctor: emptyToNull(form.proctor),
       venue: emptyToNull(form.venue),
       is_active: !!form.is_active,
     };
@@ -795,6 +800,7 @@ export default function CoordinatorCompreExamScheduleIndex() {
                   <TableHead className="w-[14%]">Exam Date</TableHead>
                   <TableHead className="w-[12%]">Start</TableHead>
                   <TableHead className="w-[12%]">End</TableHead>
+                  <TableHead className="w-[14%]">Proctor</TableHead>
                   <TableHead className="w-[10%]">Status</TableHead>
                   <TableHead className="w-[10%] text-right">Actions</TableHead>
                 </TableRow>
@@ -824,6 +830,7 @@ export default function CoordinatorCompreExamScheduleIndex() {
                     <TableCell>{r.exam_date ? fmtDate(r.exam_date) : <span className="text-zinc-400">—</span>}</TableCell>
                     <TableCell>{r.start_time ? fmtTime(r.start_time) : <span className="text-zinc-400">—</span>}</TableCell>
                     <TableCell>{r.end_time ? fmtTime(r.end_time) : <span className="text-zinc-400">—</span>}</TableCell>
+                    <TableCell>{r.proctor ? <span className="block whitespace-normal break-words">{r.proctor}</span> : <span className="text-zinc-400">TBA</span>}</TableCell>
                     <TableCell>
                       {r.is_active ? <Badge>Active</Badge> : <Badge variant="secondary">Inactive</Badge>}
                     </TableCell>
@@ -1049,6 +1056,17 @@ export default function CoordinatorCompreExamScheduleIndex() {
                 {!timeOrderInvalid && duplicateConflict && (
                   <p className="mt-1 text-xs text-rose-600">A schedule for this subject already exists on the selected date/time.</p>
                 )}
+              </div>
+
+              {/* Proctor */}
+              <div className="sm:col-span-2 min-w-0">
+                  <Label className="text-xs text-muted-foreground">Proctor (optional)</Label>
+                  <Input
+                    className="mt-1 h-9"
+                    value={form.proctor || ''}
+                    onChange={(e) => onFormChange('proctor', e.target.value)}
+                    placeholder="e.g., Prof. Jane Doe"
+                  />
               </div>
 
             <div className="sm:col-span-2 min-w-0">

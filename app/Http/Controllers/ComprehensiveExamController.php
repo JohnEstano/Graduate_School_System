@@ -58,9 +58,12 @@ class ComprehensiveExamController extends Controller
                         'date'      => $live->exam_date ?? $s->exam_date,
                         'startTime' => $live->start_time ?? $s->start_time,
                         'endTime'   => $live->end_time ?? $s->end_time,
+                        'score'     => $s->score,
                         'offeringId'=> $s->offering_id,
                     ];
                 }),
+                'average_score'        => $application->average_score,
+                'result_status'        => $application->result_status,
                 // personal info from users table
                 'first_name' => $user->first_name ?? '',
                 'middle_name'=> $user->middle_name ?? null,
