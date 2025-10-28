@@ -153,19 +153,23 @@ export default function PanelistIndividualRecord({ panelist, onClose }: Props) {
           <div className="rounded-md overflow-x-auto border bg-white dark:bg-[#121212] p-4">
             <div className="space-y-4">
               {(panelist.students || [])
+                .flatMap((student) => {
+                  // Map each payment to a separate card with student info
+                  return (student.payments || []).map((payment) => ({
+                    student,
+                    payment,
+                  }));
+                })
                 .sort((a, b) => {
                   // Sort by defense_date: latest first
-                  const dateA = a.defense_date ? new Date(a.defense_date).getTime() : 0;
-                  const dateB = b.defense_date ? new Date(b.defense_date).getTime() : 0;
+                  const dateA = a.payment.defense_date ? new Date(a.payment.defense_date).getTime() : 0;
+                  const dateB = b.payment.defense_date ? new Date(b.payment.defense_date).getTime() : 0;
                   return dateB - dateA; // Descending order (latest first)
                 })
-                .map((student) => {
-                  const payment = (student.payments || [])[0];
-                  if (!payment) return null;
-
-                return (
+                .map(({ student, payment }, index) => {
+                  return (
                   <div
-                    key={student.id}
+                    key={`${student.id}-${payment.id}-${index}`}
                     className="p-4 rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#121212] print:border-gray-400"
                   >
                     {/* Student Header */}
@@ -182,13 +186,13 @@ export default function PanelistIndividualRecord({ panelist, onClose }: Props) {
                             <span className="text-xs text-gray-500 dark:text-gray-400">
                               {student.course_section || "Regular"} • {student.school_year || "2024-2025"}
                             </span>
-                            {student.assigned_role && (
-                              <Badge className={`${getRoleBadgeColor(student.assigned_role)} text-xs`}>
-                                {student.assigned_role}
+                            {payment.panelist_role && (
+                              <Badge className={`${getRoleBadgeColor(payment.panelist_role)} text-xs`}>
+                                {payment.panelist_role}
                               </Badge>
                             )}
-                            <Badge className={`${getDefenseTypeBadge(payment.defense_type || student.defense_type || 'N/A')} text-xs`}>
-                              {payment.defense_type || student.defense_type || 'N/A'}
+                            <Badge className={`${getDefenseTypeBadge(payment.defense_type || 'N/A')} text-xs`}>
+                              {payment.defense_type || 'N/A'}
                             </Badge>
                           </div>
                         </div>
@@ -208,13 +212,7 @@ export default function PanelistIndividualRecord({ panelist, onClose }: Props) {
                                   day: 'numeric',
                                   year: 'numeric'
                                 })
-                              : (student.defense_date 
-                                  ? new Date(student.defense_date).toLocaleDateString('en-US', { 
-                                      month: 'short',
-                                      day: 'numeric',
-                                      year: 'numeric'
-                                    })
-                                  : "-")}
+                              : "-"}
                           </div>
                         </div>
                       </div>
@@ -239,7 +237,7 @@ export default function PanelistIndividualRecord({ panelist, onClose }: Props) {
                         <FileText className="h-4 w-4 text-gray-500 dark:text-gray-400 mt-0.5 flex-shrink-0" />
                         <div>
                           <div className="text-xs text-gray-500 dark:text-gray-400">OR Number</div>
-                          <div className="font-medium">{payment.or_number || student.or_number || "-"}</div>
+                          <div className="font-medium">{payment.or_number || "-"}</div>
                         </div>
                       </div>
 

@@ -9,6 +9,8 @@ use App\Models\AaPaymentBatch;
 use App\Models\DefenseRequest;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Response;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class PaymentVerificationController extends Controller
 {
@@ -71,25 +73,10 @@ class PaymentVerificationController extends Controller
         $verification->assigned_to = Auth::id(); // Ensure current user is assigned
         $verification->save();
 
-        // ✅ CRITICAL: When status becomes 'ready_for_finance', create honorarium records and sync
+        // ✅ CRITICAL: When status becomes 'ready_for_finance', create ALL records DIRECTLY
         if ($request->input('status') === 'ready_for_finance' && $oldStatus !== 'ready_for_finance') {
             $this->createHonorariumRecords($defenseRequest);
-            
-            // Trigger sync to student_records and panelist_records
-            try {
-                $syncService = app(\App\Services\StudentRecordSyncService::class);
-                $syncService->syncDefenseToStudentRecord($defenseRequest);
-                
-                \Log::info('✅ AA Workflow: Honorarium and student records created', [
-                    'defense_request_id' => $defenseRequestId,
-                    'status' => 'ready_for_finance'
-                ]);
-            } catch (\Exception $e) {
-                \Log::error('❌ AA Workflow: Sync failed', [
-                    'defense_request_id' => $defenseRequestId,
-                    'error' => $e->getMessage()
-                ]);
-            }
+            $this->createStudentAndPanelistRecords($defenseRequest);
         }
 
         return response()->json([
@@ -227,6 +214,117 @@ class PaymentVerificationController extends Controller
                 $defenseRequest->defense_panelist4,
             ])),
         ]);
+    }
+
+    /**
+     * DIRECTLY create student records and panelist records - NO SYNC SERVICE
+     */
+    private function createStudentAndPanelistRecords(DefenseRequest $defenseRequest)
+    {
+        try {
+            $programLevel = \App\Helpers\ProgramLevel::getLevel($defenseRequest->program);
+            $studentName = trim("{$defenseRequest->first_name} {$defenseRequest->middle_name} {$defenseRequest->last_name}");
+            
+            \Log::info("🚀 DIRECT CREATE - Starting for Defense #{$defenseRequest->id}");
+            
+            // 1. GET OR CREATE PROGRAM RECORD
+            $programRecord = \App\Models\ProgramRecord::firstOrCreate(
+                [
+                    'program_name' => $defenseRequest->program,
+                    'defense_type' => $defenseRequest->defense_type,
+                    'program_category' => strtolower($programLevel) === 'doctorate' ? 'Doctorate' : 'Masters',
+                ],
+                ['created_at' => now(), 'updated_at' => now()]
+            );
+            
+            \Log::info("✅ Program Record: #{$programRecord->id} - {$programRecord->program_name}");
+            
+            // 2. CREATE STUDENT RECORD
+            $studentRecord = \App\Models\StudentRecord::updateOrCreate(
+                ['defense_request_id' => $defenseRequest->id],
+                [
+                    'program_record_id' => $programRecord->id,
+                    'student_name' => $studentName,
+                    'defense_date' => $defenseRequest->scheduled_date,
+                    'thesis_title' => $defenseRequest->thesis_title ?? 'N/A',
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]
+            );
+            
+            \Log::info("✅ Student Record: #{$studentRecord->id} - {$studentRecord->student_name}");
+            
+            // 3. GET ALL HONORARIUM PAYMENTS (excluding Adviser)
+            $honorariumPayments = \App\Models\HonorariumPayment::where('defense_request_id', $defenseRequest->id)
+                ->get();
+            
+            \Log::info("📋 Found {$honorariumPayments->count()} honorarium payments");
+            
+            // 4. CREATE PANELIST RECORDS + PAYMENT RECORDS + PIVOT
+            foreach ($honorariumPayments as $honorarium) {
+                $role = $honorarium->role;
+                $panelistName = $honorarium->panelist_name;
+                
+                // SKIP ADVISERS
+                if (strtolower($role) === 'adviser' || str_contains(strtolower($role), 'advis')) {
+                    \Log::info("⏭️  SKIPPING Adviser: {$panelistName}");
+                    continue;
+                }
+                
+                // CREATE PANELIST RECORD
+                $panelistRecord = \App\Models\PanelistRecord::firstOrCreate(
+                    [
+                        'program_record_id' => $programRecord->id,
+                        'panelist_name' => $panelistName,
+                        'role' => $role,
+                    ],
+                    ['created_at' => now(), 'updated_at' => now()]
+                );
+                
+                \Log::info("✅ Panelist Record: #{$panelistRecord->id} - {$panelistRecord->panelist_name} ({$role})");
+                
+                // CREATE PAYMENT RECORD
+                $paymentRecord = \App\Models\PaymentRecord::updateOrCreate(
+                    [
+                        'panelist_record_id' => $panelistRecord->id,
+                        'student_record_id' => $studentRecord->id,
+                    ],
+                    [
+                        'defense_date' => $defenseRequest->scheduled_date,
+                        'amount' => $honorarium->amount,
+                        'role' => $role,
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ]
+                );
+                
+                \Log::info("✅ Payment Record: #{$paymentRecord->id} - ₱{$paymentRecord->amount}");
+                
+                // CREATE PIVOT LINK
+                \DB::table('panelist_student_records')->updateOrInsert(
+                    [
+                        'panelist_record_id' => $panelistRecord->id,
+                        'student_record_id' => $studentRecord->id,
+                    ],
+                    [
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ]
+                );
+                
+                \Log::info("✅ Pivot Link Created");
+            }
+            
+            \Log::info("🎉 DIRECT CREATE COMPLETE for Defense #{$defenseRequest->id}");
+            \Log::info("📍 Check records at:");
+            \Log::info("   - /honorarium/individual-record/{$programRecord->id}");
+            \Log::info("   - /student-records/program/{$programRecord->id}");
+            
+        } catch (\Exception $e) {
+            \Log::error("❌ DIRECT CREATE FAILED: " . $e->getMessage());
+            \Log::error("Stack trace: " . $e->getTraceAsString());
+            throw $e;
+        }
     }
 
     // Add to batch

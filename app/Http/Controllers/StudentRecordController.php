@@ -47,54 +47,111 @@ class StudentRecordController extends Controller
     {
         $program = ProgramRecord::findOrFail($programId);
         
-        $students = StudentRecord::where('program_record_id', $programId)
+        // Get all student records for this program
+        $allStudentRecords = StudentRecord::where('program_record_id', $programId)
             ->with(['payments.panelist']) // Eager load payments with panelist info
             ->when($request->input('search'), function ($query, $search) {
-                $query->where('first_name', 'like', "%{$search}%")
+                $query->where(function($q) use ($search) {
+                    $q->where('first_name', 'like', "%{$search}%")
                       ->orWhere('middle_name', 'like', "%{$search}%")
                       ->orWhere('last_name', 'like', "%{$search}%")
                       ->orWhere('student_id', 'like', "%{$search}%");
+                });
             })
             ->orderBy('last_name', 'asc')
-            ->paginate(15)
-            ->withQueryString();
+            ->get();
+        
+        // Group student records by student_id to combine multiple defenses
+        $groupedStudents = $allStudentRecords->groupBy('student_id')->map(function ($records) {
+            // Take the first record as the base (all should have same student info)
+            $baseStudent = $records->first();
+            
+            // Collect all payments from all records (defenses)
+            $allPayments = $records->flatMap(function ($record) {
+                return $record->payments->map(function ($payment) use ($record) {
+                    return [
+                        'id' => $payment->id,
+                        'defense_request_id' => $record->defense_request_id, // ✅ Add this to identify each defense uniquely
+                        'defense_date' => $record->defense_date,
+                        'defense_type' => $record->defense_type,
+                        'defense_status' => $payment->defense_status,
+                        'or_number' => $record->or_number,
+                        'payment_date' => $payment->payment_date,
+                        'amount' => $payment->amount,
+                        'role' => $payment->role,
+                        'panelist' => $payment->panelist
+                    ];
+                });
+            });
+            
+            // Store all payments on the base student
+            $baseStudent->all_payments = $allPayments;
+            $baseStudent->defense_count = $records->count();
+            
+            return $baseStudent;
+        })->values();
+        
+        // Paginate the grouped students manually
+        $currentPage = $request->input('page', 1);
+        $perPage = 15;
+        $total = $groupedStudents->count();
+        $students = new \Illuminate\Pagination\LengthAwarePaginator(
+            $groupedStudents->forPage($currentPage, $perPage),
+            $total,
+            $perPage,
+            $currentPage,
+            ['path' => $request->url(), 'query' => $request->query()]
+        );
 
         // Transform payments to include panelist breakdown
         $students->getCollection()->transform(function ($student) {
-            // Group payments by defense details to consolidate
+            // Group payments by defense_request_id to keep defenses separate
             $groupedPayments = [];
             
-            // Store original payments to iterate
-            $originalPayments = $student->payments;
+            // Use all_payments collection
+            $allPayments = $student->all_payments ?? collect();
             
-            foreach ($originalPayments as $payment) {
-                // Create a unique key for this defense (date + type)
-                $defenseDate = $student->defense_date ? date('Y-m-d', strtotime($student->defense_date)) : null;
-                $key = $defenseDate . '_' . $student->defense_type;
+            foreach ($allPayments as $payment) {
+                // Use defense_request_id as the key to uniquely identify each defense
+                $key = $payment['defense_request_id'];
                 
                 if (!isset($groupedPayments[$key])) {
+                    $defenseDate = $payment['defense_date'] ? date('Y-m-d', strtotime($payment['defense_date'])) : null;
                     $groupedPayments[$key] = [
-                        'id' => $payment->id,
+                        'id' => $payment['id'],
+                        'defense_request_id' => $payment['defense_request_id'],
                         'defense_date' => $defenseDate,
-                        'defense_type' => $student->defense_type,
-                        'defense_status' => $payment->defense_status,
-                        'or_number' => $student->or_number,
-                        'payment_date' => $payment->payment_date ? date('Y-m-d', strtotime($payment->payment_date)) : null,
+                        'defense_type' => $payment['defense_type'],
+                        'defense_status' => $payment['defense_status'],
+                        'or_number' => $payment['or_number'],
+                        'payment_date' => $payment['payment_date'] ? date('Y-m-d', strtotime($payment['payment_date'])) : null,
                         'amount' => 0,
-                        'panelists' => []
+                        'panelists' => [],
+                        'panelist_ids' => [] // Track added panelists to avoid duplicates
                     ];
                 }
                 
                 // Add to total amount
-                $groupedPayments[$key]['amount'] += floatval($payment->amount);
+                $groupedPayments[$key]['amount'] += floatval($payment['amount']);
                 
-                // Add panelist info with role from payment record (more accurate than panelist record role)
-                if ($payment->panelist) {
-                    $groupedPayments[$key]['panelists'][] = [
-                        'name' => trim("{$payment->panelist->pfirst_name} {$payment->panelist->pmiddle_name} {$payment->panelist->plast_name}"),
-                        'role' => $payment->role ?? $payment->panelist->role, // Use payment.role first, fallback to panelist.role
-                        'amount' => $payment->amount
-                    ];
+                // Add panelist info (avoid duplicates by checking panelist name + role)
+                if ($payment['panelist']) {
+                    $panelist = $payment['panelist'];
+                    $panelistName = trim("{$panelist->pfirst_name} {$panelist->pmiddle_name} {$panelist->plast_name}");
+                    $panelistRole = $payment['role'] ?? $panelist->role;
+                    
+                    // Create unique key for this panelist (name + role)
+                    $panelistKey = $panelistName . '|' . $panelistRole;
+                    
+                    // Only add if not already added
+                    if (!in_array($panelistKey, $groupedPayments[$key]['panelist_ids'])) {
+                        $groupedPayments[$key]['panelists'][] = [
+                            'name' => $panelistName,
+                            'role' => $panelistRole,
+                            'amount' => $payment['amount']
+                        ];
+                        $groupedPayments[$key]['panelist_ids'][] = $panelistKey;
+                    }
                 }
             }
             
@@ -149,6 +206,9 @@ class StudentRecordController extends Controller
                 $payment['rec_fee'] = $recFee;
                 $payment['school_share'] = $schoolShare;
                 $payment['grand_total'] = $grandTotal;
+                
+                // Remove internal tracking array
+                unset($payment['panelist_ids']);
             }
             
             // Format student dates

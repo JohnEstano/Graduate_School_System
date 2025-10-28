@@ -80,9 +80,8 @@ public function show($programId)
         'panelists.payments'
     ])->findOrFail($programId);
 
-    // Format panelists data with students and payments
-    // Exclude Advisers from honorarium page - they don't receive honorarium payments
-    $panelists = $record->panelists
+    // Get all panelist records for this program and filter out Advisers
+    $allPanelistRecords = $record->panelists
         ->filter(function($panelist) {
             // Get all roles for this panelist
             $roles = $panelist->students->pluck('pivot.role')->filter()->map(fn($r) => $this->normalizeRole($r))->filter()->unique()->values()->all();
@@ -90,75 +89,133 @@ public function show($programId)
             
             // Exclude if role is 'Adviser'
             return $roleSummary !== 'Adviser' && !str_contains(strtolower($roleSummary), 'advis');
-        })
-        ->values() // Re-index the collection after filtering
-        ->map(function($panelist) {
-            // derive roles from pivot assignments (panelist may have different roles per student)
-            $roles = $panelist->students->pluck('pivot.role')->filter()->map(fn($r) => $this->normalizeRole($r))->filter()->unique()->values()->all();
-            $roleSummary = count($roles) === 1 ? $roles[0] : (count($roles) > 1 ? implode(', ', $roles) : ($this->normalizeRole($panelist->role) ?? 'N/A'));
+        });
 
-            // Get defense date from the first student (assuming all students have same defense date for a panelist)
-            $defenseDate = $panelist->students->first()?->defense_date;
-
-            // Calculate TWO different amounts:
-            // 1. Receivables: Sum of role-specific payment amounts (payment_records.amount)
-            $receivableAmount = $panelist->students->sum(function($student) use ($panelist) {
-                return $student->payments->where('panelist_record_id', $panelist->id)->sum('amount');
+    // Group panelist records by panelist name (pfirst_name, pmiddle_name, plast_name)
+    // This combines multiple defense records for the same panelist
+    $groupedPanelists = $allPanelistRecords->groupBy(function($panelist) {
+        return trim($panelist->pfirst_name . '|' . ($panelist->pmiddle_name ?? '') . '|' . $panelist->plast_name);
+    })->map(function($panelistGroup) {
+        // Take the first record as the base
+        $basePanelist = $panelistGroup->first();
+        
+        // Collect all students from all panelist records (different defenses)
+        $allStudents = $panelistGroup->flatMap(function($panelistRecord) {
+            return $panelistRecord->students->map(function($student) use ($panelistRecord) {
+                // Attach the panelist_record_id so we can filter payments correctly
+                $student->current_panelist_record_id = $panelistRecord->id;
+                return $student;
             });
+        });
+        
+        // CRITICAL FIX: Deduplicate students by defense_request_id FIRST
+        // This prevents duplicate student_records (same student, same defense) from creating duplicates
+        $allStudents = $allStudents->unique(function($student) {
+            return $student->defense_request_id . '_' . $student->student_id;
+        });
+        
+        // Collect all unique roles across all records
+        $roles = $panelistGroup->flatMap(function($panelist) {
+            return $panelist->students->pluck('pivot.role')->filter()->map(fn($r) => $this->normalizeRole($r));
+        })->filter()->unique()->values()->all();
+        $roleSummary = count($roles) === 1 ? $roles[0] : (count($roles) > 1 ? implode(', ', $roles) : ($this->normalizeRole($basePanelist->role) ?? 'N/A'));
+        
+        // Calculate receivables (sum of role-specific payments across all defenses)
+        $receivableAmount = $panelistGroup->sum(function($panelistRecord) {
+            return $panelistRecord->students->sum(function($student) use ($panelistRecord) {
+                return $student->payments->where('panelist_record_id', $panelistRecord->id)->sum('amount');
+            });
+        });
+        
+        // Calculate total honorarium (sum of defense request totals)
+        $totalHonorariumAmount = $allStudents->unique('id')->sum(function($student) {
+            return $student->defenseRequest ? (float) $student->defenseRequest->amount : 0;
+        });
+        
+        // Get latest defense date
+        $latestDefenseDate = $allStudents->pluck('defense_date')->filter()->sort()->last();
+        
+        return [
+            'id' => $basePanelist->id,
+            'pfirst_name' => $basePanelist->pfirst_name,
+            'pmiddle_name' => $basePanelist->pmiddle_name ?? '',
+            'plast_name' => $basePanelist->plast_name,
+            'role' => $roleSummary,
+            'defense_date' => $latestDefenseDate ? date('Y-m-d', strtotime($latestDefenseDate)) : null,
+            'defense_type' => 'Proposal',
+            'received_date' => $basePanelist->received_date ? date('Y-m-d', strtotime($basePanelist->received_date)) : null,
+            'amount' => (float) $receivableAmount,
+            'total_honorarium' => (float) $totalHonorariumAmount,
+            'all_students' => $allStudents,
+            'defense_count' => $panelistGroup->count(),
+        ];
+    })->values();
+    
+    // Format students and payments for each grouped panelist
+    $panelists = $groupedPanelists->map(function($groupedPanelist) {
+        $allStudents = $groupedPanelist['all_students'];
+        
+        // First, deduplicate students by student_id (student.id)
+        // Some students appear multiple times if panelist worked with them in multiple defenses
+        $uniqueStudents = $allStudents->unique('id');
+        
+        // Group payments by defense_request_id for each unique student
+        $groupedStudents = $uniqueStudents->map(function($student) use ($allStudents) {
+            // Get all occurrences of this student (from different panelist_records)
+            $studentOccurrences = $allStudents->where('id', $student->id);
             
-            // 2. Total Honorarium: Sum of defense request total amounts
-            $totalHonorariumAmount = $panelist->students->sum(function($student) {
-                return $student->defenseRequest ? (float) $student->defenseRequest->amount : 0;
-            });
-
+            // Group payments by defense_request_id to keep defenses separate
+            $groupedPayments = [];
+            
+            foreach ($studentOccurrences as $occurrence) {
+                $panelistRecordId = $occurrence->current_panelist_record_id;
+                $payments = $occurrence->payments->where('panelist_record_id', $panelistRecordId);
+                
+                foreach ($payments as $payment) {
+                    $key = $payment->defense_request_id;
+                    
+                    // Only add if this defense hasn't been added yet
+                    if (!isset($groupedPayments[$key])) {
+                        // Use defense request amount instead of payment record amount
+                        $defenseAmount = $occurrence->defenseRequest ? (float) $occurrence->defenseRequest->amount : (float) $payment->amount;
+                        
+                        $groupedPayments[$key] = [
+                            'id' => $payment->id,
+                            'defense_request_id' => $payment->defense_request_id,
+                            'defense_status' => $payment->defense_status ?? 'N/A',
+                            'payment_date' => $payment->payment_date ? date('Y-m-d', strtotime($payment->payment_date)) : null,
+                            'defense_date' => $occurrence->defense_date ? date('Y-m-d', strtotime($occurrence->defense_date)) : null,
+                            'defense_type' => $occurrence->defense_type ?? 'N/A',
+                            'or_number' => $occurrence->or_number ?? 'N/A',
+                            'panelist_role' => $this->normalizeRole($occurrence->pivot->role ?? null),
+                            'amount' => $defenseAmount,
+                        ];
+                    }
+                }
+            }
+            
             return [
-                'id' => $panelist->id,
-                'pfirst_name' => $panelist->pfirst_name,
-                'pmiddle_name' => $panelist->pmiddle_name ?? '',
-                'plast_name' => $panelist->plast_name,
-                // role now summarized from assignments; keep original role fallback
-                'role' => $roleSummary,
-                'defense_type' => 'Proposal', // Default value since column doesn't exist in DB
-                'defense_date' => $defenseDate ? date('Y-m-d', strtotime($defenseDate)) : null,
-                'received_date' => $panelist->received_date ? date('Y-m-d', strtotime($panelist->received_date)) : null,
-                'amount' => (float) $receivableAmount, // Receivables: role-specific payment amount
-                'total_honorarium' => (float) $totalHonorariumAmount, // Total: defense request amounts
-                'students' => $panelist->students->map(function($student) use ($panelist) {
-                    $assigned = $this->normalizeRole($student->pivot->role ?? null);
-                    return [
-                        'id' => $student->id,
-                        'first_name' => $student->first_name,
-                        'middle_name' => $student->middle_name ?? '',
-                        'last_name' => $student->last_name,
-                        'program' => $student->program,
-                        'course_section' => $student->course_section ?? 'Regular',
-                        'school_year' => $student->school_year ?? '2024-2025',
-                        'defense_date' => $student->defense_date ? date('Y-m-d', strtotime($student->defense_date)) : null,
-                        'defense_type' => $student->defense_type ?? 'N/A',
-                        'or_number' => $student->or_number ?? 'N/A',
-                        // include assigned role for this student from pivot (normalized)
-                        'assigned_role' => $assigned,
-                        'payments' => $student->payments->where('panelist_record_id', $panelist->id)->map(function($payment) use ($student, $assigned) {
-                            // Use defense request amount instead of payment record amount
-                            $defenseAmount = $student->defenseRequest ? (float) $student->defenseRequest->amount : (float) $payment->amount;
-                            
-                            return [
-                                'id' => $payment->id,
-                                'payment_date' => $payment->payment_date ? date('Y-m-d', strtotime($payment->payment_date)) : null,
-                                'defense_status' => $payment->defense_status ?? 'N/A',
-                                'amount' => $defenseAmount, // Use defense request total amount
-                                // Include student data in payment for easier access in frontend
-                                'defense_date' => $student->defense_date ? date('Y-m-d', strtotime($student->defense_date)) : null,
-                                'defense_type' => $student->defense_type ?? 'N/A',
-                                'or_number' => $student->or_number ?? 'N/A',
-                                'panelist_role' => $assigned,
-                            ];
-                        })->values()
-                    ];
-                })
+                'id' => $student->id,
+                'first_name' => $student->first_name,
+                'middle_name' => $student->middle_name ?? '',
+                'last_name' => $student->last_name,
+                'program' => $student->program,
+                'course_section' => $student->course_section ?? 'Regular',
+                'school_year' => $student->school_year ?? '2024-2025',
+                'defense_date' => $student->defense_date ? date('Y-m-d', strtotime($student->defense_date)) : null,
+                'defense_type' => $student->defense_type ?? 'N/A',
+                'or_number' => $student->or_number ?? 'N/A',
+                'assigned_role' => $this->normalizeRole($student->pivot->role ?? null),
+                'payments' => array_values($groupedPayments),
             ];
-        })
-        ->values(); // Ensure proper array indexing for frontend
+        })->values();
+        
+        // Remove temporary field
+        unset($groupedPanelist['all_students']);
+        $groupedPanelist['students'] = $groupedStudents->all();
+        
+        return $groupedPanelist;
+    })->values();
   
     return Inertia::render('honorarium/individual-record', [
         'record'    => $record,
