@@ -142,47 +142,6 @@ export default function Details({ defenseRequest: initialDefenseRequest }: Props
     action: null,
   });
 
-  // 🐛 Debug: Log initial data
-  useEffect(() => {
-    console.log('🔍 Defense Request Details Loaded:', {
-      id: details?.id,
-      program: details?.program,
-      program_level: details?.program_level,
-      defense_type: details?.defense_type,
-      coordinator: details?.coordinator,
-      aa_verification_status: details?.aa_verification_status,
-      aa_verification_id: details?.aa_verification_id,
-      panelists: {
-        adviser: details?.defense_adviser,
-        chairperson: details?.defense_chairperson,
-        panelist1: details?.defense_panelist1,
-        panelist2: details?.defense_panelist2,
-        panelist3: details?.defense_panelist3,
-        panelist4: details?.defense_panelist4,
-      }
-    });
-    
-    console.log('🎯 Button States:', {
-      current_status: details?.aa_verification_status,
-      ready_for_finance_disabled: 
-        details?.aa_verification_status === 'ready_for_finance' || 
-        details?.aa_verification_status === 'in_progress' ||
-        details?.aa_verification_status === 'paid' ||
-        details?.aa_verification_status === 'completed',
-      in_progress_disabled:
-        details?.aa_verification_status === 'pending' ||
-        details?.aa_verification_status === 'in_progress' ||
-        details?.aa_verification_status === 'paid' ||
-        details?.aa_verification_status === 'completed',
-      paid_disabled:
-        details?.aa_verification_status === 'pending' ||
-        details?.aa_verification_status === 'ready_for_finance' ||
-        details?.aa_verification_status === 'paid' ||
-        details?.aa_verification_status === 'completed',
-      completed_disabled: details?.aa_verification_status === 'completed'
-    });
-  }, [details]);
-
   // Fetch panel members once
   useEffect(() => {
     let alive = true;
@@ -211,15 +170,12 @@ export default function Details({ defenseRequest: initialDefenseRequest }: Props
     let alive = true;
     (async () => {
       try {
-        console.log('📊 Fetching payment rates...');
         const r = await fetch('/dean/payment-rates/data', { headers: { Accept: 'application/json' } });
         const json = await r.json();
         const arr = Array.isArray(json?.rates) ? json.rates : (Array.isArray(json) ? json : []);
-        console.log('✅ Payment rates loaded:', arr.length, 'rates');
-        console.log('   Sample rates:', arr.slice(0, 3));
         if (alive) setPaymentRates(arr as any);
       } catch (e) {
-        console.error('❌ Failed to load payment rates:', e);
+        console.error('Failed to load payment rates:', e);
         if (alive) setPaymentRates([]);
       }
     })();
@@ -233,11 +189,6 @@ export default function Details({ defenseRequest: initialDefenseRequest }: Props
 
   function getMemberReceivable(role: string): number | null {
     if (!details?.program_level || !details?.defense_type) {
-      console.warn('⚠️ Cannot calculate receivable - missing data:', {
-        program_level: details?.program_level,
-        defense_type: details?.defense_type,
-        role
-      });
       return null;
     }
     
@@ -254,14 +205,6 @@ export default function Details({ defenseRequest: initialDefenseRequest }: Props
     const normalizeDefenseType = (dt: string) => dt.toLowerCase().replace(/[^a-z]/g, '');
     const targetDefenseType = normalizeDefenseType(details.defense_type);
     
-    console.log('🔍 Looking for payment rate:', {
-      program_level: details.program_level,
-      rateType,
-      defense_type: details.defense_type,
-      normalized: targetDefenseType,
-      available_rates: paymentRates.length
-    });
-    
     // Direct comparison with normalization
     const rate = paymentRates.find(
       r => {
@@ -269,20 +212,9 @@ export default function Details({ defenseRequest: initialDefenseRequest }: Props
         const matchesType = r.type === rateType;
         const matchesDefense = normalizeDefenseType(r.defense_type || '') === targetDefenseType;
         
-        console.log('   Checking rate:', {
-          rate_program: r.program_level,
-          rate_type: r.type,
-          rate_defense: r.defense_type,
-          matchesProgram,
-          matchesType,
-          matchesDefense
-        });
-        
         return matchesProgram && matchesType && matchesDefense;
       }
     );
-    
-    console.log(rate ? '✅ Found rate:' : '❌ No rate found:', rate ? rate.amount : 'N/A');
     
     return rate ? Number(rate.amount) : null;
   }
@@ -411,45 +343,56 @@ export default function Details({ defenseRequest: initialDefenseRequest }: Props
   async function handleMarkCompleted() {
     if (!details) return;
     
-    console.log('🔄 Marking defense as completed:', details.id);
     setIsUpdating(true);
     const toastId = toast.loading('Marking as completed...');
     
     try {
+      const csrfToken = (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content || '';
+      
+      if (!csrfToken) {
+        throw new Error('CSRF token not found');
+      }
+
       const res = await fetch(`/defense-requests/${details.id}/complete`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'X-CSRF-TOKEN': (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content || '',
+          'X-CSRF-TOKEN': csrfToken,
+          'Accept': 'application/json',
         },
         credentials: 'same-origin',
       });
       
+      // Handle non-JSON responses
+      const contentType = res.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        const text = await res.text();
+        console.error('Non-JSON response:', text);
+        throw new Error('Server returned an invalid response');
+      }
+      
       const data = await res.json();
       
-      console.log('📥 Mark completed response:', data);
-      
       if (res.ok && data.success) {
-        // ✅ UPDATE LOCAL STATE IMMEDIATELY - both defense status AND AA status
-        setDetails({ 
-          ...details, 
+        // Update local state immediately - both defense status AND AA status
+        setDetails(prev => prev ? { 
+          ...prev, 
           status: 'Completed', 
           workflow_state: 'completed',
           aa_verification_status: 'completed',
           aa_verification_id: data.aa_verification_id
-        });
+        } : prev);
         
-        toast.success('✅ Defense marked as completed!', { id: toastId });
-        
-        console.log('✅ Completed successfully');
+        toast.success('Defense marked as completed', { id: toastId });
         
       } else {
-        console.error('❌ Failed to mark as completed:', data);
-        toast.error(data.error || 'Failed to mark as completed', { id: toastId });
+        const errorMsg = data.error || data.message || 'Failed to mark as completed';
+        console.error('Mark completed failed:', data);
+        toast.error(errorMsg, { id: toastId });
       }
     } catch (error) {
-      console.error('❌ Error marking as completed:', error);
-      toast.error('Error marking as completed', { id: toastId });
+      console.error('Error marking as completed:', error);
+      toast.error(error instanceof Error ? error.message : 'Error marking as completed', { id: toastId });
     } finally {
       setIsUpdating(false);
       setConfirmDialog({ open: false, title: '', description: '', action: null });
@@ -459,9 +402,6 @@ export default function Details({ defenseRequest: initialDefenseRequest }: Props
   // Update AA Status only
   async function handleUpdateAAStatus(newStatus: 'ready_for_finance' | 'in_progress' | 'paid' | 'completed') {
     if (!details) return;
-    
-    console.log('🔄 Updating AA status to:', newStatus);
-    console.log('🔄 Defense Request ID:', details.id);
     
     setIsUpdating(true);
     const statusLabels = {
@@ -473,49 +413,61 @@ export default function Details({ defenseRequest: initialDefenseRequest }: Props
     const toastId = toast.loading(`Updating to ${statusLabels[newStatus]}...`);
     
     try {
-      const res = await fetch(`/assistant/aa-verification/${details.id}/status`, {
+      const csrfToken = (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content || '';
+      
+      if (!csrfToken) {
+        throw new Error('CSRF token not found');
+      }
+
+      const url = `/assistant/aa-verification/${details.id}/status`;
+      
+      const res = await fetch(url, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'X-CSRF-TOKEN': (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content || '',
+          'X-CSRF-TOKEN': csrfToken,
+          'Accept': 'application/json',
         },
         credentials: 'same-origin',
         body: JSON.stringify({ status: newStatus }),
       });
       
-      console.log('📡 Response status:', res.status);
+      // Handle non-JSON responses
+      const contentType = res.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        const text = await res.text();
+        console.error('Non-JSON response:', text);
+        throw new Error('Server returned an invalid response');
+      }
       
       const data = await res.json();
       
-      console.log('📥 AA status update response:', data);
-      
       if (res.ok && data.success) {
-        // ✅ UPDATE LOCAL STATE IMMEDIATELY
-        setDetails({ 
-          ...details, 
+        // Update local state immediately
+        setDetails(prev => prev ? { 
+          ...prev, 
           aa_verification_status: newStatus,
           aa_verification_id: data.aa_verification_id
-        });
+        } : prev);
         
-        // ✅ Special message for ready_for_finance (creates records)
+        // Success messages
         if (newStatus === 'ready_for_finance') {
-          toast.success(`✅ ${statusLabels[newStatus]}\n\nHonorarium & student records created!`, { 
+          toast.success(`Status updated to ${statusLabels[newStatus]}. Honorarium & student records created.`, { 
             id: toastId,
-            duration: 5000 
+            duration: 4000 
           });
         } else {
-          toast.success(`✅ Status updated to ${statusLabels[newStatus]}`, { id: toastId });
+          toast.success(`Status updated to ${statusLabels[newStatus]}`, { id: toastId });
         }
         
-        console.log('✅ Local state updated successfully');
-        
       } else {
-        console.error('❌ Failed to update AA status:', data);
-        toast.error(data.error || 'Failed to update AA status', { id: toastId });
+        const errorMsg = data.error || data.message || 'Failed to update status';
+        console.error('Status update failed:', data);
+        toast.error(errorMsg, { id: toastId });
       }
     } catch (error) {
-      console.error('❌ Error updating AA status:', error);
-      toast.error('Error updating AA status', { id: toastId });
+      console.error('Error updating AA status:', error);
+      toast.error(error instanceof Error ? error.message : 'Error updating status', { id: toastId });
     } finally {
       setIsUpdating(false);
       setConfirmDialog({ open: false, title: '', description: '', action: null });
@@ -552,25 +504,18 @@ export default function Details({ defenseRequest: initialDefenseRequest }: Props
             </Button>
           </div>
           <div className="flex items-center gap-2 flex-wrap">
-            {/* AA Status Update Buttons - Progressive workflow */}
+            {/* AA Status Update Buttons - Can change status freely */}
             <Button
               size="sm"
               variant="outline"
               onClick={() => {
-                console.log('🔘 Ready for Finance button clicked');
                 openConfirmDialog(
                   'Mark as Ready for Finance?',
-                  'This will create honorarium payment records, sync to student and panelist records, and make records visible in Honorarium page.',
+                  `This will create honorarium payment records, sync to student and panelist records, and make records visible in Honorarium page.`,
                   () => handleUpdateAAStatus('ready_for_finance')
                 );
               }}
-              disabled={
-                isUpdating ||
-                details?.aa_verification_status === 'ready_for_finance' || 
-                details?.aa_verification_status === 'in_progress' ||
-                details?.aa_verification_status === 'paid' ||
-                details?.aa_verification_status === 'completed'
-              }
+              disabled={isUpdating}
               className="gap-2"
             >
               <ArrowRight className="h-4 w-4 text-blue-600" />
@@ -581,20 +526,13 @@ export default function Details({ defenseRequest: initialDefenseRequest }: Props
               size="sm"
               variant="outline"
               onClick={() => {
-                console.log('🔘 In Progress button clicked');
                 openConfirmDialog(
                   'Mark as In Progress?',
                   'This indicates the payment processing has started.',
                   () => handleUpdateAAStatus('in_progress')
                 );
               }}
-              disabled={
-                isUpdating ||
-                details?.aa_verification_status === 'pending' ||
-                details?.aa_verification_status === 'in_progress' ||
-                details?.aa_verification_status === 'paid' ||
-                details?.aa_verification_status === 'completed'
-              }
+              disabled={isUpdating}
               className="gap-2"
             >
               <Hourglass className="h-4 w-4 text-amber-600" />
@@ -605,20 +543,13 @@ export default function Details({ defenseRequest: initialDefenseRequest }: Props
               size="sm"
               variant="outline"
               onClick={() => {
-                console.log('🔘 Paid button clicked');
                 openConfirmDialog(
                   'Mark as Paid?',
                   'This confirms that all honorarium payments have been processed.',
                   () => handleUpdateAAStatus('paid')
                 );
               }}
-              disabled={
-                isUpdating ||
-                details?.aa_verification_status === 'pending' ||
-                details?.aa_verification_status === 'ready_for_finance' ||
-                details?.aa_verification_status === 'paid' ||
-                details?.aa_verification_status === 'completed'
-              }
+              disabled={isUpdating}
               className="gap-2"
             >
               <Banknote className="h-4 w-4 text-emerald-600" />
@@ -630,14 +561,13 @@ export default function Details({ defenseRequest: initialDefenseRequest }: Props
               size="sm"
               variant="outline"
               onClick={() => {
-                console.log('🔘 Mark as Completed button clicked');
                 openConfirmDialog(
                   'Mark as Completed?',
                   'This action will finalize the defense and AA payment status.',
                   handleMarkCompleted
                 );
               }}
-              disabled={isUpdating || details?.aa_verification_status === 'completed'}
+              disabled={isUpdating}
               className="gap-2"
             >
               <CircleCheck className="h-4 w-4 text-green-600" />

@@ -59,7 +59,8 @@ interface Panelist {
   defense_date?: string;
   received_date: string;
   students: Student[];
-  amount: number;
+  amount: number; // Role-specific receivables (for table)
+  total_honorarium?: number; // Total defense request amounts (for dialog)
 }
 
 export type ProgramRecord = {
@@ -79,20 +80,11 @@ interface Props {
 const breadcrumbs: BreadcrumbItem[] = [{ title: "Honorarium Summary", href: "/honorarium" }];
 
 export default function Show({ record, panelists: initialPanelists }: Props) {
-  const withAmounts = initialPanelists.map((p) => {
-    const total = (p.students || []).reduce(
-      (sum, s) =>
-        sum +
-        (s.payments || []).reduce(
-          (pSum, pay) => pSum + Number(pay.amount || 0),
-          0
-        ),
-      0
-    );
-    return { ...p, amount: total };
-  });
-
-  const [panelists, setPanelists] = useState<Panelist[]>(withAmounts);
+  // Don't recalculate amounts - use backend-provided values
+  // Backend provides:
+  // - amount: role-specific receivables (for table)
+  // - total_honorarium: defense request totals (for dialog)
+  const [panelists, setPanelists] = useState<Panelist[]>(initialPanelists);
   const [searchQuery, setSearchQuery] = useState("");
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
   const [startDateInput, setStartDateInput] = useState("");

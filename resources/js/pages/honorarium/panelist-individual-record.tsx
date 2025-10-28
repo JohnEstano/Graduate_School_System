@@ -57,7 +57,8 @@ interface PanelistRecord {
   role: string;
   defense_type?: string;
   received_date?: string;
-  amount?: number;
+  amount?: number; // Role-specific receivables
+  total_honorarium?: number; // Total defense request amounts
   students?: Student[];
 }
 
@@ -69,9 +70,11 @@ interface Props {
 export default function PanelistIndividualRecord({ panelist, onClose }: Props) {
   if (!panelist) return null;
 
-  const totalHonorarium = (panelist.students || []).reduce((sum, student) => 
-    sum + (student.payments || []).reduce((pSum, pay) => pSum + Number(pay.amount || 0), 0), 0
-  );
+  // Use backend-provided total_honorarium if available, otherwise calculate from payments
+  const totalHonorarium = panelist.total_honorarium ?? 
+    (panelist.students || []).reduce((sum, student) => 
+      sum + (student.payments || []).reduce((pSum, pay) => pSum + Number(pay.amount || 0), 0), 0
+    );
 
   const handlePrint = () => {
     window.open(`/honorarium/panelist/${panelist.id}/download-pdf`, '_blank');

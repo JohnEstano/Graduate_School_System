@@ -33,6 +33,16 @@ import {
 import { Separator } from '@/components/ui/separator';
 import TableAllDefenseList from './table-all-defense-list';
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Calendar as DatePicker } from '@/components/ui/calendar';
@@ -88,6 +98,19 @@ function PaginationBar({
 function ShowAllRequestsInner({ defenseRequests: initial, onStatusChange }: ShowAllRequestsProps) {
   const [singleConfirm, setSingleConfirm] = useState<{ open: boolean, id: number | null, action: 'approve' | 'reject' | 'retrieve' | null }>({
     open: false, id: null, action: null
+  });
+  
+  // Bulk status update confirmation dialog
+  const [bulkStatusDialog, setBulkStatusDialog] = useState<{
+    open: boolean;
+    status: 'ready_for_finance' | 'in_progress' | 'paid' | 'completed' | null;
+    title: string;
+    description: string;
+  }>({
+    open: false,
+    status: null,
+    title: '',
+    description: '',
   });
 
   function getCsrfToken(): string {
@@ -515,7 +538,8 @@ function ShowAllRequestsInner({ defenseRequests: initial, onStatusChange }: Show
     setSingleConfirm({ open: false, id: null, action: null });
   }
 
-  async function handleBulkStatusChange(newStatus: 'ready_for_finance' | 'in_progress' | 'paid' | 'completed') {
+  // Open bulk status confirmation dialog
+  function openBulkStatusDialog(newStatus: 'ready_for_finance' | 'in_progress' | 'paid' | 'completed') {
     if (selected.length === 0) {
       toast.error('No requests selected');
       return;
@@ -528,26 +552,42 @@ function ShowAllRequestsInner({ defenseRequests: initial, onStatusChange }: Show
       completed: 'Completed'
     };
     
-    const confirmMessages = {
-      ready_for_finance: `💰 Mark ${selected.length} request(s) as Ready for Finance?\n\nThis will:\n✅ Create honorarium payment records for all\n✅ Sync to student and panelist records\n✅ Make records visible in Honorarium page`,
-      in_progress: `⏳ Mark ${selected.length} request(s) as In Progress?`,
-      paid: `✅ Mark ${selected.length} request(s) as Paid?`,
-      completed: `🎉 Mark ${selected.length} request(s) as Completed?`
+    const descriptions = {
+      ready_for_finance: `Mark ${selected.length} defense request${selected.length !== 1 ? 's' : ''} as Ready for Finance?\n\nThis will create honorarium payment records, sync to student and panelist records, and make records visible in Honorarium page.`,
+      in_progress: `Mark ${selected.length} defense request${selected.length !== 1 ? 's' : ''} as In Progress?\n\nThis indicates the payment processing has started.`,
+      paid: `Mark ${selected.length} defense request${selected.length !== 1 ? 's' : ''} as Paid?\n\nThis confirms that all honorarium payments have been processed.`,
+      completed: `Mark ${selected.length} defense request${selected.length !== 1 ? 's' : ''} as Completed?\n\nThis action will finalize the defense and AA payment status.`
     };
     
-    if (!confirm(confirmMessages[newStatus])) {
-      console.log('❌ User cancelled bulk status update');
+    setBulkStatusDialog({
+      open: true,
+      status: newStatus,
+      title: `Update to ${statusLabels[newStatus]}?`,
+      description: descriptions[newStatus],
+    });
+  }
+
+  async function handleBulkStatusChange() {
+    if (!bulkStatusDialog.status || selected.length === 0) {
+      setBulkStatusDialog({ open: false, status: null, title: '', description: '' });
       return;
     }
     
-    setIsLoading(true);
-    console.log('🔄 Bulk updating status to:', newStatus);
-    console.log('🔄 Selected defense request IDs:', selected);
+    const newStatus = bulkStatusDialog.status;
+    setBulkStatusDialog({ open: false, status: null, title: '', description: '' });
     
-    const toastId = toast.loading(`Updating ${selected.length} request(s) to ${statusLabels[newStatus]}...`);
+    setIsLoading(true);
+    
+    const statusLabels = {
+      ready_for_finance: 'Ready for Finance',
+      in_progress: 'In Progress',
+      paid: 'Paid',
+      completed: 'Completed'
+    };
+    
+    const toastId = toast.loading(`Updating ${selected.length} request${selected.length !== 1 ? 's' : ''}...`);
     
     try {
-      // Use defense request IDs directly - backend will handle verification record lookup
       const res = await fetch('/aa/payment-verifications/bulk-update', {
         method: 'POST',
         headers: {
@@ -556,43 +596,42 @@ function ShowAllRequestsInner({ defenseRequests: initial, onStatusChange }: Show
         },
         credentials: 'same-origin',
         body: JSON.stringify({
-          defense_request_ids: selected, // Send defense request IDs
+          defense_request_ids: selected,
           status: newStatus,
         }),
       });
 
-      console.log('📡 Bulk update response status:', res.status);
       const data = await res.json();
-      console.log('📥 Bulk update response:', data);
 
       if (res.ok && data.success) {
         // Update local state for all selected items
         setDefenseRequests(prev =>
           prev.map(r =>
             selected.includes(r.id)
-              ? ({ ...r, aa_verification_status: newStatus } as DefenseRequestSummary)
+              ? { ...r, aa_verification_status: newStatus }
               : r
           )
         );
+        
+        // Clear selection
         setSelected([]);
         
+        // Success message
         const message = newStatus === 'ready_for_finance' 
-          ? `✅ ${data.updated_count || selected.length} request(s) updated!\n\nHonorarium & student records created.`
-          : `✅ ${data.updated_count || selected.length} request(s) updated to ${statusLabels[newStatus]}`;
+          ? `${data.updated_count || selected.length} request${(data.updated_count || selected.length) !== 1 ? 's' : ''} updated to ${statusLabels[newStatus]}. Honorarium & student records created.`
+          : `${data.updated_count || selected.length} request${(data.updated_count || selected.length) !== 1 ? 's' : ''} updated to ${statusLabels[newStatus]}`;
         
         toast.success(message, { 
           id: toastId,
-          duration: 5000 
+          duration: 4000 
         });
         
-        console.log('✅ Bulk update successful');
       } else {
-        console.error('❌ Bulk update failed:', data);
-        toast.error(data.error || 'Bulk update failed', { id: toastId });
+        toast.error(data.error || 'Failed to update status', { id: toastId });
       }
     } catch (error) {
-      console.error('❌ Bulk update error:', error);
-      toast.error('Bulk update error', { id: toastId });
+      console.error('Bulk update error:', error);
+      toast.error('Failed to update status', { id: toastId });
     } finally {
       setIsLoading(false);
     }
@@ -908,7 +947,7 @@ function ShowAllRequestsInner({ defenseRequests: initial, onStatusChange }: Show
                 variant="ghost"
                 size="sm"
                 className="px-3 py-1 h-7 w-auto text-xs flex items-center gap-1"
-                onClick={() => handleBulkStatusChange('ready_for_finance')}
+                onClick={() => openBulkStatusDialog('ready_for_finance')}
                 disabled={isLoading}
               >
                 <ArrowRight size={13} className="text-blue-600" />
@@ -918,7 +957,7 @@ function ShowAllRequestsInner({ defenseRequests: initial, onStatusChange }: Show
                 variant="ghost"
                 size="sm"
                 className="px-3 py-1 h-7 w-auto text-xs flex items-center gap-1"
-                onClick={() => handleBulkStatusChange('in_progress')}
+                onClick={() => openBulkStatusDialog('in_progress')}
                 disabled={isLoading}
               >
                 <Hourglass size={13} className="text-amber-600" />
@@ -928,7 +967,7 @@ function ShowAllRequestsInner({ defenseRequests: initial, onStatusChange }: Show
                 variant="ghost"
                 size="sm"
                 className="px-3 py-1 h-7 w-auto text-xs flex items-center gap-1"
-                onClick={() => handleBulkStatusChange('paid')}
+                onClick={() => openBulkStatusDialog('paid')}
                 disabled={isLoading}
               >
                 <Banknote size={13} className="text-emerald-600" />
@@ -938,7 +977,7 @@ function ShowAllRequestsInner({ defenseRequests: initial, onStatusChange }: Show
                 variant="ghost"
                 size="sm"
                 className="px-3 py-1 h-7 w-auto text-xs flex items-center gap-1"
-                onClick={() => handleBulkStatusChange('completed')}
+                onClick={() => openBulkStatusDialog('completed')}
                 disabled={isLoading}
               >
                 <CircleCheck size={13} className="text-green-600" />
@@ -1208,6 +1247,24 @@ function ShowAllRequestsInner({ defenseRequests: initial, onStatusChange }: Show
           </div>
         </DialogContent>
       </Dialog>
+      
+      {/* Bulk Status Update AlertDialog */}
+      <AlertDialog open={bulkStatusDialog.open} onOpenChange={(open) => !open && setBulkStatusDialog({ open: false, status: null, title: '', description: '' })}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{bulkStatusDialog.title}</AlertDialogTitle>
+            <AlertDialogDescription className="whitespace-pre-line">
+              {bulkStatusDialog.description}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isLoading}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleBulkStatusChange} disabled={isLoading}>
+              Confirm
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }

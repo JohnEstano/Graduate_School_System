@@ -73,8 +73,10 @@ class HonorariumSummaryController extends Controller
 public function show($programId)
 {
     // Fetch the program record with panelists and their related data
+    // Include defenseRequest to get the total defense amount
     $record = ProgramRecord::with([
         'panelists.students.payments',
+        'panelists.students.defenseRequest',
         'panelists.payments'
     ])->findOrFail($programId);
 
@@ -98,9 +100,15 @@ public function show($programId)
             // Get defense date from the first student (assuming all students have same defense date for a panelist)
             $defenseDate = $panelist->students->first()?->defense_date;
 
-            // Calculate total amount for this panelist from all payment records
-            $totalAmount = $panelist->students->sum(function($student) use ($panelist) {
+            // Calculate TWO different amounts:
+            // 1. Receivables: Sum of role-specific payment amounts (payment_records.amount)
+            $receivableAmount = $panelist->students->sum(function($student) use ($panelist) {
                 return $student->payments->where('panelist_record_id', $panelist->id)->sum('amount');
+            });
+            
+            // 2. Total Honorarium: Sum of defense request total amounts
+            $totalHonorariumAmount = $panelist->students->sum(function($student) {
+                return $student->defenseRequest ? (float) $student->defenseRequest->amount : 0;
             });
 
             return [
@@ -113,7 +121,8 @@ public function show($programId)
                 'defense_type' => 'Proposal', // Default value since column doesn't exist in DB
                 'defense_date' => $defenseDate ? date('Y-m-d', strtotime($defenseDate)) : null,
                 'received_date' => $panelist->received_date ? date('Y-m-d', strtotime($panelist->received_date)) : null,
-                'amount' => (float) $totalAmount, // Total honorarium amount for this panelist
+                'amount' => (float) $receivableAmount, // Receivables: role-specific payment amount
+                'total_honorarium' => (float) $totalHonorariumAmount, // Total: defense request amounts
                 'students' => $panelist->students->map(function($student) use ($panelist) {
                     $assigned = $this->normalizeRole($student->pivot->role ?? null);
                     return [
@@ -130,11 +139,14 @@ public function show($programId)
                         // include assigned role for this student from pivot (normalized)
                         'assigned_role' => $assigned,
                         'payments' => $student->payments->where('panelist_record_id', $panelist->id)->map(function($payment) use ($student, $assigned) {
+                            // Use defense request amount instead of payment record amount
+                            $defenseAmount = $student->defenseRequest ? (float) $student->defenseRequest->amount : (float) $payment->amount;
+                            
                             return [
                                 'id' => $payment->id,
                                 'payment_date' => $payment->payment_date ? date('Y-m-d', strtotime($payment->payment_date)) : null,
                                 'defense_status' => $payment->defense_status ?? 'N/A',
-                                'amount' => (float) $payment->amount,
+                                'amount' => $defenseAmount, // Use defense request total amount
                                 // Include student data in payment for easier access in frontend
                                 'defense_date' => $student->defense_date ? date('Y-m-d', strtotime($student->defense_date)) : null,
                                 'defense_type' => $student->defense_type ?? 'N/A',

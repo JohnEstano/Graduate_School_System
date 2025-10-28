@@ -52,7 +52,7 @@ class PaymentVerificationController extends Controller
             'remarks' => 'nullable|string',
         ]);
 
-        $defenseRequest = DefenseRequest::with(['panelists'])->findOrFail($defenseRequestId);
+        $defenseRequest = DefenseRequest::findOrFail($defenseRequestId);
         
         // Get or create AA verification record
         $verification = AaPaymentVerification::firstOrCreate(
@@ -242,7 +242,7 @@ class PaymentVerificationController extends Controller
 
                 // If changing to ready_for_finance, create honorarium records
                 if ($request->status === 'ready_for_finance' && $oldStatus !== 'ready_for_finance') {
-                    $defenseRequest = DefenseRequest::with(['panelists'])->find($defenseRequestId);
+                    $defenseRequest = DefenseRequest::find($defenseRequestId);
                     if ($defenseRequest) {
                         $this->createHonorariumRecords($defenseRequest);
                         
