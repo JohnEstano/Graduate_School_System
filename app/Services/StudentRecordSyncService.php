@@ -17,6 +17,7 @@ class StudentRecordSyncService
     /**
      * Sync a defense request to student records
      * Now triggered by AA Payment Verification status = 'ready_for_finance'
+     * ✅ CREATES SEPARATE STUDENT RECORD PER DEFENSE (not updating existing)
      */
     public function syncDefenseToStudentRecord(DefenseRequest $defenseRequest)
     {
@@ -41,34 +42,33 @@ class StudentRecordSyncService
 
             Log::info('Program record created', ['id' => $programRecord->id]);
 
-            // Create or update student record with program_record_id and all defense info
-            $studentRecord = StudentRecord::updateOrCreate(
-                ['student_id' => $defenseRequest->school_id],
-                [
-                    'first_name' => $defenseRequest->first_name,
-                    'middle_name' => $defenseRequest->middle_name,
-                    'last_name' => $defenseRequest->last_name,
-                    'program' => $defenseRequest->program,
-                    'program_record_id' => $programRecord->id, // ✅ Link to program
-                    'school_year' => PaymentRecord::getCurrentSchoolYear(),
-                    'defense_date' => $defenseRequest->scheduled_date, // ✅ Get from scheduled_date
-                    'defense_type' => $defenseRequest->defense_type,
-                    'defense_request_id' => $defenseRequest->id,
-                    'or_number' => $defenseRequest->reference_no, // ✅ Add OR number
-                    'payment_date' => $defenseRequest->payment_date, // ✅ Add payment date
-                ]
-            );
+            // ✅ CREATE NEW STUDENT RECORD FOR EACH DEFENSE (not update)
+            // This ensures each defense has its own separate record
+            $studentRecord = StudentRecord::create([
+                'student_id' => $defenseRequest->school_id,
+                'first_name' => $defenseRequest->first_name,
+                'middle_name' => $defenseRequest->middle_name,
+                'last_name' => $defenseRequest->last_name,
+                'program' => $defenseRequest->program,
+                'program_record_id' => $programRecord->id,
+                'school_year' => PaymentRecord::getCurrentSchoolYear(),
+                'defense_date' => $defenseRequest->scheduled_date,
+                'defense_type' => $defenseRequest->defense_type,
+                'defense_request_id' => $defenseRequest->id,
+                'or_number' => $defenseRequest->reference_no,
+                'payment_date' => $defenseRequest->payment_date,
+            ]);
 
             Log::info('Student record created', ['id' => $studentRecord->id]);
 
-            // Get honorarium payments
+            // Get honorarium payments (includes ALL members: adviser, chair, and panel members)
             $honorariumPayments = HonorariumPayment::where('defense_request_id', $defenseRequest->id)
                 ->with('panelist')
                 ->get();
 
             Log::info('Found honorarium payments', ['count' => $honorariumPayments->count()]);
 
-            // Process each payment
+            // Process each payment and create records
             foreach ($honorariumPayments as $honorariumPayment) {
                 if (!$honorariumPayment->panelist_name && !$honorariumPayment->panelist) {
                     Log::warning('Skipping payment - no panelist info', ['payment_id' => $honorariumPayment->id]);
@@ -91,17 +91,19 @@ class StudentRecordSyncService
                 $lastName = count($nameParts) > 1 ? $nameParts[count($nameParts) - 1] : '';
                 $middleName = count($nameParts) > 2 ? implode(' ', array_slice($nameParts, 1, -1)) : '';
 
-                // Create panelist record with proper name parsing
+                // ✅ Create/find panelist record with UNIQUE constraint per defense
+                // This ensures each defense creates its own panelist entries
                 $panelistRecord = PanelistRecord::firstOrCreate(
                     [
                         'pfirst_name' => $firstName,
                         'plast_name' => $lastName,
                         'program_record_id' => $programRecord->id,
+                        'defense_type' => $defenseRequest->defense_type,
+                        'received_date' => $honorariumPayment->payment_date ?? $defenseRequest->payment_date ?? now(),
                     ],
                     [
                         'pmiddle_name' => $middleName,
                         'role' => $honorariumPayment->role,
-                        'received_date' => $honorariumPayment->payment_date ?? now(),
                     ]
                 );
 
@@ -111,32 +113,27 @@ class StudentRecordSyncService
                     'role' => $honorariumPayment->role
                 ]);
 
-                // Create payment record (or update if exists) to avoid duplicates
-                $paymentRecord = PaymentRecord::updateOrCreate(
-                    [
-                        'student_record_id' => $studentRecord->id,
-                        'panelist_record_id' => $panelistRecord->id,
-                        'defense_request_id' => $defenseRequest->id,
-                    ],
-                    [
-                        'school_year' => PaymentRecord::getCurrentSchoolYear(),
-                        'payment_date' => $honorariumPayment->payment_date ?? $defenseRequest->payment_date ?? now(),
-                        'defense_status' => 'completed',
-                        'amount' => $honorariumPayment->amount,
-                        'role' => $honorariumPayment->role,
-                    ]
-                );
+                // ✅ Create payment record with role
+                $paymentRecord = PaymentRecord::create([
+                    'student_record_id' => $studentRecord->id,
+                    'panelist_record_id' => $panelistRecord->id,
+                    'defense_request_id' => $defenseRequest->id,
+                    'school_year' => PaymentRecord::getCurrentSchoolYear(),
+                    'payment_date' => $honorariumPayment->payment_date ?? $defenseRequest->payment_date ?? now(),
+                    'defense_status' => 'completed',
+                    'amount' => $honorariumPayment->amount,
+                    'role' => $honorariumPayment->role, // ✅ Store role here
+                ]);
 
-                Log::info('Payment record created/updated', [
+                Log::info('Payment record created', [
                     'id' => $paymentRecord->id,
                     'amount' => $paymentRecord->amount,
                     'role' => $honorariumPayment->role
                 ]);
 
-                // Link panelist to student with role in pivot table
-                // Use sync to avoid duplicates, and preserve the role
-                $studentRecord->panelists()->syncWithoutDetaching([
-                    $panelistRecord->id => ['role' => $honorariumPayment->role]
+                // ✅ Link panelist to student with role in pivot table
+                $studentRecord->panelists()->attach($panelistRecord->id, [
+                    'role' => $honorariumPayment->role
                 ]);
 
                 Log::info('Panelist linked to student via pivot', [

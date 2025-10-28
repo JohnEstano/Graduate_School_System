@@ -104,7 +104,17 @@ class AaPaymentVerificationObserver
             }
 
             // Map role to payment rate type
-            $rateType = ($member['role'] === 'Adviser') ? 'Adviser' : 'Panel Chair';
+            if ($member['role'] === 'Adviser') {
+                $rateType = 'Adviser';
+            } elseif ($member['role'] === 'Panel Chair') {
+                $rateType = 'Panel Chair';
+            } elseif (str_contains($member['role'], 'Panel Member')) {
+                // Panel Member 1, Panel Member 2, etc. -> Panel Member
+                $rateType = 'Panel Member';
+            } else {
+                // Default fallback
+                $rateType = $member['role'];
+            }
 
             // Get rate for this role
             $rate = \App\Models\PaymentRate::where('program_level', $programLevel)

@@ -7,6 +7,7 @@ use App\Http\Controllers\StudentRecordController;
 use App\Http\Controllers\EmailsController;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DefenseRequestController;
@@ -991,24 +992,35 @@ Route::get('/adviser/defense-requirements/{id}/details', function ($id) {
 
     $defenseRequest = \App\Models\DefenseRequest::findOrFail($id);
 
-    // Fetch all coordinators linked to this adviser
-    $coordinators = $user->coordinators()
-        ->select('users.id', 'users.first_name', 'users.middle_name', 'users.last_name', 'users.email')
-        ->get()
-        ->map(function ($c) {
-            return [
-                'id' => $c->id,
-                'name' => trim($c->first_name . ' ' . ($c->middle_name ? strtoupper($c->middle_name[0]) . '. ' : '') . $c->last_name),
-                'email' => $c->email,
-            ];
-        })
-        ->values()
-        ->all();
+    // Find the student from defense request
+    $student = \App\Models\User::where('school_id', $defenseRequest->school_id)->first();
+
+    // Get the coordinator who assigned this specific student-adviser relationship
+    $coordinators = [];
+    if ($student) {
+        // Check if this student has an adviser relationship with the current user
+        $pivot = DB::table('adviser_student')
+            ->where('adviser_id', $user->id)
+            ->where('student_id', $student->id)
+            ->first();
+
+        // If there's a coordinator who assigned this relationship, use that coordinator
+        if ($pivot && $pivot->requested_by) {
+            $coordinator = \App\Models\User::find($pivot->requested_by);
+            if ($coordinator) {
+                $coordinators = [[
+                    'id' => $coordinator->id,
+                    'name' => trim($coordinator->first_name . ' ' . ($coordinator->middle_name ? strtoupper($coordinator->middle_name[0]) . '. ' : '') . $coordinator->last_name),
+                    'email' => $coordinator->email,
+                ]];
+            }
+        }
+    }
 
     return Inertia::render('adviser/defense-requirements/details-requirements', [
         'defenseRequest' => $defenseRequest,
         'userRole' => $user->role,
-        'coordinators' => $coordinators, // <-- pass as prop
+        'coordinators' => $coordinators,
     ]);
 })->name('adviser.defense-requirements.details');
 

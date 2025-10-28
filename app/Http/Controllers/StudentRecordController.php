@@ -266,50 +266,52 @@ class StudentRecordController extends Controller
             ];
         }
 
-        // 3. Panel Members
-        $memberRate = $rates->get('Panel Member 1') ?? $rates->get('Panel Member'); // fallback
-        
+        // 3. Panel Members (Each panel member has their own numbered rate)
         if ($defense->defense_panelist1) {
+            $memberRate1 = $rates->get('Panel Member 1') ?? $rates->get('Panel Member'); // fallback
             $nameParts = $this->splitName($defense->defense_panelist1);
             $panelists[] = [
                 'id' => null,
-                'role' => 'Panel Member',
+                'role' => 'Panel Member 1',
                 'pfirst_name' => $nameParts['first'],
                 'plast_name' => $nameParts['last'],
-                'amount' => $memberRate ? $memberRate->amount : 0,
+                'amount' => $memberRate1 ? $memberRate1->amount : 0,
             ];
         }
         
         if ($defense->defense_panelist2) {
+            $memberRate2 = $rates->get('Panel Member 2') ?? $rates->get('Panel Member 1') ?? $rates->get('Panel Member'); // fallback
             $nameParts = $this->splitName($defense->defense_panelist2);
             $panelists[] = [
                 'id' => null,
-                'role' => 'Panel Member',
+                'role' => 'Panel Member 2',
                 'pfirst_name' => $nameParts['first'],
                 'plast_name' => $nameParts['last'],
-                'amount' => $memberRate ? $memberRate->amount : 0,
+                'amount' => $memberRate2 ? $memberRate2->amount : 0,
             ];
         }
         
         if ($defense->defense_panelist3) {
+            $memberRate3 = $rates->get('Panel Member 3') ?? $rates->get('Panel Member 1') ?? $rates->get('Panel Member'); // fallback
             $nameParts = $this->splitName($defense->defense_panelist3);
             $panelists[] = [
                 'id' => null,
-                'role' => 'Panel Member',
+                'role' => 'Panel Member 3',
                 'pfirst_name' => $nameParts['first'],
                 'plast_name' => $nameParts['last'],
-                'amount' => $memberRate ? $memberRate->amount : 0,
+                'amount' => $memberRate3 ? $memberRate3->amount : 0,
             ];
         }
         
         if ($defense->defense_panelist4) {
+            $memberRate4 = $rates->get('Panel Member 4') ?? $rates->get('Panel Member 1') ?? $rates->get('Panel Member'); // fallback
             $nameParts = $this->splitName($defense->defense_panelist4);
             $panelists[] = [
                 'id' => null,
-                'role' => 'Panel Member',
+                'role' => 'Panel Member 4',
                 'pfirst_name' => $nameParts['first'],
                 'plast_name' => $nameParts['last'],
-                'amount' => $memberRate ? $memberRate->amount : 0,
+                'amount' => $memberRate4 ? $memberRate4->amount : 0,
             ];
         }
 

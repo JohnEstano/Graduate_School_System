@@ -66,6 +66,16 @@ export default function EndorsementDialog({
     return (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content || '';
   }
 
+  // Fetch fresh CSRF token from server
+  async function refreshCsrfToken() {
+    try {
+      await fetch('/sanctum/csrf-cookie', { credentials: 'include' });
+      await new Promise(resolve => setTimeout(resolve, 100));
+    } catch (err) {
+      console.error('Failed to refresh CSRF token:', err);
+    }
+  }
+
   // Auto-generate document when dialog opens
   useEffect(() => {
     if (open) {
@@ -90,7 +100,14 @@ export default function EndorsementDialog({
   async function loadSignatures() {
     setLoadingSignatures(true);
     try {
-      const res = await fetch('/api/signatures');
+      await refreshCsrfToken();
+      const res = await fetch('/api/signatures', {
+        headers: {
+          'X-CSRF-TOKEN': csrf(),
+          'Accept': 'application/json'
+        },
+        credentials: 'include'
+      });
       if (res.ok) {
         const data = await res.json();
         setSignatures(data);
@@ -111,6 +128,10 @@ export default function EndorsementDialog({
     }
 
     setIsGenerating(true);
+    
+    // Refresh CSRF token before generating
+    await refreshCsrfToken();
+    
     try {
       console.log('🚀 Generating endorsement PDF for request:', defenseRequest.id);
       console.log('📋 Defense type:', defenseRequest.defense_type);
@@ -122,6 +143,7 @@ export default function EndorsementDialog({
           'Accept': 'application/pdf',
           'X-CSRF-TOKEN': csrf()
         },
+        credentials: 'include',
         body: JSON.stringify({
           defense_request_id: defenseRequest.id,
           role: 'adviser' // Specify role to add adviser signature only
@@ -175,13 +197,19 @@ export default function EndorsementDialog({
     const dataUrl = canvas.toDataURL('image/png');
     
     setIsSavingSignature(true);
+    
+    // Refresh CSRF token before saving
+    await refreshCsrfToken();
+    
     try {
       const res = await fetch('/api/signatures', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'X-CSRF-TOKEN': csrf()
+          'X-CSRF-TOKEN': csrf(),
+          'Accept': 'application/json'
         },
+        credentials: 'include',
         body: JSON.stringify({
           image_base64: dataUrl,
           label: 'Drawn Signature',
@@ -206,12 +234,17 @@ export default function EndorsementDialog({
   }
 
   async function handleActivateSignature(sigId: number) {
+    // Refresh CSRF token before activating
+    await refreshCsrfToken();
+    
     try {
       const res = await fetch(`/api/signatures/${sigId}/activate`, {
         method: 'PATCH',
         headers: {
-          'X-CSRF-TOKEN': csrf()
-        }
+          'X-CSRF-TOKEN': csrf(),
+          'Accept': 'application/json'
+        },
+        credentials: 'include'
       });
 
       if (res.ok) {
@@ -296,6 +329,10 @@ export default function EndorsementDialog({
     }
 
     setIsEndorsing(true);
+    
+    // Refresh CSRF token at the start
+    await refreshCsrfToken();
+    
     try {
       console.log('🚀 Starting endorsement process...');
       
@@ -315,6 +352,7 @@ export default function EndorsementDialog({
             'X-CSRF-TOKEN': csrf(),
             'Accept': 'application/json'
           },
+          credentials: 'include',
           body: formData
         });
 
@@ -350,6 +388,7 @@ export default function EndorsementDialog({
               'X-CSRF-TOKEN': csrf(),
               'Accept': 'application/json'
             },
+            credentials: 'include',
             body: formData
           });
 
@@ -383,6 +422,9 @@ export default function EndorsementDialog({
 
       console.log('✅ Endorsement form saved successfully, updating adviser status...');
 
+      // Refresh CSRF token again before status update
+      await refreshCsrfToken();
+
       // STEP 2: Update adviser status to approved
       const payload: any = {
         adviser_status: 'Approved'
@@ -399,8 +441,10 @@ export default function EndorsementDialog({
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
-          'X-CSRF-TOKEN': csrf()
+          'X-CSRF-TOKEN': csrf(),
+          'Accept': 'application/json'
         },
+        credentials: 'include',
         body: JSON.stringify(payload)
       });
 
@@ -410,17 +454,17 @@ export default function EndorsementDialog({
         const data = await res.json();
         console.log('✅ Endorsement successful:', data);
         
-        // WAIT for callback to complete FIRST before closing dialog
+        toast.success(`Request endorsed successfully and forwarded to ${coordinatorName}!`);
+        
+        // Close dialog first for immediate feedback
+        onOpenChange(false);
+        
+        // Then run the callback to refresh data
         if (onEndorseComplete) {
           await onEndorseComplete();
         }
-        
-        // Then close dialog AFTER update is done
-        onOpenChange(false);
-        
-        toast.success(`Request endorsed successfully and forwarded to ${coordinatorName}!`);
       } else {
-        const error = await res.json();
+        const error = await res.json().catch(() => ({ message: 'Failed to endorse request' }));
         console.error('❌ Adviser status update failed:', error);
         toast.error(error.message || 'Failed to endorse request');
       }
@@ -501,23 +545,24 @@ export default function EndorsementDialog({
                     </Button>
                   </nav>
 
-                  <Separator />
-
-                  {/* Request Info */}
-                  <div className="space-y-2 text-xs">
-                    <div>
-                      <div className="font-medium text-muted-foreground">Student</div>
-                      <div className="font-semibold">
-                        {defenseRequest?.first_name} {defenseRequest?.last_name}
+                  {/* Request Info - Hidden but kept for potential future use */}
+                  <div className="hidden">
+                    <Separator />
+                    <div className="space-y-2 text-xs">
+                      <div>
+                        <div className="font-medium text-muted-foreground">Student</div>
+                        <div className="font-semibold">
+                          {defenseRequest?.first_name} {defenseRequest?.last_name}
+                        </div>
                       </div>
-                    </div>
-                    <div>
-                      <div className="font-medium text-muted-foreground">Defense Type</div>
-                      <div className="font-semibold">{defenseRequest?.defense_type}</div>
-                    </div>
-                    <div>
-                      <div className="font-medium text-muted-foreground">Coordinator</div>
-                      <div className="font-semibold">{coordinatorName}</div>
+                      <div>
+                        <div className="font-medium text-muted-foreground">Defense Type</div>
+                        <div className="font-semibold">{defenseRequest?.defense_type}</div>
+                      </div>
+                      <div>
+                        <div className="font-medium text-muted-foreground">Coordinator</div>
+                        <div className="font-semibold">{coordinatorName}</div>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -651,51 +696,6 @@ export default function EndorsementDialog({
                           <Pencil className="mr-2 h-4 w-4" />
                           Draw Signature
                         </Button>
-                      </div>
-
-                      {/* All Signatures */}
-                      <div className="border rounded-lg p-4 space-y-3">
-                        <Label className="text-sm font-medium">All Signatures</Label>
-                        {loadingSignatures ? (
-                          <div className="flex items-center justify-center py-8">
-                            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                          </div>
-                        ) : signatures.length > 0 ? (
-                          <div className="grid grid-cols-2 gap-3">
-                            {signatures.map((sig) => (
-                              <div
-                                key={sig.id}
-                                className={`border rounded-lg p-3 space-y-2 ${
-                                  sig.active ? 'ring-2 ring-primary' : ''
-                                }`}
-                              >
-                                <div className="bg-muted/50 rounded p-2 flex items-center justify-center min-h-[60px]">
-                                  <img
-                                    src={`/storage/${sig.image_path}`}
-                                    alt="Signature"
-                                    className="max-h-12 object-contain"
-                                  />
-                                </div>
-                                <Button
-                                  variant={sig.active ? 'secondary' : 'outline'}
-                                  size="sm"
-                                  className="w-full"
-                                  onClick={() => handleActivateSignature(sig.id)}
-                                  disabled={sig.active}
-                                >
-                                  {sig.active ? 'Active' : 'Set Active'}
-                                </Button>
-                              </div>
-                            ))}
-                          </div>
-                        ) : (
-                          <Alert>
-                            <AlertCircle className="h-4 w-4" />
-                            <AlertDescription>
-                              No signatures found. Draw one to get started.
-                            </AlertDescription>
-                          </Alert>
-                        )}
                       </div>
                     </div>
                   )}

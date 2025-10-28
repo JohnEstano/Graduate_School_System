@@ -22,6 +22,8 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 
+import { fetchWithCsrf, postWithCsrf, patchWithCsrf, postFormWithCsrf } from '@/utils/csrf';
+
 interface CoordinatorApproveDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -29,6 +31,21 @@ interface CoordinatorApproveDialogProps {
   coordinatorId?: number;
   coordinatorName?: string;
   onApproveComplete?: () => void;
+  panelsData?: {
+    defense_chairperson: string;
+    defense_panelist1: string;
+    defense_panelist2: string;
+    defense_panelist3: string;
+    defense_panelist4: string;
+  };
+  scheduleData?: {
+    scheduled_date: string;
+    scheduled_time: string;
+    scheduled_end_time: string;
+    defense_mode: string;
+    defense_venue: string;
+    scheduling_notes: string;
+  };
 }
 
 type ApprovalTab = 'preview' | 'signature' | 'upload';
@@ -39,7 +56,9 @@ export default function CoordinatorApproveDialog({
   defenseRequest,
   coordinatorId,
   coordinatorName = 'Coordinator',
-  onApproveComplete
+  onApproveComplete,
+  panelsData,
+  scheduleData
 }: CoordinatorApproveDialogProps) {
   const [currentTab, setCurrentTab] = useState<ApprovalTab>('preview');
   const [endorsementPdfUrl, setEndorsementPdfUrl] = useState<string | null>(null);
@@ -68,31 +87,6 @@ export default function CoordinatorApproveDialog({
   // Email confirmation dialog state
   const [showEmailDialog, setShowEmailDialog] = useState(false);
   const [sendEmail, setSendEmail] = useState(false);
-
-  // Helper to get fresh CSRF token
-  async function getFreshCsrfToken(): Promise<string> {
-    try {
-      await fetch('/sanctum/csrf-cookie', { 
-        credentials: 'same-origin',
-        headers: { 'Accept': 'application/json' }
-      });
-      
-      const token = (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content || '';
-      
-      if (!token) {
-        console.error('⚠️ CSRF token not found in meta tag');
-      }
-      
-      return token;
-    } catch (err) {
-      console.error('❌ Failed to refresh CSRF token:', err);
-      return '';
-    }
-  }
-
-  function csrf() {
-    return (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content || '';
-  }
 
   // Load existing endorsement form when dialog opens
   useEffect(() => {
@@ -173,11 +167,6 @@ export default function CoordinatorApproveDialog({
       return;
     }
 
-    if (!coordinatorFullName.trim()) {
-      toast.error('Please enter the coordinator full name');
-      return;
-    }
-
     if (!activeSignature) {
       toast.error('Please set an active signature first');
       return;
@@ -189,22 +178,10 @@ export default function CoordinatorApproveDialog({
       console.log('📋 Defense type:', defenseRequest.defense_type);
       console.log('👤 Coordinator:', coordinatorFullName, coordinatorTitle);
       
-      // Get fresh CSRF token
-      const token = await getFreshCsrfToken();
-      
-      // Generate new PDF with coordinator signature
-      const res = await fetch('/api/generate-endorsement-pdf', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/pdf',
-          'X-CSRF-TOKEN': token
-        },
-        credentials: 'same-origin',
-        body: JSON.stringify({
-          defense_request_id: defenseRequest.id,
-          role: 'coordinator'
-        })
+      // Generate new PDF with coordinator signature using centralized CSRF utility
+      const res = await postWithCsrf('/api/generate-endorsement-pdf', {
+        defense_request_id: defenseRequest.id,
+        role: 'coordinator'
       });
 
       console.log('📥 Response status:', res.status, res.statusText);
@@ -327,22 +304,11 @@ export default function CoordinatorApproveDialog({
     
     setIsSavingSignature(true);
     try {
-      // Get fresh CSRF token
-      const token = await getFreshCsrfToken();
-      
-      const res = await fetch('/api/signatures', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-CSRF-TOKEN': token
-        },
-        credentials: 'same-origin',
-        body: JSON.stringify({
-          image_base64: dataUrl,
-          label: 'Drawn Signature',
-          natural_width: canvas.width,
-          natural_height: canvas.height
-        })
+      const res = await postWithCsrf('/api/signatures', {
+        image_base64: dataUrl,
+        label: 'Drawn Signature',
+        natural_width: canvas.width,
+        natural_height: canvas.height
       });
 
       if (res.ok) {
@@ -362,16 +328,7 @@ export default function CoordinatorApproveDialog({
 
   async function handleActivateSignature(sigId: number) {
     try {
-      // Get fresh CSRF token
-      const token = await getFreshCsrfToken();
-      
-      const res = await fetch(`/api/signatures/${sigId}/activate`, {
-        method: 'PATCH',
-        headers: {
-          'X-CSRF-TOKEN': token
-        },
-        credentials: 'same-origin'
-      });
+      const res = await patchWithCsrf(`/api/signatures/${sigId}/activate`, {});
 
       if (res.ok) {
         toast.success('Signature activated!');
@@ -397,11 +354,6 @@ export default function CoordinatorApproveDialog({
       return;
     }
 
-    if (!coordinatorFullName.trim()) {
-      toast.error('Please enter your full name');
-      return;
-    }
-
     // Show email confirmation dialog
     setShowEmailDialog(true);
   }
@@ -412,10 +364,36 @@ export default function CoordinatorApproveDialog({
     try {
       console.log('🚀 Starting coordinator approval process...');
       
-      // Get fresh CSRF token
-      const token = await getFreshCsrfToken();
-      
-      // Prepare the form data
+      // STEP 1: Save panels and schedule first
+      if (panelsData) {
+        console.log('💾 Saving panel assignments...', panelsData);
+        const panelsRes = await postWithCsrf(`/coordinator/defense-requests/${defenseRequest.id}/panels`, panelsData);
+
+        if (!panelsRes.ok) {
+          const errorText = await panelsRes.text();
+          console.error('❌ Failed to save panels:', errorText);
+          toast.error('Failed to save panel assignments');
+          setIsApproving(false);
+          return;
+        }
+        console.log('✅ Panels saved successfully');
+      }
+
+      if (scheduleData) {
+        console.log('💾 Saving schedule information...', scheduleData);
+        const scheduleRes = await postWithCsrf(`/coordinator/defense-requests/${defenseRequest.id}/schedule`, scheduleData);
+
+        if (!scheduleRes.ok) {
+          const errorText = await scheduleRes.text();
+          console.error('❌ Failed to save schedule:', errorText);
+          toast.error('Failed to save schedule information');
+          setIsApproving(false);
+          return;
+        }
+        console.log('✅ Schedule saved successfully');
+      }
+
+      // STEP 2: Prepare the form data for signature
       const formData = new FormData();
       
       // If uploaded file exists, use it. Otherwise use the generated/loaded one
@@ -433,15 +411,11 @@ export default function CoordinatorApproveDialog({
       
       console.log('📤 Uploading PDF with coordinator signature overlay...');
       
-      const uploadRes = await fetch(`/api/defense-requests/${defenseRequest.id}/add-coordinator-signature`, {
-        method: 'POST',
-        headers: {
-          'X-CSRF-TOKEN': token,
-          'Accept': 'application/json'
-        },
-        credentials: 'same-origin',
-        body: formData
-      });
+      // Use centralized CSRF utility for FormData upload
+      const uploadRes = await postFormWithCsrf(
+        `/api/defense-requests/${defenseRequest.id}/add-coordinator-signature`,
+        formData
+      );
 
       if (!uploadRes.ok) {
         const errorText = await uploadRes.text();
@@ -453,7 +427,7 @@ export default function CoordinatorApproveDialog({
 
       console.log('✅ Coordinator signature added successfully');
 
-      // STEP 2: Update coordinator status to approved
+      // STEP 3: Update coordinator status to approved
       const payload: any = {
         coordinator_status: 'Approved'
       };
@@ -467,20 +441,10 @@ export default function CoordinatorApproveDialog({
 
       console.log('📤 Updating coordinator status with payload:', payload);
       
-      // Get fresh token again for second request
-      const token2 = await getFreshCsrfToken();
-      
-      const statusRes = await fetch(
+      // Use centralized CSRF utility for status update
+      const statusRes = await patchWithCsrf(
         `/coordinator/defense-requirements/${defenseRequest.id}/coordinator-status`,
-        {
-          method: 'PATCH',
-          headers: {
-            'Content-Type': 'application/json',
-            'X-CSRF-TOKEN': token2
-          },
-          credentials: 'same-origin',
-          body: JSON.stringify(payload)
-        }
+        payload
       );
 
       if (statusRes.ok) {
@@ -492,7 +456,7 @@ export default function CoordinatorApproveDialog({
         }
         
         onOpenChange(false);
-        toast.success('Defense request approved successfully!');
+        toast.success('Defense request approved successfully! Panels, schedule, and signature have been saved.');
       } else {
         const error = await statusRes.json();
         console.error('❌ Status update failed:', error);
@@ -574,73 +538,6 @@ export default function CoordinatorApproveDialog({
                       Upload File
                     </Button>
                   </nav>
-
-                  <Separator />
-
-                  {/* Coordinator Info Form */}
-                  <div className="space-y-3">
-                    <Label className="text-sm font-medium">Coordinator Information</Label>
-                    <div className="space-y-2">
-                      <div>
-                        <Label className="text-xs text-muted-foreground">Full Name *</Label>
-                        <Input
-                          value={coordinatorFullName}
-                          onChange={(e) => setCoordinatorFullName(e.target.value)}
-                          placeholder="Enter your full name"
-                          className="h-8 text-sm"
-                        />
-                      </div>
-                      <div>
-                        <Label className="text-xs text-muted-foreground">Title</Label>
-                        <Input
-                          value={coordinatorTitle}
-                          onChange={(e) => setCoordinatorTitle(e.target.value)}
-                          placeholder="e.g., Program Coordinator"
-                          className="h-8 text-sm"
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  <Separator />
-
-                  {/* Request Info */}
-                  <div className="space-y-2 text-xs">
-                    <div>
-                      <div className="font-medium text-muted-foreground">Student</div>
-                      <div className="font-semibold">
-                        {defenseRequest?.first_name} {defenseRequest?.last_name}
-                      </div>
-                    </div>
-                    <div>
-                      <div className="font-medium text-muted-foreground">Program</div>
-                      <div className="font-semibold">{defenseRequest?.program}</div>
-                    </div>
-                    <div>
-                      <div className="font-medium text-muted-foreground">Defense Type</div>
-                      <div className="font-semibold">{defenseRequest?.defense_type}</div>
-                    </div>
-                    <div>
-                      <div className="font-medium text-muted-foreground">Thesis Title</div>
-                      <div className="font-semibold text-wrap">{defenseRequest?.thesis_title}</div>
-                    </div>
-                  </div>
-
-                  <Separator />
-
-                  {/* Status Info */}
-                  <div className="space-y-2 text-xs">
-                    <div>
-                      <div className="font-medium text-muted-foreground">Adviser Status</div>
-                      <div className="font-semibold text-green-600">
-                        {defenseRequest?.adviser_status || 'Approved'}
-                      </div>
-                    </div>
-                    <div>
-                      <div className="font-medium text-muted-foreground">Your Action</div>
-                      <div className="font-semibold text-amber-600">Pending Approval</div>
-                    </div>
-                  </div>
                 </div>
               </ScrollArea>
 
@@ -651,7 +548,7 @@ export default function CoordinatorApproveDialog({
                 <Button
                   className="w-full"
                   size="lg"
-                  disabled={!endorsementPdfUrl && !uploadedFile || !activeSignature || isApproving || !coordinatorFullName.trim()}
+                  disabled={!endorsementPdfUrl && !uploadedFile || !activeSignature || isApproving}
                   onClick={handleApproveClick}
                 >
                   {isApproving ? (
@@ -675,11 +572,6 @@ export default function CoordinatorApproveDialog({
                 {(!endorsementPdfUrl && !uploadedFile) && (
                   <p className="text-xs text-center text-muted-foreground mt-2">
                     Generate or upload an endorsement form
-                  </p>
-                )}
-                {!coordinatorFullName.trim() && (
-                  <p className="text-xs text-center text-muted-foreground mt-2">
-                    Enter your full name above
                   </p>
                 )}
               </div>
@@ -716,7 +608,7 @@ export default function CoordinatorApproveDialog({
                           variant="outline"
                           size="sm"
                           onClick={handleGenerateDocument}
-                          disabled={isGenerating || !coordinatorFullName.trim()}
+                          disabled={isGenerating}
                         >
                           {isGenerating ? (
                             <>
@@ -744,9 +636,7 @@ export default function CoordinatorApproveDialog({
                         <Alert>
                           <AlertCircle className="h-4 w-4" />
                           <AlertDescription>
-                            {!coordinatorFullName.trim() 
-                              ? 'Please enter your full name in the sidebar, then click Generate.'
-                              : 'Click "Generate" to create the endorsement form with your information.'}
+                            Click "Generate" to create the endorsement form with your signature.
                           </AlertDescription>
                         </Alert>
                       )}
@@ -791,51 +681,6 @@ export default function CoordinatorApproveDialog({
                           <Pencil className="mr-2 h-4 w-4" />
                           Draw Signature
                         </Button>
-                      </div>
-
-                      {/* All Signatures */}
-                      <div className="border rounded-lg p-4 space-y-3">
-                        <Label className="text-sm font-medium">All Signatures</Label>
-                        {loadingSignatures ? (
-                          <div className="flex items-center justify-center py-8">
-                            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                          </div>
-                        ) : signatures.length > 0 ? (
-                          <div className="grid grid-cols-2 gap-3">
-                            {signatures.map((sig) => (
-                              <div
-                                key={sig.id}
-                                className={`border rounded-lg p-3 space-y-2 ${
-                                  sig.active ? 'ring-2 ring-primary' : ''
-                                }`}
-                              >
-                                <div className="bg-muted/50 rounded p-2 flex items-center justify-center min-h-[60px]">
-                                  <img
-                                    src={`/storage/${sig.image_path}`}
-                                    alt="Signature"
-                                    className="max-h-12 object-contain"
-                                  />
-                                </div>
-                                <Button
-                                  variant={sig.active ? 'secondary' : 'outline'}
-                                  size="sm"
-                                  className="w-full"
-                                  onClick={() => handleActivateSignature(sig.id)}
-                                  disabled={sig.active}
-                                >
-                                  {sig.active ? 'Active' : 'Set Active'}
-                                </Button>
-                              </div>
-                            ))}
-                          </div>
-                        ) : (
-                          <Alert>
-                            <AlertCircle className="h-4 w-4" />
-                            <AlertDescription>
-                              No signatures found. Draw one to get started.
-                            </AlertDescription>
-                          </Alert>
-                        )}
                       </div>
                     </div>
                   )}

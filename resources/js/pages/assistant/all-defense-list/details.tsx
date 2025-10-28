@@ -192,13 +192,22 @@ export default function Details({ defenseRequest: initialDefenseRequest }: Props
       return null;
     }
     
-    // Map role to payment rate type exactly as stored in DB
+    // Map role to payment rate type EXACTLY as stored in DB
+    // IMPORTANT: Database stores "Panel Member 1", "Panel Member 2", etc. with numbers!
     let rateType = '';
     if (role === 'Adviser') {
       rateType = 'Adviser';
-    } else {
-      // All panel members (chair, panelist 1-4) use "Panel Chair" rate
+    } else if (role === 'Panel Chair' || role === 'Chairperson') {
       rateType = 'Panel Chair';
+    } else if (role.includes('Panel Member')) {
+      // Keep the full role name including number (Panel Member 1, Panel Member 2, etc.)
+      rateType = role;
+    } else if (role === 'Panelist') {
+      // Generic panelist - try to find any Panel Member rate
+      rateType = 'Panel Member 1'; // Default to Panel Member 1
+    } else {
+      // Default fallback
+      rateType = role;
     }
     
     // Normalize defense type for case-insensitive comparison
@@ -347,13 +356,24 @@ export default function Details({ defenseRequest: initialDefenseRequest }: Props
     const toastId = toast.loading('Marking as completed...');
     
     try {
+      // Refresh CSRF token first
+      console.log('🔄 Refreshing CSRF token...');
+      await fetch('/sanctum/csrf-cookie', {
+        credentials: 'same-origin',
+      });
+      
       const csrfToken = (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content || '';
       
+      console.log('🔑 CSRF Token:', csrfToken ? '✓ Found' : '✗ Not found');
+      
       if (!csrfToken) {
-        throw new Error('CSRF token not found');
+        throw new Error('CSRF token not found. Please refresh the page.');
       }
 
-      const res = await fetch(`/defense-requests/${details.id}/complete`, {
+      const url = `/defense-requests/${details.id}/complete`;
+      console.log('📡 Sending request to:', url);
+      
+      const res = await fetch(url, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -363,15 +383,31 @@ export default function Details({ defenseRequest: initialDefenseRequest }: Props
         credentials: 'same-origin',
       });
       
+      console.log('📥 Response status:', res.status, res.statusText);
+      
+      // Handle CSRF token mismatch (419)
+      if (res.status === 419) {
+        console.error('❌ CSRF token mismatch (419)');
+        toast.error('Session expired. Please refresh the page and try again.', { id: toastId });
+        return;
+      }
+      
       // Handle non-JSON responses
       const contentType = res.headers.get('content-type');
       if (!contentType || !contentType.includes('application/json')) {
         const text = await res.text();
-        console.error('Non-JSON response:', text);
+        console.error('❌ Non-JSON response:', text);
+        
+        // Check if it's an HTML error page
+        if (text.includes('<!DOCTYPE') || text.includes('<html')) {
+          throw new Error('Server error. Please check the server logs.');
+        }
+        
         throw new Error('Server returned an invalid response');
       }
       
       const data = await res.json();
+      console.log('📦 Response data:', data);
       
       if (res.ok && data.success) {
         // Update local state immediately - both defense status AND AA status
@@ -383,16 +419,23 @@ export default function Details({ defenseRequest: initialDefenseRequest }: Props
           aa_verification_id: data.aa_verification_id
         } : prev);
         
+        console.log('✅ Defense marked as completed');
         toast.success('Defense marked as completed', { id: toastId });
         
       } else {
         const errorMsg = data.error || data.message || 'Failed to mark as completed';
-        console.error('Mark completed failed:', data);
+        console.error('❌ Mark completed failed:', data);
         toast.error(errorMsg, { id: toastId });
       }
     } catch (error) {
-      console.error('Error marking as completed:', error);
-      toast.error(error instanceof Error ? error.message : 'Error marking as completed', { id: toastId });
+      console.error('💥 Error marking as completed:', error);
+      
+      let errorMessage = 'Error marking as completed';
+      if (error instanceof Error) {
+        errorMessage = error.message;
+      }
+      
+      toast.error(errorMessage, { id: toastId });
     } finally {
       setIsUpdating(false);
       setConfirmDialog({ open: false, title: '', description: '', action: null });
@@ -413,13 +456,23 @@ export default function Details({ defenseRequest: initialDefenseRequest }: Props
     const toastId = toast.loading(`Updating to ${statusLabels[newStatus]}...`);
     
     try {
+      // Refresh CSRF token first
+      console.log('🔄 Refreshing CSRF token...');
+      await fetch('/sanctum/csrf-cookie', {
+        credentials: 'same-origin',
+      });
+      
       const csrfToken = (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content || '';
       
+      console.log('🔑 CSRF Token:', csrfToken ? '✓ Found' : '✗ Not found');
+      
       if (!csrfToken) {
-        throw new Error('CSRF token not found');
+        throw new Error('CSRF token not found. Please refresh the page.');
       }
 
       const url = `/assistant/aa-verification/${details.id}/status`;
+      console.log('📡 Sending request to:', url);
+      console.log('📦 Payload:', { status: newStatus });
       
       const res = await fetch(url, {
         method: 'POST',
@@ -432,15 +485,31 @@ export default function Details({ defenseRequest: initialDefenseRequest }: Props
         body: JSON.stringify({ status: newStatus }),
       });
       
+      console.log('📥 Response status:', res.status, res.statusText);
+      
+      // Handle CSRF token mismatch (419)
+      if (res.status === 419) {
+        console.error('❌ CSRF token mismatch (419)');
+        toast.error('Session expired. Please refresh the page and try again.', { id: toastId });
+        return;
+      }
+      
       // Handle non-JSON responses
       const contentType = res.headers.get('content-type');
       if (!contentType || !contentType.includes('application/json')) {
         const text = await res.text();
-        console.error('Non-JSON response:', text);
+        console.error('❌ Non-JSON response:', text);
+        
+        // Check if it's an HTML error page
+        if (text.includes('<!DOCTYPE') || text.includes('<html')) {
+          throw new Error('Server error. Please check the server logs.');
+        }
+        
         throw new Error('Server returned an invalid response');
       }
       
       const data = await res.json();
+      console.log('📦 Response data:', data);
       
       if (res.ok && data.success) {
         // Update local state immediately
@@ -449,6 +518,8 @@ export default function Details({ defenseRequest: initialDefenseRequest }: Props
           aa_verification_status: newStatus,
           aa_verification_id: data.aa_verification_id
         } : prev);
+        
+        console.log('✅ Status updated successfully');
         
         // Success messages
         if (newStatus === 'ready_for_finance') {
@@ -462,12 +533,18 @@ export default function Details({ defenseRequest: initialDefenseRequest }: Props
         
       } else {
         const errorMsg = data.error || data.message || 'Failed to update status';
-        console.error('Status update failed:', data);
+        console.error('❌ Status update failed:', data);
         toast.error(errorMsg, { id: toastId });
       }
     } catch (error) {
-      console.error('Error updating AA status:', error);
-      toast.error(error instanceof Error ? error.message : 'Error updating status', { id: toastId });
+      console.error('💥 Error updating AA status:', error);
+      
+      let errorMessage = 'Error updating status';
+      if (error instanceof Error) {
+        errorMessage = error.message;
+      }
+      
+      toast.error(errorMessage, { id: toastId });
     } finally {
       setIsUpdating(false);
       setConfirmDialog({ open: false, title: '', description: '', action: null });

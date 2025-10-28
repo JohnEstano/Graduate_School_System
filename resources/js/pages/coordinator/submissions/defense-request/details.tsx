@@ -7,6 +7,7 @@ import { Head, router } from '@inertiajs/react';
 import { format } from 'date-fns';
 import dayjs from 'dayjs';
 import { toast, Toaster } from 'sonner';
+import { fetchWithCsrf, postWithCsrf, patchWithCsrf } from '@/utils/csrf';
 import {
   ArrowLeft,
   Calendar,
@@ -651,108 +652,57 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
     }
   }
 
-  // Auto-save panels and schedule before opening approval dialog
-  async function handleOpenApprovalDialog() {
+  // Validate and open approval dialog (panels/schedule will be saved on final approval)
+  function handleOpenApprovalDialog() {
     if (!request.id) return;
 
-    const toastId = toast.loading('Saving panels and schedule before approval...');
+    // Validate that panels and schedule are filled before opening dialog
+    const requiredPanels = [
+      panels.defense_chairperson,
+      panels.defense_panelist1,
+      panels.defense_panelist2
+    ];
+
+    const allPanelsFilled = requiredPanels.every(p => p && p.trim());
     
-    try {
-      console.log('🚀 Starting auto-save before approval...');
-      console.log('📋 Panels data:', panels);
-      console.log('📅 Schedule data:', schedule);
-      
-      // Save panels first
-      console.log('💾 Saving panels...');
-      const panelsRes = await fetchWithCsrfRetry(`/coordinator/defense-requests/${request.id}/panels`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Accept: 'application/json'
-        },
-        body: JSON.stringify(panels)
-      });
-
-      if (!panelsRes.ok) {
-        const contentType = panelsRes.headers.get('content-type');
-        let errorMessage = 'Failed to save panel assignments';
-        
-        if (contentType && contentType.includes('application/json')) {
-          const panelsError = await panelsRes.json().catch(() => ({ error: errorMessage }));
-          errorMessage = panelsError.error || panelsError.message || errorMessage;
-          console.error('❌ Panel save error (JSON):', panelsError);
-        } else {
-          const errorText = await panelsRes.text();
-          errorMessage = errorText || errorMessage;
-          console.error('❌ Panel save error (Text):', errorText);
-        }
-        
-        toast.error(errorMessage, { id: toastId });
-        return;
-      }
-
-      console.log('✅ Panels saved successfully');
-
-      // Save schedule
-      console.log('💾 Saving schedule...');
-      const scheduleRes = await fetchWithCsrfRetry(`/coordinator/defense-requests/${request.id}/schedule`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Accept: 'application/json'
-        },
-        body: JSON.stringify(schedule)
-      });
-
-      if (!scheduleRes.ok) {
-        const contentType = scheduleRes.headers.get('content-type');
-        let errorMessage = 'Failed to save schedule information';
-        
-        if (contentType && contentType.includes('application/json')) {
-          const scheduleError = await scheduleRes.json().catch(() => ({ error: errorMessage }));
-          errorMessage = scheduleError.error || scheduleError.message || errorMessage;
-          console.error('❌ Schedule save error (JSON):', scheduleError);
-        } else {
-          const errorText = await scheduleRes.text();
-          errorMessage = errorText || errorMessage;
-          console.error('❌ Schedule save error (Text):', errorText);
-        }
-        
-        toast.error(errorMessage, { id: toastId });
-        return;
-      }
-
-      console.log('✅ Schedule saved successfully');
-
-      toast.success('Panels and schedule saved successfully!', { id: toastId });
-      
-      // Update local state with saved data
-      const scheduleData = await scheduleRes.json();
-      console.log('📦 Received schedule data:', scheduleData);
-      
-      if (scheduleData.request) {
-        setRequest(scheduleData.request);
-        console.log('✅ Local state updated');
-      }
-      
-      // Now open the approval dialog
-      console.log('🎭 Opening approval dialog...');
-      setApproveDialogOpen(true);
-      
-    } catch (err) {
-      console.error('💥 Failed to save panels/schedule:', err);
-      
-      let errorMessage = 'Failed to save panels and schedule. Please try again.';
-      if (err instanceof Error) {
-        if (err.message === 'network') {
-          errorMessage = 'Network error. Please check your connection and try again.';
-        } else {
-          errorMessage = err.message || errorMessage;
-        }
-      }
-      
-      toast.error(errorMessage, { id: toastId });
+    if (!allPanelsFilled) {
+      toast.error('Please assign at least Chairperson and 2 Panelists before approving');
+      return;
     }
+
+    const requiredSchedule = [
+      schedule.scheduled_date,
+      schedule.scheduled_time,
+      schedule.scheduled_end_time,
+      schedule.defense_mode,
+      schedule.defense_venue
+    ];
+
+    const allScheduleFilled = requiredSchedule.every(s => s && s.trim());
+    
+    if (!allScheduleFilled) {
+      toast.error('Please fill in all schedule information before approving');
+      return;
+    }
+
+    // Validate time logic: start < end
+    if (schedule.scheduled_time && schedule.scheduled_end_time) {
+      const [sh, sm] = schedule.scheduled_time.split(':').map(Number);
+      const [eh, em] = schedule.scheduled_end_time.split(':').map(Number);
+      const start = sh * 60 + sm;
+      const end = eh * 60 + em;
+      if (end <= start) {
+        toast.error('End time must be after start time');
+        return;
+      }
+    }
+    
+    console.log('✅ Validation passed. Opening approval dialog...');
+    console.log('📋 Panels data to be saved:', panels);
+    console.log('� Schedule data to be saved:', schedule);
+    
+    // Open the approval dialog - panels and schedule will be saved on final approval
+    setApproveDialogOpen(true);
   }
 
   // --- Approve/Reject/Retrieve logic (robust, uses fetchWithCsrfRetry) ---
@@ -1067,20 +1017,40 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
 
   // Local helper to get receivable (matching AA logic)
   function getMemberReceivable(role: string): number | null {
-    if (!request.program_level || !request.defense_type) return null;
+    if (!request.program_level || !request.defense_type) {
+      return null;
+    }
     
-    // Map role to payment rate type exactly as stored in DB
+    // Map role to payment rate type EXACTLY as stored in DB
+    // IMPORTANT: Database stores "Panel Member 1", "Panel Member 2", etc. with numbers!
     let rateType = '';
     if (role === 'Adviser') {
       rateType = 'Adviser';
-    } else {
-      // All panel members (chair, panelist 1-4) use "Panel Chair" rate
+    } else if (role === 'Panel Chair' || role === 'Chairperson') {
       rateType = 'Panel Chair';
+    } else if (role.includes('Panel Member')) {
+      // Keep the full role name including number (Panel Member 1, Panel Member 2, etc.)
+      rateType = role;
+    } else if (role === 'Panelist') {
+      // Generic panelist - try to find any Panel Member rate
+      rateType = 'Panel Member 1'; // Default to Panel Member 1
+    } else {
+      // Default fallback
+      rateType = role;
     }
     
     // Normalize defense type for case-insensitive comparison
     const normalizeDefenseType = (dt: string) => dt.toLowerCase().replace(/[^a-z]/g, '');
     const targetDefenseType = normalizeDefenseType(request.defense_type);
+    
+    // Log for debugging
+    console.log('💰 Rate Lookup:', {
+      originalRole: role,
+      mappedRateType: rateType,
+      program_level: request.program_level,
+      defense_type: request.defense_type,
+      targetDefenseType,
+    });
     
     // Direct comparison with normalization
     const rate = paymentRates.find(
@@ -1088,9 +1058,29 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
         const matchesProgram = r.program_level === request.program_level;
         const matchesType = r.type === rateType;
         const matchesDefense = normalizeDefenseType(r.defense_type || '') === targetDefenseType;
+        
         return matchesProgram && matchesType && matchesDefense;
       }
     );
+    
+    if (!rate) {
+      console.error('❌ No rate found:', {
+        role,
+        rateType,
+        searched_for: { 
+          program_level: request.program_level, 
+          type: rateType, 
+          defense_type: targetDefenseType 
+        },
+        available_rates: paymentRates.map(r => ({ 
+          program: r.program_level, 
+          type: r.type, 
+          defense: r.defense_type 
+        }))
+      });
+    } else {
+      console.log('✅ Rate found:', rate);
+    }
     
     return rate ? Number(rate.amount) : null;
   }
@@ -1477,12 +1467,6 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
                     <Users className="h-4 w-4" /> Panel Assignment
                   </h2>
                   <Separator />
-                  {/* Show program level info */}
-                  <div className="text-xs text-muted-foreground mb-2">
-                    {request.program_level === 'Doctorate' 
-                      ? 'Doctorate program: 5 panel members required (Chairperson + 4 Panelists)'
-                      : 'Masteral program: 4 panel members required (Chairperson + 3 Panelists)'}
-                  </div>
                   <div className="grid md:grid-cols-2 gap-4">
                     {/* Always show Chairperson and first 3 panelists for Masteral */}
                     {[
@@ -1513,11 +1497,6 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
                         taken={taken}
                       />
                     )}
-                  </div>
-                  <div className="flex justify-end mt-4">
-                    <div className="text-sm text-muted-foreground">
-                      Changes to panel assignments are saved when you Approve the request.
-                    </div>
                   </div>
                   {panelLoadError && (
                     <div className="text-xs text-red-500 mt-2">{panelLoadError}</div>
@@ -1631,11 +1610,6 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
                       />
                     </div>
                   </div>
-                  <div className="flex justify-end mt-4">
-                    <div className="text-sm text-muted-foreground">
-                      Scheduling changes will be persisted when you Approve the request.
-                    </div>
-                  </div>
                 </div>
               </TabsContent>
             </Tabs>
@@ -1702,6 +1676,8 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
         defenseRequest={request}
         coordinatorId={request.coordinator?.id}
         coordinatorName={request.coordinator?.name || 'Coordinator'}
+        panelsData={panels}
+        scheduleData={schedule}
         onApproveComplete={() => {
           // Use Inertia reload to refresh data properly
           console.log('🔄 Approval complete, reloading page data...');

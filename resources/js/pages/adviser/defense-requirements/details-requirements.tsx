@@ -150,10 +150,20 @@ export default function DetailsRequirementsPage(rawProps: any) {
   const aiDetectionInputRef = useRef<HTMLInputElement>(null);
 
   function csrf() {
-    return (
-      (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)
-        ?.content || ''
-    );
+    const token = (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content || '';
+    return token;
+  }
+
+  // Fetch fresh CSRF token from server
+  async function refreshCsrfToken() {
+    try {
+      // Make a simple GET request to refresh the session
+      await fetch('/sanctum/csrf-cookie', { credentials: 'include' });
+      // Give it a moment to update the meta tag
+      await new Promise(resolve => setTimeout(resolve, 100));
+    } catch (err) {
+      console.error('Failed to refresh CSRF token:', err);
+    }
   }
 
   // --- Reject/Retrieve logic (Approve is handled by endorsement dialog) ---
@@ -162,43 +172,51 @@ export default function DetailsRequirementsPage(rawProps: any) {
 
     setIsLoading(true);
 
+    // Refresh CSRF token before making the request
+    await refreshCsrfToken();
+
     // Map action to new adviser_status value
     let newAdviserStatus: string = 'Pending';
     if (action === 'reject') newAdviserStatus = 'Rejected';
     else if (action === 'retrieve') newAdviserStatus = 'Pending';
 
     try {
-      const payload: any = { adviser_status: newAdviserStatus };
-
-      const res = await fetchWithCsrfRetry(`/adviser/defense-requirements/${request.id}/adviser-status`, {
+      const response = await fetch(`/adviser/defense-requirements/${request.id}/adviser-status`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
-          Accept: 'application/json',
+          'X-CSRF-TOKEN': csrf(),
+          'Accept': 'application/json',
         },
-        body: JSON.stringify(payload),
+        credentials: 'include',
+        body: JSON.stringify({ adviser_status: newAdviserStatus }),
       });
-      const data = await res.json();
-      if (res.ok) {
-        if (data.request) {
-          setRequest(data.request); // This will update workflow_history and re-render the workflow section
-        } else {
-          setRequest(r => ({
-            ...r,
-            adviser_status: newAdviserStatus,
-            workflow_history: data.workflow_history || r.workflow_history,
-            workflow_state: data.workflow_state || r.workflow_state,
-          }));
-        }
-        toast.success(`Adviser status set to ${newAdviserStatus}`);
-      } else {
-        toast.error(data?.error || 'Failed to update adviser status');
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: 'Failed to update status' }));
+        throw new Error(errorData.message || `HTTP ${response.status}`);
       }
-    } catch {
-      toast.error('Network error updating adviser status');
+
+      const data = await response.json();
+      
+      // Update local state with the server response
+      setRequest(prev => ({
+        ...prev,
+        adviser_status: data.adviser_status || newAdviserStatus,
+        workflow_state: data.workflow_state || prev.workflow_state,
+        workflow_history: data.workflow_history || prev.workflow_history,
+        last_status_updated_by: data.last_status_updated_by || prev.last_status_updated_by,
+        last_status_updated_at: data.last_status_updated_at || prev.last_status_updated_at,
+      }));
+
+      setConfirm({ open: false, action: null });
+      
+      toast.success(`Status updated to ${newAdviserStatus}!`);
+    } catch (err) {
+      console.error('Status update error:', err);
+      toast.error(err instanceof Error ? err.message : 'Failed to update status');
     } finally {
       setIsLoading(false);
-      setConfirm({ open: false, action: null });
     }
   }
 
@@ -350,39 +368,54 @@ export default function DetailsRequirementsPage(rawProps: any) {
     return { event, desc, from, to, created, userName };
   }
 
-  // Handle AI Declaration Form upload
+    // Handle AI Declaration Form upload
   async function handleAiCertificateSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (!request.id) return;
     if (!aiDetectionCertFile) {
-      toast.error('Please select a file to upload.');
+      toast.error('Please select a file first');
       return;
     }
 
     const formData = new FormData();
     formData.append('ai_detection_certificate', aiDetectionCertFile);
+    
+    setAiDetectionCertUploading(true);
+    
+    // Refresh CSRF token before upload
+    await refreshCsrfToken();
 
     try {
-      setAiDetectionCertUploading(true);
-
-      const res = await fetchWithCsrfRetry(`/adviser/defense-requirements/${request.id}/documents`, {
+      const response = await fetch(`/adviser/defense-requirements/${request.id}/documents`, {
         method: 'POST',
+        headers: {
+          'X-CSRF-TOKEN': csrf(),
+          'Accept': 'application/json',
+        },
+        credentials: 'include',
         body: formData,
       });
-      const data = await res.json();
-      if (res.ok) {
-        setRequest(r => ({
-          ...r,
-          ai_detection_certificate: data.ai_detection_certificate || r.ai_detection_certificate,
-        }));
-        setAiDetectionCertFile(null);
-        if (aiDetectionInputRef.current) aiDetectionInputRef.current.value = '';
-        toast.success('AI Declaration Form uploaded successfully.');
-      } else {
-        toast.error(data?.error || 'Failed to upload declaration form.');
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: 'Upload failed' }));
+        throw new Error(errorData.message || `HTTP ${response.status}`);
       }
-    } catch {
-      toast.error('Network error uploading declaration form.');
+
+      const data = await response.json();
+      
+      // Update local state
+      setRequest(prev => ({
+        ...prev,
+        ai_detection_certificate: data.ai_detection_certificate || prev.ai_detection_certificate,
+      }));
+
+      setAiDetectionCertFile(null);
+      if (aiDetectionInputRef.current) aiDetectionInputRef.current.value = '';
+      
+      toast.success('AI Declaration Form uploaded successfully!');
+    } catch (err) {
+      console.error('Upload error:', err);
+      toast.error(err instanceof Error ? err.message : 'Failed to upload file');
     } finally {
       setAiDetectionCertUploading(false);
     }
@@ -962,18 +995,9 @@ export default function DetailsRequirementsPage(rawProps: any) {
         defenseRequest={request}
         coordinatorId={coordinators.length > 0 ? coordinators[0].id : undefined}
         coordinatorName={coordinators.length > 0 ? coordinators[0].name : 'Coordinator'}
-        onEndorseComplete={async () => {
-          // Simply reload the page to get fresh data from server
-          console.log('🔄 Endorsement complete, reloading page data...');
-          toast.success('Endorsement submitted successfully!');
-          
-          // Use Inertia reload to refresh all data properly
-          router.reload({ 
-            only: ['defenseRequest'],
-            onSuccess: () => {
-              console.log('✅ Page data reloaded successfully');
-            }
-          });
+        onEndorseComplete={() => {
+          // Simply reload the entire page to get fresh data
+          window.location.reload();
         }}
       />
     </AppLayout>

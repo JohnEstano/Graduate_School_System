@@ -17,6 +17,7 @@ class PaymentRecord extends Model
         'payment_date',
         'defense_status',
         'amount',
+        'role', // ✅ Add role to track member's role in this specific defense
     ];
 
     protected $casts = [
