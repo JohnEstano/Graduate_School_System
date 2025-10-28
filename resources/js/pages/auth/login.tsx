@@ -14,6 +14,7 @@ type LoginForm = {
     identifier: string; // email or student number
     password: string;
     remember: boolean;
+    mode?: 'auto' | 'local' | 'api';
 };
 
 interface LoginProps {
@@ -27,6 +28,7 @@ export default function Login(props: LoginProps) {
         identifier: '',
         password: '',
         remember: false,
+        mode: 'auto',
     });
 
     const submit: FormEventHandler = (e) => {
@@ -49,6 +51,28 @@ export default function Login(props: LoginProps) {
 
             <form className="flex flex-col gap-6" onSubmit={submit}>
                 <div className="grid gap-6">
+                    {/* Login method selector */}
+                    <div className="grid gap-2">
+                        <Label htmlFor="mode">Login method</Label>
+                        <div className="grid grid-cols-3 gap-2">
+                            {(['auto','local','api'] as const).map((opt) => (
+                                <Button
+                                    key={opt}
+                                    type="button"
+                                    variant={data.mode === opt ? 'default' : 'outline'}
+                                    className="h-9"
+                                    onClick={() => setData('mode', opt)}
+                                    aria-pressed={data.mode === opt}
+                                >
+                                    {opt === 'auto' ? 'Auto' : opt.toUpperCase()}
+                                </Button>
+                            ))}
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                            Auto tries Local first, then API. Choose Local to bypass the API when it’s down.
+                        </div>
+                        <InputError message={errors.mode as any} />
+                    </div>
                     <div className="grid gap-2">
                         <Label htmlFor="identifier">Email or Student Number</Label>
                         <Input

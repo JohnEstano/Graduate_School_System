@@ -185,4 +185,42 @@ class DeanCompreExamController extends Controller
             ->orderByDesc('created_at')
             ->get(['id','status','reason','reviewed_by','created_at']);
     }
+
+    // Revert a single decision back to pending
+    public function revert(ExamApplication $application)
+    {
+        abort_unless(in_array(Auth::user()->role, ['Dean','Coordinator']), 403);
+
+        DB::transaction(function () use ($application) {
+            $application->final_approval_status = 'pending';
+            $application->final_approval_date   = null;
+            $application->final_approval_reason = null;
+            $application->save();
+        });
+
+        return response()->json(['ok' => true]);
+    }
+
+    // Bulk revert multiple decisions back to pending
+    public function bulkRevert(Request $request)
+    {
+        abort_unless(in_array(Auth::user()->role, ['Dean','Coordinator']), 403);
+
+        $validated = $request->validate([
+            'ids'   => ['required','array','min:1'],
+            'ids.*' => ['integer'],
+        ]);
+
+        DB::transaction(function () use ($validated) {
+            $ids = $validated['ids'];
+
+            ExamApplication::whereIn('application_id', $ids)->update([
+                'final_approval_status' => 'pending',
+                'final_approval_date'   => null,
+                'final_approval_reason' => null,
+            ]);
+        });
+
+        return response()->json(['ok' => true]);
+    }
 }

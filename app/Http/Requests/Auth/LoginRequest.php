@@ -26,6 +26,7 @@ class LoginRequest extends FormRequest
         return [
             'identifier' => ['required', 'string', 'max:100'],
             'password' => ['required', 'string'],
+            'mode' => ['nullable', 'in:auto,local,api'],
         ];
     }
 
@@ -109,7 +110,38 @@ class LoginRequest extends FormRequest
             }
         }
         
-        // Legacy authentication
+        // Try LOCAL authentication first unless explicitly forced to API
+        $mode = (string)($this->input('mode') ?? 'auto');
+
+        if ($mode !== 'api') {
+            // Attempt local DB auth if a user exists with a password hash
+            $localUser = null;
+            if ($mappedNumeric) {
+                $localUser = User::where('student_number', $mappedNumeric)
+                    ->orWhere('school_id', $mappedNumeric)
+                    ->first();
+            }
+            if (!$localUser) {
+                $email = str_contains($identifier, '@') ? strtolower($identifier) : strtolower($identifier) . '@uic.edu.ph';
+                $localUser = User::where('email', $email)->first();
+            }
+
+            if ($localUser && $localUser->password && Hash::check($password, $localUser->password)) {
+                Auth::login($localUser, $this->boolean('remember'));
+                RateLimiter::clear($this->throttleKey());
+                return;
+            }
+
+            if ($mode === 'local') {
+                // If forced local and failed, stop here
+                RateLimiter::hit($this->throttleKey());
+                throw ValidationException::withMessages([
+                    'identifier' => 'Invalid local credentials.',
+                ]);
+            }
+        }
+
+        // Legacy authentication (API)
         try {
             Log::info("Login: Attempting legacy authentication", [
                 'mapped_numeric' => $mappedNumeric,
@@ -134,9 +166,10 @@ class LoginRequest extends FormRequest
                 'error' => $e->getMessage(),
                 'identifier' => $identifier
             ]);
+            // If we reached here in auto mode and local also failed earlier, report generic invalid
             RateLimiter::hit($this->throttleKey());
             throw ValidationException::withMessages([
-                'identifier' => 'Invalid credentials.',
+                'identifier' => $mode === 'api' ? 'API authentication failed.' : 'Invalid credentials.',
             ]);
         }
 

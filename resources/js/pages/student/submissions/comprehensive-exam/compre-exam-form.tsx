@@ -71,6 +71,13 @@ export default function CompreExamForm({ open, onOpenChange, onFinish }: Props) 
   const [schedules, setSchedules] = useState<OfferingOption[]>([]);
   const [schedLoading, setSchedLoading] = useState(false);
   const [schedError, setSchedError] = useState<string | null>(null);
+  const [errors, setErrors] = useState<{
+    schoolYear?: string;
+    officeAddress?: string;
+    mobileNo?: string;
+    telephoneNo?: string;
+    subjects?: string;
+  }>({});
 
   // Build School Year options 2020-2021 ... 2039-2040
   const schoolYearOptions = React.useMemo(
@@ -87,6 +94,7 @@ export default function CompreExamForm({ open, onOpenChange, onFinish }: Props) 
       setCurrentStep(0);
       reset();
       setShowSuccessPanel(false);
+      setErrors({});
     }
   }
 
@@ -145,13 +153,64 @@ export default function CompreExamForm({ open, onOpenChange, onFinish }: Props) 
       preserveScroll: true,
       preserveState: true,
       onSuccess: () => {
+        // Ensure dialog stays open to show success panel even if parent re-renders
+        try { onOpenChange?.(true); } catch {}
         setShowSuccessPanel(true);
         onFinish?.();
       },
     });
   }
 
+  // Basic per-step validation rules (must be in component scope)
+  function validateStep(stepIndex: number): boolean {
+    const nextErrors: typeof errors = {};
+
+    if (stepIndex === 0) {
+      // Step 1: require School Year only (other fields are read-only/prefilled)
+      if (!data.schoolYear?.trim()) {
+        nextErrors.schoolYear = 'School Year is required.';
+      }
+    }
+
+    if (stepIndex === 1) {
+      // Step 2: require Office Address and Mobile No. (Email is read-only; Telephone optional)
+      if (!data.officeAddress?.trim()) {
+        nextErrors.officeAddress = 'Office Address is required.';
+      }
+      const raw = (data.mobileNo || '').trim();
+      const digits = raw.replace(/\D/g, '');
+      const hasNonDigits = /\D/.test(raw);
+      if (!raw) {
+        nextErrors.mobileNo = 'Mobile number is required.';
+      } else if (hasNonDigits || digits.length !== 11) {
+        nextErrors.mobileNo = 'Please enter a valid 11-digit mobile number';
+      }
+      // Telephone (optional) – allow only digits, spaces, dashes, parentheses
+      const telRaw = (data.telephoneNo || '').trim();
+      if (telRaw) {
+        const invalidTel = /[^0-9\s()-]/.test(telRaw);
+        if (invalidTel) {
+          nextErrors.telephoneNo = 'Only digits, spaces, dashes, and parentheses are allowed';
+        }
+      }
+    }
+
+    if (stepIndex === 2) {
+      // Step 3: require at least one selected offering
+      const selected = (data.subjects || []).filter((s) => !!s.offeringId);
+      if (selected.length === 0) {
+        nextErrors.subjects = 'Please select at least one examination schedule.';
+      }
+    }
+
+    setErrors((prev) => ({ ...prev, ...nextErrors }));
+    return Object.keys(nextErrors).length === 0;
+  }
+
   function handleNext() {
+    // Validate current step before proceeding
+    if (!validateStep(currentStep)) return;
+
     if (currentStep < steps.length - 1) {
       setCurrentStep((s) => s + 1);
     } else {
@@ -266,6 +325,7 @@ export default function CompreExamForm({ open, onOpenChange, onFinish }: Props) 
                 className="h-10 text-s w-full border rounded-md px-3 bg-white focus:outline-none focus:ring-2 focus:ring-rose-300"
                 value={data.schoolYear}
                 onChange={(e) => setData('schoolYear', e.target.value)}
+                aria-invalid={!!errors.schoolYear}
               >
                 <option value="" disabled>
                   Select school year
@@ -276,6 +336,9 @@ export default function CompreExamForm({ open, onOpenChange, onFinish }: Props) 
                   </option>
                 ))}
               </select>
+              {errors.schoolYear && (
+                <p className="text-xs text-rose-600 mt-1">{errors.schoolYear}</p>
+              )}
             </div>
             <div>
               <Label className="text-s">Program</Label>
@@ -293,15 +356,21 @@ export default function CompreExamForm({ open, onOpenChange, onFinish }: Props) 
             <HeadingSmall title="Step 2: Contact Information" />
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div className="md:col-span-2">
-                <Label className="text-s">Office Address</Label>
+                <Label className="text-s">Office Address <span className="text-rose-500">*</span></Label>
                 <Input
                 className="h-10 text-s"
                 value={data.officeAddress}
-                onChange={(e) => setData('officeAddress', e.target.value)}
+                onChange={(e) => {
+                  setData('officeAddress', e.target.value);
+                  if (errors.officeAddress) setErrors((prev) => ({ ...prev, officeAddress: undefined }));
+                }}
                 />
+                {errors.officeAddress && (
+                  <p className="text-xs text-rose-600 mt-1">{errors.officeAddress}</p>
+                )}
             </div>
             <div>
-                <Label className="text-s">Mobile No.</Label>
+                <Label className="text-s">Mobile No. <span className="text-rose-500">*</span></Label>
                 <Input
                 type="text"
                 inputMode="numeric"
@@ -309,22 +378,46 @@ export default function CompreExamForm({ open, onOpenChange, onFinish }: Props) 
                 className="h-10 text-s"
                 value={data.mobileNo}
                 placeholder="e.g. 09171234567"
-                onChange={(e) => setData('mobileNo', e.target.value.replace(/\D/g, ''))}
+                aria-invalid={!!errors.mobileNo}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setData('mobileNo', val);
+
+                  const digits = (val || '').replace(/\D/g, '');
+                  const hasNonDigits = /\D/.test(val);
+                  if (hasNonDigits) {
+                    setErrors((prev) => ({ ...prev, mobileNo: 'Only numeric digits (0-9) are allowed' }));
+                  } else {
+                    setErrors((prev) => ({ ...prev, mobileNo: undefined }));
+                  }
+                }}
                 />
+                {errors.mobileNo && (
+                  <p className="text-xs text-rose-600 mt-1">{errors.mobileNo}</p>
+                )}
             </div>
             <div>
-                <Label className="text-s">Telephone No.</Label>
+                <Label className="text-s">Telephone No. <span className="text-xs text-zinc-500">(optional)</span></Label>
                 <Input
                 type="tel"
                 className="h-10 text-s"
                 value={data.telephoneNo}
                 placeholder="e.g. (02) 123-4567"
+                aria-invalid={!!errors.telephoneNo}
                 onChange={(e) => {
-                    // Allow digits, spaces, dashes, parentheses
-                    const cleaned = e.target.value.replace(/[^0-9\s()-]/g, '');
-                    setData('telephoneNo', cleaned);
+                  const val = e.target.value;
+                  setData('telephoneNo', val);
+                  const invalid = /[^0-9\s()-]/.test(val);
+                  if (invalid) {
+                    setErrors((prev) => ({ ...prev, telephoneNo: 'Only digits, spaces, dashes, and parentheses are allowed' }));
+                  } else {
+                    setErrors((prev) => ({ ...prev, telephoneNo: undefined }));
+                  }
                 }}
                 />
+                {errors.telephoneNo && (
+                  <p className="text-xs text-rose-600 mt-1">{errors.telephoneNo}</p>
+                )}
             </div>
             <div className="md:col-span-2">
                 <Label className="text-s">Email</Label>
@@ -349,6 +442,9 @@ export default function CompreExamForm({ open, onOpenChange, onFinish }: Props) 
             <p className="text-sm text-gray-600 text-justify">
               Select schedules posted by your coordinator for your program and school year.
             </p>
+            {errors.subjects && (
+              <p className="text-sm text-rose-600 mt-2">{errors.subjects}</p>
+            )}
           </div>
 
           {!data.schoolYear ? (
@@ -413,7 +509,7 @@ export default function CompreExamForm({ open, onOpenChange, onFinish }: Props) 
                            </SelectTrigger>
                            <SelectContent className="max-h-72">
                             {schedules.map((o) => {
-                              const label = `${o.subject_name} — ${format(new Date(o.exam_date as string), 'MMM d, yyyy')} • ${formatTime12hr(o.start_time || '')} - ${formatTime12hr(o.end_time || '')}`;
+                              const label = `${o.subject_name}`;
                               const disabled = takenIds.has(o.id);
                               return (
                                 <SelectItem key={o.id} value={String(o.id)} disabled={disabled} title={o.subject_name}>
@@ -428,10 +524,6 @@ export default function CompreExamForm({ open, onOpenChange, onFinish }: Props) 
                       {/* Read-only details after selection */}
                       {subj.offeringId && subj.subject && subj.date ? (
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                          <div>
-                            <Label className="text-sm font-medium text-gray-700">Subject</Label>
-                            <Input className="mt-1 h-10" value={subj.subject} readOnly disabled />
-                          </div>
                           <div>
                             <Label className="text-sm font-medium text-gray-700">Exam Date</Label>
                             <Input

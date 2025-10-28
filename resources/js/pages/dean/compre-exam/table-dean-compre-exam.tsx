@@ -1,8 +1,8 @@
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogTrigger, DialogContent } from '@/components/ui/dialog';
+import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { GraduationCap, Filter, Check, CheckCircle, CircleX, Info, ArrowUp, ArrowDown, ArrowUpDown, X, Calendar as CalendarIcon } from 'lucide-react';
+import { GraduationCap, Filter, Check, CheckCircle, CircleX, Info, ArrowUp, ArrowDown, ArrowUpDown, X, Calendar as CalendarIcon, CircleArrowLeft } from 'lucide-react';
 import { format } from 'date-fns';
 import { useMemo, useState, useEffect } from 'react';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@/components/ui/dropdown-menu';
@@ -39,10 +39,15 @@ type Props = {
 	tabType?: 'pending' | 'approved' | 'rejected';
 	showStatusFilter?: boolean;
 	programOptions?: string[];
+	// Optional controlled program filter (when provided, parent handles filtering and count)
+	programValue?: string; // 'all' or specific program
+	onProgramChange?: (v: string) => void;
 	onApprove?: (id: number) => Promise<void> | void;
 	onReject?: (id: number, reason: string) => Promise<void> | void;
 	onApproveMany?: (ids: number[]) => Promise<void> | void;
 	onRejectMany?: (ids: number[], reason: string) => Promise<void> | void;
+	onRetrieve?: (id: number) => Promise<void> | void;
+	onRetrieveMany?: (ids: number[]) => Promise<void> | void;
 	loading?: boolean;
 	// Extra filters controlled by parent (optional)
 	schoolYearOptions?: string[];
@@ -60,8 +65,8 @@ type Props = {
 };
 
 export default function TableDeanCompreExam({
-	paged, columns, tabType, showStatusFilter, programOptions,
-	onApprove, onReject, onApproveMany, onRejectMany, loading,
+	paged, columns, tabType, showStatusFilter, programOptions, programValue, onProgramChange,
+	onApprove, onReject, onApproveMany, onRejectMany, onRetrieve, onRetrieveMany, loading,
 	schoolYearOptions, schoolYearValue, onSchoolYearChange,
 	fromDate, toDate, onFromDateChange, onToDateChange,
 	hasRemarks, onHasRemarksChange, sortDir, onSortDirChange, onResetFilters,
@@ -77,12 +82,16 @@ export default function TableDeanCompreExam({
 	const [approveManyOpen, setApproveManyOpen] = useState(false);
 	const [rejectManyOpen, setRejectManyOpen] = useState(false);
 	const [rejectManyReason, setRejectManyReason] = useState('');
+	const [retrieveManyOpen, setRetrieveManyOpen] = useState(false);
+	const [retrieveId, setRetrieveId] = useState<number | null>(null);
 
 	const [statusFilter, setStatusFilter] = useState<'all' | 'approved' | 'pending' | 'rejected'>('all');
 	const [programFilter, setProgramFilter] = useState<string>('all');
 	const [programOpen, setProgramOpen] = useState(false);
 	const [showAllPrograms, setShowAllPrograms] = useState(false);
 	const [sort, setSort] = useState<{ by: 'date' | null; dir: 'asc' | 'desc' }>({ by: 'date', dir: 'desc' });
+
+	const effectiveProgram = (programValue ?? programFilter) || 'all';
 
 	const { programsAvailable, programsAll } = useMemo(() => {
 		const normalize = (s: string) => s.trim().replace(/\s+/g, ' ');
@@ -120,10 +129,11 @@ export default function TableDeanCompreExam({
 	const filtered = useMemo(() => {
 		return sorted.filter(r => {
 			const statusOk = statusFilter === 'all' || r.application_status === statusFilter;
-			const progOk = programFilter === 'all' || (r.program || '') === programFilter;
+			// If parent controls program filtering, don't filter here to avoid double-filtering after pagination
+			const progOk = onProgramChange ? true : (effectiveProgram === 'all' || (r.program || '') === effectiveProgram);
 			return statusOk && progOk;
 		});
-	}, [sorted, statusFilter, programFilter]);
+	}, [sorted, statusFilter, effectiveProgram, onProgramChange]);
 
 	useEffect(() => {
 		setSelected(prev => prev.filter(id => filtered.some(r => r.id === id)));
@@ -133,6 +143,24 @@ export default function TableDeanCompreExam({
 	const toggleSelectAll = () => setSelected(headerChecked ? [] : filtered.map(p => p.id));
 	const toggleSelectOne = (id: number) =>
 		setSelected(prev => (prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]));
+
+	// Bulk selection subsets (mirror payment bulk behavior)
+	const selectedRows = useMemo(
+		() => filtered.filter(r => selected.includes(r.id)),
+		[filtered, selected]
+	);
+	const selectedPendingIds = useMemo(
+		() => selectedRows.filter(r => r.application_status === 'pending').map(r => r.id),
+		[selectedRows]
+	);
+	const selectedApprovedIds = useMemo(
+		() => selectedRows.filter(r => r.application_status === 'approved').map(r => r.id),
+		[selectedRows]
+	);
+	const selectedRejectedIds = useMemo(
+		() => selectedRows.filter(r => r.application_status === 'rejected').map(r => r.id),
+		[selectedRows]
+	);
 
 	const statusBadge = (s?: string | null) => {
 		const v = String(s || 'pending').toLowerCase();
@@ -175,6 +203,18 @@ export default function TableDeanCompreExam({
 		try { await onRejectMany(ids, reason.trim()); setSelected([]); }
 		finally { setSubmitting(false); setRejectManyOpen(false); setRejectManyReason(''); }
 	}
+	async function callRetrieve(id: number) {
+		if (!onRetrieve) return;
+		setSubmitting(true);
+		try { await onRetrieve(id); }
+		finally { setSubmitting(false); setRetrieveId(null); }
+	}
+	async function callRetrieveMany(ids: number[]) {
+		if (!onRetrieveMany) return;
+		setSubmitting(true);
+		try { await onRetrieveMany(ids); setSelected([]); }
+		finally { setSubmitting(false); setRetrieveManyOpen(false); }
+	}
 
 	return (
 		<div className="rounded-md overflow-x-auto border border-border bg-white dark:bg-background dark:border-border w-full max-w-full">
@@ -184,7 +224,7 @@ export default function TableDeanCompreExam({
 						<PopoverTrigger asChild>
 							<Button variant="outline" size="sm" className="h-8">
 								<GraduationCap className="mr-2 h-4 w-4" />
-								Program: {programFilter === 'all' ? 'All' : programFilter}
+								Program: {effectiveProgram === 'all' ? 'All' : effectiveProgram}
 							</Button>
 						</PopoverTrigger>
 						<PopoverContent className="p-0 w-80" align="start">
@@ -203,17 +243,23 @@ export default function TableDeanCompreExam({
 									<CommandGroup heading="Programs">
 										<CommandItem
 											value="all"
-											onSelect={() => { setProgramFilter('all'); setProgramOpen(false); }}
+											onSelect={() => {
+												if (onProgramChange) onProgramChange('all'); else setProgramFilter('all');
+												setProgramOpen(false);
+											}}
 										>
-											All programs {programFilter === 'all' && <Check className="ml-auto h-4 w-4" />}
+											All programs {effectiveProgram === 'all' && <Check className="ml-auto h-4 w-4" />}
 										</CommandItem>
 										{programs.map((p) => (
 											<CommandItem
 												key={p}
 												value={p}
-												onSelect={() => { setProgramFilter(p); setProgramOpen(false); }}
+												onSelect={() => {
+													if (onProgramChange) onProgramChange(p); else setProgramFilter(p);
+													setProgramOpen(false);
+												}}
 											>
-												{p} {programFilter === p && <Check className="ml-auto h-4 w-4" />}
+												{p} {effectiveProgram === p && <Check className="ml-auto h-4 w-4" />}
 											</CommandItem>
 										))}
 									</CommandGroup>
@@ -385,8 +431,11 @@ export default function TableDeanCompreExam({
 												</Button>
 											</DialogTrigger>
 											<DialogContent className="max-h-[90vh]" aria-describedby={undefined}>
-													{selectedRow && <Details application={selectedRow} />}
-												
+												<DialogHeader>
+													<DialogTitle>Application details</DialogTitle>
+													<DialogDescription>Review the student’s submission and decision status.</DialogDescription>
+												</DialogHeader>
+												{selectedRow && <Details application={selectedRow} />}
 											</DialogContent>
 										</Dialog>
 
@@ -422,9 +471,11 @@ export default function TableDeanCompreExam({
 
 												<Dialog open={rejectId === r.id} onOpenChange={(open) => !open && setRejectId(null)}>
 													<DialogContent className="max-w-md" aria-describedby={undefined}>
+														<DialogHeader>
+															<DialogTitle>Reject this application</DialogTitle>
+															<DialogDescription>Provide a reason visible to the student.</DialogDescription>
+														</DialogHeader>
 														<div className="space-y-2">
-															<h3 className="text-base font-semibold">Reject this application</h3>
-															<p className="text-sm text-muted-foreground">Provide a reason visible to the student.</p>
 															<Textarea value={rejectReason} onChange={(e) => setRejectReason(e.target.value)} placeholder="Reason for rejection" rows={4} />
 															<div className="flex justify-end gap-2 pt-2">
 																<Button variant="outline" onClick={() => setRejectId(null)} disabled={submitting}>Cancel</Button>
@@ -437,6 +488,58 @@ export default function TableDeanCompreExam({
 												</Dialog>
 											</>
 										)}
+
+											{tabType === 'approved' && (
+												<>
+													<AlertDialog open={retrieveId === r.id} onOpenChange={(open) => !open && setRetrieveId(null)}>
+														<AlertDialogTrigger asChild>
+															<Button size="sm" variant="outline" title="Revert to Pending"
+																onClick={() => setRetrieveId(r.id)}
+																className="text-blue-500 hover:text-blue-500" disabled={submitting || loading}>
+																<CircleArrowLeft size={16} />
+															</Button>
+														</AlertDialogTrigger>
+														<AlertDialogContent>
+															<AlertDialogHeader>
+																<AlertDialogTitle>Revert this decision to Pending?</AlertDialogTitle>
+																<AlertDialogDescription>Approved application will be moved back to pending for re-review.</AlertDialogDescription>
+															</AlertDialogHeader>
+															<AlertDialogFooter>
+																<AlertDialogCancel disabled={submitting}>Cancel</AlertDialogCancel>
+																<AlertDialogAction disabled={submitting} onClick={() => callRetrieve(r.id)}>
+																	{submitting ? 'Reverting…' : 'Revert'}
+																</AlertDialogAction>
+															</AlertDialogFooter>
+														</AlertDialogContent>
+													</AlertDialog>
+												</>
+											)}
+
+											{tabType === 'rejected' && (
+												<>
+													<AlertDialog open={retrieveId === r.id} onOpenChange={(open) => !open && setRetrieveId(null)}>
+														<AlertDialogTrigger asChild>
+															<Button size="sm" variant="outline" title="Revert to Pending"
+																onClick={() => setRetrieveId(r.id)}
+																className="text-blue-500 hover:text-blue-500" disabled={submitting || loading}>
+																<CircleArrowLeft size={16} />
+															</Button>
+														</AlertDialogTrigger>
+														<AlertDialogContent>
+															<AlertDialogHeader>
+																<AlertDialogTitle>Revert this decision to Pending?</AlertDialogTitle>
+																<AlertDialogDescription>Rejected application will be moved back to pending for re-review.</AlertDialogDescription>
+															</AlertDialogHeader>
+															<AlertDialogFooter>
+																<AlertDialogCancel disabled={submitting}>Cancel</AlertDialogCancel>
+																<AlertDialogAction disabled={submitting} onClick={() => callRetrieve(r.id)}>
+																	{submitting ? 'Reverting…' : 'Revert'}
+																</AlertDialogAction>
+															</AlertDialogFooter>
+														</AlertDialogContent>
+													</AlertDialog>
+												</>
+											)}
 									</div>
 								</TableCell>
 							)}
@@ -452,36 +555,57 @@ export default function TableDeanCompreExam({
 				</TableBody>
 			</Table>
 
-			<div
-				role="region"
-				aria-label="Bulk actions"
-				aria-hidden={!(tabType === 'pending' && selected.length > 0)}
-				className={`fixed bottom-6 left-1/2 -translate-x-1/2 z-40 transition-all duration-200 ease-out
-					${tabType === 'pending' && selected.length > 0 ? 'opacity-100 translate-y-0 scale-100 pointer-events-auto' : 'opacity-0 translate-y-3 scale-95 pointer-events-none'}`}>
-				<div className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white/95 px-3 py-2 shadow-lg backdrop-blur dark:border-slate-800 dark:bg-slate-900/95">
-					<span className="text-sm text-muted-foreground">{selected.length} selected</span>
-					<Button size="sm" variant="outline" onClick={() => setApproveManyOpen(true)} disabled={submitting || loading} className="gap-1">
-						<CheckCircle className="h-4 w-4" /> Approve
-					</Button>
-					<Button size="sm" variant="destructive" onClick={() => setRejectManyOpen(true)} disabled={submitting || loading} className="gap-1">
-						<CircleX className="h-4 w-4" /> Reject
-					</Button>
-					<Button size="sm" variant="ghost" onClick={() => setSelected([])} disabled={submitting || loading} className="gap-1">
-						<X className="h-4 w-4" /> Clear
-					</Button>
+			{selected.length > 0 && (
+				<div
+					role="region"
+					aria-label="Bulk actions"
+					aria-hidden={false}
+					className={`fixed bottom-6 left-1/2 -translate-x-1/2 z-40 transition-all duration-200 ease-out opacity-100 translate-y-0 scale-100 pointer-events-auto`}>
+					<div className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white/95 px-3 py-2 shadow-lg backdrop-blur dark:border-slate-800 dark:bg-slate-900/95">
+						{tabType === 'pending' && (
+							<>
+								<span className="text-sm text-muted-foreground">{selected.length} selected • {selectedPendingIds.length} pending</span>
+								<Button size="sm" variant="outline" onClick={() => setApproveManyOpen(true)} disabled={submitting || loading || selectedPendingIds.length === 0} className="gap-1">
+									<CheckCircle className="h-4 w-4" /> Approve
+								</Button>
+								<Button size="sm" variant="destructive" onClick={() => setRejectManyOpen(true)} disabled={submitting || loading || selectedPendingIds.length === 0} className="gap-1">
+									<CircleX className="h-4 w-4" /> Reject
+								</Button>
+							</>
+						)}
+						{tabType === 'approved' && (
+							<>
+								<span className="text-sm text-muted-foreground">{selected.length} selected • {selectedApprovedIds.length} approved</span>
+								<Button size="sm" variant="outline" onClick={() => setRetrieveManyOpen(true)} disabled={submitting || loading || selectedApprovedIds.length === 0} className="gap-1">
+									<CircleArrowLeft className="h-4 w-4" /> Revert to Pending
+								</Button>
+							</>
+						)}
+						{tabType === 'rejected' && (
+							<>
+								<span className="text-sm text-muted-foreground">{selected.length} selected • {selectedRejectedIds.length} rejected</span>
+								<Button size="sm" variant="outline" onClick={() => setRetrieveManyOpen(true)} disabled={submitting || loading || selectedRejectedIds.length === 0} className="gap-1">
+									<CircleArrowLeft className="h-4 w-4" /> Revert to Pending
+								</Button>
+							</>
+						)}
+						<Button size="sm" variant="ghost" onClick={() => setSelected([])} disabled={submitting || loading} className="gap-1">
+							<X className="h-4 w-4" /> Clear
+						</Button>
+					</div>
 				</div>
-			</div>
+			)}
 
 			<AlertDialog open={approveManyOpen} onOpenChange={setApproveManyOpen}>
 				<AlertDialogContent>
 					<AlertDialogHeader>
-						<AlertDialogTitle>Approve {selected.length} selected application(s)?</AlertDialogTitle>
-						<AlertDialogDescription>This will finalize them as approved.</AlertDialogDescription>
+						<AlertDialogTitle>Approve {selectedPendingIds.length} pending application(s)?</AlertDialogTitle>
+						<AlertDialogDescription>Only pending selections will be approved.</AlertDialogDescription>
 					</AlertDialogHeader>
 					<AlertDialogFooter>
 						<AlertDialogCancel disabled={submitting}>Cancel</AlertDialogCancel>
-						<AlertDialogAction disabled={submitting} onClick={() => callApproveMany(selected)}>
-							{submitting ? 'Approving…' : 'Approve selected'}
+						<AlertDialogAction disabled={submitting || selectedPendingIds.length === 0} onClick={() => callApproveMany(selectedPendingIds)}>
+							{submitting ? 'Approving…' : 'Approve pending'}
 						</AlertDialogAction>
 					</AlertDialogFooter>
 				</AlertDialogContent>
@@ -489,19 +613,39 @@ export default function TableDeanCompreExam({
 
 			<Dialog open={rejectManyOpen} onOpenChange={setRejectManyOpen}>
 				<DialogContent className="max-w-md" aria-describedby={undefined}>
+					<DialogHeader>
+						<DialogTitle>Reject {selectedPendingIds.length} pending application(s)</DialogTitle>
+						<DialogDescription>Provide a reason visible to the student. Only pending selections will be rejected.</DialogDescription>
+					</DialogHeader>
 					<div className="space-y-2">
-						<h3 className="text-base font-semibold">Reject {selected.length} selected application(s)</h3>
-						<p className="text-sm text-muted-foreground">Provide a reason visible to the student.</p>
 						<Textarea value={rejectManyReason} onChange={(e) => setRejectManyReason(e.target.value)} placeholder="Reason for rejection" rows={4} />
 						<div className="flex justify-end gap-2 pt-2">
 							<Button variant="outline" onClick={() => setRejectManyOpen(false)} disabled={submitting}>Cancel</Button>
-							<Button variant="destructive" onClick={() => callRejectMany(selected, rejectManyReason)} disabled={submitting || rejectManyReason.trim().length < 3}>
-								{submitting ? 'Rejecting…' : 'Confirm Reject'}
+							<Button variant="destructive" onClick={() => callRejectMany(selectedPendingIds, rejectManyReason)} disabled={submitting || rejectManyReason.trim().length < 3 || selectedPendingIds.length === 0}>
+								{submitting ? 'Rejecting…' : 'Reject pending'}
 							</Button>
 						</div>
 					</div>
 				</DialogContent>
 			</Dialog>
+
+			{/* Bulk Revert dialog */}
+			<AlertDialog open={retrieveManyOpen} onOpenChange={setRetrieveManyOpen}>
+				<AlertDialogContent>
+					<AlertDialogHeader>
+						<AlertDialogTitle>Revert selected to Pending?</AlertDialogTitle>
+						<AlertDialogDescription>
+							{tabType === 'approved' ? `${selectedApprovedIds.length} approved application(s) will be moved back to pending.` : `${selectedRejectedIds.length} rejected application(s) will be moved back to pending.`}
+						</AlertDialogDescription>
+					</AlertDialogHeader>
+					<AlertDialogFooter>
+						<AlertDialogCancel disabled={submitting}>Cancel</AlertDialogCancel>
+						<AlertDialogAction disabled={submitting || ((tabType === 'approved' ? selectedApprovedIds.length : selectedRejectedIds.length) === 0)} onClick={() => callRetrieveMany(tabType === 'approved' ? selectedApprovedIds : selectedRejectedIds)}>
+							{submitting ? 'Reverting…' : 'Revert'}
+						</AlertDialogAction>
+					</AlertDialogFooter>
+				</AlertDialogContent>
+			</AlertDialog>
 		</div>
 	);
 }

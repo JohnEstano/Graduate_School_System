@@ -5,7 +5,13 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@/components/ui/dropdown-menu';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Filter, Check, Eye } from 'lucide-react';
+import { Filter, Check, Eye, GraduationCap, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
+import { UIC_PROGRAMS } from '@/constants/programs';
+import { AlertDialog, AlertDialogTrigger, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from '@/components/ui/alert-dialog';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { Textarea } from '@/components/ui/textarea';
 
 export type RegistrarRow = {
   application_id: number;
@@ -41,15 +47,15 @@ type Props = {
   columns?: Partial<Columns>;
   onVisibleCountChange?: (n: number) => void;
   onReview: (row: RegistrarRow) => void;
-  onBulkAction?: (ids: number[], action: 'approve' | 'reject') => void;
+  // Allow optional reason (for reject)
+  onBulkAction?: (ids: number[], action: 'approve' | 'reject', reason?: string) => void;
 };
 
 export default function TableRegistrar({ rows, programs, onVisibleCountChange, onReview, onBulkAction, columns: cols }: Props) {
-  const [bulkMode, setBulkMode] = useState(false);
   const [selected, setSelected] = useState<Set<number>>(new Set());
 
   const columns: Columns = {
-    sel: bulkMode,
+    sel: true,
     student: true,
     program: true,
     grades: true,
@@ -62,7 +68,9 @@ export default function TableRegistrar({ rows, programs, onVisibleCountChange, o
   // Local filters
   const [programFilter, setProgramFilter] = useState<'all' | string>('all');
   const [eligibilityFilter, setEligibilityFilter] = useState<'all' | 'eligible' | 'not'>('all');
-  const [statusFilter, setStatusFilter] = useState<'all' | 'approved' | 'pending' | 'rejected'>('pending');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'approved' | 'pending' | 'rejected'>('all');
+  const [programOpen, setProgramOpen] = useState(false);
+  const [showAllPrograms, setShowAllPrograms] = useState(false);
 
   // Derive flags
   const enriched = useMemo(() => {
@@ -91,6 +99,40 @@ export default function TableRegistrar({ rows, programs, onVisibleCountChange, o
     for (const r of filtered) if (!map.has(r.application_id)) map.set(r.application_id, r);
     return Array.from(map.values());
   }, [filtered]);
+
+  // Pagination (client-side, consistent with payment/schedule)
+  const [page, setPage] = useState(1);
+  const pageSize = 10;
+  useEffect(() => {
+    // reset to first page when local filters change
+    setPage(1);
+  }, [programFilter, eligibilityFilter, statusFilter, rows]);
+  const total = renderRows.length;
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  const pageStart = (page - 1) * pageSize;
+  const pageRows = useMemo(() => renderRows.slice(pageStart, pageStart + pageSize), [renderRows, pageStart]);
+
+  // Program options: available (from current rows) and all (rows + prop programs + canonical)
+  const { programsAvailable, programsAll } = useMemo(() => {
+    const normalize = (s: string) => s.trim().replace(/\s+/g, ' ');
+    const keepFirst = (names: (string | null | undefined)[]) => {
+      const map = new Map<string, string>();
+      for (const n of names) {
+        if (!n) continue;
+        const v = normalize(n);
+        const key = v.toLowerCase();
+        if (!map.has(key)) map.set(key, v);
+      }
+      return Array.from(map.values()).sort((a, b) => a.localeCompare(b));
+    };
+    const fromApplicants = keepFirst(rows.map(r => r.program));
+    const fromProps = keepFirst(programs ?? []);
+    const fromCanonical = keepFirst(UIC_PROGRAMS);
+    const all = keepFirst([...fromApplicants, ...fromProps, ...fromCanonical]);
+    return { programsAvailable: fromApplicants, programsAll: all };
+  }, [rows, programs]);
+
+  const programChoices = showAllPrograms ? programsAll : programsAvailable;
 
   const gradeBadge = (ok: boolean) => (
     <Badge
@@ -135,33 +177,87 @@ export default function TableRegistrar({ rows, programs, onVisibleCountChange, o
     return { primary, secondary };
   };
 
-  const allSelected = renderRows.length > 0 && renderRows.every((r) => selected.has(r.application_id));
+  const allSelected = pageRows.length > 0 && pageRows.every((r) => selected.has(r.application_id));
   const toggleAll = (checked: boolean) => {
     const next = new Set<number>();
-    if (checked) renderRows.forEach((r) => next.add(r.application_id));
+    if (checked) pageRows.forEach((r) => next.add(r.application_id));
     setSelected(next);
   };
+
+  // Bulk dialog states and helpers (mirroring coordinator payment UI)
+  const [approveManyOpen, setApproveManyOpen] = useState(false);
+  const [rejectManyOpen, setRejectManyOpen] = useState(false);
+  const [rejectManyReason, setRejectManyReason] = useState('');
+
+  // Selected subsets
+  const selectedArray = useMemo(() => Array.from(selected), [selected]);
+  const selectedRows = useMemo(() => renderRows.filter(r => selected.has(r.application_id)), [renderRows, selected]);
+  const selectedPendingIds = useMemo(() => selectedRows.filter(r => (r.registrar_status ?? 'pending') === 'pending').map(r => r.application_id), [selectedRows]);
+  // If needed later, we can derive rejected IDs similarly to payments UI
+
+  // Bulk actions
+  const doApproveMany = () => {
+    if (!onBulkAction || selectedPendingIds.length === 0) return;
+    onBulkAction(selectedPendingIds, 'approve');
+    setSelected(new Set());
+    setApproveManyOpen(false);
+  };
+  const doRejectMany = () => {
+    const reason = rejectManyReason.trim();
+    if (!onBulkAction || selectedPendingIds.length === 0 || reason.length < 3) return;
+    onBulkAction(selectedPendingIds, 'reject', reason);
+    setSelected(new Set());
+    setRejectManyOpen(false);
+    setRejectManyReason('');
+  };
+  // Retrieve flow is not included for registrar at this time
 
   return (
     <div className="rounded-md overflow-x-auto border border-border bg-white dark:bg-background dark:border-border w-full max-w-full">
       {/* Toolbar */}
-      <div className="flex flex-wrap items-center justify-end gap-2 px-3 py-3 border-b bg-muted/20 dark:bg-muted/10">
-        {/* Program */}
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="outline" size="sm" className="h-8"><Filter className="mr-2 h-4 w-4" />Program: {programLabel}</Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-56">
-            <DropdownMenuItem onClick={() => setProgramFilter('all')} className="flex items-center justify-between">
-              All programs {programFilter === 'all' && <Check className="h-4 w-4" />}
-            </DropdownMenuItem>
-            {programs.map((p) => (
-              <DropdownMenuItem key={p} onClick={() => setProgramFilter(p)} className="flex items-center justify-between">
-                {p} {programFilter === p && <Check className="h-4 w-4" />}
-              </DropdownMenuItem>
-            ))}
-          </DropdownMenuContent>
-        </DropdownMenu>
+  <div className="flex flex-wrap items-center justify-end gap-2 px-3 py-3 border-b bg-muted/20 dark:bg-muted/10">
+        {/* Program (dean-style searchable with scope toggle) */}
+        <Popover open={programOpen} onOpenChange={setProgramOpen}>
+          <PopoverTrigger asChild>
+            <Button variant="outline" size="sm" className="h-8">
+              <GraduationCap className="mr-2 h-4 w-4" />
+              Program: {programFilter === 'all' ? 'All' : programFilter}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="p-0 w-80" align="end">
+            <Command shouldFilter={true}>
+              <CommandInput placeholder="Search program…" />
+              <CommandEmpty>No program found.</CommandEmpty>
+              <CommandList className="max-h-64 overflow-y-auto">
+                <CommandGroup heading="Scope">
+                  <CommandItem
+                    value={showAllPrograms ? 'available-only' : 'all-programs'}
+                    onSelect={() => setShowAllPrograms(v => !v)}
+                  >
+                    {showAllPrograms ? 'Show only current applicants' : 'Show all programs'}
+                  </CommandItem>
+                </CommandGroup>
+                <CommandGroup heading="Programs">
+                  <CommandItem
+                    value="all"
+                    onSelect={() => { setProgramFilter('all'); setProgramOpen(false); }}
+                  >
+                    All programs {programFilter === 'all' && <Check className="ml-auto h-4 w-4" />}
+                  </CommandItem>
+                  {programChoices.map((p) => (
+                    <CommandItem
+                      key={p}
+                      value={p}
+                      onSelect={() => { setProgramFilter(p); setProgramOpen(false); }}
+                    >
+                      {p} {programFilter === p && <Check className="ml-auto h-4 w-4" />}
+                    </CommandItem>
+                  ))}
+                </CommandGroup>
+              </CommandList>
+            </Command>
+          </PopoverContent>
+        </Popover>
 
         {/* Eligibility */}
         <DropdownMenu>
@@ -195,26 +291,13 @@ export default function TableRegistrar({ rows, programs, onVisibleCountChange, o
           </DropdownMenuContent>
         </DropdownMenu>
 
-        {/* Bulk checker */}
-        <Button variant={bulkMode ? 'default' : 'outline'} size="sm" className="h-8" onClick={() => { setBulkMode((v) => !v); setSelected(new Set()); }}>
-          {bulkMode ? 'Exit Bulk' : 'Bulk checker'}
-        </Button>
-        {bulkMode && (
-          <>
-            <Button size="sm" className="h-8" onClick={() => onBulkAction?.(Array.from(selected), 'approve')} disabled={selected.size === 0}>
-              Approve selected ({selected.size})
-            </Button>
-            <Button size="sm" variant="destructive" className="h-8" onClick={() => onBulkAction?.(Array.from(selected), 'reject')} disabled={selected.size === 0}>
-              Reject selected ({selected.size})
-            </Button>
-          </>
-        )}
+        {/* Bulk actions are available via floating bar when selection is not empty */}
       </div>
 
       <Table className="min-w-[900px] text-sm dark:text-muted-foreground">
         <TableHeader>
           <TableRow className="dark:bg-muted/40">
-            {columns.sel && <TableHead className="w-[40px] px-2"><Checkbox checked={allSelected} onCheckedChange={(v) => toggleAll(!!v)} /></TableHead>}
+            {columns.sel && <TableHead className="w-[40px] px-2"><Checkbox checked={allSelected} onCheckedChange={(v) => toggleAll(!!v)} aria-label="Select all" /></TableHead>}
             {columns.student && <TableHead className="w-[30%] px-2 dark:bg-muted/30 dark:text-muted-foreground">Applicant</TableHead>}
             {columns.program && <TableHead className="w-[28%] px-2 dark:bg-muted/30 dark:text-muted-foreground">Program • SY</TableHead>}
             {columns.grades && <TableHead className="w-[14%] text-center px-1 py-2 dark:bg-muted/30 dark:text-muted-foreground">Grades</TableHead>}
@@ -225,7 +308,7 @@ export default function TableRegistrar({ rows, programs, onVisibleCountChange, o
         </TableHeader>
 
         <TableBody>
-          {renderRows.map((r) => {
+          {pageRows.map((r) => {
             const disp = buildDisplay(r);
             const grades = (r as any).grades as boolean;
             return (
@@ -242,6 +325,7 @@ export default function TableRegistrar({ rows, programs, onVisibleCountChange, o
                           return next;
                         })
                       }
+                      aria-label="Select row"
                     />
                   </TableCell>
                 )}
@@ -287,6 +371,89 @@ export default function TableRegistrar({ rows, programs, onVisibleCountChange, o
           )}
         </TableBody>
       </Table>
+
+      {/* Floating bulk action bar (centered bottom) */}
+      {selectedArray.length > 0 && (
+        <div
+          role="region"
+          aria-label="Bulk actions"
+          className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 transition-all duration-200 ease-out opacity-100 translate-y-0 scale-100 pointer-events-auto"
+        >
+          <div className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white/95 px-3 py-2 shadow-lg backdrop-blur dark:border-slate-800 dark:bg-slate-900/95">
+            <span className="text-sm text-muted-foreground">
+              {selectedArray.length} selected • {selectedPendingIds.length} pending
+            </span>
+            <Button size="sm" variant="outline" onClick={() => setApproveManyOpen(true)} disabled={selectedPendingIds.length === 0} className="gap-1">
+              Approve
+            </Button>
+            <Button size="sm" variant="destructive" onClick={() => setRejectManyOpen(true)} disabled={selectedPendingIds.length === 0} className="gap-1">
+              Reject
+            </Button>
+            <Button size="sm" variant="ghost" onClick={() => setSelected(new Set())} className="gap-1">
+              Clear
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Footer pagination (consistent with coordinator payment/schedule) */}
+      <div className="px-1 py-2 flex items-center justify-between mt-2">
+        <div className="text-sm text-muted-foreground ml-2">Showing {total} application{total === 1 ? '' : 's'}</div>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8 px-2"
+            onClick={() => setPage((p) => Math.max(1, p - 1))}
+            disabled={page <= 1}
+            aria-label="Previous page"
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+          <div className="text-xs text-muted-foreground">Page {page} of {totalPages}</div>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8 px-2"
+            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+            disabled={page >= totalPages}
+            aria-label="Next page"
+          >
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+        </div>
+      </div>
+
+      {/* Bulk Approve dialog */}
+      <AlertDialog open={approveManyOpen} onOpenChange={setApproveManyOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Approve {selectedPendingIds.length} pending application(s)?</AlertDialogTitle>
+            <AlertDialogDescription>Only pending selections will be approved.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={doApproveMany} disabled={selectedPendingIds.length === 0}>Approve pending</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Bulk Reject dialog */}
+      <Dialog open={rejectManyOpen} onOpenChange={setRejectManyOpen}>
+        <DialogContent className="max-w-md">
+          <div className="space-y-2">
+            <h3 className="text-base font-semibold">Reject {selectedPendingIds.length} pending application(s)</h3>
+            <p className="text-sm text-muted-foreground">Provide a reason. Only pending selections will be rejected.</p>
+            <Textarea value={rejectManyReason} onChange={(e) => setRejectManyReason(e.target.value)} placeholder="Reason for rejection" rows={4} />
+            <div className="flex justify-end gap-2 pt-2">
+              <Button variant="outline" onClick={() => setRejectManyOpen(false)}>Cancel</Button>
+              <Button variant="destructive" onClick={doRejectMany} disabled={rejectManyReason.trim().length < 3 || selectedPendingIds.length === 0}>Confirm Reject</Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* No bulk retrieve for registrar at the moment */}
     </div>
   );
 }

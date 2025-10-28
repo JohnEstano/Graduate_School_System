@@ -140,5 +140,52 @@ class RegistrarExamApplicationController extends Controller
             return response()->json(['ok' => true, 'review_id' => $review->id], 201);
         }
         return back()->with('success', 'Decision saved.');
-        return back()->with('success', 'Decision saved.');
-    }}
+    }
+
+    // Reviews history for an application (Registrar)
+    public function reviews(ExamApplication $application)
+    {
+        // Prefer created_at desc if timestamps available; otherwise fallback to id desc
+        $rows = ExamRegistrarReview::query()
+            ->where('exam_application_id', $application->application_id)
+            ->orderByDesc(DB::raw('COALESCE(created_at, id)'))
+            ->get([
+                'id',
+                'exam_application_id',
+                'doc_photo_clear',
+                'doc_transcript',
+                'doc_psa_birth',
+                'doc_honorable_dismissal',
+                'doc_prof_exam',
+                'doc_marriage_cert',
+                'documents_complete',
+                'grades_complete',
+                'status',
+                'reason',
+                'reviewed_by',
+                'created_at',
+                'updated_at',
+            ]);
+
+        $out = $rows->map(function ($r) {
+            return [
+                'id' => $r->id,
+                'application_id' => $r->exam_application_id,
+                'status' => $r->status,
+                'reason' => $r->reason,
+                'grades_complete' => (bool)$r->grades_complete,
+                'documents_complete' => (bool)$r->documents_complete,
+                'doc_photo_clear' => (bool)$r->doc_photo_clear,
+                'doc_transcript' => (bool)$r->doc_transcript,
+                'doc_psa_birth' => (bool)$r->doc_psa_birth,
+                'doc_honorable_dismissal' => (bool)$r->doc_honorable_dismissal,
+                'doc_prof_exam' => (bool)$r->doc_prof_exam,
+                'doc_marriage_cert' => (bool)$r->doc_marriage_cert,
+                'reviewed_by' => $r->reviewed_by,
+                'created_at' => $r->created_at,
+            ];
+        });
+
+        return response()->json($out);
+    }
+}

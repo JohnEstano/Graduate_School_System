@@ -466,6 +466,7 @@ Route::get('/honorarium/individual-record/{programId}', [HonorariumSummaryContro
     /* Payments */
     Route::get('/payment', [PaymentSubmissionController::class, 'index'])->name('payment.index');
     Route::post('/payment', [PaymentSubmissionController::class, 'store'])->name('payment.store');
+    Route::get('/api/payment/or-unique', [PaymentSubmissionController::class, 'checkOrUnique'])->name('api.payment.or-unique');
 
     /* Student schedule page */
     Route::get('/schedule', [ScheduleController::class, 'index'])->name('schedule.index');
@@ -608,6 +609,15 @@ Route::get('/honorarium/individual-record/{programId}', [HonorariumSummaryContro
         ->name('coordinator.compre-payment.approve');
     Route::post('/coordinator/compre-payment/{id}/reject', [PaymentSubmissionController::class, 'reject'])
         ->name('coordinator.compre-payment.reject');
+    Route::post('/coordinator/compre-payment/{id}/retrieve', [PaymentSubmissionController::class, 'retrieve'])
+        ->name('coordinator.compre-payment.retrieve');
+    // Override bulk routes to use PaymentSubmissionController versions (placed after earlier definitions)
+    Route::post('/coordinator/compre-payment/bulk-approve', [PaymentSubmissionController::class, 'bulkApprove'])
+        ->name('coordinator.compre-payment.bulk-approve');
+    Route::post('/coordinator/compre-payment/bulk-reject', [PaymentSubmissionController::class, 'bulkReject'])
+        ->name('coordinator.compre-payment.bulk-reject');
+    Route::post('/coordinator/compre-payment/bulk-retrieve', [PaymentSubmissionController::class, 'bulkRetrieve'])
+        ->name('coordinator.compre-payment.bulk-retrieve');
     // Page (Inertia)
     Route::get('/coordinator/compre-exam-schedule', [ExamSubjectOfferingController::class, 'page'])
         ->name('coordinator.compre-exam-schedule.index');
@@ -673,6 +683,10 @@ Route::get('/honorarium/individual-record/{programId}', [HonorariumSummaryContro
             ->name('dean.exam-applications.decide');
         Route::post('/dean/exam-applications/bulk-decision', [DeanCompreExamController::class, 'bulkDecision'])
             ->name('dean.exam-applications.bulk-decision');
+        Route::post('/dean/exam-applications/{application}/revert', [DeanCompreExamController::class, 'revert'])
+            ->name('dean.exam-applications.revert');
+        Route::post('/dean/exam-applications/bulk-revert', [DeanCompreExamController::class, 'bulkRevert'])
+            ->name('dean.exam-applications.bulk-revert');
         Route::get('/api/dean/exam-applications/{application}/reviews', [DeanCompreExamController::class, 'reviews'])
             ->name('api.dean.exam-applications.reviews');
     });
