@@ -8,32 +8,45 @@ return new class extends Migration {
     public function up(): void
     {
         Schema::table('exam_application_subject', function (Blueprint $table) {
-            // New normalized reference
-            $table->unsignedBigInteger('offering_id')->nullable()->after('application_id');
+            // Only add columns that don't already exist
+            // Note: subject_code, subject_name, status, remarks already exist from create migration
+            
+            // New normalized reference (skip if added by later migration)
+            if (!Schema::hasColumn('exam_application_subject', 'offering_id')) {
+                $table->unsignedBigInteger('offering_id')->nullable()->after('application_id');
+                $table->foreign('offering_id')->references('id')->on('exam_subject_offerings')->nullOnDelete();
+            }
 
-            // Denormalized copies (for reporting/export)
-            $table->string('subject_code')->nullable()->after('offering_id');
-            $table->string('subject_name')->nullable()->after('subject_code');
-            $table->date('exam_date')->nullable()->after('subject_name');
-            $table->time('start_time')->nullable()->after('exam_date');
-            $table->time('end_time')->nullable()->after('start_time');
-
-            // Review metadata
-            $table->string('status')->nullable()->after('end_time'); // pending/approved/rejected etc.
-            $table->text('remarks')->nullable()->after('status');
-
-            // FK and indexes
-            $table->foreign('offering_id')->references('id')->on('exam_subject_offerings')->nullOnDelete();
-            $table->index(['application_id', 'status'], 'exam_app_subj_app_status_idx');
+            // Denormalized copies for exam schedule (NEW columns only)
+            if (!Schema::hasColumn('exam_application_subject', 'exam_date')) {
+                $table->date('exam_date')->nullable()->after('subject_name');
+            }
+            if (!Schema::hasColumn('exam_application_subject', 'start_time')) {
+                $table->time('start_time')->nullable()->after('exam_date');
+            }
+            if (!Schema::hasColumn('exam_application_subject', 'end_time')) {
+                $table->time('end_time')->nullable()->after('start_time');
+            }
         });
     }
 
     public function down(): void
     {
         Schema::table('exam_application_subject', function (Blueprint $table) {
-            $table->dropIndex('exam_app_subj_app_status_idx');
-            $table->dropForeign(['offering_id']);
-            $table->dropColumn(['offering_id', 'subject_code', 'subject_name', 'exam_date', 'start_time', 'end_time', 'status', 'remarks']);
+            // Only drop columns that this migration actually added
+            if (Schema::hasColumn('exam_application_subject', 'offering_id')) {
+                $table->dropForeign(['offering_id']);
+                $table->dropColumn('offering_id');
+            }
+            if (Schema::hasColumn('exam_application_subject', 'exam_date')) {
+                $table->dropColumn('exam_date');
+            }
+            if (Schema::hasColumn('exam_application_subject', 'start_time')) {
+                $table->dropColumn('start_time');
+            }
+            if (Schema::hasColumn('exam_application_subject', 'end_time')) {
+                $table->dropColumn('end_time');
+            }
         });
     }
 };

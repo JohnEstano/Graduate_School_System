@@ -960,7 +960,8 @@ Route::middleware(['auth'])->group(function () {
     // Student search for autocomplete
     Route::get('/api/students/search', [App\Http\Controllers\Api\StudentSearchController::class, 'search']);
 
-    // Comprehensive exam eligibility API
+    // Comprehensive exam eligibility APIs
+    Route::get('/api/comprehensive-exam/status', [App\Http\Controllers\Api\ComprehensiveExamEligibilityController::class, 'checkExamStatus']);
     Route::get('/api/comprehensive-exam/eligibility', [App\Http\Controllers\Api\ComprehensiveExamEligibilityController::class, 'checkEligibility']);
 
     // Manual data scraping endpoint for testing
