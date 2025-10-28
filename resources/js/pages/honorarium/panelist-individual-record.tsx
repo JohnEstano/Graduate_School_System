@@ -70,28 +70,18 @@ interface Props {
 export default function PanelistIndividualRecord({ panelist, onClose }: Props) {
   if (!panelist) return null;
 
-  // Use backend-provided total_honorarium if available, otherwise calculate from payments
-  const totalHonorarium = panelist.total_honorarium ?? 
-    (panelist.students || []).reduce((sum, student) => 
-      sum + (student.payments || []).reduce((pSum, pay) => pSum + Number(pay.amount || 0), 0), 0
-    );
+  // Calculate total receivables from all payments
+  // This sums up the actual amounts paid to this panelist across all defenses
+  const totalReceivables = (panelist.students || []).reduce((sum, student) => 
+    sum + (student.payments || []).reduce((pSum, pay) => pSum + Number(pay.amount || 0), 0), 0
+  );
 
   const handlePrint = () => {
     window.open(`/honorarium/panelist/${panelist.id}/download-pdf`, '_blank');
   };
 
   const getRoleBadgeColor = (role: string) => {
-    // role may be a comma-separated summary (e.g. "Adviser, Panel Member")
-    if (!role) return 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300 border-gray-200';
-    if (role.includes('Adviser')) {
-      return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300 border-blue-200';
-    }
-    if (role.includes('Panel Chair')) {
-      return 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300 border-purple-200';
-    }
-    if (role.includes('Panel Member')) {
-      return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300 border-green-200';
-    }
+    // Consistent gray styling for all roles
     return 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300 border-gray-200';
   };
 
@@ -119,12 +109,12 @@ export default function PanelistIndividualRecord({ panelist, onClose }: Props) {
             </DialogTitle>
             <DialogDescription className="flex items-center gap-2 text-base mt-1">
               <Badge className={`${getRoleBadgeColor(panelist.role)} font-medium`}>
-                Total: 
+                Total Receivables: 
               </Badge>
-              <span className="text-sm text-gray-600 dark:text-gray-400">
-                ₱ {totalHonorarium.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+              <span className="text-sm font-semibold text-green-600 dark:text-green-400">
+                ₱  {totalReceivables.toLocaleString('en-US', { minimumFractionDigits: 2 })}
               </span>
-            </DialogDescription>
+            </DialogDescription>    
           </div>
           <div className="flex items-center gap-2">
             <Button
@@ -175,8 +165,8 @@ export default function PanelistIndividualRecord({ panelist, onClose }: Props) {
                     {/* Student Header */}
                     <div className="flex items-start justify-between mb-4">
                       <div className="flex items-center gap-3">
-                        <div className="h-10 w-10 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center flex-shrink-0 print:border print:border-blue-300">
-                          <User className="h-5 w-5 text-blue-600 dark:text-blue-300" />
+                        <div className="h-10 w-10 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center flex-shrink-0 print:border">
+                          <User className="h-5 w-5 text-black dark:text-white" />
                         </div>
                         <div>
                           <h4 className="font-semibold text-base">
@@ -184,7 +174,7 @@ export default function PanelistIndividualRecord({ panelist, onClose }: Props) {
                           </h4>
                           <div className="flex items-center gap-2 mt-1">
                             <span className="text-xs text-gray-500 dark:text-gray-400">
-                              {student.course_section || "Regular"} • {student.school_year || "2024-2025"}
+                              {student.school_year || "2024-2025"}
                             </span>
                             {payment.panelist_role && (
                               <Badge className={`${getRoleBadgeColor(payment.panelist_role)} text-xs`}>
@@ -245,8 +235,8 @@ export default function PanelistIndividualRecord({ panelist, onClose }: Props) {
                         <User className="h-4 w-4 text-gray-500 dark:text-gray-400 mt-0.5 flex-shrink-0" />
                         <div>
                           <div className="text-xs text-gray-500 dark:text-gray-400">Honorarium Amount</div>
-                          <div className="font-semibold text-green-600 dark:text-green-400">
-                            ₱{Number(payment.amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                          <div className="font-semibold">
+                            ₱ {Number(payment.amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}
                           </div>
                         </div>
                       </div>
