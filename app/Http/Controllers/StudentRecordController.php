@@ -483,68 +483,121 @@ class StudentRecordController extends Controller
         if ($defenseRequest) {
             $programLevel = ProgramLevel::getLevel($defenseRequest->program);
             
+            Log::info('Fetching payment rates for PDF', [
+                'program' => $defenseRequest->program,
+                'program_level' => $programLevel,
+                'defense_type' => $defenseRequest->defense_type,
+            ]);
+            
             // Get payment rates
             $rates = PaymentRate::where('program_level', $programLevel)
                 ->where('defense_type', $defenseRequest->defense_type)
                 ->get()
                 ->keyBy('type');
             
+            Log::info('Payment rates fetched', [
+                'rates_count' => $rates->count(),
+                'rate_types' => $rates->keys()->toArray(),
+                'rates_detail' => $rates->map(fn($r) => ['type' => $r->type, 'amount' => $r->amount])->toArray(),
+            ]);
+            
             // Adviser
             if ($defenseRequest->defense_adviser) {
                 $adviserRate = $rates->get('Adviser');
-                $nameParts = $this->splitName($defenseRequest->defense_adviser);
+                $amount = $adviserRate ? floatval($adviserRate->amount) : 0;
                 $panelists[] = [
                     'name' => $defenseRequest->defense_adviser,
                     'role' => 'Adviser',
-                    'amount' => $adviserRate ? $adviserRate->amount : 0,
+                    'amount' => $amount,
                 ];
+                
+                Log::info('Added Adviser', [
+                    'name' => $defenseRequest->defense_adviser,
+                    'rate_found' => $adviserRate ? 'yes' : 'no',
+                    'amount' => $amount,
+                ]);
             }
             
             // Panel Chair
             if ($defenseRequest->defense_chairperson) {
                 $chairRate = $rates->get('Panel Chair');
+                $amount = $chairRate ? floatval($chairRate->amount) : 0;
                 $panelists[] = [
                     'name' => $defenseRequest->defense_chairperson,
                     'role' => 'Panel Chair',
-                    'amount' => $chairRate ? $chairRate->amount : 0,
+                    'amount' => $amount,
                 ];
+                
+                Log::info('Added Panel Chair', [
+                    'name' => $defenseRequest->defense_chairperson,
+                    'rate_found' => $chairRate ? 'yes' : 'no',
+                    'amount' => $amount,
+                ]);
             }
             
             // Panel Members (Each panel member has their own numbered rate)
             if ($defenseRequest->defense_panelist1) {
-                $memberRate1 = $rates->get('Panel Member 1') ?? $rates->get('Panel Member');
+                $memberRate1 = $rates->get('Panel Member 1');
+                $amount = $memberRate1 ? floatval($memberRate1->amount) : 0;
                 $panelists[] = [
                     'name' => $defenseRequest->defense_panelist1,
                     'role' => 'Panel Member',
-                    'amount' => $memberRate1 ? $memberRate1->amount : 0,
+                    'amount' => $amount,
                 ];
+                
+                Log::info('Added Panel Member 1', [
+                    'name' => $defenseRequest->defense_panelist1,
+                    'rate_found' => $memberRate1 ? 'yes' : 'no',
+                    'amount' => $amount,
+                ]);
             }
             
             if ($defenseRequest->defense_panelist2) {
-                $memberRate2 = $rates->get('Panel Member 2') ?? $rates->get('Panel Member 1') ?? $rates->get('Panel Member');
+                $memberRate2 = $rates->get('Panel Member 2');
+                $amount = $memberRate2 ? floatval($memberRate2->amount) : 0;
                 $panelists[] = [
                     'name' => $defenseRequest->defense_panelist2,
                     'role' => 'Panel Member',
-                    'amount' => $memberRate2 ? $memberRate2->amount : 0,
+                    'amount' => $amount,
                 ];
+                
+                Log::info('Added Panel Member 2', [
+                    'name' => $defenseRequest->defense_panelist2,
+                    'rate_found' => $memberRate2 ? 'yes' : 'no',
+                    'amount' => $amount,
+                ]);
             }
             
             if ($defenseRequest->defense_panelist3) {
-                $memberRate3 = $rates->get('Panel Member 3') ?? $rates->get('Panel Member 1') ?? $rates->get('Panel Member');
+                $memberRate3 = $rates->get('Panel Member 3');
+                $amount = $memberRate3 ? floatval($memberRate3->amount) : 0;
                 $panelists[] = [
                     'name' => $defenseRequest->defense_panelist3,
                     'role' => 'Panel Member',
-                    'amount' => $memberRate3 ? $memberRate3->amount : 0,
+                    'amount' => $amount,
                 ];
+                
+                Log::info('Added Panel Member 3', [
+                    'name' => $defenseRequest->defense_panelist3,
+                    'rate_found' => $memberRate3 ? 'yes' : 'no',
+                    'amount' => $amount,
+                ]);
             }
             
             if ($defenseRequest->defense_panelist4) {
-                $memberRate4 = $rates->get('Panel Member 4') ?? $rates->get('Panel Member 1') ?? $rates->get('Panel Member');
+                $memberRate4 = $rates->get('Panel Member 4');
+                $amount = $memberRate4 ? floatval($memberRate4->amount) : 0;
                 $panelists[] = [
                     'name' => $defenseRequest->defense_panelist4,
                     'role' => 'Panel Member',
-                    'amount' => $memberRate4 ? $memberRate4->amount : 0,
+                    'amount' => $amount,
                 ];
+                
+                Log::info('Added Panel Member 4', [
+                    'name' => $defenseRequest->defense_panelist4,
+                    'rate_found' => $memberRate4 ? 'yes' : 'no',
+                    'amount' => $amount,
+                ]);
             }
             
             Log::info('Built panelists from defense request', [
@@ -553,7 +606,7 @@ class StudentRecordController extends Controller
                 'program_level' => $programLevel,
                 'defense_type' => $defenseRequest->defense_type,
                 'panelists_count' => count($panelists),
-                'rates_used' => $rates->map(fn($r) => ['type' => $r->type, 'amount' => $r->amount]),
+                'panelists' => $panelists,
             ]);
         }
         

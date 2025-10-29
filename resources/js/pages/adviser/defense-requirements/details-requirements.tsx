@@ -21,6 +21,11 @@ import {
   ArrowRightLeft,
   Info,
   Loader2,
+  AlertTriangle,
+  Banknote,
+  DollarSign,
+  Hourglass,
+  ArrowRight,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -46,11 +51,11 @@ type DefenseRequestFull = {
   priority?: 'Low' | 'Medium' | 'High';
   workflow_state?: string;
   defense_adviser?: string;
-  defense_chairperson?: string; // ADD THIS
-  defense_panelist1?: string; // ADD THIS
-  defense_panelist2?: string; // ADD THIS
-  defense_panelist3?: string; // ADD THIS
-  defense_panelist4?: string; // ADD THIS
+  defense_chairperson?: string;
+  defense_panelist1?: string;
+  defense_panelist2?: string;
+  defense_panelist3?: string;
+  defense_panelist4?: string;
   advisers_endorsement?: string;
   rec_endorsement?: string;
   proof_of_payment?: string;
@@ -74,6 +79,11 @@ type DefenseRequestFull = {
   scheduled_time?: string;
   scheduled_date?: string;
   scheduled_end_time?: string;
+  amount?: number;
+  program_level?: string;
+  aa_verification_status?: 'pending' | 'ready_for_finance' | 'in_progress' | 'paid' | 'completed' | 'invalid';
+  aa_verification_id?: number | null;
+  invalid_comment?: string | null;
 };
 
 interface PageProps {
@@ -91,7 +101,11 @@ type WorkflowStepKey =
   | 'coordinator-rejected'
   | 'coordinator-retrieved'
   | 'panels-assigned'
-  | 'scheduled';
+  | 'scheduled'
+  | 'payment-ready'
+  | 'payment-in-progress'
+  | 'payment-paid'
+  | 'payment-invalid';
 
 type WorkflowStep = {
   key: WorkflowStepKey;
@@ -321,6 +335,26 @@ export default function DetailsRequirementsPage(rawProps: any) {
       label: 'Scheduled',
       icon: <Clock className="h-5 w-5" />,
     },
+    {
+      key: 'payment-ready',
+      label: 'Payment Ready for Finance',
+      icon: <ArrowRight className="h-5 w-5" />,
+    },
+    {
+      key: 'payment-in-progress',
+      label: 'Payment In Progress',
+      icon: <Hourglass className="h-5 w-5" />,
+    },
+    {
+      key: 'payment-paid',
+      label: 'Payment Paid',
+      icon: <Banknote className="h-5 w-5" />,
+    },
+    {
+      key: 'payment-invalid',
+      label: 'Payment Invalid',
+      icon: <AlertTriangle className="h-5 w-5" />,
+    },
   ];
 
   // Map event/to_state to workflow step key
@@ -345,6 +379,12 @@ export default function DetailsRequirementsPage(rawProps: any) {
       if (state.includes('approved')) return 'coordinator-approved';
       return 'coordinator-approved'; // default for coordinator actions
     }
+    
+    // Handle payment-related events
+    if (event.includes('payment ready') || event.includes('ready for finance')) return 'payment-ready';
+    if (event.includes('payment in progress') || event.includes('in progress')) return 'payment-in-progress';
+    if (event.includes('payment paid') || event.includes('paid')) return 'payment-paid';
+    if (event.includes('payment invalid') || event.includes('invalid')) return 'payment-invalid';
     
     if (event === 'adviser-review' || event === 'pending') return 'adviser-pending';
     if (event.includes('panels')) return 'panels-assigned';
@@ -630,6 +670,70 @@ export default function DetailsRequirementsPage(rawProps: any) {
                         {request.defense_type ?? '—'}
                       </Badge>
                     </div>
+
+                    {/* Reference No. */}
+                    <div>
+                      <div className="text-xs text-muted-foreground mb-1">Reference No.</div>
+                      <div className="font-medium text-sm">{request.reference_no || '—'}</div>
+                    </div>
+
+                    {/* Amount */}
+                    <div>
+                      <div className="text-xs text-muted-foreground mb-1">Amount</div>
+                      <div className="font-medium text-sm">
+                        {request.amount ? `₱${Number(request.amount).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '—'}
+                      </div>
+                    </div>
+
+                    {/* AA Verification Status */}
+                    <div>
+                      <div className="text-xs text-muted-foreground mb-1">AA Payment Status</div>
+                      <Badge
+                        variant="secondary"
+                        className={cn(
+                          "text-xs font-semibold px-2 py-1 h-fit flex items-center gap-1.5 w-fit",
+                          request.aa_verification_status === 'completed'
+                            ? 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300'
+                            : request.aa_verification_status === 'paid'
+                            ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300'
+                            : request.aa_verification_status === 'ready_for_finance'
+                            ? 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300'
+                            : request.aa_verification_status === 'in_progress'
+                            ? 'bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300'
+                            : request.aa_verification_status === 'invalid'
+                            ? 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300'
+                            : 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300'
+                        )}
+                      >
+                        {request.aa_verification_status === 'completed' && <CheckCircle className="h-3 w-3" />}
+                        {request.aa_verification_status === 'paid' && <Banknote className="h-3 w-3" />}
+                        {request.aa_verification_status === 'ready_for_finance' && <DollarSign className="h-3 w-3" />}
+                        {request.aa_verification_status === 'in_progress' && <Hourglass className="h-3 w-3" />}
+                        {request.aa_verification_status === 'invalid' && <AlertTriangle className="h-3 w-3" />}
+                        {!request.aa_verification_status && <Clock className="h-3 w-3" />}
+                        {request.aa_verification_status === 'completed'
+                          ? 'Completed'
+                          : request.aa_verification_status === 'paid'
+                          ? 'Paid'
+                          : request.aa_verification_status === 'ready_for_finance'
+                          ? 'Ready for Finance'
+                          : request.aa_verification_status === 'in_progress'
+                          ? 'In Progress'
+                          : request.aa_verification_status === 'invalid'
+                          ? 'Invalid'
+                          : 'Pending'}
+                      </Badge>
+                    </div>
+
+                    {/* Invalid Comment Display */}
+                    {request.invalid_comment && (
+                      <div className="md:col-span-2">
+                        <div className="p-3 bg-red-50 border border-red-200 rounded-md">
+                          <p className="text-xs text-muted-foreground mb-1">Invalid Reason</p>
+                          <p className="text-sm text-red-800">{request.invalid_comment}</p>
+                        </div>
+                      </div>
+                    )}
 
                     <div>
                       <div className="text-xs text-muted-foreground mb-1">Submitted At</div>
@@ -948,7 +1052,8 @@ export default function DetailsRequirementsPage(rawProps: any) {
                       icon: <Clock className="h-5 w-5 text-gray-500" />,
                     };
                     const isLast = idx === ((request.workflow_history ?? []).length - 1);
-                    const iconBoxColor = 'bg-gray-100 text-gray-500';
+                    const isInvalid = event.toLowerCase().includes('invalid');
+                    const iconBoxColor = isInvalid ? 'bg-red-100 text-red-600' : 'bg-gray-100 text-gray-500';
                     const comment = item.comment || item.rejection_reason || '';
                     return (
                       <div key={idx} className="flex items-start gap-3 relative">
@@ -973,7 +1078,11 @@ export default function DetailsRequirementsPage(rawProps: any) {
                           </div>
 
                           {comment && (
-                            <div className="mt-2 p-2 bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 rounded text-[11px] text-amber-900 dark:text-amber-100">
+                            <div className={`mt-2 p-2 rounded text-[11px] ${
+                              isInvalid 
+                                ? 'bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 text-red-900 dark:text-red-100'
+                                : 'bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 text-amber-900 dark:text-amber-100'
+                            }`}>
                              {comment}
                             </div>
                           )}

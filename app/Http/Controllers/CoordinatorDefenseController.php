@@ -1086,7 +1086,7 @@ class CoordinatorDefenseController extends Controller
         $defenseRequest = \App\Models\DefenseRequest::findOrFail($id);
 
         // Only load real relationships (NOT 'panelists')
-        $defenseRequest->load(['user', 'adviserUser']);
+        $defenseRequest->load(['user', 'adviserUser', 'aaVerification']);
 
         // Compose panelists list manually
         $panelistFields = [
@@ -1170,6 +1170,10 @@ class CoordinatorDefenseController extends Controller
                     'name' => optional(\App\Models\User::find($defenseRequest->coordinator_user_id))->name,
                     'email' => optional(\App\Models\User::find($defenseRequest->coordinator_user_id))->email,
                 ] : null,
+                // ✅ ADD AA VERIFICATION DATA
+                'aa_verification_status' => optional($defenseRequest->aaVerification)->status ?? 'pending',
+                'aa_verification_id' => optional($defenseRequest->aaVerification)->id,
+                'invalid_comment' => optional($defenseRequest->aaVerification)->invalid_comment,
             ],
             'userRole' => $user->role,
         ]);

@@ -2289,6 +2289,7 @@ class DefenseRequestController extends Controller
                 // ✅ ADD AA VERIFICATION STATUS
                 'aa_verification_status' => optional($defenseRequest->aaVerification)->status ?? 'pending',
                 'aa_verification_id' => optional($defenseRequest->aaVerification)->id,
+                'invalid_comment' => optional($defenseRequest->aaVerification)->invalid_comment,
                 'attachments' => [
                     'advisers_endorsement' => $defenseRequest->advisers_endorsement,
                     'rec_endorsement' => $defenseRequest->rec_endorsement,

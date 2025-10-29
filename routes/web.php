@@ -1097,7 +1097,7 @@ Route::get('/adviser/defense-requirements/{id}/details', function ($id) {
     if (!$user || !in_array($user->role, ['Adviser', 'Faculty']))
         abort(403);
 
-    $defenseRequest = \App\Models\DefenseRequest::findOrFail($id);
+    $defenseRequest = \App\Models\DefenseRequest::with(['aaVerification'])->findOrFail($id);
 
     // Find the student from defense request
     $student = \App\Models\User::where('school_id', $defenseRequest->school_id)->first();
@@ -1265,6 +1265,7 @@ Route::middleware('role:Administrative Assistant,Dean')->get('/assistant/all-def
                 'coordinator' => $coordinator,
                 'aa_verification_status' => optional($r->aaVerification)->status ?? 'pending',
                 'aa_verification_id' => optional($r->aaVerification)->id,
+                'invalid_comment' => optional($r->aaVerification)->invalid_comment,
             ];
         });
 

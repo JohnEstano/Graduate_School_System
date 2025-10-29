@@ -22,6 +22,7 @@ import {
   Banknote,
   CircleCheck,
   ArrowRight,
+  AlertTriangle,
 } from 'lucide-react';
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from '@/components/ui/button';
@@ -40,6 +41,15 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
 import { postWithCsrf, fetchWithCsrf } from '@/utils/csrf';
 
 type DefenseRequestDetails = {
@@ -84,8 +94,9 @@ type DefenseRequestDetails = {
     name: string;
     email: string;
   } | null;
-  aa_verification_status?: 'pending' | 'ready_for_finance' | 'in_progress' | 'paid' | 'completed';
+  aa_verification_status?: 'pending' | 'ready_for_finance' | 'in_progress' | 'paid' | 'completed' | 'invalid';
   aa_verification_id?: number | null;
+  invalid_comment?: string | null;
 };
 
 type PaymentRateRow = {
@@ -141,6 +152,15 @@ export default function Details({ defenseRequest: initialDefenseRequest }: Props
     title: '',
     description: '',
     action: null,
+  });
+
+  // Invalid comment dialog state
+  const [invalidCommentDialog, setInvalidCommentDialog] = useState<{
+    open: boolean;
+    comment: string;
+  }>({
+    open: false,
+    comment: '',
   });
 
   // Fetch panel members once
@@ -326,6 +346,26 @@ export default function Details({ defenseRequest: initialDefenseRequest }: Props
       icon: <Clock className="h-5 w-5" />,
     },
     {
+      key: 'payment-ready',
+      label: 'Payment Ready for Finance',
+      icon: <ArrowRight className="h-5 w-5" />,
+    },
+    {
+      key: 'payment-in-progress',
+      label: 'Payment In Progress',
+      icon: <Hourglass className="h-5 w-5" />,
+    },
+    {
+      key: 'payment-paid',
+      label: 'Payment Paid',
+      icon: <Banknote className="h-5 w-5" />,
+    },
+    {
+      key: 'payment-invalid',
+      label: 'Payment Invalid',
+      icon: <AlertTriangle className="h-5 w-5" />,
+    },
+    {
       key: 'rejected',
       label: 'Rejected',
       icon: <XCircle className="h-5 w-5" />,
@@ -344,6 +384,10 @@ export default function Details({ defenseRequest: initialDefenseRequest }: Props
     if (event.includes('coordinator-approved')) return 'coordinator-approved';
     if (event.includes('panel')) return 'panels-assigned';
     if (event.includes('schedule')) return 'scheduled';
+    if (event.includes('payment ready') || event.includes('ready for finance')) return 'payment-ready';
+    if (event.includes('payment in progress') || event.includes('in progress')) return 'payment-in-progress';
+    if (event.includes('payment paid') || event.includes('paid')) return 'payment-paid';
+    if (event.includes('payment invalid') || event.includes('invalid')) return 'payment-invalid';
     if (event.includes('rejected')) return 'rejected';
     if (event.includes('retrieved')) return 'retrieved';
     return '';
@@ -508,6 +552,78 @@ export default function Details({ defenseRequest: initialDefenseRequest }: Props
       setConfirmDialog({ open: false, title: '', description: '', action: null });
     }
   }
+
+  // Mark as Invalid with comment
+  async function handleMarkInvalid() {
+    if (!details) return;
+    
+    const comment = invalidCommentDialog.comment.trim();
+    if (!comment) {
+      toast.error('Please provide a reason for marking as invalid');
+      return;
+    }
+    
+    setIsUpdating(true);
+    setInvalidCommentDialog({ open: false, comment: '' });
+    
+    const toastId = toast.loading('Marking as invalid...');
+    
+    try {
+      const url = `/assistant/aa-verification/${details.id}/status`;
+      console.log('📡 Sending request to:', url);
+      console.log('📦 Payload:', { status: 'invalid', invalid_comment: comment });
+      
+      const res = await postWithCsrf(url, { 
+        status: 'invalid',
+        invalid_comment: comment 
+      });
+      
+      console.log('📥 Response status:', res.status, res.statusText);
+      
+      if (res.status === 419) {
+        console.error('❌ CSRF token mismatch (419)');
+        toast.error('Session expired. Please refresh the page and try again.', { id: toastId });
+        return;
+      }
+      
+      const contentType = res.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        const text = await res.text();
+        console.error('❌ Non-JSON response:', text);
+        throw new Error('Server returned an invalid response');
+      }
+      
+      const data = await res.json();
+      console.log('📦 Response data:', data);
+      
+      if (res.ok && data.success) {
+        setDetails(prev => prev ? { 
+          ...prev, 
+          aa_verification_status: 'invalid',
+          aa_verification_id: data.aa_verification_id,
+          invalid_comment: comment
+        } : prev);
+        
+        console.log('✅ Marked as invalid successfully');
+        toast.success('Payment marked as invalid', { id: toastId });
+      } else {
+        const errorMsg = data.error || data.message || 'Failed to mark as invalid';
+        console.error('❌ Failed:', data);
+        toast.error(errorMsg, { id: toastId });
+      }
+    } catch (error) {
+      console.error('💥 Error marking as invalid:', error);
+      
+      let errorMessage = 'Error marking as invalid';
+      if (error instanceof Error) {
+        errorMessage = error.message;
+      }
+      
+      toast.error(errorMessage, { id: toastId });
+    } finally {
+      setIsUpdating(false);
+    }
+  }
   
   // Open confirmation dialog
   function openConfirmDialog(
@@ -591,6 +707,19 @@ export default function Details({ defenseRequest: initialDefenseRequest }: Props
               Paid
             </Button>
             
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => {
+                setInvalidCommentDialog({ open: true, comment: '' });
+              }}
+              disabled={isUpdating}
+              className="gap-2"
+            >
+              <AlertTriangle className="h-4 w-4 text-red-600" />
+              Mark as Invalid
+            </Button>
+            
             {/* Hidden but functional - Mark as Completed */}
             {false && (
               <Button
@@ -637,6 +766,8 @@ export default function Details({ defenseRequest: initialDefenseRequest }: Props
                       ? 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300'
                       : details?.aa_verification_status === 'in_progress'
                       ? 'bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300'
+                      : details?.aa_verification_status === 'invalid'
+                      ? 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300'
                       : 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300'
                   )}
                 >
@@ -644,6 +775,7 @@ export default function Details({ defenseRequest: initialDefenseRequest }: Props
                   {details?.aa_verification_status === 'paid' && <Banknote className="h-3.5 w-3.5" />}
                   {details?.aa_verification_status === 'ready_for_finance' && <DollarSign className="h-3.5 w-3.5" />}
                   {details?.aa_verification_status === 'in_progress' && <Hourglass className="h-3.5 w-3.5" />}
+                  {details?.aa_verification_status === 'invalid' && <AlertTriangle className="h-3.5 w-3.5" />}
                   {!details?.aa_verification_status && <Clock className="h-3.5 w-3.5" />}
                   {details?.aa_verification_status === 'completed'
                     ? 'Completed'
@@ -653,6 +785,8 @@ export default function Details({ defenseRequest: initialDefenseRequest }: Props
                     ? 'Ready for Finance'
                     : details?.aa_verification_status === 'in_progress'
                     ? 'In Progress'
+                    : details?.aa_verification_status === 'invalid'
+                    ? 'Invalid'
                     : 'Pending'}
                 </Badge>
               </div>
@@ -942,6 +1076,12 @@ export default function Details({ defenseRequest: initialDefenseRequest }: Props
                               </span>
                             )}
                           </div>
+                          {/* Show comment for invalid payments */}
+                          {item.comment && stepKey === 'payment-invalid' && (
+                            <div className="mt-2 text-[11px] p-2 bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-800 rounded text-red-700 dark:text-red-400">
+                              <strong>Reason:</strong> {item.comment}
+                            </div>
+                          )}
                         </div>
                       </div>
                     );
@@ -979,6 +1119,43 @@ export default function Details({ defenseRequest: initialDefenseRequest }: Props
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Invalid Comment Dialog */}
+      <Dialog open={invalidCommentDialog.open} onOpenChange={(open) => setInvalidCommentDialog({ ...invalidCommentDialog, open })}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Mark Payment as Invalid</DialogTitle>
+            <DialogDescription>
+              Please provide a reason for marking this payment as invalid. This will be recorded in the workflow history.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <Textarea
+              placeholder="Enter reason for marking as invalid..."
+              value={invalidCommentDialog.comment}
+              onChange={(e) => setInvalidCommentDialog({ ...invalidCommentDialog, comment: e.target.value })}
+              rows={4}
+              className="resize-none"
+            />
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setInvalidCommentDialog({ open: false, comment: '' })}
+              disabled={isUpdating}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleMarkInvalid}
+              disabled={isUpdating || !invalidCommentDialog.comment.trim()}
+              variant="destructive"
+            >
+              Mark as Invalid
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </AppLayout>
   );
 }

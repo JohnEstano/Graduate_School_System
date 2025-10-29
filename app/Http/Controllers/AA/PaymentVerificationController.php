@@ -28,8 +28,9 @@ class PaymentVerificationController extends Controller
     public function updateStatus(Request $request, $id)
     {
         $request->validate([
-            'status' => 'required|in:pending,ready_for_finance,in_progress,paid,completed',
+            'status' => 'required|in:pending,ready_for_finance,in_progress,paid,completed,invalid',
             'remarks' => 'nullable|string',
+            'invalid_comment' => 'required_if:status,invalid|string|max:1000',
         ]);
 
         $verification = AaPaymentVerification::findOrFail($id);
@@ -41,6 +42,12 @@ class PaymentVerificationController extends Controller
 
         $verification->status = $request->input('status');
         $verification->remarks = $request->input('remarks');
+        
+        // Store invalid comment if status is invalid
+        if ($request->input('status') === 'invalid') {
+            $verification->invalid_comment = $request->input('invalid_comment');
+        }
+        
         $verification->save();
 
         return response()->json(['success' => true, 'status' => $verification->status]);
@@ -50,8 +57,9 @@ class PaymentVerificationController extends Controller
     public function updateStatusByDefenseRequest(Request $request, $defenseRequestId)
     {
         $request->validate([
-            'status' => 'required|in:pending,ready_for_finance,in_progress,paid,completed',
+            'status' => 'required|in:pending,ready_for_finance,in_progress,paid,completed,invalid',
             'remarks' => 'nullable|string',
+            'invalid_comment' => 'required_if:status,invalid|string|max:1000',
         ]);
 
         $defenseRequest = DefenseRequest::findOrFail($defenseRequestId);
@@ -70,8 +78,42 @@ class PaymentVerificationController extends Controller
         // Update status
         $verification->status = $request->input('status');
         $verification->remarks = $request->input('remarks');
+        
+        // Store invalid comment if status is invalid
+        if ($request->input('status') === 'invalid') {
+            $verification->invalid_comment = $request->input('invalid_comment');
+        }
+        
         $verification->assigned_to = Auth::id(); // Ensure current user is assigned
         $verification->save();
+
+        // Add workflow history entry
+        $hist = $defenseRequest->workflow_history ?? [];
+        $statusLabel = match($request->input('status')) {
+            'ready_for_finance' => 'Payment Ready for Finance',
+            'in_progress' => 'Payment In Progress',
+            'paid' => 'Payment Paid',
+            'completed' => 'Payment Completed',
+            'invalid' => 'Payment Invalid',
+            default => 'Payment Status Updated'
+        };
+        
+        $eventData = [
+            'event_type' => $statusLabel,
+            'user_name' => Auth::user()->name,
+            'user_id' => Auth::id(),
+            'created_at' => now()->toDateTimeString(),
+            'status' => $request->input('status'),
+        ];
+        
+        // Add invalid comment to workflow history if present
+        if ($request->input('status') === 'invalid' && $request->input('invalid_comment')) {
+            $eventData['comment'] = $request->input('invalid_comment');
+        }
+        
+        $hist[] = $eventData;
+        $defenseRequest->workflow_history = $hist;
+        $defenseRequest->save();
 
         // ✅ CRITICAL: When status becomes 'ready_for_finance', create ALL records DIRECTLY
         if ($request->input('status') === 'ready_for_finance' && $oldStatus !== 'ready_for_finance') {
@@ -366,7 +408,8 @@ class PaymentVerificationController extends Controller
             'defense_request_ids.*' => 'integer|exists:defense_requests,id',
             'verification_ids' => 'sometimes|array',
             'verification_ids.*' => 'integer|exists:aa_payment_verifications,id',
-            'status' => 'required|in:pending,ready_for_finance,in_progress,paid,completed',
+            'status' => 'required|in:pending,ready_for_finance,in_progress,paid,completed,invalid',
+            'invalid_comment' => 'required_if:status,invalid|string|max:1000',
         ]);
 
         $updated = 0;
@@ -385,12 +428,46 @@ class PaymentVerificationController extends Controller
                 $oldStatus = $verification->status;
                 $verification->status = $request->status;
                 $verification->assigned_to = Auth::id();
+                
+                // Store invalid comment if status is invalid
+                if ($request->status === 'invalid') {
+                    $verification->invalid_comment = $request->input('invalid_comment');
+                }
+                
                 $verification->save();
 
-                // If changing to ready_for_finance, create honorarium records
-                if ($request->status === 'ready_for_finance' && $oldStatus !== 'ready_for_finance') {
-                    $defenseRequest = DefenseRequest::find($defenseRequestId);
-                    if ($defenseRequest) {
+                // Add workflow history entry
+                $defenseRequest = DefenseRequest::find($defenseRequestId);
+                if ($defenseRequest) {
+                    $hist = $defenseRequest->workflow_history ?? [];
+                    $statusLabel = match($request->status) {
+                        'ready_for_finance' => 'Payment Ready for Finance',
+                        'in_progress' => 'Payment In Progress',
+                        'paid' => 'Payment Paid',
+                        'completed' => 'Payment Completed',
+                        'invalid' => 'Payment Invalid',
+                        default => 'Payment Status Updated'
+                    };
+                    
+                    $eventData = [
+                        'event_type' => $statusLabel,
+                        'user_name' => Auth::user()->name,
+                        'user_id' => Auth::id(),
+                        'created_at' => now()->toDateTimeString(),
+                        'status' => $request->status,
+                    ];
+                    
+                    // Add invalid comment to workflow history if present
+                    if ($request->status === 'invalid' && $request->input('invalid_comment')) {
+                        $eventData['comment'] = $request->input('invalid_comment');
+                    }
+                    
+                    $hist[] = $eventData;
+                    $defenseRequest->workflow_history = $hist;
+                    $defenseRequest->save();
+
+                    // If changing to ready_for_finance, create honorarium records
+                    if ($request->status === 'ready_for_finance' && $oldStatus !== 'ready_for_finance') {
                         $this->createHonorariumRecords($defenseRequest);
                         
                         try {

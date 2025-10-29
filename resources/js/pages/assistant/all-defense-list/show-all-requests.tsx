@@ -29,10 +29,12 @@ import {
   Hourglass,
   Banknote,
   CircleCheck,
+  AlertTriangle,
 } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import TableAllDefenseList from './table-all-defense-list';
-import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogTitle, DialogDescription, DialogFooter, DialogHeader } from '@/components/ui/dialog';
+import { Textarea } from '@/components/ui/textarea';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -104,7 +106,7 @@ function ShowAllRequestsInner({ defenseRequests: initial, onStatusChange }: Show
   // Bulk status update confirmation dialog
   const [bulkStatusDialog, setBulkStatusDialog] = useState<{
     open: boolean;
-    status: 'ready_for_finance' | 'in_progress' | 'paid' | 'completed' | null;
+    status: 'ready_for_finance' | 'in_progress' | 'paid' | 'completed' | 'invalid' | null;
     title: string;
     description: string;
   }>({
@@ -112,6 +114,15 @@ function ShowAllRequestsInner({ defenseRequests: initial, onStatusChange }: Show
     status: null,
     title: '',
     description: '',
+  });
+
+  // Invalid comment dialog state for bulk operations
+  const [bulkInvalidCommentDialog, setBulkInvalidCommentDialog] = useState<{
+    open: boolean;
+    comment: string;
+  }>({
+    open: false,
+    comment: '',
   });
 
   // --- FINAL FIX: Only use expected_rate and amount ---
@@ -503,9 +514,15 @@ function ShowAllRequestsInner({ defenseRequests: initial, onStatusChange }: Show
   }
 
   // Open bulk status confirmation dialog
-  function openBulkStatusDialog(newStatus: 'ready_for_finance' | 'in_progress' | 'paid' | 'completed') {
+  function openBulkStatusDialog(newStatus: 'ready_for_finance' | 'in_progress' | 'paid' | 'completed' | 'invalid') {
     if (selected.length === 0) {
       toast.error('No requests selected');
+      return;
+    }
+    
+    // Special handling for invalid status - open comment dialog instead
+    if (newStatus === 'invalid') {
+      setBulkInvalidCommentDialog({ open: true, comment: '' });
       return;
     }
     
@@ -513,14 +530,16 @@ function ShowAllRequestsInner({ defenseRequests: initial, onStatusChange }: Show
       ready_for_finance: 'Ready for Finance',
       in_progress: 'In Progress',
       paid: 'Paid',
-      completed: 'Completed'
+      completed: 'Completed',
+      invalid: 'Invalid'
     };
     
     const descriptions = {
       ready_for_finance: `Mark ${selected.length} defense request${selected.length !== 1 ? 's' : ''} as Ready for Finance?\n\nThis will create honorarium payment records, sync to student and panelist records, and make records visible in Honorarium page.`,
       in_progress: `Mark ${selected.length} defense request${selected.length !== 1 ? 's' : ''} as In Progress?\n\nThis indicates the payment processing has started.`,
       paid: `Mark ${selected.length} defense request${selected.length !== 1 ? 's' : ''} as Paid?\n\nThis confirms that all honorarium payments have been processed.`,
-      completed: `Mark ${selected.length} defense request${selected.length !== 1 ? 's' : ''} as Completed?\n\nThis action will finalize the defense and AA payment status.`
+      completed: `Mark ${selected.length} defense request${selected.length !== 1 ? 's' : ''} as Completed?\n\nThis action will finalize the defense and AA payment status.`,
+      invalid: `Mark ${selected.length} defense request${selected.length !== 1 ? 's' : ''} as Invalid?\n\nThis will mark the payment as invalid.`
     };
     
     setBulkStatusDialog({
@@ -546,7 +565,8 @@ function ShowAllRequestsInner({ defenseRequests: initial, onStatusChange }: Show
       ready_for_finance: 'Ready for Finance',
       in_progress: 'In Progress',
       paid: 'Paid',
-      completed: 'Completed'
+      completed: 'Completed',
+      invalid: 'Invalid'
     };
     
     const toastId = toast.loading(`Updating ${selected.length} request${selected.length !== 1 ? 's' : ''}...`);
@@ -588,6 +608,63 @@ function ShowAllRequestsInner({ defenseRequests: initial, onStatusChange }: Show
     } catch (error) {
       console.error('Bulk update error:', error);
       toast.error('Failed to update status', { id: toastId });
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  // Handle bulk invalid with comment
+  async function handleBulkInvalidWithComment() {
+    const comment = bulkInvalidCommentDialog.comment.trim();
+    if (!comment) {
+      toast.error('Please provide a reason for marking as invalid');
+      return;
+    }
+    
+    if (selected.length === 0) {
+      toast.error('No requests selected');
+      setBulkInvalidCommentDialog({ open: false, comment: '' });
+      return;
+    }
+    
+    setBulkInvalidCommentDialog({ open: false, comment: '' });
+    setIsLoading(true);
+    
+    const toastId = toast.loading(`Marking ${selected.length} request${selected.length !== 1 ? 's' : ''} as invalid...`);
+    
+    try {
+      const res = await postWithCsrf('/aa/payment-verifications/bulk-update', {
+        defense_request_ids: selected,
+        status: 'invalid',
+        invalid_comment: comment,
+      });
+
+      const data = await res.json();
+
+      if (res.ok && data.success) {
+        // Update local state for all selected items
+        setDefenseRequests(prev =>
+          prev.map(r =>
+            selected.includes(r.id)
+              ? { ...r, aa_verification_status: 'invalid', invalid_comment: comment }
+              : r
+          )
+        );
+        
+        // Clear selection
+        setSelected([]);
+        
+        toast.success(`${data.updated_count || selected.length} request${(data.updated_count || selected.length) !== 1 ? 's' : ''} marked as invalid`, { 
+          id: toastId,
+          duration: 4000 
+        });
+        
+      } else {
+        toast.error(data.error || 'Failed to mark as invalid', { id: toastId });
+      }
+    } catch (error) {
+      console.error('Bulk invalid error:', error);
+      toast.error('Failed to mark as invalid', { id: toastId });
     } finally {
       setIsLoading(false);
     }
@@ -921,6 +998,16 @@ function ShowAllRequestsInner({ defenseRequests: initial, onStatusChange }: Show
                 <Banknote size={13} className="text-emerald-600" />
                 Paid
               </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="px-3 py-1 h-7 w-auto text-xs flex items-center gap-1"
+                onClick={() => openBulkStatusDialog('invalid')}
+                disabled={isLoading}
+              >
+                <AlertTriangle size={13} className="text-red-600" />
+                Invalid
+              </Button>
               {/* Hidden but functional - Mark as Completed */}
               {false && (
                 <Button
@@ -1216,6 +1303,43 @@ function ShowAllRequestsInner({ defenseRequests: initial, onStatusChange }: Show
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Bulk Invalid Comment Dialog */}
+      <Dialog open={bulkInvalidCommentDialog.open} onOpenChange={(open) => setBulkInvalidCommentDialog({ ...bulkInvalidCommentDialog, open })}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Mark {selected.length} Payment{selected.length !== 1 ? 's' : ''} as Invalid</DialogTitle>
+            <DialogDescription>
+              Please provide a reason for marking {selected.length === 1 ? 'this payment' : 'these payments'} as invalid. This will be recorded in the workflow history.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <Textarea
+              placeholder="Enter reason for marking as invalid..."
+              value={bulkInvalidCommentDialog.comment}
+              onChange={(e) => setBulkInvalidCommentDialog({ ...bulkInvalidCommentDialog, comment: e.target.value })}
+              rows={4}
+              className="resize-none"
+            />
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setBulkInvalidCommentDialog({ open: false, comment: '' })}
+              disabled={isLoading}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleBulkInvalidWithComment}
+              disabled={isLoading || !bulkInvalidCommentDialog.comment.trim()}
+              variant="destructive"
+            >
+              Mark as Invalid
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
