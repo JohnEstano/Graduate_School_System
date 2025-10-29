@@ -25,11 +25,23 @@ class PaymentTrendsController extends Controller
         
         $endDate = Carbon::now();
         
-        // Get payment data from completed defense requests
+        // Get payment data from defense requests with payment verification status
+        // Include: ready_for_finance, in_progress, paid, completed
+        // Check both workflow_state and aa_payment_verifications table
         $defensePayments = DefenseRequest::whereBetween('scheduled_date', [$startDate, $endDate])
             ->whereNotNull('scheduled_date')
             ->whereNotNull('amount')
-            ->where('workflow_state', 'completed')
+            ->where(function($query) {
+                // Include completed defenses
+                $query->where('workflow_state', 'completed')
+                      // OR defenses with AA verification in payment-related statuses
+                      ->orWhereExists(function($q) {
+                          $q->select(DB::raw(1))
+                            ->from('aa_payment_verifications')
+                            ->whereColumn('aa_payment_verifications.defense_request_id', 'defense_requests.id')
+                            ->whereIn('aa_payment_verifications.status', ['ready_for_finance', 'in_progress', 'paid', 'completed']);
+                      });
+            })
             ->select(
                 DB::raw('DATE(scheduled_date) as date'),
                 DB::raw('COUNT(*) as count'),

@@ -113,9 +113,14 @@ class StudentRecordController extends Controller
             
             // CRITICAL FIX: Deduplicate payments by defense_request_id + panelist_record_id
             // This prevents counting the same panelist twice if there are duplicate student_records
-            $allPayments = $allPayments->unique(function($payment) {
-                return $payment['defense_request_id'] . '_' . $payment['panelist']->id;
-            });
+            // Filter out payments without panelists and deduplicate
+            $allPayments = $allPayments
+                ->filter(function($payment) {
+                    return isset($payment['panelist']) && $payment['panelist'] !== null;
+                })
+                ->unique(function($payment) {
+                    return $payment['defense_request_id'] . '_' . $payment['panelist']->id;
+                });
             
             foreach ($allPayments as $payment) {
                 // Use defense_request_id as the key to uniquely identify each defense

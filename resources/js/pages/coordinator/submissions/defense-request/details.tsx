@@ -406,8 +406,11 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
         const r = await fetch('/dean/payment-rates/data', { headers: { Accept: 'application/json' } });
         const json = await r.json();
         const arr = Array.isArray(json?.rates) ? json.rates : (Array.isArray(json) ? json : []);
+        console.log('📊 Coordinator - Payment Rates Loaded:', arr.length, 'rates');
+        console.log('📊 Sample rates:', arr.slice(0, 3));
         if (alive) setPaymentRates(arr as any);
       } catch (e) {
+        console.error('❌ Failed to load payment rates:', e);
         if (alive) setPaymentRates([]);
       }
     })();
