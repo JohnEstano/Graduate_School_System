@@ -214,7 +214,7 @@ class DefenseRequestController extends Controller
 
         foreach (['advisersEndorsement','recEndorsement','proofOfPayment'] as $f) {
             if ($request->hasFile($f)) {
-                $data[$f] = $request->file($f)->store('defense-attachments');
+                $data[$f] = $request->file($f)->store('defense-attachments', 'public');
             }
         }
 
@@ -2454,12 +2454,36 @@ class DefenseRequestController extends Controller
         // Sanitize filename to prevent directory traversal
         $filename = basename($filename);
         
-        // Build the full path
-        $path = 'defense-attachments/' . $filename;
+        // Try multiple possible storage locations
+        $possiblePaths = [
+            'defense-attachments/' . $filename,
+            'defense_requirements/' . $filename,
+            'defense_documents/' . $filename,
+        ];
         
-        // Check if file exists in storage
-        if (!Storage::disk('public')->exists($path)) {
-            abort(404, 'File not found');
+        $path = null;
+        foreach ($possiblePaths as $testPath) {
+            if (Storage::disk('public')->exists($testPath)) {
+                $path = $testPath;
+                break;
+            }
+        }
+        
+        // If not found in public disk, check default disk (for legacy files)
+        if (!$path) {
+            foreach (['defense-attachments/' . $filename] as $testPath) {
+                if (Storage::disk('local')->exists($testPath)) {
+                    $path = $testPath;
+                    $disk = 'local';
+                    break;
+                }
+            }
+        } else {
+            $disk = 'public';
+        }
+        
+        if (!$path) {
+            abort(404, 'File not found in storage');
         }
 
         // SECURITY: Find which defense request this file belongs to
@@ -2529,7 +2553,7 @@ class DefenseRequestController extends Controller
         }
 
         // Get the full file path
-        $filePath = Storage::disk('public')->path($path);
+        $filePath = Storage::disk($disk)->path($path);
         
         // Determine MIME type
         $mimeType = mime_content_type($filePath) ?: 'application/octet-stream';
