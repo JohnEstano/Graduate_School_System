@@ -311,7 +311,7 @@ export default function CoordinatorCompreExamIndex() {
         </div>
 
         {/* Table container (highlight) */}
-        <div className="mt-6 bg-white">
+        <div className="mt-6 bg-white dark:bg-zinc-900">
           <div>
             <TableCompreExam paged={pageItems} columns={columns} />
           </div>

@@ -116,7 +116,7 @@ function AdviserSearchInput({ value, onChange }: AdviserSearchInputProps) {
             />
             {open && (
                 <div
-                    className="absolute z-10 mt-1 w-full bg-white border border-gray-200 rounded shadow"
+                    className="absolute z-10 mt-1 w-full bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-700 rounded shadow"
                     style={{ maxHeight: 200, overflowY: "auto" }}
                 >
                     {loading && (
@@ -523,7 +523,7 @@ export default function SubmitDefenseRequirements({ onFinish, open, onOpenChange
                                     className={`rounded-md px-4 py-2 text-xs font-medium cursor-pointer border
                                         ${data.defense_type === option.value
                                             ? "bg-rose-500 text-white border-rose-500"
-                                            : "bg-white text-zinc-700 border-zinc-200"
+                                            : "bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-700"
                                         }`}
                                     aria-pressed={data.defense_type === option.value}
                                 >

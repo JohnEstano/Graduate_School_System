@@ -258,9 +258,9 @@ export default function MessagingIndex() {
             <Head title="Messages" />
             
             <div className="h-full flex-1 flex-col gap-4 overflow-hidden rounded-xl">
-                <div className="flex h-[calc(100vh-8rem)] bg-white rounded-lg shadow-sm border overflow-hidden">
+                <div className="flex h-[calc(100vh-8rem)] bg-white dark:bg-zinc-900 rounded-lg shadow-sm border dark:border-zinc-700 overflow-hidden">
                     {/* Sidebar */}
-                    <div className="w-80 border-r flex flex-col">
+                    <div className="w-80 border-r dark:border-zinc-700 flex flex-col">
                         {/* Header */}
                         <div className="p-4 border-b">
                             <div className="flex items-center justify-between mb-4">
@@ -419,7 +419,7 @@ export default function MessagingIndex() {
                         {selectedConversation ? (
                             <>
                                 {/* Chat Header */}
-                                <div className="p-4 border-b bg-white">
+                                <div className="p-4 border-b dark:border-zinc-700 bg-white dark:bg-zinc-900">
                                     <div className="flex items-center justify-between">
                                         <div className="flex items-center space-x-3">
                                             <Avatar className="h-10 w-10">
@@ -513,7 +513,7 @@ export default function MessagingIndex() {
                                 </div>
 
                                 {/* Message Input */}
-                                <div className="p-4 border-t bg-white">
+                                <div className="p-4 border-t dark:border-zinc-700 bg-white dark:bg-zinc-900">
                                     <div className="flex items-center space-x-2">
                                         <Button variant="ghost" size="sm">
                                             <Paperclip className="h-4 w-4" />

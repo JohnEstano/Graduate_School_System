@@ -244,7 +244,7 @@ export default function PaymentForm({ canSubmit, payment, onSuccess }: Props) {
   const formError: string | undefined = (errors as any)?.form;
 
   return (
-    <div className="rounded-lg bg-white">
+    <div className="rounded-lg bg-white dark:bg-zinc-900">
 
       {/* Reduced body padding */}
       <div className="p-2">
