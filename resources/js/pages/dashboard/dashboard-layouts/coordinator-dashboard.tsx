@@ -241,7 +241,7 @@ export default function CoordinatorDashboard() {
         {
             title: "Assigned Programs",
             value: assignedProgramsCount,
-            description: "Programs you coordinate",
+            description: "Total number of assigned programs",
             icon: <ClipboardList className="size-5 text-violet-500" />,
             iconTheme: "bg-violet-100 text-violet-600 dark:bg-violet-900 dark:text-violet-300",
         },

@@ -351,6 +351,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::middleware('role:Administrative Assistant')->post('/assistant/aa-verification/{defenseRequestId}/status', [PaymentVerificationController::class, 'updateStatusByDefenseRequest'])
         ->name('assistant.aa-verification.update-status');
 
+    // Payment Trends API for Assistant Dashboard
+    Route::middleware('role:Administrative Assistant')->get('/api/assistant/payment-trends', [\App\Http\Controllers\Api\PaymentTrendsController::class, 'getPaymentTrends'])
+        ->name('api.assistant.payment-trends');
+
     //PAYMENT RATESS ETC.
    
 
@@ -813,6 +817,106 @@ Route::middleware(['auth'])->group(function () {
 
     Route::get('/api/exam-subject-offerings', [ExamSubjectOfferingController::class, 'index'])
         ->name('api.exam-subject-offerings.index');
+    
+    // Coordinators API - for dean dashboard
+    Route::get('/api/coordinators', function () {
+        return User::where('role', 'Coordinator')
+            ->select('id', 'first_name', 'middle_name', 'last_name', 'email')
+            ->get()
+            ->map(function ($user) {
+                // Get students count through coordinated advisers
+                $studentsCount = User::whereIn('id', function($query) use ($user) {
+                    $query->select('student_id')
+                        ->from('adviser_student')
+                        ->whereIn('adviser_id', function($subquery) use ($user) {
+                            $subquery->select('adviser_id')
+                                ->from('adviser_coordinator')
+                                ->where('coordinator_id', $user->id);
+                        })
+                        ->where('status', 'accepted');
+                })->count();
+
+                // Get advisers count
+                $advisersCount = $user->coordinatedAdvisers()->count();
+
+                // Get unique programs from students
+                $programs = User::whereIn('id', function($query) use ($user) {
+                    $query->select('student_id')
+                        ->from('adviser_student')
+                        ->whereIn('adviser_id', function($subquery) use ($user) {
+                            $subquery->select('adviser_id')
+                                ->from('adviser_coordinator')
+                                ->where('coordinator_id', $user->id);
+                        })
+                        ->where('status', 'accepted');
+                })
+                ->whereNotNull('program')
+                ->where('program', '!=', '')
+                ->pluck('program')
+                ->unique()
+                ->values()
+                ->toArray();
+
+                return [
+                    'id' => $user->id,
+                    'name' => trim($user->first_name . ' ' . $user->last_name),
+                    'first_name' => $user->first_name,
+                    'middle_name' => $user->middle_name,
+                    'last_name' => $user->last_name,
+                    'email' => $user->email,
+                    'students_count' => $studentsCount,
+                    'advisers_count' => $advisersCount,
+                    'programs' => $programs,
+                ];
+            });
+    });
+
+    // Administrative Assistants API - for dean dashboard
+    Route::get('/api/assistants', function () {
+        return User::where('role', 'Administrative Assistant')
+            ->select('id', 'first_name', 'middle_name', 'last_name', 'email')
+            ->get()
+            ->map(function ($user) {
+                return [
+                    'id' => $user->id,
+                    'name' => trim($user->first_name . ' ' . $user->last_name),
+                    'first_name' => $user->first_name,
+                    'middle_name' => $user->middle_name,
+                    'last_name' => $user->last_name,
+                    'email' => $user->email,
+                    'students_count' => 0, // Assistants don't have students
+                    'advisers_count' => 0, // Assistants don't have advisers
+                ];
+            });
+    });
+
+    // Coordinator Programs API - Get programs for logged-in coordinator
+    Route::get('/api/coordinator/programs', function () {
+        $user = Auth::user();
+        
+        if ($user->role !== 'Coordinator') {
+            return response()->json([]);
+        }
+
+        // Get unique programs from students assigned to this coordinator
+        $programs = User::whereIn('id', function($query) use ($user) {
+            $query->select('student_id')
+                ->from('adviser_student')
+                ->whereIn('adviser_id', function($subquery) use ($user) {
+                    $subquery->select('adviser_id')
+                        ->from('adviser_coordinator')
+                        ->where('coordinator_id', $user->id);
+                })
+                ->where('status', 'accepted');
+        })
+        ->whereNotNull('program')
+        ->where('program', '!=', '')
+        ->pluck('program')
+        ->unique()
+        ->values();
+
+        return response()->json($programs);
+    });
 });
 
 /*

@@ -6,11 +6,11 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import QuickActionsWidget from '../widgets/quick-actions-widget';
 import WeeklyDefenseSchedulesWidget from '../widgets/weekly-defense-schedule-widget';
-import PendingDefenseRequestsWidget from '../widgets/pending-defense-request-widget';
 import DefenseCountLineChart from '../widgets/visual-charts/defense-count';
 import { HonorariumPaymentTrends } from '../widgets/visual-charts/honorarium-payment-trends';
 import { DefenseTypeDistribution } from '../widgets/visual-charts/defense-type-distribution';
 import { OverallProgramActivity } from '../widgets/visual-charts/overall-program-activity';
+import { PaymentTrendsInteractive } from '../widgets/visual-charts/payment-trends-interactive';
 
 type PageProps = {
     auth: {
@@ -63,7 +63,6 @@ export default function AssistantDashboard() {
     const [pendingPayments, setPendingPayments] = useState<number>(stats.pending_payments ?? 0);
 
     const [allRequests, setAllRequests] = useState<any[]>([]);
-    const [pendingRequests, setPendingRequests] = useState<any[]>([]);
     const [selectedDay, setSelectedDay] = useState<number>(new Date().getDay());
 
     const weekDays = [
@@ -98,11 +97,6 @@ export default function AssistantDashboard() {
                     ? allDefenseRequests
                     : (allDefenseRequests.defenseRequests ?? []);
                 setAllRequests(requests);
-
-                const pending = requests.filter(
-                    (r: any) => (r.normalized_status || r.status) === 'Pending'
-                );
-                setPendingRequests(pending);
             })
             .finally(() => setLoading(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -186,7 +180,7 @@ export default function AssistantDashboard() {
                     </div>
 
                     {/* Tabs - Mobile Responsive */}
-                    <div className="w-full max-w-screen-xl mx-auto px-4 md:px-7">
+                    <div className="w-full px-4 md:px-7">
                         <Tabs value={tab} onValueChange={setTab} className="w-full">
                             <TabsList className="mb-2 ">
                                 <TabsTrigger value="overview" className="flex-1 sm:flex-none">Overview</TabsTrigger>
@@ -196,7 +190,7 @@ export default function AssistantDashboard() {
                             {/* Overview Tab */}
                             <TabsContent value="overview" className="w-full">
                                 {/* Metric Cards - Mobile Optimized */}
-                                <div className="w-full max-w-screen-xl mx-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 px-0 mb-4 md:mb-6">
+                                <div className="w-full grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 px-0 mb-4 md:mb-6">
                                     {metrics.map((metric, idx) => (
                                         <Card
                                             key={idx}
@@ -234,7 +228,7 @@ export default function AssistantDashboard() {
                                             referenceDate={new Date()}
                                             loading={loading}
                                         />
-                                        <PendingDefenseRequestsWidget pendingRequests={pendingRequests} loading={loading} />
+                                        <PaymentTrendsInteractive />
                                     </div>
                                 </div>
                             </TabsContent>

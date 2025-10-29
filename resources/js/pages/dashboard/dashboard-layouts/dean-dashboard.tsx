@@ -1,18 +1,27 @@
 import React, { useEffect, useState } from 'react';
 import { usePage } from '@inertiajs/react';
-import { Sun, Moon } from 'lucide-react';
+import { Sun, Moon, Search } from 'lucide-react';
 import QuickActionsWidget from '../widgets/quick-actions-widget';
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card} from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Users, CalendarDays, ClipboardList, BadgeDollarSign } from 'lucide-react';
 import WeeklyDefenseSchedulesWidget from '../widgets/weekly-defense-schedule-widget';
-import PendingDefenseRequestsWidget from '../widgets/pending-defense-request-widget';
 import DefenseCountLineChart from '../widgets/visual-charts/defense-count';
 import { DefenseTypeDistribution } from '../widgets/visual-charts/defense-type-distribution';
 import { DefenseModeBreakdown } from '../widgets/visual-charts/defense-mode-breakdown';
 import { OverallProgramActivity } from '../widgets/visual-charts/overall-program-activity';
 import { CoordinatorPerformance } from '../widgets/visual-charts/coordinator-performance';
+import StaffDataTable from '../widgets/staff-data-table';
+import { Input } from "@/components/ui/input";
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
+import { getProgramAbbreviation } from "@/utils/program-abbreviations";
 
 type PageProps = {
     auth: {
@@ -86,8 +95,29 @@ export default function DeanDashboard() {
     const [advisersCount, setAdvisersCount] = useState<number>(0);
     const [assignedProgramsCount, setAssignedProgramsCount] = useState<number>(0);
     const [pendingHonorariumsCount, setPendingHonorariumsCount] = useState<number>(0);
+    const [coordinators, setCoordinators] = useState<any[]>([]);
+    const [assistants, setAssistants] = useState<any[]>([]);
+    const [staffSearchQuery, setStaffSearchQuery] = useState('');
+    const [selectedProgram, setSelectedProgram] = useState('all');
+
+    // Get all unique programs from coordinators
+    const allPrograms = React.useMemo(() => {
+        const programSet = new Set<string>();
+        coordinators.forEach(staff => {
+            if (staff.programs) {
+                staff.programs.forEach((program: string) => programSet.add(program));
+            }
+        });
+        return Array.from(programSet).sort();
+    }, [coordinators]);
+
+    // Calculate total unique programs count from all students
+    const totalProgramsCount = React.useMemo(() => {
+        return allPrograms.length;
+    }, [allPrograms]);
 
     const [selectedDay, setSelectedDay] = useState<number>(new Date().getDay());
+    const [tab, setTab] = useState("overview");
 
     const weekDays = [
         { label: 'Sun', value: 0 },
@@ -159,19 +189,32 @@ export default function DeanDashboard() {
             .then(res => res.ok ? res.json() : { pending_count: 0 })
             .then((data) => setPendingHonorariumsCount(data.pending_count ?? 0))
             .catch(() => setPendingHonorariumsCount(0));
+
+        // Fetch all coordinators
+        fetch('/api/coordinators', {
+            headers: { 'Accept': 'application/json' }
+        })
+            .then(res => res.ok ? res.json() : [])
+            .then((data) => {
+                setCoordinators(Array.isArray(data) ? data : []);
+            })
+            .catch(() => setCoordinators([]));
+
+        // Fetch all assistants
+        fetch('/api/assistants', {
+            headers: { 'Accept': 'application/json' }
+        })
+            .then(res => res.ok ? res.json() : [])
+            .then((data) => {
+                setAssistants(Array.isArray(data) ? data : []);
+            })
+            .catch(() => setAssistants([]));
     }, []);
 
     const todaysSchedules = getTodaysSchedules(allRequests);
 
     // Metric cards (overall, not just assigned to user)
     const metrics = [
-        {
-            title: "Pending Defense Requests",
-            value: pendingRequests.length,
-            description: "Awaiting coordinator action",
-            icon: <ClipboardList className="size-5 text-rose-500" />,
-            iconTheme: "bg-rose-100 text-rose-600 dark:bg-rose-900 dark:text-rose-300",
-        },
         {
             title: "Today's Defense Schedules",
             value: todaysSchedules,
@@ -188,8 +231,8 @@ export default function DeanDashboard() {
         },
         {
             title: "Programs",
-            value: assignedProgramsCount,
-            description: "Total programs",
+            value: totalProgramsCount,
+            description: "Total number of all programs",
             icon: <ClipboardList className="size-5 text-violet-500" />,
             iconTheme: "bg-violet-100 text-violet-600 dark:bg-violet-900 dark:text-violet-300",
         },
@@ -210,6 +253,13 @@ export default function DeanDashboard() {
             description: "Total panelists",
             icon: <Users className="size-5 text-violet-500" />,
             iconTheme: "bg-violet-100 text-violet-600 dark:bg-violet-900 dark:text-violet-300",
+        },
+        {
+            title: "Coordinators",
+            value: coordinators.length,
+            description: "Total coordinators",
+            icon: <Users className="size-5 text-blue-500" />,
+            iconTheme: "bg-blue-100 text-blue-600 dark:bg-blue-900 dark:text-blue-300",
         },
     ];
 
@@ -254,17 +304,17 @@ export default function DeanDashboard() {
                     </div>
 
                     {/* Tabs - Mobile Responsive */}
-                    <div className="w-full max-w-screen-xl mx-auto px-4 md:px-7">
-                        <Tabs defaultValue="overview" className="w-full">
-                            <TabsList className="mb-2 w-full sm:w-auto">
-                                <TabsTrigger value="overview" className="flex-1 sm:flex-none">Overview</TabsTrigger>
-                                <TabsTrigger value="analytics" className="flex-1 sm:flex-none">Analytics</TabsTrigger>
+                    <div className="w-full px-4 md:px-7">
+                        <Tabs value={tab} onValueChange={setTab} className="">
+                            <TabsList className="mb-2 ">
+                                <TabsTrigger value="overview" className="flex-1 ">Overview</TabsTrigger>
+                                <TabsTrigger value="analytics" className="flex-1 ">Analytics</TabsTrigger>
                             </TabsList>
 
                             {/* Overview Tab */}
                             <TabsContent value="overview" className="w-full">
                                 {/* Metric Cards - Mobile Optimized */}
-                                <div className="w-full max-w-screen-xl mx-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-4 px-0 mb-4 md:mb-6">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-4 px-0 mb-4 md:mb-6">
                                     {metrics.map((metric, idx) => (
                                         <Card
                                             key={idx}
@@ -291,19 +341,100 @@ export default function DeanDashboard() {
                                     ))}
                                 </div>
 
-                                {/* Widgets Body - Mobile Responsive */}
-                                <div className="flex flex-col gap-4 md:gap-6 bg-gray-100 dark:bg-muted rounded-lg md:rounded-xl mt-2 mb-2 px-3 md:px-4 py-4 md:py-8 w-full">
-                                    <div className="w-full mb-2 flex flex-col gap-4">
-                                        <WeeklyDefenseSchedulesWidget
-                                            weekDays={weekDays}
-                                            selectedDay={selectedDay}
-                                            setSelectedDay={setSelectedDay}
-                                            approvedDefenses={allRequests}
-                                            referenceDate={new Date()}
-                                            loading={loading}
-                                        />
-                                        <PendingDefenseRequestsWidget pendingRequests={pendingRequests} loading={loading} />
-                                    </div>
+                                {/* Widgets Body - Reduced Spacing */}
+                                <div className="flex flex-col gap-4 bg-gray-100 dark:bg-muted rounded-lg md:rounded-xl mt-2 mb-2 px-3 md:px-4 py-3 md:py-4 w-full">
+                                    <WeeklyDefenseSchedulesWidget
+                                        weekDays={weekDays}
+                                        selectedDay={selectedDay}
+                                        setSelectedDay={setSelectedDay}
+                                        approvedDefenses={allRequests}
+                                        referenceDate={new Date()}
+                                        loading={loading}
+                                    />
+                                    
+                                    {/* Graduate School Staff Widget - Full Width */}
+                                    <Card className="rounded-lg md:rounded-xl border border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-sm w-full">
+                                        <div className="px-4 pt-3 pb-2">
+                                            <h3 className="text-base font-semibold text-gray-900 dark:text-white">
+                                                Graduate School Staff
+                                            </h3>
+                                            <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
+                                                Contact coordinators and administrative assistants
+                                            </p>
+                                        </div>
+
+                                        <Tabs defaultValue="coordinators" className="w-full">
+                                            <div className="flex items-center justify-between px-4 mb-3 gap-4">
+                                                <TabsList className="w-fit">
+                                                    <TabsTrigger value="coordinators" className="text-sm">
+                                                        Coordinators
+                                                        <span className="ml-1.5 text-sm text-gray-500 dark:text-gray-400">
+                                                            ({coordinators.length})
+                                                        </span>
+                                                    </TabsTrigger>
+                                                    <TabsTrigger value="assistants" className="text-sm">
+                                                        Assistants
+                                                        <span className="ml-1.5 text-sm text-gray-500 dark:text-gray-400">
+                                                            ({assistants.length})
+                                                        </span>
+                                                    </TabsTrigger>
+                                                </TabsList>
+
+                                                <div className="flex items-center gap-2">
+                                                    {allPrograms.length > 0 && (
+                                                        <Select 
+                                                            value={selectedProgram} 
+                                                            onValueChange={setSelectedProgram}
+                                                        >
+                                                            <SelectTrigger className="w-[240px] h-8 text-sm">
+                                                                <SelectValue placeholder="All Programs" />
+                                                            </SelectTrigger>
+                                                            <SelectContent>
+                                                                <SelectItem value="all">All Programs</SelectItem>
+                                                                {allPrograms.map((program) => (
+                                                                    <SelectItem key={program} value={program}>
+                                                                        {getProgramAbbreviation(program)}
+                                                                    </SelectItem>
+                                                                ))}
+                                                            </SelectContent>
+                                                        </Select>
+                                                    )}
+                                                    
+                                                    <div className="relative w-72">
+                                                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                                                        <Input
+                                                            placeholder="Search by name or email..."
+                                                            value={staffSearchQuery}
+                                                            onChange={(e) => setStaffSearchQuery(e.target.value)}
+                                                            className="pl-9 h-8 text-sm"
+                                                            startIcon={Search}
+                                                        />
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <TabsContent value="coordinators" className="mt-0">
+                                                <StaffDataTable 
+                                                    data={coordinators} 
+                                                    type="coordinators"
+                                                    searchQuery={staffSearchQuery}
+                                                    onSearchChange={setStaffSearchQuery}
+                                                    selectedProgram={selectedProgram}
+                                                    onProgramChange={setSelectedProgram}
+                                                    allPrograms={allPrograms}
+                                                />
+                                            </TabsContent>
+
+                                            <TabsContent value="assistants" className="mt-0">
+                                                <StaffDataTable 
+                                                    data={assistants} 
+                                                    type="assistants"
+                                                    searchQuery={staffSearchQuery}
+                                                    onSearchChange={setStaffSearchQuery}
+                                                />
+                                            </TabsContent>
+                                        </Tabs>
+                                    </Card>
                                 </div>
                             </TabsContent>
 
