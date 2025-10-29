@@ -78,7 +78,7 @@ export default function Index() {
       <Head title="Comprehensive Exam • Payment" />
 
       <div className="flex h-full flex-1 flex-col gap-5 pt-5 px-7 overflow-auto">
-        <div className="w-full px-2 bg-white border border-zinc-200 rounded-lg overflow-hidden">
+        <div className="w-full px-2 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-lg overflow-hidden">
           {/* Header row (mirrors comprehensive exam header) */}
           <div className="flex flex-row items-center justify-between w-full p-3 border-b">
             <div className="flex items-center gap-2">
