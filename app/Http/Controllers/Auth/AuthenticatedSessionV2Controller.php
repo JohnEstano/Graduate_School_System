@@ -16,7 +16,6 @@ class AuthenticatedSessionV2Controller extends Controller
     {
         abort_unless($this->enabled(), 404);
     return Inertia::render('auth/LoginV2', [
-            'canResetPassword' => Route::has('password.request'),
             'status' => $request->session()->get('status'),
             'debugLoginV2' => true,
         ]);

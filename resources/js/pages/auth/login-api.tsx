@@ -50,6 +50,22 @@ export default function LoginAPI(props: LoginProps) {
 
             <form className="flex flex-col gap-6" onSubmit={submit}>
                 <div className="grid gap-6">
+                    {/* Login method info */}
+                    <div className="grid gap-2">
+                        <div className="flex items-center justify-between">
+                            <span className="text-sm font-medium">Login Method: <span className="text-primary font-semibold">API</span></span>
+                            <Link 
+                                href={route('login.local')} 
+                                className="text-sm text-muted-foreground hover:text-primary transition-colors underline"
+                            >
+                                Switch to Local
+                            </Link>
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                            Using UIC API authentication. If API is down, switch to Local login.
+                        </div>
+                    </div>
+
                     <div className="grid gap-2">
                         <Label htmlFor="identifier">Email or Student Number</Label>
                         <Input

@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 use Inertia\Inertia;
 use Inertia\Response;
 use App\Models\User;
@@ -26,7 +27,6 @@ class AuthenticatedSessionController extends Controller
         $request->session()->regenerateToken();
         
         return Inertia::render('auth/login', [
-            'canResetPassword' => Route::has('password.request'),
             'status' => $request->session()->get('status'),
         ]);
     }
@@ -138,6 +138,149 @@ class AuthenticatedSessionController extends Controller
                 }
             }
         }
+
+        return redirect()->intended(route('dashboard'));
+    }
+
+    /**
+     * Show the local login page.
+     */
+    public function createLocal(Request $request): Response
+    {
+        // Regenerate CSRF token to ensure fresh token on login page
+        $request->session()->regenerateToken();
+        
+        return Inertia::render('auth/login-local', [
+            'status' => $request->session()->get('status'),
+        ]);
+    }
+
+    /**
+     * Handle local authentication request (no API, direct database check).
+     */
+    public function storeLocal(Request $request): RedirectResponse
+    {
+        // Validate input
+        $request->validate([
+            'identifier' => 'required|string',
+            'password' => 'required|string',
+            'remember' => 'boolean',
+        ]);
+
+        $identifier = $request->input('identifier');
+        $password = $request->input('password');
+        $remember = $request->boolean('remember');
+
+        // Find user by email or student_number
+        $user = User::where('email', $identifier)
+            ->orWhere('student_number', $identifier)
+            ->first();
+
+        // Check if user exists and password matches
+        if (!$user || !Hash::check($password, $user->password)) {
+            return back()->withErrors([
+                'identifier' => 'The provided credentials do not match our records.',
+            ])->onlyInput('identifier');
+        }
+
+        // Log the user in
+        Auth::login($user, $remember);
+        $request->session()->regenerate();
+
+        // Update adviser status if matching adviser exists
+        if ($user) {
+            $adviser = \App\Models\Adviser::where('email', $user->email)->first();
+            if ($adviser) {
+                $adviser->status = 'active';
+                $adviser->user_id = $user->id;
+                $adviser->save();
+            }
+            
+            // Handle pending student assignments (same logic as API login)
+            $pendingAssignments = \App\Models\PendingStudentAssignment::where(function($query) use ($user) {
+                $query->where('student_email', $user->email);
+                
+                if ($user->student_number) {
+                    $query->orWhere('student_email', 'LIKE', '%' . $user->student_number . '%@uic.edu.ph');
+                }
+                
+                if ($user->email) {
+                    if (preg_match('/(\d{10,})/', $user->email, $matches)) {
+                        $studentId = $matches[1];
+                        $query->orWhere('student_email', 'LIKE', '%' . $studentId . '%@uic.edu.ph');
+                    }
+                }
+            })->get();
+            
+            if ($pendingAssignments->isNotEmpty()) {
+                foreach ($pendingAssignments as $pending) {
+                    try {
+                        $adviserForAssignment = \App\Models\Adviser::find($pending->adviser_id);
+                        
+                        if ($adviserForAssignment && $adviserForAssignment->user_id) {
+                            $exists = DB::table('adviser_student')
+                                ->where('adviser_id', $adviserForAssignment->user_id)
+                                ->where('student_id', $user->id)
+                                ->exists();
+                            
+                            if (!$exists) {
+                                DB::table('adviser_student')->insert([
+                                    'adviser_id' => $adviserForAssignment->user_id,
+                                    'student_id' => $user->id,
+                                    'status' => 'pending',
+                                    'requested_by' => $pending->coordinator_id,
+                                    'created_at' => now(),
+                                    'updated_at' => now(),
+                                ]);
+                                
+                                $coordinator = \App\Models\User::find($pending->coordinator_id);
+                                $adviserUser = \App\Models\User::find($adviserForAssignment->user_id);
+                                
+                                if ($adviserUser && $coordinator) {
+                                    \App\Models\Notification::create([
+                                        'user_id' => $adviserUser->id,
+                                        'type' => 'student_assigned',
+                                        'title' => 'New Student Assigned',
+                                        'message' => "Coordinator {$coordinator->first_name} {$coordinator->last_name} has assigned {$user->first_name} {$user->last_name} to you. Please review and accept/reject.",
+                                        'action_url' => '/adviser/pending-students',
+                                    ]);
+                                }
+                                
+                                \App\Models\Notification::create([
+                                    'user_id' => $user->id,
+                                    'type' => 'assigned_to_adviser',
+                                    'title' => 'Assigned to Adviser',
+                                    'message' => "You have been assigned to an adviser. Awaiting adviser's acceptance.",
+                                    'action_url' => '/dashboard',
+                                ]);
+                                
+                                Log::info('Pre-registered student assignment activated (local login)', [
+                                    'student_id' => $user->id,
+                                    'student_email' => $user->email,
+                                    'adviser_id' => $adviserForAssignment->user_id,
+                                    'pending_assignment_id' => $pending->id
+                                ]);
+                            }
+                        }
+                        
+                        $pending->delete();
+                        
+                    } catch (\Exception $e) {
+                        Log::error('Failed to process pending student assignment (local login)', [
+                            'student_email' => $user->email,
+                            'pending_id' => $pending->id,
+                            'error' => $e->getMessage()
+                        ]);
+                    }
+                }
+            }
+        }
+
+        Log::info('User logged in successfully (local)', [
+            'user_id' => $user->id,
+            'email' => $user->email,
+            'login_method' => 'local'
+        ]);
 
         return redirect()->intended(route('dashboard'));
     }

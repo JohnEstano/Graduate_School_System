@@ -111,7 +111,7 @@ axios.interceptors.response.use(
                 console.error('Failed to refresh CSRF token:', refreshError);
                 
                 // Only reload if not on login/register pages to avoid loops
-                const isAuthPage = ['/login', '/register', '/forgot-password', '/reset-password'].some(
+                const isAuthPage = ['/login', '/register'].some(
                     path => window.location.pathname.startsWith(path)
                 );
                 

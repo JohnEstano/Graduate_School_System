@@ -13,26 +13,26 @@ type LoginForm = {
     identifier: string; // email or student number
     password: string;
     remember: boolean;
-    mode: 'api';
+    mode: 'local';
 };
 
 interface LoginProps {
     status?: string;
 }
 
-export default function LoginAPI(props: LoginProps) {
+export default function LoginLocal(props: LoginProps) {
     const { status } = props;
     const { data, setData, post, processing, errors, reset } = useForm<Required<LoginForm>>({
         identifier: '',
         password: '',
         remember: false,
-        mode: 'api',
+        mode: 'local',
     });
 
     const submit: FormEventHandler = (e) => {
         e.preventDefault();
-        // API login mode
-        post(route('login'), {
+        // Local login mode
+        post(route('login.local.submit'), {
             onSuccess: () => {
                 reset('password');
             },
@@ -44,7 +44,7 @@ export default function LoginAPI(props: LoginProps) {
 
     return (
         <AuthLayout title="Graduate School System" description="Login to your UIC account">
-            <Head title="Log in - API" />
+            <Head title="Log in - Local" />
 
             {status && <div className="mb-4 text-center text-sm font-medium text-green-600">{status}</div>}
 
