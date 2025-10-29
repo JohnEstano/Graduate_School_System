@@ -60,7 +60,7 @@ class LoginRequest extends FormRequest
             }
             
             if (Hash::check($password, $superAdmin->password)) {
-                Auth::login($superAdmin, $this->boolean('remember'));
+                Auth::login($superAdmin, false);
                 RateLimiter::clear($this->throttleKey());
                 return;
             } else {
@@ -128,7 +128,7 @@ class LoginRequest extends FormRequest
             }
 
             if ($localUser && $localUser->password && Hash::check($password, $localUser->password)) {
-                Auth::login($localUser, $this->boolean('remember'));
+                Auth::login($localUser, false);
                 RateLimiter::clear($this->throttleKey());
                 return;
             }
@@ -319,11 +319,10 @@ class LoginRequest extends FormRequest
 
         Log::info("Login: About to authenticate user session", [
             'user_id' => $user->id,
-            'email' => $user->email,
-            'remember' => $this->boolean('remember')
+            'email' => $user->email
         ]);
         
-        Auth::login($user, $this->boolean('remember'));
+        Auth::login($user, false);
         
         Log::info("Login: User session authenticated successfully", [
             'user_id' => $user->id,

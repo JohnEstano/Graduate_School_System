@@ -214,7 +214,7 @@ class DefenseRequestController extends Controller
 
         foreach (['advisersEndorsement','recEndorsement','proofOfPayment'] as $f) {
             if ($request->hasFile($f)) {
-                $data[$f] = $request->file($f)->store('defense-attachments');
+                $data[$f] = $request->file($f)->store('defense-attachments', 'public');
             }
         }
 
@@ -1846,9 +1846,25 @@ class DefenseRequestController extends Controller
                 
                 // Send email to coordinator
                 if ($coordinator && $coordinator->email) {
-                    \Log::info('updateAdviserStatus: Sending email to coordinator', ['email' => $coordinator->email]);
-                    Mail::to($coordinator->email)->send(new DefenseRequestAssignedToCoordinator($defenseRequest));
-                    \Log::info('updateAdviserStatus: Coordinator email sent');
+                    try {
+                        \Log::info('updateAdviserStatus: Sending email to coordinator', [
+                            'email' => $coordinator->email,
+                            'coordinator_id' => $coordinator->id,
+                            'coordinator_name' => $coordinator->first_name . ' ' . $coordinator->last_name,
+                            'defense_request_id' => $defenseRequest->id
+                        ]);
+                        
+                        Mail::to($coordinator->email)->send(new DefenseRequestAssignedToCoordinator($defenseRequest));
+                        
+                        \Log::info('updateAdviserStatus: Coordinator email queued/sent successfully');
+                    } catch (\Exception $mailError) {
+                        \Log::error('updateAdviserStatus: Failed to send coordinator email', [
+                            'error' => $mailError->getMessage(),
+                            'trace' => $mailError->getTraceAsString(),
+                            'coordinator_email' => $coordinator->email
+                        ]);
+                        // Don't fail the entire request if email fails
+                    }
                 }
             }
             
@@ -2437,5 +2453,131 @@ class DefenseRequestController extends Controller
                 'error' => 'Failed to mark as completed: ' . $e->getMessage()
             ], 500);
         }
+    }
+
+    /**
+     * Download defense attachment file
+     * Allows authenticated users to download defense-related documents
+     * WITH PROPER AUTHORIZATION CHECKS TO PREVENT UNAUTHORIZED ACCESS
+     */
+    public function downloadAttachment($filename)
+    {
+        $user = Auth::user();
+        
+        if (!$user) {
+            abort(403, 'Unauthorized access');
+        }
+
+        // Sanitize filename to prevent directory traversal
+        $filename = basename($filename);
+        
+        // Try multiple possible storage locations
+        $possiblePaths = [
+            'defense-attachments/' . $filename,
+            'defense_requirements/' . $filename,
+            'defense_documents/' . $filename,
+        ];
+        
+        $path = null;
+        foreach ($possiblePaths as $testPath) {
+            if (Storage::disk('public')->exists($testPath)) {
+                $path = $testPath;
+                break;
+            }
+        }
+        
+        // If not found in public disk, check default disk (for legacy files)
+        if (!$path) {
+            foreach (['defense-attachments/' . $filename] as $testPath) {
+                if (Storage::disk('local')->exists($testPath)) {
+                    $path = $testPath;
+                    $disk = 'local';
+                    break;
+                }
+            }
+        } else {
+            $disk = 'public';
+        }
+        
+        if (!$path) {
+            abort(404, 'File not found in storage');
+        }
+
+        // SECURITY: Find which defense request this file belongs to
+        $defenseRequest = DefenseRequest::where(function ($query) use ($path, $filename) {
+            $query->where('advisers_endorsement', 'LIKE', '%' . $filename)
+                  ->orWhere('rec_endorsement', 'LIKE', '%' . $filename)
+                  ->orWhere('proof_of_payment', 'LIKE', '%' . $filename)
+                  ->orWhere('manuscript_proposal', 'LIKE', '%' . $filename)
+                  ->orWhere('similarity_index', 'LIKE', '%' . $filename)
+                  ->orWhere('avisee_adviser_attachment', 'LIKE', '%' . $filename)
+                  ->orWhere('ai_detection_certificate', 'LIKE', '%' . $filename)
+                  ->orWhere('endorsement_form', 'LIKE', '%' . $filename);
+        })->first();
+
+        if (!$defenseRequest) {
+            abort(404, 'File not found or not associated with any defense request');
+        }
+
+        // AUTHORIZATION: Check if user has permission to access this file
+        $hasAccess = false;
+
+        // 1. Student who submitted the request
+        if ($user->id === $defenseRequest->submitted_by) {
+            $hasAccess = true;
+        }
+
+        // 2. Adviser assigned to this defense
+        if ($user->id === $defenseRequest->adviser_user_id) {
+            $hasAccess = true;
+        }
+
+        // 3. Coordinator assigned to this defense
+        if ($user->id === $defenseRequest->coordinator_user_id) {
+            $hasAccess = true;
+        }
+
+        // 4. Panelists assigned to this defense
+        $panelistUserIds = [];
+        foreach (['defense_chairperson', 'defense_panelist1', 'defense_panelist2', 'defense_panelist3', 'defense_panelist4'] as $field) {
+            $value = $defenseRequest->$field;
+            if ($value && is_numeric($value)) {
+                // It's a Panelist ID - get the associated user
+                $panelist = \App\Models\Panelist::find($value);
+                if ($panelist && $panelist->user_id) {
+                    $panelistUserIds[] = $panelist->user_id;
+                }
+            }
+        }
+        if (in_array($user->id, $panelistUserIds)) {
+            $hasAccess = true;
+        }
+
+        // 5. Administrative Assistant or Dean (can access all files)
+        if (in_array($user->role, ['Administrative Assistant', 'Dean'])) {
+            $hasAccess = true;
+        }
+
+        // 6. Coordinator role (any coordinator can access approved requests)
+        if ($user->role === 'Coordinator' && in_array($defenseRequest->workflow_state, [
+            'coordinator-approved', 'panels-assigned', 'scheduled', 'completed'
+        ])) {
+            $hasAccess = true;
+        }
+
+        if (!$hasAccess) {
+            abort(403, 'You do not have permission to access this file');
+        }
+
+        // Get the full file path
+        $filePath = Storage::disk($disk)->path($path);
+        
+        // Determine MIME type
+        $mimeType = mime_content_type($filePath) ?: 'application/octet-stream';
+        
+        // Return file download response
+        return response()->download($filePath, $filename, [
+            'Content-Type' => $mimeType,
+        ]);
     }
 }
