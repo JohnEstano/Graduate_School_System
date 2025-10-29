@@ -6,6 +6,9 @@
     <title>Welcome to Graduate School System</title>
 </head>
 <body>
+    {{-- Testing Disclaimer --}}
+    @include('emails.partials.testing-disclaimer')
+
     <h1>Welcome!</h1>
     <p>
         You've successfully registered your account to the University of the Immaculate Conception Graduate School System.<br>

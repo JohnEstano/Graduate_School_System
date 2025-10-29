@@ -154,6 +154,9 @@
             <span class="header-title">Graduate School System</span>
         </div>
 
+        {{-- Testing Disclaimer --}}
+        @include('emails.partials.testing-disclaimer')
+
         <h1>New Defense Request Submitted!</h1>
 
         <div class="content">

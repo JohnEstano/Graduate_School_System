@@ -165,6 +165,9 @@
             <span class="header-title">Graduate School System</span>
         </div>
 
+        {{-- Testing Disclaimer --}}
+        @include('emails.partials.testing-disclaimer')
+
         @if($changes)
             <h1>Defense Schedule Updated!</h1>
         @else

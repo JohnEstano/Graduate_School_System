@@ -127,6 +127,8 @@
             <img src="{{ asset('gss-uic-logo-v2.png') }}" alt="UIC Graduate School Logo" class="logo">
             <span class="header-title">Graduate School System</span>
         </div>
+        {{-- Testing Disclaimer --}}
+        @include('emails.partials.testing-disclaimer')
 
         <h1>Defense Request Requires Revision!</h1>
 
