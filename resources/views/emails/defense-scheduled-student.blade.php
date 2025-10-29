@@ -287,16 +287,32 @@
                         </tr>
                         <tr>
                             <td style="padding: 20px 30px; border-top: 1px solid #e5e7eb;">
-        <img src="{{ asset('gss-uic-logo-v2.png') }}" alt="UIC Graduate School Logo" class="logo">
-        <p>
-            <strong>University of the Immaculate Conception</strong><br>
-            Graduate School Office<br>
-            Father Selga St., Davao City, Philippines 8000
-        </p>
-        <p style="margin-top: 15px;">
-            This is an automated message from the Graduate School System. Please do not
-            reply to this email.
-        </p>
+                                <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                                    <tr>
+                                        <td align="center">
+                                            <img src="{{ asset('gss-uic-logo-v2.png') }}" alt="UIC Graduate School Logo" style="max-width: 60px; margin-bottom: 10px;">
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td align="center" style="font-size: 14px; color: #333; line-height: 1.6;">
+                                            <strong>University of the Immaculate Conception</strong><br>
+                                            Graduate School Office<br>
+                                            Father Selga St., Davao City, Philippines 8000
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td align="center" style="font-size: 12px; color: #333; padding-top: 15px;">
+                                            This is an automated message from the Graduate School System.<br>
+                                            Please do not reply to this email.
+                                        </td>
+                                    </tr>
+                                </table>
+                            </td>
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+        </table>
     </div>
 </body>
 </html>
