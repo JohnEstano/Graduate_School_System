@@ -69,8 +69,11 @@ class CoordinatorAdviserController extends Controller
             if ($row->user_id) {
                 $user = $matchedUser ?? User::find($row->user_id);
                 if ($user) {
-                    // Include all students for this adviser (regardless of who assigned them)
+                    // Only include students assigned by this coordinator
                     $students = $user->advisedStudents
+                        ->filter(function ($student) use ($coordinator) {
+                            return $student->pivot && $student->pivot->requested_by == $coordinator->id;
+                        })
                         ->map(function ($student) use ($coordinator) {
                             $coordinatorName = null;
                             if ($student->pivot && $student->pivot->requested_by) {
@@ -97,9 +100,10 @@ class CoordinatorAdviserController extends Controller
                         ->values()
                         ->all();
 
-                    // Count all accepted students for this adviser
+                    // Count only accepted students assigned by this coordinator
                     $assigned_students_count = $user->advisedStudents()
                         ->wherePivot('status', 'accepted')
+                        ->wherePivot('requested_by', $coordinator->id)
                         ->count();
                 }
             }
@@ -467,9 +471,10 @@ class CoordinatorAdviserController extends Controller
         $adviserUser = User::find($adviser->user_id);
         if (!$adviserUser) return response()->json([]);
 
-        // Get all accepted students for this adviser (regardless of who assigned them)
+        // Get accepted students assigned by this coordinator only
         $students = $adviserUser->advisedStudents()
             ->wherePivot('status', 'accepted')
+            ->wherePivot('requested_by', $coordinator->id)
             ->get()
             ->map(function ($s) use ($coordinator) {
                 $coordinatorName = null;
@@ -516,9 +521,10 @@ class CoordinatorAdviserController extends Controller
         if ($adviser->user_id) {
             $adviserUser = User::find($adviser->user_id);
             if ($adviserUser) {
-                // Get all pending students for this adviser (regardless of who assigned them)
+                // Get pending students assigned by this coordinator only
                 $registeredPending = $adviserUser->advisedStudents()
                     ->wherePivot('status', 'pending')
+                    ->wherePivot('requested_by', $coordinator->id)
                     ->get()
                     ->map(function ($s) use ($coordinator) {
                         $coordinatorName = null;
@@ -553,8 +559,9 @@ class CoordinatorAdviserController extends Controller
         }
 
         // 2. Get pre-registered students (invited but not logged in yet)
-        // Show all pending assignments for this adviser (regardless of which coordinator created them)
-        $preRegisteredQuery = \App\Models\PendingStudentAssignment::where('adviser_id', $adviser->id);
+        // Show only pending assignments created by this coordinator
+        $preRegisteredQuery = \App\Models\PendingStudentAssignment::where('adviser_id', $adviser->id)
+            ->where('coordinator_id', $coordinator->id);
         
         Log::info('Querying PendingStudentAssignment', [
             'adviser_id' => $adviser->id,
@@ -563,17 +570,12 @@ class CoordinatorAdviserController extends Controller
         ]);
 
         $preRegistered = $preRegisteredQuery->get()
-            ->map(function ($pending) {
-                // Get the actual coordinator who created this assignment
-                $assignedByCoordinator = User::find($pending->coordinator_id);
-                $coordinatorName = null;
-                if ($assignedByCoordinator) {
-                    $coordinatorName = trim(
-                        $assignedByCoordinator->first_name . ' ' .
-                        ($assignedByCoordinator->middle_name ? strtoupper($assignedByCoordinator->middle_name[0]) . '. ' : '') .
-                        $assignedByCoordinator->last_name
-                    );
-                }
+            ->map(function ($pending) use ($coordinator) {
+                $coordinatorName = trim(
+                    $coordinator->first_name . ' ' .
+                    ($coordinator->middle_name ? strtoupper($coordinator->middle_name[0]) . '. ' : '') .
+                    $coordinator->last_name
+                );
                 
                 // Extract name from email
                 $emailParts = explode('@', $pending->student_email);

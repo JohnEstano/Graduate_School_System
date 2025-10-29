@@ -844,9 +844,6 @@ export default function ShowAdvisers() {
                         Chat
                       </button>
                     </div>
-                    {viewAdviser.employee_id && (
-                      <div className="text-sm text-gray-600 dark:text-gray-300">Employee ID: {viewAdviser.employee_id}</div>
-                    )}
                   </div>
                 </div>
               )}
