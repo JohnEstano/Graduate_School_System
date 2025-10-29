@@ -92,15 +92,7 @@ const registrarNavItems: MainNavItem[] = [
 const assistantNavItems: MainNavItem[] = [
     { title: 'Dashboard', href: '/dashboard', icon: LayoutGrid },
     { title: 'Defense Requests', href: '/assistant/all-defense-list', icon: Send }, 
-    {
-        title: 'Applications',
-        href: '/defense',
-        icon: FileText,
-        subItems: [
-            { title: 'Comprehensive Exams', href: '/coordinator/compre-exam' },
-            { title: 'Payment Receipt', href: '/coordinator/compre-payment' },
-        ],
-    },
+    { title: 'Comprehensive Exams', href: '/dean/compre-exam', icon: ScrollText },
     { title: 'Honorarium', href: '/honorarium', icon: DollarSign },
     { title: 'Student Records', href: '/student-records', icon: Users },
     { title: 'Payment Rates', href: '/dean/payment-rates', icon: CircleDollarSign },

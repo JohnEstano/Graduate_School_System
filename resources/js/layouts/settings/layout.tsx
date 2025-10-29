@@ -13,13 +13,13 @@ type NavItem = { title:string; href:string; roles?:string[] };
 const baseNav: NavItem[] = [
   { title:'Profile',    href:'/settings/profile' },
   { title:'General',    href:'/settings/general', roles:['Coordinator','Adviser','Faculty'] },
-  { title:'Password',   href:'/settings/password' },
+ // { title:'Password',   href:'/settings/password' },
   { title:'Appearance', href:'/settings/appearance' },
 ];
 
 const extraNav: NavItem[] = [
-  { title:'Document Templates', href:'/settings/documents', roles:['Dean','Coordinator'] },
-  { title:'E‑Signatures',       href:'/settings/signatures', roles:['Dean','Coordinator','Adviser','Faculty','Student'] },
+  //{ title:'Document Templates', href:'/settings/documents', roles:['Dean','Coordinator'] },
+  { title:'E‑Signatures',       href:'/settings/signatures', roles:['Dean','Coordinator','Adviser','Faculty'] },
 ];
 
 export default function SettingsLayout({ children }: PropsWithChildren) {

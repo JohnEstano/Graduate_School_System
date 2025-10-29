@@ -352,7 +352,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->name('assistant.aa-verification.update-status');
 
     //PAYMENT RATESS ETC.
-    Route::middleware('role:Dean')->group(function () {
+   
+
+
+    Route::middleware('role:Dean,Administrative Assistant')->group(function () {
         Route::post('/dean/payment-rates', [\App\Http\Controllers\PaymentRateController::class, 'update'])
             ->name('dean.payment-rates.update');
         Route::get('/dean/payment-rates', [\App\Http\Controllers\PaymentRateController::class, 'index'])
