@@ -346,7 +346,7 @@ export default function CoordinatorDashboard() {
 
                                 {/* Widgets Body - Mobile Responsive */}
                                 <div className="flex flex-col gap-4 md:gap-6 bg-gray-100 dark:bg-muted rounded-lg md:rounded-xl mt-2 mb-2 px-3 md:px-4 py-4 md:py-8 w-full">
-                                    <div className="w-full mb-2 flex flex-col lg:flex-row gap-4">
+                                    <div className="w-full mb-2 flex flex-col gap-4">
                                         <WeeklyDefenseSchedulesWidget
                                             weekDays={weekDays}
                                             selectedDay={selectedDay}

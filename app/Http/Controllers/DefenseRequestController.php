@@ -1471,8 +1471,18 @@ class DefenseRequestController extends Controller
                 'id','thesis_title','defense_type','status','workflow_state',
                 'program','school_id','first_name','last_name',
                 'scheduled_date','scheduled_time','scheduled_end_time',
-                'defense_mode','defense_venue'
+                'defense_mode','defense_venue',
+                'defense_adviser','defense_chairperson',
+                'defense_panelist1','defense_panelist2','defense_panelist3','defense_panelist4'
             ])->map(function($r){
+                // Build panel members array from individual fields
+                $panelMembers = array_filter([
+                    $r->defense_panelist1,
+                    $r->defense_panelist2,
+                    $r->defense_panelist3,
+                    $r->defense_panelist4,
+                ]);
+                
                 return [
                     'id'              => $r->id,
                     'thesis_title'    => $r->thesis_title,
@@ -1488,6 +1498,10 @@ class DefenseRequestController extends Controller
                     'end_time'        => $r->scheduled_end_time,
                     'defense_mode'    => $r->defense_mode,
                     'defense_venue'   => $r->defense_venue,
+                    // Panel information
+                    'adviser'         => $r->defense_adviser,
+                    'panel_chair'     => $r->defense_chairperson,
+                    'panel_members'   => $panelMembers,
                 ];
             })->values();
 

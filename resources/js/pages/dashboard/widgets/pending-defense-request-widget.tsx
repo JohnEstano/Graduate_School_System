@@ -12,7 +12,7 @@ const PendingDefenseRequestsWidget: React.FC<Props> = ({ pendingRequests, loadin
     const filteredPendingRequests = pendingRequests;
 
     return (
-        <div className="w-full md:w-[580px] border rounded-xl p-5 bg-white dark:bg-zinc-900 flex flex-col min-h-[340px]">
+        <div className="w-full border rounded-xl p-5 bg-white dark:bg-zinc-900 flex flex-col min-h-[340px]">
             {showSkeleton ? (
                 <div className="flex flex-col gap-3 h-full">
                     <div className="flex items-center justify-between mb-2">

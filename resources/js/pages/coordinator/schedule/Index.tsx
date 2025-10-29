@@ -13,12 +13,15 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 // Icons
-import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, X, GraduationCap, Trash2, Printer, CalendarDays, CalendarRange, Calendar, Eye, Edit } from "lucide-react";
+import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, X, GraduationCap, Trash2, Printer, CalendarDays, CalendarRange, Calendar, User, Users, Download, Upload, FileJson, FileSpreadsheet } from "lucide-react";
 import { createPortal } from 'react-dom';
 import { useDroppable, useDraggable, DndContext, closestCenter, type DragStartEvent, type DragEndEvent, type DragOverEvent, DragOverlay } from "@dnd-kit/core";
 
@@ -44,6 +47,10 @@ type DefenseEvent = {
   defense_venue?: string;
   program?: string;
   student_name?: string;
+  adviser?: string;
+  panel_chair?: string;
+  panel_members?: string[];
+  committee?: Array<{ name: string; role: string }>;
 };
 
 type CalendarEntry = {
@@ -70,9 +77,9 @@ const MINUTES_IN_DAY_RANGE = (DAY_END_HOUR - DAY_START_HOUR) * 60;
 const SLOT_HEIGHT = 44;
 
 const EVENT_BASE =
-  "bg-zinc-100 dark:bg-zinc-900/90 hover:bg-zinc-200 dark:hover:bg-zinc-800 text-zinc-900 dark:text-zinc-100 ring-1 ring-zinc-300 dark:ring-zinc-700/40 shadow-sm";
+  "bg-rose-50 dark:bg-rose-950/50 hover:bg-rose-100/80 dark:hover:bg-rose-950/70 text-foreground ring-1 ring-rose-200 dark:ring-rose-800/50 shadow-sm";
 const EVENT_BASE_SOLID =
-  "bg-zinc-200 dark:bg-zinc-900 hover:bg-zinc-300 dark:hover:bg-zinc-800 text-zinc-900 dark:text-zinc-100 ring-1 ring-zinc-400 dark:ring-zinc-700/40 shadow-sm ";
+  "bg-rose-100 dark:bg-rose-950/70 hover:bg-rose-100/90 dark:hover:bg-rose-950/80 text-foreground ring-1 ring-rose-300 dark:ring-rose-700/60 shadow-sm ";
 
 function buildTimeSlots() {
   const slots: { label: string; minutes: number; isHour: boolean }[] = [];
@@ -190,6 +197,67 @@ function getCsrf() {
   return meta?.content || '';
 }
 
+// Helper functions for avatars
+function getInitials(name: string): string {
+  if (!name) return '?';
+  const parts = name.trim().split(/\s+/);
+  if (parts.length === 1) return parts[0].charAt(0).toUpperCase();
+  return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
+}
+
+function stringToColor(str: string): string {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    hash = str.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  const hue = hash % 360;
+  return `hsl(${hue}, 65%, 55%)`;
+}
+
+// Avatar components for panelists/students view
+const PersonAvatar = ({ name, role }: { name: string; role?: string }) => {
+  const initials = getInitials(name);
+  const bgColor = stringToColor(name);
+  
+  return (
+    <TooltipProvider>
+      <Tooltip delayDuration={200}>
+        <TooltipTrigger asChild>
+          <Avatar className="h-8 w-8 border-2 border-white dark:border-zinc-800 cursor-pointer hover:scale-110 transition-transform">
+            <AvatarFallback 
+              style={{ backgroundColor: bgColor, color: 'white' }}
+              className="text-[10px] font-semibold"
+            >
+              {initials}
+            </AvatarFallback>
+          </Avatar>
+        </TooltipTrigger>
+        <TooltipContent className="bg-zinc-800 text-white border-zinc-700">
+          <p className="font-medium">{name}</p>
+          {role && <p className="text-xs text-zinc-400">{role}</p>}
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  );
+};
+
+const AvatarGroup = ({ people }: { people: Array<{ name: string; role?: string }> }) => {
+  if (!people.length) return null;
+  
+  return (
+    <div className="flex -space-x-2">
+      {people.slice(0, 5).map((person, idx) => (
+        <PersonAvatar key={idx} name={person.name} role={person.role} />
+      ))}
+      {people.length > 5 && (
+        <div className="h-8 w-8 rounded-full bg-zinc-300 dark:bg-zinc-700 border-2 border-white dark:border-zinc-800 flex items-center justify-center text-[10px] font-semibold">
+          +{people.length - 5}
+        </div>
+      )}
+    </div>
+  );
+};
+
 // --- DRAG & DROP LOGIC ---
 type DragData = {
   event: CalendarEntry;
@@ -198,27 +266,79 @@ type DragData = {
 
 const DraggableEventCard = ({
   event,
-  editMode,
   onClick,
+  viewBy,
 }: {
   event: CalendarEntry;
-  editMode: boolean;
   onClick?: (e: React.MouseEvent) => void;
+  viewBy: 'events' | 'panelists' | 'students';
 }) => {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: event.id,
     data: { event, fromDate: event.date },
-    disabled: !editMode || event.defense,
+    disabled: true, // Always disabled since no editing
   });
+
+  // For panelists view - show committee members
+  if (viewBy === 'panelists' && event.defense) {
+    const committee: Array<{ name: string; role: string }> = [];
+    if (event.raw.adviser) committee.push({ name: event.raw.adviser, role: 'Adviser' });
+    if (event.raw.panel_chair) committee.push({ name: event.raw.panel_chair, role: 'Panel Chair' });
+    if (event.raw.panel_members) {
+      event.raw.panel_members.forEach(member => {
+        committee.push({ name: member, role: 'Panel Member' });
+      });
+    }
+    if (event.raw.committee) {
+      committee.push(...event.raw.committee);
+    }
+
+    if (committee.length === 0) return null;
+
+    return (
+      <div
+        ref={setNodeRef}
+        {...attributes}
+        {...listeners}
+        className={cn(
+          "px-1 py-1 rounded cursor-pointer",
+          isDragging && "opacity-50"
+        )}
+        onClick={onClick}
+      >
+        <AvatarGroup people={committee} />
+      </div>
+    );
+  }
+
+  // For students view - show student
+  if (viewBy === 'students' && event.defense && event.raw.student_name) {
+    return (
+      <div
+        ref={setNodeRef}
+        {...attributes}
+        {...listeners}
+        className={cn(
+          "px-1 py-1 rounded cursor-pointer",
+          isDragging && "opacity-50"
+        )}
+        onClick={onClick}
+      >
+        <AvatarGroup people={[{ name: event.raw.student_name, role: 'Student' }]} />
+      </div>
+    );
+  }
+
+  // Default events view - show event cards
   return (
     <div
       ref={setNodeRef}
       {...attributes}
       {...listeners}
       className={cn(
-        "px-1 py-0.5 rounded text-[10px] font-medium truncate flex items-center gap-1 cursor-grab active:cursor-grabbing",
+        "px-1 py-0.5 rounded text-[10px] font-medium truncate flex items-center gap-1 cursor-pointer",
         event.defense ? EVENT_BASE_SOLID : EVENT_BASE,
-        isDragging && "opacity-50" // Visual feedback during drag
+        isDragging && "opacity-50"
       )}
       style={
         !event.defense
@@ -237,19 +357,19 @@ const DraggableEventCard = ({
 const DroppableCell = ({
   dateKey,
   children,
-  editMode,
   isDragOver,
   activeDrag,
+  viewBy,
 }: {
   dateKey: string;
   children: React.ReactNode;
-  editMode: boolean;
   isDragOver?: boolean;
   activeDrag?: DragData | null;
+  viewBy: 'events' | 'panelists' | 'students';
 }) => {
   const { setNodeRef, isOver } = useDroppable({
     id: dateKey,
-    disabled: !editMode,
+    disabled: true, // Always disabled since no editing
   });
 
   return (
@@ -259,7 +379,7 @@ const DroppableCell = ({
         "relative p-1 border-r border-b last:[&:nth-last-child(-n+7)]:border-b-0 cursor-pointer overflow-hidden focus:outline-none focus-visible:outline-none",
         "bg-white dark:bg-zinc-900",
         "border-zinc-200 dark:border-zinc-800",
-        isOver && "bg-blue-50 dark:bg-blue-900/20 ring-2 ring-blue-400 ring-inset" // Visual feedback for drop target
+        isOver && "bg-blue-50 dark:bg-blue-900/20 ring-2 ring-blue-400 ring-inset"
       )}
       style={{ minHeight: 120 }}
     >
@@ -269,7 +389,7 @@ const DroppableCell = ({
         <div className="absolute left-1 right-1 top-7 z-30 pointer-events-none" style={{ opacity: 0.6 }}>
           <DraggableEventCard
             event={activeDrag.event}
-            editMode={false}
+            viewBy={viewBy}
           />
         </div>
       )}
@@ -280,19 +400,17 @@ const DroppableCell = ({
 const DroppableDayColumn = ({
   dateKey,
   children,
-  editMode,
   isDragOver,
   activeDrag,
 }: {
   dateKey: string;
   children: React.ReactNode;
-  editMode: boolean;
   isDragOver?: boolean;
   activeDrag?: DragData | null;
 }) => {
   const { setNodeRef, isOver } = useDroppable({
     id: dateKey,
-    disabled: !editMode,
+    disabled: true, // Always disabled since no editing
   });
 
   return (
@@ -300,7 +418,7 @@ const DroppableDayColumn = ({
       ref={setNodeRef}
       className={cn(
         "relative h-full",
-        isOver && "bg-blue-50 dark:bg-blue-900/20 ring-2 ring-blue-400 ring-inset" // Visual feedback for drop target
+        isOver && "bg-blue-50 dark:bg-blue-900/20 ring-2 ring-blue-400 ring-inset"
       )}
     >
       {children}
@@ -330,17 +448,17 @@ const DroppableDayColumn = ({
 
 const DraggableWeekEvent = ({
   event,
-  editMode,
   onClick,
+  viewBy,
 }: {
   event: CalendarEntry;
-  editMode: boolean;
   onClick?: (e: React.MouseEvent) => void;
+  viewBy: 'events' | 'panelists' | 'students';
 }) => {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: event.id,
     data: { event, fromDate: event.date },
-    disabled: !editMode || event.defense,
+    disabled: true, // Always disabled since no editing
   });
 
   const l = event.__layout;
@@ -353,42 +471,93 @@ const DraggableWeekEvent = ({
   const duration = Math.max(5, (endMin - startMin));
   const heightPct = (duration / MINUTES_IN_DAY_RANGE) * 100;
 
+  // For panelists view - show committee members
+  if (viewBy === 'panelists' && event.defense) {
+    const committee: Array<{ name: string; role: string }> = [];
+    if (event.raw.adviser) committee.push({ name: event.raw.adviser, role: 'Adviser' });
+    if (event.raw.panel_chair) committee.push({ name: event.raw.panel_chair, role: 'Panel Chair' });
+    if (event.raw.panel_members) {
+      event.raw.panel_members.forEach(m => committee.push({ name: m, role: 'Panelist' }));
+    }
+    if (event.raw.committee) {
+      committee.push(...event.raw.committee);
+    }
+
+    if (committee.length === 0) return null;
+
+    return (
+      <div
+        ref={setNodeRef}
+        className="absolute rounded-md p-2 text-xs flex items-center justify-center cursor-pointer bg-rose-50 dark:bg-rose-950/50 hover:bg-rose-100/80 dark:hover:bg-rose-950/70 border border-rose-200 dark:border-rose-800/50"
+        style={{
+          top: `calc(${topPct}%)`,
+          height: `calc(${heightPct}%)`,
+          left: `calc(${(l?.leftPct ?? 0)}%)`,
+          width: `calc(${(l?.widthPct ?? 100)}%)`,
+        }}
+        onClick={onClick}
+        title={`${event.title} - ${committee.length} committee member(s)`}
+      >
+        <AvatarGroup people={committee} />
+      </div>
+    );
+  }
+
+  // For students view - show student
+  if (viewBy === 'students' && event.defense && event.raw.student_name) {
+    return (
+      <div
+        ref={setNodeRef}
+        className="absolute rounded-md p-2 text-xs flex items-center justify-center cursor-pointer bg-rose-50 dark:bg-rose-950/50 hover:bg-rose-100/80 dark:hover:bg-rose-950/70 border border-rose-200 dark:border-rose-800/50"
+        style={{
+          top: `calc(${topPct}%)`,
+          height: `calc(${heightPct}%)`,
+          left: `calc(${(l?.leftPct ?? 0)}%)`,
+          width: `calc(${(l?.widthPct ?? 100)}%)`,
+        }}
+        onClick={onClick}
+        title={`${event.title} - ${event.raw.student_name}`}
+      >
+        <PersonAvatar name={event.raw.student_name} role="Student" />
+      </div>
+    );
+  }
+
+  // Default events view
   return (
     <div
       ref={setNodeRef}
       {...attributes}
       {...listeners}
       className={cn(
-        "absolute rounded-md text-[11px] flex flex-col overflow-hidden cursor-grab active:cursor-grabbing",
+        "absolute rounded-md text-[11px] flex flex-col overflow-hidden cursor-pointer",
         event.defense ? EVENT_BASE : EVENT_BASE,
         "hover:ring-2 ring-primary/40",
         "bg-white dark:bg-zinc-800",
         "border border-zinc-200 dark:border-zinc-700",
-        isDragging && "opacity-50 z-50" // Visual feedback during drag
+        isDragging && "opacity-50 z-50"
       )}
       style={{
         top: `calc(${topPct}% )`,
         height: `calc(${heightPct}% )`,
         left: `calc(${(l?.leftPct ?? 0)}% )`,
         width: `calc(${(l?.widthPct ?? 100)}% )`,
-        backgroundColor: event.defense ? undefined : (event.color || '#34d399'),
-        color: event.defense ? undefined : getTextColor(event.color)
       }}
       title={event.title}
       onClick={onClick}
     >
       <div className="px-1 pt-1 flex items-start gap-1">
-        {event.defense && <GraduationCap className="h-3.5 w-3.5 shrink-0 text-emerald-900/80" />}
+        {event.defense && <GraduationCap className="h-3.5 w-3.5 shrink-0" />}
         <span className="font-semibold leading-tight truncate">
           {truncate(event.title, 56)}
         </span>
       </div>
-      <div className="px-1 pb-1 font-medium">
+      <div className="px-1 pb-1 font-medium opacity-80">
         {event.start && formatTime(event.start)}
         {event.end && ' – ' + formatTime(event.end)}
       </div>
       {event.raw.student_name && event.defense && (
-        <div className="px-1 pb-1 truncate text-emerald-950/90 text-[10px]">
+        <div className="px-1 pb-1 truncate opacity-70 text-[10px]">
           {truncate(event.raw.student_name, 40)}
         </div>
       )}
@@ -398,17 +567,17 @@ const DraggableWeekEvent = ({
 
 const DraggableDayEvent = ({
   event,
-  editMode,
   onClick,
+  viewBy,
 }: {
   event: CalendarEntry;
-  editMode: boolean;
   onClick?: (e: React.MouseEvent) => void;
+  viewBy: 'events' | 'panelists' | 'students';
 }) => {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: event.id,
     data: { event, fromDate: event.date },
-    disabled: !editMode || event.defense,
+    disabled: true, // Always disabled since no editing
   });
 
   const l = event.__layout;
@@ -421,26 +590,77 @@ const DraggableDayEvent = ({
   const duration = Math.max(5, (endMin - startMin));
   const heightPct = (duration / MINUTES_IN_DAY_RANGE) * 100;
 
+  // For panelists view - show committee members
+  if (viewBy === 'panelists' && event.defense) {
+    const committee: Array<{ name: string; role: string }> = [];
+    if (event.raw.adviser) committee.push({ name: event.raw.adviser, role: 'Adviser' });
+    if (event.raw.panel_chair) committee.push({ name: event.raw.panel_chair, role: 'Panel Chair' });
+    if (event.raw.panel_members) {
+      event.raw.panel_members.forEach(m => committee.push({ name: m, role: 'Panelist' }));
+    }
+    if (event.raw.committee) {
+      committee.push(...event.raw.committee);
+    }
+
+    if (committee.length === 0) return null;
+
+    return (
+      <div
+        ref={setNodeRef}
+        className="absolute rounded-md p-2 text-xs flex items-center justify-center cursor-pointer bg-rose-50 dark:bg-rose-950/50 hover:bg-rose-100/80 dark:hover:bg-rose-950/70 border border-rose-200 dark:border-rose-800/50"
+        style={{
+          top: `calc(${topPct}%)`,
+          height: `calc(${heightPct}%)`,
+          left: `calc(${(l?.leftPct ?? 0)}%)`,
+          width: `calc(${(l?.widthPct ?? 100)}%)`,
+        }}
+        onClick={onClick}
+        title={`${event.title} - ${committee.length} committee member(s)`}
+      >
+        <AvatarGroup people={committee} />
+      </div>
+    );
+  }
+
+  // For students view - show student
+  if (viewBy === 'students' && event.defense && event.raw.student_name) {
+    return (
+      <div
+        ref={setNodeRef}
+        className="absolute rounded-md p-2 text-xs flex items-center justify-center cursor-pointer bg-rose-50 dark:bg-rose-950/50 hover:bg-rose-100/80 dark:hover:bg-rose-950/70 border border-rose-200 dark:border-rose-800/50"
+        style={{
+          top: `calc(${topPct}%)`,
+          height: `calc(${heightPct}%)`,
+          left: `calc(${(l?.leftPct ?? 0)}%)`,
+          width: `calc(${(l?.widthPct ?? 100)}%)`,
+        }}
+        onClick={onClick}
+        title={`${event.title} - ${event.raw.student_name}`}
+      >
+        <PersonAvatar name={event.raw.student_name} role="Student" />
+      </div>
+    );
+  }
+
+  // Default events view
   return (
     <div
       ref={setNodeRef}
       {...attributes}
       {...listeners}
       className={cn(
-        "absolute rounded-md p-2 text-[11px] flex flex-col overflow-hidden cursor-grab active:cursor-grabbing",
+        "absolute rounded-md p-2 text-[11px] flex flex-col overflow-hidden cursor-pointer",
         event.defense ? EVENT_BASE_SOLID : EVENT_BASE,
         "hover:ring-2 ring-primary/40",
         "bg-white dark:bg-zinc-800",
         "border border-zinc-200 dark:border-zinc-700",
-        isDragging && "opacity-50 z-50" // Visual feedback during drag
+        isDragging && "opacity-50 z-50"
       )}
       style={{
         top: `calc(${topPct}% )`,
         height: `calc(${heightPct}% )`,
         left: `calc(${(l?.leftPct ?? 0)}% )`,
         width: `calc(${(l?.widthPct ?? 100)}% )`,
-        backgroundColor: event.defense ? undefined : (event.color || '#34d399'),
-        color: event.defense ? undefined : getTextColor(event.color)
       }}
       title={event.title}
       onClick={onClick}
@@ -451,18 +671,18 @@ const DraggableDayEvent = ({
           {truncate(event.title, 80)}
         </div>
       </div>
-      <div className="text-[11px] font-medium mt-0.5">
+      <div className="text-[11px] font-medium mt-0.5 opacity-80">
         {event.start && formatTime(event.start)}
         {event.end && ' – ' + formatTime(event.end)}
         {event.raw.student_name && event.defense && ' • ' + event.raw.student_name}
       </div>
       {event.defense && event.raw.student_name && (
-        <div className="text-[10px] truncate">
+        <div className="text-[10px] truncate opacity-70">
           {event.raw.student_name} {event.raw.program && <span className="opacity-70">({event.raw.program})</span>}
         </div>
       )}
       {event.defense && event.raw.defense_type && (
-        <div className="text-[10px] mt-0.5 uppercase tracking-wide">
+        <div className="text-[10px] mt-0.5 uppercase tracking-wide opacity-70">
           {event.raw.defense_type}
         </div>
       )}
@@ -478,6 +698,7 @@ export default function SchedulePage({ canManage, userRole }: { canManage: boole
   const [monthCursor, setMonthCursor] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<Date | null>(new Date());
   const [view, setView] = useState<'month' | 'week' | 'day'>('week');
+  const [viewBy, setViewBy] = useState<'events' | 'panelists' | 'students'>('events');
   const [loading, setLoading] = useState(false);
   const [showAdd, setShowAdd] = useState(false);
   const [adding, setAdding] = useState(false);
@@ -523,7 +744,9 @@ export default function SchedulePage({ canManage, userRole }: { canManage: boole
     setLoading(true);
     fetch('/defense-requests/calendar')
       .then(r => r.json())
-      .then((data: DefenseEvent[]) => setRawEvents(data || []))
+      .then((data: DefenseEvent[]) => {
+        setRawEvents(data || []);
+      })
       .finally(() => setLoading(false));
   }, []);
 
@@ -666,7 +889,6 @@ export default function SchedulePage({ canManage, userRole }: { canManage: boole
     return s.length > n ? s.slice(0, n) + '…' : s;
   }
 
-  const [editMode, setEditMode] = useState(false);
   const [activeDrag, setActiveDrag] = useState<DragData | null>(null);
   const [draggedOverDate, setDraggedOverDate] = useState<string | null>(null);
 
@@ -762,9 +984,9 @@ export default function SchedulePage({ canManage, userRole }: { canManage: boole
                   <DroppableCell
                     key={key}
                     dateKey={key}
-                    editMode={editMode}
                     isDragOver={draggedOverDate === key}
                     activeDrag={activeDrag}
+                    viewBy={viewBy}
                   >
                     <div className="flex items-start justify-between mb-0.5">
                       <span
@@ -788,13 +1010,11 @@ export default function SchedulePage({ canManage, userRole }: { canManage: boole
                         <DraggableEventCard
                           key={ev.id}
                           event={ev}
-                          editMode={editMode}
+                          viewBy={viewBy}
                           onClick={e => {
                             e.stopPropagation();
-                            if (!editMode) {
-                              setSelectedDate(day);
-                              setView('day');
-                            }
+                            setSelectedDate(day);
+                            setView('day');
                           }}
                         />
                       ))}
@@ -808,7 +1028,7 @@ export default function SchedulePage({ canManage, userRole }: { canManage: boole
             {activeDrag ? (
               <DraggableEventCard
                 event={activeDrag.event}
-                editMode={false}
+                viewBy={viewBy}
               />
             ) : null}
           </DragOverlay>
@@ -902,7 +1122,6 @@ export default function SchedulePage({ canManage, userRole }: { canManage: boole
                   <DroppableDayColumn
                     key={'week-col-' + dateKey}
                     dateKey={dateKey}
-                    editMode={editMode}
                     isDragOver={draggedOverDate === dateKey}
                     activeDrag={activeDrag}
                   >
@@ -930,17 +1149,15 @@ export default function SchedulePage({ canManage, userRole }: { canManage: boole
                         <DraggableWeekEvent
                           key={ev.id}
                           event={ev}
-                          editMode={editMode}
+                          viewBy={viewBy}
                           onClick={(e) => {
                             e.stopPropagation();
-                            if (!editMode) {
-                              if (canManage && !ev.defense) {
-                                setEditEvent(ev);
-                              } else {
-                                setSelectedDate(parseISO(ev.date));
-                                setDetailEvent(ev);
-                                setView('day');
-                              }
+                            if (canManage && !ev.defense) {
+                              setEditEvent(ev);
+                            } else {
+                              setSelectedDate(parseISO(ev.date));
+                              setDetailEvent(ev);
+                              setView('day');
                             }
                           }}
                         />
@@ -1044,7 +1261,6 @@ export default function SchedulePage({ canManage, userRole }: { canManage: boole
           >
             <DroppableDayColumn
               dateKey={key}
-              editMode={editMode}
               isDragOver={draggedOverDate === key}
               activeDrag={activeDrag}
             >
@@ -1075,15 +1291,13 @@ export default function SchedulePage({ canManage, userRole }: { canManage: boole
                     <DraggableDayEvent
                       key={ev.id}
                       event={ev}
-                      editMode={editMode}
+                      viewBy={viewBy}
                       onClick={(e) => {
                         e.stopPropagation();
-                        if (!editMode) {
-                          if (canManage && !ev.defense) {
-                            setEditEvent(ev);
-                          } else {
-                            setDetailEvent(ev);
-                          }
+                        if (canManage && !ev.defense) {
+                          setEditEvent(ev);
+                        } else {
+                          setDetailEvent(ev);
                         }
                       }}
                     />
@@ -1353,6 +1567,204 @@ export default function SchedulePage({ canManage, userRole }: { canManage: boole
     }
   };
 
+  // Export events as JSON
+  const handleExportJSON = () => {
+    try {
+      const exportData = extraEvents.map(ev => ({
+        title: ev.title,
+        description: ev.description || '',
+        date: ev.date,
+        start_time: ev.start || '',
+        end_time: ev.end || '',
+        color: ev.color || '#10b981',
+      }));
+      const json = JSON.stringify(exportData, null, 2);
+      const blob = new Blob([json], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `events-${format(new Date(), 'yyyy-MM-dd')}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      console.error('Export JSON failed', e);
+      alert('Export failed.');
+    }
+  };
+
+  // Export events as CSV
+  const handleExportCSV = () => {
+    try {
+      const headers = ['Title', 'Description', 'Date', 'Start Time', 'End Time', 'Color'];
+      const rows = extraEvents.map(ev => [
+        ev.title,
+        ev.description || '',
+        ev.date,
+        ev.start || '',
+        ev.end || '',
+        ev.color || '#10b981',
+      ]);
+      
+      const csvContent = [
+        headers.join(','),
+        ...rows.map(row => row.map(cell => {
+          // Escape quotes and wrap in quotes if contains comma or quote
+          const str = String(cell);
+          if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+            return `"${str.replace(/"/g, '""')}"`;
+          }
+          return str;
+        }).join(','))
+      ].join('\n');
+
+      const blob = new Blob([csvContent], { type: 'text/csv' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `events-${format(new Date(), 'yyyy-MM-dd')}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      console.error('Export CSV failed', e);
+      alert('Export failed.');
+    }
+  };
+
+  // Import events from JSON
+  const handleImportJSON = (file: File) => {
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      try {
+        const json = JSON.parse(e.target?.result as string);
+        if (!Array.isArray(json)) throw new Error('Invalid JSON format. Expected an array.');
+        
+        const csrf = getCsrf();
+        let successCount = 0;
+        let errorCount = 0;
+
+        for (const item of json) {
+          try {
+            const payload = {
+              title: item.title || 'Untitled Event',
+              description: item.description || '',
+              start: `${item.date} ${item.start_time || '00:00'}:00`,
+              end: `${item.date} ${item.end_time || '23:59'}:00`,
+              allDay: false,
+              color: item.color || '#10b981',
+            };
+
+            const resp = await fetch('/api/calendar/events', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-TOKEN': csrf },
+              body: JSON.stringify(payload),
+            });
+
+            if (resp.ok) {
+              successCount++;
+            } else {
+              errorCount++;
+            }
+          } catch (err) {
+            errorCount++;
+          }
+        }
+
+        alert(`Import complete!\nSuccessful: ${successCount}\nFailed: ${errorCount}`);
+        
+        // Refresh events
+        window.location.reload();
+      } catch (e: any) {
+        console.error('Import JSON failed', e);
+        alert(`Import failed: ${e.message}`);
+      }
+    };
+    reader.readAsText(file);
+  };
+
+  // Import events from CSV
+  const handleImportCSV = (file: File) => {
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      try {
+        const csv = e.target?.result as string;
+        const lines = csv.split('\n').filter(line => line.trim());
+        if (lines.length < 2) throw new Error('CSV file is empty or has no data rows.');
+        
+        // Skip header row
+        const dataLines = lines.slice(1);
+        
+        const csrf = getCsrf();
+        let successCount = 0;
+        let errorCount = 0;
+
+        for (const line of dataLines) {
+          try {
+            // Simple CSV parser (handles quoted fields)
+            const fields: string[] = [];
+            let current = '';
+            let inQuotes = false;
+            
+            for (let i = 0; i < line.length; i++) {
+              const char = line[i];
+              if (char === '"') {
+                if (inQuotes && line[i + 1] === '"') {
+                  current += '"';
+                  i++;
+                } else {
+                  inQuotes = !inQuotes;
+                }
+              } else if (char === ',' && !inQuotes) {
+                fields.push(current);
+                current = '';
+              } else {
+                current += char;
+              }
+            }
+            fields.push(current);
+
+            const [title, description, date, startTime, endTime, color] = fields;
+
+            const payload = {
+              title: title || 'Untitled Event',
+              description: description || '',
+              start: `${date} ${startTime || '00:00'}:00`,
+              end: `${date} ${endTime || '23:59'}:00`,
+              allDay: false,
+              color: color || '#10b981',
+            };
+
+            const resp = await fetch('/api/calendar/events', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-TOKEN': csrf },
+              body: JSON.stringify(payload),
+            });
+
+            if (resp.ok) {
+              successCount++;
+            } else {
+              errorCount++;
+            }
+          } catch (err) {
+            errorCount++;
+          }
+        }
+
+        alert(`Import complete!\nSuccessful: ${successCount}\nFailed: ${errorCount}`);
+        
+        // Refresh events
+        window.location.reload();
+      } catch (e: any) {
+        console.error('Import CSV failed', e);
+        alert(`Import failed: ${e.message}`);
+      }
+    };
+    reader.readAsText(file);
+  };
+
   return (
     <AppLayout breadcrumbs={breadcrumbs}>
       <Head title="Schedules" />
@@ -1438,43 +1850,100 @@ export default function SchedulePage({ canManage, userRole }: { canManage: boole
                   </Select>
                 </div>
               )}
-              {/* Edit/View Mode Dropdown, Print, Add Event */}
-              {canManage && (
-                <div className="flex items-center gap-2 ml-auto">
-                  <Select
-                    value={editMode ? "editing" : "viewing"}
-                    onValueChange={val => setEditMode(val === "editing")}
-                  >
-                    <SelectTrigger className=" h-8">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="viewing">
-                        <Eye className="inline-block mr-2 h-4 w-4" />
-                        Viewing
-                      </SelectItem>
-                      <SelectItem value="editing">
-                        <Edit className="inline-block mr-2 h-4 w-4" />
-                        Editing
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <Button type="button" size="icon" variant="outline" onClick={handlePrint} title="Print schedules">
-                    <Printer className="h-4 w-4 hover:cursor-printer" />
-                  </Button>
-                  {/* Add/Edit Event Dialog */}
-                  <Dialog open={showAdd} onOpenChange={o => {
-                    setShowAdd(o);
-                    setAddError(null);
-                    if (!o) {
-                      setEditEvent(null);
-                      resetDragState(); // Use the new reset function
-                    }
-                  }}>
-                    <DialogTrigger asChild>
-                      <Button className="hover:cursor-pointer dark:bg-rose" size="sm">{isEditing ? 'Edit Event' : 'Add Event'}</Button>
-                    </DialogTrigger>
-                    <DialogContent className="sm:max-w-md">
+              {/* View By Dropdown, Print, Add Event */}
+              <div className="flex items-center gap-2 ml-auto">
+                <Select
+                  value={viewBy}
+                  onValueChange={val => setViewBy(val as typeof viewBy)}
+                >
+                  <SelectTrigger className="w-[140px] h-8">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="events">
+                      <CalendarIcon className="inline-block mr-2 h-4 w-4" />
+                      Events
+                    </SelectItem>
+                    <SelectItem value="panelists">
+                      <Users className="inline-block mr-2 h-4 w-4" />
+                      Panelists
+                    </SelectItem>
+                    <SelectItem value="students">
+                      <User className="inline-block mr-2 h-4 w-4" />
+                      Students
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+                {canManage && (
+                  <>
+                    {/* Import/Export Dropdown */}
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="outline" size="icon" title="Import/Export">
+                          <Download className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-48">
+                        <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">Export</div>
+                        <DropdownMenuItem onClick={handleExportJSON}>
+                          <FileJson className="mr-2 h-4 w-4" />
+                          Export as JSON
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={handleExportCSV}>
+                          <FileSpreadsheet className="mr-2 h-4 w-4" />
+                          Export as CSV
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">Import</div>
+                        <DropdownMenuItem
+                          onClick={() => {
+                            const input = document.createElement('input');
+                            input.type = 'file';
+                            input.accept = '.json';
+                            input.onchange = (e) => {
+                              const file = (e.target as HTMLInputElement).files?.[0];
+                              if (file) handleImportJSON(file);
+                            };
+                            input.click();
+                          }}
+                        >
+                          <Upload className="mr-2 h-4 w-4" />
+                          Import JSON
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => {
+                            const input = document.createElement('input');
+                            input.type = 'file';
+                            input.accept = '.csv';
+                            input.onchange = (e) => {
+                              const file = (e.target as HTMLInputElement).files?.[0];
+                              if (file) handleImportCSV(file);
+                            };
+                            input.click();
+                          }}
+                        >
+                          <Upload className="mr-2 h-4 w-4" />
+                          Import CSV
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                    
+                    <Button type="button" size="icon" variant="outline" onClick={handlePrint} title="Print schedules">
+                      <Printer className="h-4 w-4 hover:cursor-printer" />
+                    </Button>
+                    {/* Add/Edit Event Dialog */}
+                    <Dialog open={showAdd} onOpenChange={o => {
+                      setShowAdd(o);
+                      setAddError(null);
+                      if (!o) {
+                        setEditEvent(null);
+                        resetDragState();
+                      }
+                    }}>
+                      <DialogTrigger asChild>
+                        <Button className="hover:cursor-pointer dark:bg-rose" size="sm">{isEditing ? 'Edit Event' : 'Add Event'}</Button>
+                      </DialogTrigger>
+                      <DialogContent className="sm:max-w-md">
                       <DialogHeader>
                         <DialogTitle className="text-sm font-semibold">
                           {isEditing ? 'Edit Event' : 'Create Event'}
@@ -1617,7 +2086,11 @@ export default function SchedulePage({ canManage, userRole }: { canManage: boole
                               };
                               let resp: Response;
                               if (isEditing && editEvent) {
-                                resp = await fetch(`/api/calendar/events/${editEvent.raw.id}`, {
+                                // Extract numeric ID from event ID (remove 'ev-' prefix if present)
+                                const numericId = editEvent.id.startsWith('ev-') 
+                                  ? editEvent.id.replace('ev-', '') 
+                                  : editEvent.raw.id;
+                                resp = await fetch(`/api/calendar/events/${numericId}`, {
                                   method: 'PUT',
                                   headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-TOKEN': csrf },
                                   body: JSON.stringify(payload)
@@ -1634,7 +2107,7 @@ export default function SchedulePage({ canManage, userRole }: { canManage: boole
                                 throw new Error(j.message || j.error || 'Save failed');
                               }
                               const j = await resp.json().catch(() => ({}));
-                              const eventId = j.event_id || (editEvent && editEvent.raw.id);
+                              const eventId = j.event_id || (editEvent && (editEvent.id.startsWith('ev-') ? editEvent.id.replace('ev-', '') : editEvent.raw.id));
                               const s = addAllDay ? "00:00" : addStart;
                               const e = addAllDay ? "23:59" : addEnd;
                               setExtraEvents(prev => {
@@ -1679,8 +2152,9 @@ export default function SchedulePage({ canManage, userRole }: { canManage: boole
                       </DialogFooter>
                     </DialogContent>
                   </Dialog>
-                </div>
-              )}
+                  </>
+                )}
+              </div>
             </div>
             {view === 'month' && renderMonth()}
             {view === 'week' && renderWeek()}

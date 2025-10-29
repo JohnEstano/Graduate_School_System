@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { usePage } from '@inertiajs/react';
-import { Sun, Moon, Users, CalendarDays, ClipboardList, DollarSign, CircleEllipsis } from 'lucide-react';
+import { Sun, Moon, Users, CalendarDays, ClipboardList, DollarSign, CircleEllipsis,ChartLine } from 'lucide-react';
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -184,7 +184,7 @@ export default function AssistantDashboard() {
                         <Tabs value={tab} onValueChange={setTab} className="w-full">
                             <TabsList className="mb-2 ">
                                 <TabsTrigger value="overview" className="flex-1 sm:flex-none">Overview</TabsTrigger>
-                                <TabsTrigger value="analytics" className="flex-1 sm:flex-none">Analytics</TabsTrigger>
+                                <TabsTrigger value="analytics" className="flex-1 sm:flex-none"> Analytics </TabsTrigger>
                             </TabsList>
 
                             {/* Overview Tab */}
