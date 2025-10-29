@@ -79,6 +79,15 @@ export default function TableDeanCompreExam({
 	const [rejectReason, setRejectReason] = useState('');
 	const [submitting, setSubmitting] = useState(false);
 
+	// NEW: success dialog state
+	const [successOpen, setSuccessOpen] = useState(false);
+	const [successText, setSuccessText] = useState('');
+	useEffect(() => {
+		if (!successOpen) return;
+		const t = setTimeout(() => setSuccessOpen(false), 4000);
+		return () => clearTimeout(t);
+	}, [successOpen]);
+
 	const [approveManyOpen, setApproveManyOpen] = useState(false);
 	const [rejectManyOpen, setRejectManyOpen] = useState(false);
 	const [rejectManyReason, setRejectManyReason] = useState('');
@@ -183,37 +192,59 @@ export default function TableDeanCompreExam({
 	async function callApprove(id: number) {
 		if (!onApprove) return;
 		setSubmitting(true);
-		try { await onApprove(id); } finally { setSubmitting(false); setApproveId(null); }
+		try {
+			await onApprove(id);
+			setSuccessText('Decision saved: Approved');
+			setSuccessOpen(true);
+		} finally { setSubmitting(false); setApproveId(null); }
 	}
 	async function callReject(id: number) {
 		if (!onReject || !rejectReason.trim()) return;
 		setSubmitting(true);
-		try { await onReject(id, rejectReason.trim()); }
-		finally { setSubmitting(false); setRejectId(null); setRejectReason(''); }
+		try {
+			await onReject(id, rejectReason.trim());
+			setSuccessText('Decision saved: Rejected');
+			setSuccessOpen(true);
+		} finally { setSubmitting(false); setRejectId(null); setRejectReason(''); }
 	}
 	async function callApproveMany(ids: number[]) {
 		if (!onApproveMany) return;
 		setSubmitting(true);
-		try { await onApproveMany(ids); setSelected([]); }
-		finally { setSubmitting(false); setApproveManyOpen(false); }
+		try {
+			await onApproveMany(ids);
+			setSelected([]);
+			setSuccessText(`Approved ${ids.length} application(s)`);
+			setSuccessOpen(true);
+		} finally { setSubmitting(false); setApproveManyOpen(false); }
 	}
 	async function callRejectMany(ids: number[], reason: string) {
 		if (!onRejectMany || !reason.trim()) return;
 		setSubmitting(true);
-		try { await onRejectMany(ids, reason.trim()); setSelected([]); }
-		finally { setSubmitting(false); setRejectManyOpen(false); setRejectManyReason(''); }
+		try {
+			await onRejectMany(ids, reason.trim());
+			setSelected([]);
+			setSuccessText(`Rejected ${ids.length} application(s)`);
+			setSuccessOpen(true);
+		} finally { setSubmitting(false); setRejectManyOpen(false); setRejectManyReason(''); }
 	}
 	async function callRetrieve(id: number) {
 		if (!onRetrieve) return;
 		setSubmitting(true);
-		try { await onRetrieve(id); }
-		finally { setSubmitting(false); setRetrieveId(null); }
+		try {
+			await onRetrieve(id);
+			setSuccessText('Decision reverted to Pending');
+			setSuccessOpen(true);
+		} finally { setSubmitting(false); setRetrieveId(null); }
 	}
 	async function callRetrieveMany(ids: number[]) {
 		if (!onRetrieveMany) return;
 		setSubmitting(true);
-		try { await onRetrieveMany(ids); setSelected([]); }
-		finally { setSubmitting(false); setRetrieveManyOpen(false); }
+		try {
+			await onRetrieveMany(ids);
+			setSelected([]);
+			setSuccessText(`Reverted ${ids.length} application(s) to Pending`);
+			setSuccessOpen(true);
+		} finally { setSubmitting(false); setRetrieveManyOpen(false); }
 	}
 
 	return (
@@ -646,6 +677,29 @@ export default function TableDeanCompreExam({
 					</AlertDialogFooter>
 				</AlertDialogContent>
 			</AlertDialog>
+
+			{/* Bottom-right success dialog */}
+			{successOpen && (
+				<div className="fixed bottom-6 right-6 z-50">
+					<div className="flex items-start gap-3 rounded-xl border border-emerald-200 bg-white px-4 py-3 shadow-lg text-sm
+									dark:border-emerald-900 dark:bg-slate-900">
+						<CheckCircle className="h-5 w-5 text-emerald-600 mt-0.5" />
+						<div className="pr-6">
+							<div className="font-medium text-emerald-700 dark:text-emerald-300">Success</div>
+							<div className="text-foreground/80 dark:text-foreground/80">{successText}</div>
+						</div>
+						<button
+							type="button"
+							onClick={() => setSuccessOpen(false)}
+							className="absolute top-2 right-2 rounded p-1 hover:bg-emerald-50 dark:hover:bg-slate-800"
+							aria-label="Close"
+							title="Close"
+						>
+							<X className="h-4 w-4 opacity-70" />
+						</button>
+					</div>
+				</div>
+			)}
 		</div>
 	);
 }
