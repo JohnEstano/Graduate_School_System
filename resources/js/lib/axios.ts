@@ -82,9 +82,18 @@ axios.interceptors.request.use(
     (error) => Promise.reject(error)
 );
 
-// Response interceptor - handle 419 errors
+// Response interceptor - handle 419 errors and update CSRF tokens
 axios.interceptors.response.use(
-    (response) => response,
+    (response) => {
+        // Check if response has updated CSRF token in headers
+        const newToken = response.headers['x-csrf-token'];
+        if (newToken && newToken !== getCSRFToken()) {
+            updateCSRFToken(newToken);
+            axios.defaults.headers.common['X-CSRF-TOKEN'] = newToken;
+            console.log('✓ CSRF token updated from response headers');
+        }
+        return response;
+    },
     async (error) => {
         const originalRequest = error.config;
 
@@ -110,12 +119,17 @@ axios.interceptors.response.use(
             } catch (refreshError) {
                 console.error('Failed to refresh CSRF token:', refreshError);
                 
-                // Only reload if not on login/register pages to avoid loops
-                const isAuthPage = ['/login', '/register', '/forgot-password', '/reset-password'].some(
+                // Check if on auth pages
+                const isAuthPage = ['/login', '/register', '/login-local'].some(
                     path => window.location.pathname.startsWith(path)
                 );
                 
-                if (!isAuthPage) {
+                if (isAuthPage) {
+                    // On auth pages, redirect to same page to get fresh token
+                    console.log('Redirecting to same page to refresh CSRF token...');
+                    window.location.href = window.location.pathname;
+                } else {
+                    // On other pages, reload
                     console.log('Reloading page to get fresh session...');
                     window.location.reload();
                 }
