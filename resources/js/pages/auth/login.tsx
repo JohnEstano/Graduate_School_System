@@ -49,6 +49,25 @@ export default function LoginAPI(props: LoginProps) {
             <Head title="Log in - API" />
 
             {status && <div className="mb-4 text-center text-sm font-medium text-green-600">{status}</div>}
+            
+            {/* Display general error message if login fails */}
+            {(errors.identifier || errors.password) && (
+                <div className="mb-4 rounded-md bg-red-50 border border-red-200 p-4">
+                    <div className="flex">
+                        <div className="flex-shrink-0">
+                            <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                            </svg>
+                        </div>
+                        <div className="ml-3">
+                            <h3 className="text-sm font-medium text-red-800">Login Failed</h3>
+                            <div className="mt-2 text-sm text-red-700">
+                                {errors.identifier || errors.password || "Invalid username or password. Please check your credentials and try again."}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             <form className="flex flex-col gap-6" onSubmit={submit}>
                 <div className="grid gap-6">
@@ -60,9 +79,11 @@ export default function LoginAPI(props: LoginProps) {
                             type="text"
                             required
                             autoComplete="username"
+                            tabIndex={1}
                             value={data.identifier}
                             onChange={e => setData('identifier', e.target.value)}
                             placeholder="Use your myuic credentials"
+                            className={errors.identifier ? 'border-red-500' : ''}
                         />
                         <InputError message={errors.identifier} />
                     </div>
@@ -78,6 +99,7 @@ export default function LoginAPI(props: LoginProps) {
                             value={data.password}
                             onChange={(e) => setData('password', e.target.value)}
                             placeholder="Password"
+                            className={errors.password ? 'border-red-500' : ''}
                         />
                         <InputError message={errors.password} />
                     </div>
