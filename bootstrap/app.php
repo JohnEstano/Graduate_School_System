@@ -10,6 +10,7 @@ use App\Http\Middleware\HandleInertiaRequests;
 use App\Http\Middleware\PreventDuplicateCompreApplication;
 use App\Http\Middleware\CheckRole;
 use App\Http\Middleware\EnsureFreshCsrfToken;
+use App\Http\Middleware\PreventBackHistory;
 use Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets;
 
 return Application::configure(basePath: dirname(__DIR__))
@@ -35,6 +36,7 @@ return Application::configure(basePath: dirname(__DIR__))
             HandleInertiaRequests::class,
             AddLinkHeadersForPreloadedAssets::class,
             EnsureFreshCsrfToken::class, // Ensure CSRF token is always fresh
+            PreventBackHistory::class, // Prevent back button after logout
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
