@@ -36,6 +36,18 @@ class ComprehensiveExamController extends Controller
 
         $response = null;
         if ($application) {
+            // Format created_at to Asia/Manila timezone
+            $createdAt = null;
+            if ($application->created_at) {
+                try {
+                    $createdAt = \Carbon\Carbon::parse($application->created_at)
+                        ->setTimezone('Asia/Manila')
+                        ->toIso8601String();
+                } catch (\Exception $e) {
+                    $createdAt = $application->created_at;
+                }
+            }
+
             $response = [
                 'application_id'        => $application->application_id,
                 'school_year'           => $application->school_year,
@@ -45,7 +57,7 @@ class ComprehensiveExamController extends Controller
                 'telephone_number'      => $application->telephone_number,
                 'office_address'        => $application->office_address,
                 'program'               => $application->program,
-                'created_at'            => $application->created_at,
+                'created_at'            => $createdAt,
                 'status'                => $application->final_approval_status
                                             ?? ($application->registrar_status ?? 'pending'),
                 'registrar_reason'      => $application->final_approval_reason

@@ -73,9 +73,21 @@ class RegistrarExamApplicationController extends Controller
         $perPage = $validated['per_page'] ?? 20;
 
         // FIX: define $rows before transforming
-        $rows = $q->paginate($perPage);
+        $all = $q->paginate($perPage);
 
-        $rows->getCollection()->transform(function ($r) {
+        $rows = $all->map(function ($r) {
+            // Format created_at to Asia/Manila timezone
+            $createdAt = null;
+            if ($r->created_at) {
+                try {
+                    $createdAt = \Carbon\Carbon::parse($r->created_at)
+                        ->setTimezone('Asia/Manila')
+                        ->toIso8601String();
+                } catch (\Exception $e) {
+                    $createdAt = $r->created_at;
+                }
+            }
+
             return [
                 'application_id'   => $r->application_id,
                 'first_name'       => $r->first_name ?? '',
@@ -85,7 +97,7 @@ class RegistrarExamApplicationController extends Controller
                 'school_id'        => (string)($r->school_id ?? $r->student_id ?? ''),
                 'program'          => $r->program,
                 'school_year'      => $r->school_year,
-                'created_at'       => $r->created_at,
+                'created_at'       => $createdAt,
                 'registrar_status' => $r->registrar_status ?? 'pending',
                 'registrar_reason' => $r->registrar_reason ?? null,
                 'subjects_count'   => (int)($r->subjects_count ?? 0),

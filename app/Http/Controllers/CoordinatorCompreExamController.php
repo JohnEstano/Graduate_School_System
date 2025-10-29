@@ -140,6 +140,18 @@ class CoordinatorCompreExamController extends Controller
             // Eligibility keyed by the canonical users.id
             $elig = $this->computeEligibility($userId);
 
+            // Format submitted_at to Asia/Manila timezone for accurate display
+            $submittedAt = null;
+            if ($latest && $latest->created_at) {
+                try {
+                    $submittedAt = \Carbon\Carbon::parse($latest->created_at)
+                        ->setTimezone('Asia/Manila')
+                        ->toIso8601String();
+                } catch (\Exception $e) {
+                    $submittedAt = $latest->created_at;
+                }
+            }
+
             return [
                 'id'         => $userId,
                 'first_name' => $s->first_name ?? '',
@@ -154,7 +166,7 @@ class CoordinatorCompreExamController extends Controller
 
                 'applied'            => (bool) $latest,
                 'application_id'     => $latest->application_id ?? null,
-                'submitted_at'       => $latest->created_at ?? null,
+                'submitted_at'       => $submittedAt,
                 'application_status' => $latest
                     ? strtolower($latest->final_approval_status ?? 'pending')
                     : 'not_yet_applied',
