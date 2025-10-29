@@ -1846,9 +1846,25 @@ class DefenseRequestController extends Controller
                 
                 // Send email to coordinator
                 if ($coordinator && $coordinator->email) {
-                    \Log::info('updateAdviserStatus: Sending email to coordinator', ['email' => $coordinator->email]);
-                    Mail::to($coordinator->email)->send(new DefenseRequestAssignedToCoordinator($defenseRequest));
-                    \Log::info('updateAdviserStatus: Coordinator email sent');
+                    try {
+                        \Log::info('updateAdviserStatus: Sending email to coordinator', [
+                            'email' => $coordinator->email,
+                            'coordinator_id' => $coordinator->id,
+                            'coordinator_name' => $coordinator->first_name . ' ' . $coordinator->last_name,
+                            'defense_request_id' => $defenseRequest->id
+                        ]);
+                        
+                        Mail::to($coordinator->email)->send(new DefenseRequestAssignedToCoordinator($defenseRequest));
+                        
+                        \Log::info('updateAdviserStatus: Coordinator email queued/sent successfully');
+                    } catch (\Exception $mailError) {
+                        \Log::error('updateAdviserStatus: Failed to send coordinator email', [
+                            'error' => $mailError->getMessage(),
+                            'trace' => $mailError->getTraceAsString(),
+                            'coordinator_email' => $coordinator->email
+                        ]);
+                        // Don't fail the entire request if email fails
+                    }
                 }
             }
             
