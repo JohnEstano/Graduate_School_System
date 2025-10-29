@@ -8,6 +8,7 @@ use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\Api\StudentSearchController;
 use App\Http\Controllers\Api\ComprehensiveExamEligibilityController;
 use App\Http\Controllers\DocumentTemplateController;
+use App\Models\User;
 
 // Authenticated API routes
 Route::middleware('auth:sanctum')->group(function () {
@@ -41,6 +42,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Student search API
     Route::get('students/search', [StudentSearchController::class, 'search']);
+    
     // Document Templates API
     Route::get('/document-templates', [DocumentTemplateController::class,'index']);
     Route::get('/document-templates/{template}', [DocumentTemplateController::class,'show']);
