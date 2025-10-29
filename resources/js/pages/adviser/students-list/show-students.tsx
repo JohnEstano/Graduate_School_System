@@ -71,6 +71,7 @@ export default function ShowStudents() {
     setLoading(true);
     try {
       const res = await axios.get("/api/adviser/students");
+      console.log('Loaded accepted students:', res.data);
       setStudents(res.data || []);
     } catch (err) {
       console.error("Failed to load students", err);

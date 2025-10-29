@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Mail;
 use Inertia\Inertia;
 use Inertia\Response;
 use App\Models\User;
@@ -105,6 +106,32 @@ class AuthenticatedSessionController extends Controller
                                         'message' => "Coordinator {$coordinator->first_name} {$coordinator->last_name} has assigned {$user->first_name} {$user->last_name} to you. Please review and accept/reject.",
                                         'action_url' => '/adviser/pending-students',
                                     ]);
+                                    
+                                    // Queue email notification to adviser (with rate limiting)
+                                    try {
+                                        Mail::to($adviserUser->email)->queue(
+                                            new \App\Mail\StudentRegisteredNotification(
+                                                $adviserUser, 
+                                                $user, 
+                                                $coordinator,
+                                                $pending->student_email  // Pass original email from pending assignment
+                                            )
+                                        );
+                                        
+                                        Log::info('Student registration notification queued for adviser', [
+                                            'adviser_email' => $adviserUser->email,
+                                            'student_name' => "{$user->first_name} {$user->last_name}",
+                                            'student_email' => $pending->student_email,
+                                            'coordinator_name' => "{$coordinator->first_name} {$coordinator->last_name}",
+                                        ]);
+                                    } catch (\Exception $e) {
+                                        Log::error('Failed to send student registration notification to adviser', [
+                                            'adviser_email' => $adviserUser->email,
+                                            'student_id' => $user->id,
+                                            'error' => $e->getMessage()
+                                        ]);
+                                        // Don't fail the login process if email fails
+                                    }
                                 }
                                 
                                 // Create notification for student
@@ -244,6 +271,32 @@ class AuthenticatedSessionController extends Controller
                                         'message' => "Coordinator {$coordinator->first_name} {$coordinator->last_name} has assigned {$user->first_name} {$user->last_name} to you. Please review and accept/reject.",
                                         'action_url' => '/adviser/pending-students',
                                     ]);
+                                    
+                                    // Queue email notification to adviser (with rate limiting)
+                                    try {
+                                        Mail::to($adviserUser->email)->queue(
+                                            new \App\Mail\StudentRegisteredNotification(
+                                                $adviserUser, 
+                                                $user, 
+                                                $coordinator,
+                                                $pending->student_email  // Pass original email from pending assignment
+                                            )
+                                        );
+                                        
+                                        Log::info('Student registration notification queued for adviser (local login)', [
+                                            'adviser_email' => $adviserUser->email,
+                                            'student_name' => "{$user->first_name} {$user->last_name}",
+                                            'student_email' => $pending->student_email,
+                                            'coordinator_name' => "{$coordinator->first_name} {$coordinator->last_name}",
+                                        ]);
+                                    } catch (\Exception $e) {
+                                        Log::error('Failed to queue student registration notification to adviser (local login)', [
+                                            'adviser_email' => $adviserUser->email,
+                                            'student_id' => $user->id,
+                                            'error' => $e->getMessage()
+                                        ]);
+                                        // Don't fail the login process if email fails
+                                    }
                                 }
                                 
                                 \App\Models\Notification::create([

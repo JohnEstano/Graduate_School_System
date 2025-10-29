@@ -368,9 +368,9 @@ class CoordinatorAdviserController extends Controller
                 'mail_from' => config('mail.from.address')
             ]);
 
-            Mail::to($adviser->email)->send(new AdviserInvitation($adviserFullName, $coordinatorFullName));
+            Mail::to($adviser->email)->queue(new AdviserInvitation($adviserFullName, $coordinatorFullName));
             
-            Log::info('Adviser invitation email sent successfully', [
+            Log::info('Adviser invitation email queued successfully', [
                 'adviser_email' => $adviser->email,
                 'adviser_name' => $adviserFullName,
                 'coordinator_name' => $coordinatorFullName,
@@ -672,20 +672,20 @@ class CoordinatorAdviserController extends Controller
                                 $adviserFullName = $adviserUser ? trim("{$adviserUser->first_name} {$adviserUser->last_name}") : "Your Adviser";
                                 $coordinatorFullName = trim("{$coordinator->first_name} {$coordinator->last_name}");
                                 
-                                Mail::to($studentEmail)->send(new \App\Mail\StudentInvitation(
+                                Mail::to($studentEmail)->queue(new \App\Mail\StudentInvitation(
                                     ucfirst($emailName),  // Use email username as name
                                     $adviserFullName,
                                     $coordinatorFullName
                                 ));
                                 
-                                Log::info('Student invitation email sent (not yet registered)', [
+                                Log::info('Student invitation email queued (not yet registered)', [
                                     'student_email' => $studentEmail,
                                     'adviser' => $adviserFullName,
                                     'coordinator' => $coordinatorFullName,
                                     'pending_assignment_id' => $pendingAssignment->id
                                 ]);
                             } catch (\Exception $e) {
-                                Log::error('Failed to send student invitation email', [
+                                Log::error('Failed to queue student invitation email', [
                                     'student_email' => $studentEmail,
                                     'error' => $e->getMessage()
                                 ]);
