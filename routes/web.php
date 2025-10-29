@@ -359,7 +359,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
    
 
 
-    Route::middleware('role:Dean,Administrative Assistant')->group(function () {
+    Route::middleware('role:Dean,Administrative Assistant,Coordinator')->group(function () {
         Route::post('/dean/payment-rates', [\App\Http\Controllers\PaymentRateController::class, 'update'])
             ->name('dean.payment-rates.update');
         Route::get('/dean/payment-rates', [\App\Http\Controllers\PaymentRateController::class, 'index'])
@@ -769,6 +769,10 @@ Route::get('/honorarium/individual-record/{programId}', [HonorariumSummaryContro
         
         Route::get('/panel-members', [CoordinatorDefenseController::class, 'panelMembersAll'])
             ->name('defense.panel-members');
+        
+        // Add the missing panel-members-all route
+        Route::get('/defense/panel-members-all', [CoordinatorDefenseController::class, 'availablePanelMembersJson'])
+            ->name('defense.panel-members-all');
 
         Route::get('/defense-requests/{defenseRequest}/details', [CoordinatorDefenseController::class, 'details'])
             ->name('defense-requests.details'); // <-- FIXED: was 'coordinator.defense-requests.details'

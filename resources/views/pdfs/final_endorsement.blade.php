@@ -67,7 +67,7 @@
         }
         .line {
             border-bottom: 1px solid #000;
-            height: 18px;
+            height: 16px;
             width: 100%;
             display: inline-block;
         }
@@ -99,7 +99,7 @@
         }
         .signature-line {
             border-bottom: 1px solid #000;
-            width: 120px;
+            width: 150px;
             margin-top: 10px;
             margin-bottom: 2px;
         }
@@ -160,33 +160,39 @@
             <tr>
                 <!-- Name: line left, label centered below -->
                 <td style="width:52%; vertical-align:bottom;">
-                    <div class="line" style="width:95%; margin-left:8px; text-align:left;">
-                        <span style="position:relative; width:100%; display:inline-block; text-align:left; font-weight:bold;">
-                            {{ $student_name ?? '_________________________' }}
-                        </span>
+                    <div style="width:85%; margin-left:8px;">
+                        <div class="line" style="text-align:left;">
+                            <span style="position:relative; width:100%; display:inline-block; text-align:left; font-weight:bold;">
+                                {{ $student_name ?? '_________________________' }}
+                            </span>
+                        </div>
+                        <div class="label" style="text-align:center; margin-top:2px;">Name of Student/ Candidate</div>
                     </div>
-                    <div class="label" style="text-align:center; margin-top:2px;">Name of Student/ Candidate</div>
                 </td>
                 <td style="width:4%;"></td>
                 <!-- Date: line right, label centered below -->
                 <td style="width:34%; vertical-align:bottom;">
-                    <div class="line" style="width:95%; margin-right:8px; text-align:center;">
-                        <span style="position:relative; width:100%; display:inline-block; text-align:center; font-weight:bold;">
-                            {{ $defense_date ?? now()->format('F d, Y') }}
-                        </span>
+                    <div style="width:75%; margin-left:auto;">
+                        <div class="line" style="text-align:center;">
+                            <span style="position:relative; width:100%; display:inline-block; text-align:center; font-weight:bold;">
+                                {{ $defense_date ?? now()->format('F d, Y') }}
+                            </span>
+                        </div>
+                        <div class="label" style="text-align:center; margin-top:2px;">Date</div>
                     </div>
-                    <div class="label" style="text-align:center; margin-top:2px;">Date</div>
                 </td>
             </tr>
             <tr>
                 <!-- Program of Study: line left, label centered below, input wider -->
                 <td style="width:52%; vertical-align:bottom;">
-                    <div class="line" style="width:95%; margin-left:8px; text-align:left;">
-                        <span style="position:relative; width:100%; display:inline-block; text-align:left; font-weight:bold;">
-                            {{ $program ?? '_________________________' }}
-                        </span>
+                    <div style="width:85%; margin-left:8px;">
+                        <div class="line" style="text-align:left;">
+                            <span style="position:relative; width:100%; display:inline-block; text-align:left; font-weight:bold;">
+                                {{ $program ?? '_________________________' }}
+                            </span>
+                        </div>
+                        <div class="label" style="text-align:center; margin-top:2px;">Program of Study</div>
                     </div>
-                    <div class="label" style="text-align:center; margin-top:2px;">Program of Study</div>
                 </td>
                 <td></td>
                 <td></td>
@@ -232,7 +238,7 @@
         </table>
 
         <div class="section">
-            Dear <span class="dear">{{ $approver_name ?? 'Dr. Mary Jane B. Amoguis' }}</span>,
+            Dear <span class="dear">{{ $approver_name ?? 'Program Coordinator' }}</span>,
         </div>
         <div class="section" style="margin-top: 6px;">
             I have reviewed and fully endorsed the final manuscript attached for evaluation. The student has satisfactorily completed all prior defense stages and has incorporated all necessary revisions and recommendations. The manuscript is now ready for final evaluation.
@@ -243,62 +249,119 @@
 
         <div class="signature-block">
             <div style="position: relative; display: inline-block;">
-                <div class="signature-label" style="margin-bottom: 6px;">{{ $adviser_name ?? 'Thesis / Dissertation Adviser' }}</div>
+                <div class="signature-label" style="margin-bottom: 2px; font-weight: bold;">{{ $adviser_name ?? 'Thesis / Dissertation Adviser' }}</div>
                 @if(!empty($adviser_signature_path))
                     <img src="{{ $adviser_signature_path }}" alt="Adviser Signature" style="position: absolute; top: -30px; left: 0; max-height:60px; z-index: 10;">
                 @endif
                 <div class="signature-line"></div>
+                <div class="signature-caption" style="margin-top: 4px;">Thesis / Dissertation Adviser</div>
             </div>
             <div class="signature-caption" style="margin-top: 4px;">(Signature over Printed Name)</div>
         </div>
 
         <div class="approved-block">
-            <div class="approved-label">Approved by:</div>
-            @if(!empty($coordinator_signature_path) && !empty($coordinator_name))
-                <!-- Show coordinator signature if available -->
-                <div style="position: relative; display: inline-block; text-align: right;">
-                    <div class="approved-name" style="margin-bottom: 4px; text-align: right;">{{ $coordinator_name }}</div>
-                    <img src="{{ $coordinator_signature_path }}" alt="Coordinator Signature" style="position: absolute; top: -30px; right: 0; max-height:60px; z-index: 10;">
-                    <div style="border-bottom: 1px solid #000; width: 180px; margin-top: 10px; margin-bottom: 2px; margin-left: auto;"></div>
-                    <div style="font-size: 9pt; margin-top: 2px; text-align: right;">{{ $coordinator_title ?? 'Program Coordinator' }}</div>
-                </div>
-            @else
-                <!-- Show empty lines for manual signature -->
-                <div style="text-align: right; display: inline-block;">
-                    <div style="border-bottom: 1px solid #000; width: 180px; height: 20px; margin-bottom: 2px; margin-left: auto;"></div>
-                    <div style="font-size: 9pt; text-align: right;">Name and Signature</div>
-                    <div style="border-bottom: 1px solid #000; width: 180px; height: 18px; margin-top: 8px; margin-bottom: 2px; margin-left: auto;"></div>
-                    <div style="font-size: 9pt; text-align: right;">Position/Designation</div>
-                </div>
-            @endif
+            <div style="display: inline-block; text-align: left;">
+                <div class="approved-label" style="text-align:left;">Approved by:</div>
+                @if(!empty($coordinator_signature_path) && !empty($coordinator_name))
+                    <!-- Show coordinator signature if available -->
+                    <div style="position: relative; display: inline-block; text-align: left;">
+                        <div class="approved-name" style="margin-bottom: 4px; text-align: left;">{{ $coordinator_name }}</div>
+                        <img src="{{ $coordinator_signature_path }}" alt="Coordinator Signature" style="position: absolute; top: -30px; left: 0; max-height:60px; z-index: 10;">
+                        <div style="border-bottom: 1px solid #000; width: 200px; margin-top: 10px; margin-bottom: 2px;"></div>
+                        <div style="font-size: 9pt; margin-top: 2px; text-align: left;">{{ $coordinator_title ?? 'Program Coordinator, Graduate School' }}</div>
+                    </div>
+                @else
+                    <!-- Show empty lines for manual signature -->
+                    <div style="text-align: left; display: inline-block;">
+                        <div style="border-bottom: 1px solid #000; width: 200px; height: 20px; margin-bottom: 2px;"></div>
+                        <div style="font-size: 9pt; text-align: left;">Name and Signature</div>
+                        <div style="border-bottom: 1px solid #000; width: 200px; height: 18px; margin-top: 8px; margin-bottom: 2px;"></div>
+                        <div style="font-size: 9pt; text-align: left;">Program Coordinator, Graduate School</div>
+                    </div>
+                @endif
+            </div>
         </div>
 
         <table class="footer-table">
             <tr>
                 <td style="width: 50%;">
-                    An applicant for Thesis / Dissertation Final Defense should have accomplished the following before s/he is granted approval:
+                    Guidelines in Preparing for Thesis / Dissertation Final Defense:
                     <ol>
-                        <li>Successfully defended the thesis/dissertation proposal and pre-final defense</li>
-                        <li>Incorporated all revisions and recommendations from the pre-final defense panel</li>
-                        <li>Completed all research activities including data gathering, analysis, and interpretation</li>
-                        <li>Written the complete manuscript following the prescribed UIC format</li>
-                        <li>Received final endorsement from the thesis/dissertation adviser</li>
-                        <li>Submitted bound copies of the complete manuscript to all panel members</li>
+                        <li>The applicant for thesis / dissertation final defense must be enrolled in Thesis / Dissertation Writing in the current semester.</li>
+                        <li>S/He must secure and accomplish an Application Form from the office of the Dean of Graduate School.</li>
+                        <li>When the form is accomplished, s/he must submit application to the Graduate Dean's office and arrange for tentative schedule of defense.</li>
                     </ol>
                 </td>
                 <td style="width: 50%;">
-                    Procedure for Final Defense:
+                    Process /Procedure for Final Defense:
                     <ol>
-                        <li>Secures and fills up a final defense endorsement form from the Administrative Assistant to be signed by the adviser.</li>
-                        <li>Pays the final defense fee at the cashier</li>
+                        <li>Secures and fills up a final defense endorsement form from the Administrative Assistant to be signed by the Adviser.</li>
+                        <li>Pays the final defense fee at the cashier.</li>
                         <li>Submits the receipt to the Administrative Assistant and the manuscript, (7) for Doctorate student (5) for Masteral student to the assigned panels and adviser.</li>
                         <li>Endorses the candidate to the Program Coordinator for the schedule.</li>
-                        <li>Confirms the panel composition with the Program Coordinator and Dean</li>
                         <li>Schedules the final oral defense.</li>
                     </ol>
                 </td>
             </tr>
         </table>
+
+        <!-- Defense Schedule Section -->
+        <div style="width: 100%; margin: 12px auto 0; text-align: right; font-size: 10pt;">
+            <div style="display: inline-block; text-align: right;">
+                <span style="margin-right: 8px;">Date/Time of Defense:</span>
+                <span style="border-bottom: 1px solid #000; display: inline-block; width: 200px; padding: 2px 4px; text-align: right;">
+                    <span style="font-weight: bold;">
+                        @if($scheduled_date && $defense_time)
+                            {{ $scheduled_date }} at {{ $defense_time }}
+                        @endif
+                    </span>
+                </span>
+            </div>
+        </div>
+
+        <!-- Panel Information Section -->
+        <div style="width: 100%; margin: 8px auto 0; text-align: right; font-size: 10pt;">
+            @if($panel_chair)
+            <div style="margin-bottom: 4px; text-align: right;">
+                <span style="margin-right: 8px;">Panel Chair:</span>
+                <span style="border-bottom: 1px solid #000; display: inline-block; width: 200px; padding: 2px 4px; text-align: right;">
+                    <span style="font-weight: bold;">{{ $panel_chair }}</span>
+                </span>
+            </div>
+            @endif
+            @if($panel_member_1)
+            <div style="margin-bottom: 4px; text-align: right;">
+                <span style="margin-right: 8px;">Panel Member:</span>
+                <span style="border-bottom: 1px solid #000; display: inline-block; width: 200px; padding: 2px 4px; text-align: right;">
+                    <span style="font-weight: bold;">{{ $panel_member_1 }}</span>
+                </span>
+            </div>
+            @endif
+            @if($panel_member_2)
+            <div style="margin-bottom: 4px; text-align: right;">
+                <span style="margin-right: 8px;">Panel Member:</span>
+                <span style="border-bottom: 1px solid #000; display: inline-block; width: 200px; padding: 2px 4px; text-align: right;">
+                    <span style="font-weight: bold;">{{ $panel_member_2 }}</span>
+                </span>
+            </div>
+            @endif
+            @if($panel_member_3 ?? false)
+            <div style="margin-bottom: 4px; text-align: right;">
+                <span style="margin-right: 8px;">Panel Member:</span>
+                <span style="border-bottom: 1px solid #000; display: inline-block; width: 200px; padding: 2px 4px; text-align: right;">
+                    <span style="font-weight: bold;">{{ $panel_member_3 }}</span>
+                </span>
+            </div>
+            @endif
+            @if($panel_member_4 ?? false)
+            <div style="margin-bottom: 4px; text-align: right;">
+                <span style="margin-right: 8px;">Panel Member:</span>
+                <span style="border-bottom: 1px solid #000; display: inline-block; width: 200px; padding: 2px 4px; text-align: right;">
+                    <span style="font-weight: bold;">{{ $panel_member_4 }}</span>
+                </span>
+            </div>
+            @endif
+        </div>
     </div>
 </body>
 </html>

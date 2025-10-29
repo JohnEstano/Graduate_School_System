@@ -86,7 +86,7 @@ class EndorsementPdfController extends Controller
     {
         $data = $this->prepareEndorsementData($defenseRequest, $role);
         
-        $pdf = Pdf::loadView('pdfs.prefinal_endorsement_form', $data)
+        $pdf = Pdf::loadView('pdfs.prefinal_endorsement', $data)
             ->setPaper('letter', 'portrait');
 
         return $pdf->output();
@@ -99,7 +99,7 @@ class EndorsementPdfController extends Controller
     {
         $data = $this->prepareEndorsementData($defenseRequest, $role);
         
-        $pdf = Pdf::loadView('pdfs.final_endorsement_form', $data)
+        $pdf = Pdf::loadView('pdfs.final_endorsement', $data)
             ->setPaper('letter', 'portrait');
 
         return $pdf->output();
@@ -164,13 +164,15 @@ class EndorsementPdfController extends Controller
         $coordinator_name = null;
         $coordinator_title = null;
         $coordinator_signature_path = null;
+        $approver_name = null; // Initialize approver_name
         
         if ($role === 'coordinator') {
             // Get coordinator from authenticated user
             $coordinator = auth()->user();
             if ($coordinator) {
                 $coordinator_name = trim(($coordinator->first_name ?? '') . ' ' . ($coordinator->middle_name ?? '') . ' ' . ($coordinator->last_name ?? ''));
-                $coordinator_title = 'Program Coordinator';
+                $coordinator_title = 'Program Coordinator, Graduate School';
+                $approver_name = $coordinator_name; // Use coordinator's name in "Dear" section
                 
                 $coordinatorSignature = $this->getActiveSignature($coordinator->id);
                 if ($coordinatorSignature && $coordinatorSignature->image_path) {
@@ -197,9 +199,34 @@ class EndorsementPdfController extends Controller
             }
         }
 
-        // Default approver (Dean) - used in the "Dear" section
-        $approver_name = 'Dr. Mary Jane B. Amoguis';
-        $approver_title = 'Dean, Graduate School';
+        // If coordinator info not available, use stored coordinator from defense request
+        if (!$approver_name && $defenseRequest->coordinator) {
+            $approver_name = trim(($defenseRequest->coordinator->first_name ?? '') . ' ' . 
+                                 ($defenseRequest->coordinator->middle_name ?? '') . ' ' . 
+                                 ($defenseRequest->coordinator->last_name ?? ''));
+        }
+        
+        // Final fallback
+        if (!$approver_name) {
+            $approver_name = 'Program Coordinator';
+        }
+        
+        $approver_title = 'Program Coordinator, Graduate School';
+
+        // Defense schedule and panel information
+        $defense_time = $defenseRequest->scheduled_time 
+            ? \Carbon\Carbon::parse($defenseRequest->scheduled_time)->format('g:i A')
+            : null;
+        
+        $scheduled_date = $defenseRequest->scheduled_date 
+            ? \Carbon\Carbon::parse($defenseRequest->scheduled_date)->format('F d, Y')
+            : null;
+        
+        $panel_chair = $defenseRequest->defense_chairperson ?? null;
+        $panel_member_1 = $defenseRequest->defense_panelist1 ?? null;
+        $panel_member_2 = $defenseRequest->defense_panelist2 ?? null;
+        $panel_member_3 = $defenseRequest->defense_panelist3 ?? null;
+        $panel_member_4 = $defenseRequest->defense_panelist4 ?? null;
 
         return compact(
             'student_name',
@@ -212,7 +239,14 @@ class EndorsementPdfController extends Controller
             'coordinator_title',
             'coordinator_signature_path',
             'approver_name',
-            'approver_title'
+            'approver_title',
+            'defense_time',
+            'scheduled_date',
+            'panel_chair',
+            'panel_member_1',
+            'panel_member_2',
+            'panel_member_3',
+            'panel_member_4'
         );
     }
 

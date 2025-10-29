@@ -147,7 +147,7 @@
 </head>
 <body>
     <div class="page">
-        <img src="{{ public_path('uic-logo.png') }}" class="uic-logo">
+        <img src="<?php echo e(public_path('uic-logo.png')); ?>" class="uic-logo">
         <div class="header">
             <div class="school">University of the Immaculate Conception</div>
             <div class="dept">GRADUATE SCHOOL</div>
@@ -163,7 +163,8 @@
                     <div style="width:85%; margin-left:8px;">
                         <div class="line" style="text-align:left;">
                             <span style="position:relative; width:100%; display:inline-block; text-align:left; font-weight:bold;">
-                                {{ $student_name ?? '_________________________' }}
+                                <?php echo e($student_name ?? '_________________________'); ?>
+
                             </span>
                         </div>
                         <div class="label" style="text-align:center; margin-top:2px;">Name of Student/ Candidate</div>
@@ -175,7 +176,8 @@
                     <div style="width:75%; margin-left:auto;">
                         <div class="line" style="text-align:center;">
                             <span style="position:relative; width:100%; display:inline-block; text-align:center; font-weight:bold;">
-                                {{ $defense_date ?? now()->format('F d, Y') }}
+                                <?php echo e($defense_date ?? now()->format('F d, Y')); ?>
+
                             </span>
                         </div>
                         <div class="label" style="text-align:center; margin-top:2px;">Date</div>
@@ -188,7 +190,8 @@
                     <div style="width:85%; margin-left:8px;">
                         <div class="line" style="text-align:left;">
                             <span style="position:relative; width:100%; display:inline-block; text-align:left; font-weight:bold;">
-                                {{ $program ?? '_________________________' }}
+                                <?php echo e($program ?? '_________________________'); ?>
+
                             </span>
                         </div>
                         <div class="label" style="text-align:center; margin-top:2px;">Program of Study</div>
@@ -208,7 +211,8 @@
                 <td colspan="3" style="padding-left:8px;">
                     <div class="line" style="width:100%; position:relative; text-align:left;">
                         <span style="position:relative; width:100%; text-align:left; display:inline-block; padding-left:4px;">
-                            {{ Str::limit($thesis_title ?? '', 100, '') }}
+                            <?php echo e(Str::limit($thesis_title ?? '', 100, '')); ?>
+
                         </span>
                     </div>
                 </td>
@@ -217,9 +221,10 @@
                 <td colspan="3" style="padding-left:8px;">
                     <div class="line" style="width:100%; position:relative; text-align:left;">
                         <span style="position:relative; width:100%; text-align:left; display:inline-block; padding-left:4px;">
-                            @if(strlen($thesis_title ?? '') > 100)
-                                {{ Str::limit(Str::substr($thesis_title ?? '', 100), 100, '') }}
-                            @endif
+                            <?php if(strlen($thesis_title ?? '') > 100): ?>
+                                <?php echo e(Str::limit(Str::substr($thesis_title ?? '', 100), 100, '')); ?>
+
+                            <?php endif; ?>
                         </span>
                     </div>
                 </td>
@@ -228,9 +233,10 @@
                 <td colspan="3" style="padding-left:8px;">
                     <div class="line" style="width:100%; position:relative; text-align:left;">
                         <span style="position:relative; width:100%; text-align:left; display:inline-block; padding-left:4px;">
-                            @if(strlen($thesis_title ?? '') > 200)
-                                {{ Str::substr($thesis_title ?? '', 200) }}
-                            @endif
+                            <?php if(strlen($thesis_title ?? '') > 200): ?>
+                                <?php echo e(Str::substr($thesis_title ?? '', 200)); ?>
+
+                            <?php endif; ?>
                         </span>
                     </div>
                 </td>
@@ -238,7 +244,7 @@
         </table>
 
         <div class="section">
-            Dear <span class="dear">{{ $approver_name ?? 'Program Coordinator' }}</span>,
+            Dear <span class="dear"><?php echo e($approver_name ?? 'Program Coordinator'); ?></span>,
         </div>
         <div class="section" style="margin-top: 6px;">
             I have reviewed and fully endorsed the final manuscript attached for evaluation.
@@ -249,10 +255,10 @@
 
         <div class="signature-block">
             <div style="position: relative; display: inline-block;">
-                <div class="signature-label" style="margin-bottom: 2px; font-weight: bold;">{{ $adviser_name ?? 'Thesis / Dissertation Adviser' }}</div>
-                @if(!empty($adviser_signature_path))
-                    <img src="{{ $adviser_signature_path }}" alt="Adviser Signature" style="position: absolute; top: -30px; left: 0; max-height:60px; z-index: 10;">
-                @endif
+                <div class="signature-label" style="margin-bottom: 2px; font-weight: bold;"><?php echo e($adviser_name ?? 'Thesis / Dissertation Adviser'); ?></div>
+                <?php if(!empty($adviser_signature_path)): ?>
+                    <img src="<?php echo e($adviser_signature_path); ?>" alt="Adviser Signature" style="position: absolute; top: -30px; left: 0; max-height:60px; z-index: 10;">
+                <?php endif; ?>
                 <div class="signature-line"></div>
                 <div class="signature-caption" style="margin-top: 4px;">Thesis / Dissertation Adviser</div>
             </div>
@@ -262,15 +268,15 @@
         <div class="approved-block">
             <div style="display: inline-block; text-align: left;">
                 <div class="approved-label" style="text-align:left;">Approved by:</div>
-                @if(!empty($coordinator_signature_path) && !empty($coordinator_name))
+                <?php if(!empty($coordinator_signature_path) && !empty($coordinator_name)): ?>
                     <!-- Show coordinator signature if available -->
                     <div style="position: relative; display: inline-block; text-align: left;">
-                        <div class="approved-name" style="margin-bottom: 4px; text-align: left;">{{ $coordinator_name }}</div>
-                        <img src="{{ $coordinator_signature_path }}" alt="Coordinator Signature" style="position: absolute; top: -30px; left: 0; max-height:60px; z-index: 10;">
+                        <div class="approved-name" style="margin-bottom: 4px; text-align: left;"><?php echo e($coordinator_name); ?></div>
+                        <img src="<?php echo e($coordinator_signature_path); ?>" alt="Coordinator Signature" style="position: absolute; top: -30px; left: 0; max-height:60px; z-index: 10;">
                         <div style="border-bottom: 1px solid #000; width: 200px; margin-top: 10px; margin-bottom: 2px;"></div>
-                        <div style="font-size: 9pt; margin-top: 2px; text-align: left;">{{ $coordinator_title ?? 'Program Coordinator, Graduate School' }}</div>
+                        <div style="font-size: 9pt; margin-top: 2px; text-align: left;"><?php echo e($coordinator_title ?? 'Program Coordinator, Graduate School'); ?></div>
                     </div>
-                @else
+                <?php else: ?>
                     <!-- Show empty lines for manual signature -->
                     <div style="text-align: left; display: inline-block;">
                         <div style="border-bottom: 1px solid #000; width: 200px; height: 20px; margin-bottom: 2px;"></div>
@@ -278,7 +284,7 @@
                         <div style="border-bottom: 1px solid #000; width: 200px; height: 18px; margin-top: 8px; margin-bottom: 2px;"></div>
                         <div style="font-size: 9pt; text-align: left;">Program Coordinator, Graduate School</div>
                     </div>
-                @endif
+                <?php endif; ?>
             </div>
         </div>
 
@@ -315,9 +321,10 @@
                 <span style="margin-right: 8px;">Date/Time of Defense:</span>
                 <span style="border-bottom: 1px solid #000; display: inline-block; width: 200px; padding: 2px 4px; text-align: right;">
                     <span style="font-weight: bold;">
-                        @if($scheduled_date && $defense_time)
-                            {{ $scheduled_date }} at {{ $defense_time }}
-                        @endif
+                        <?php if($scheduled_date && $defense_time): ?>
+                            <?php echo e($scheduled_date); ?> at <?php echo e($defense_time); ?>
+
+                        <?php endif; ?>
                     </span>
                 </span>
             </div>
@@ -325,47 +332,48 @@
 
         <!-- Panel Information Section -->
         <div style="width: 100%; margin: 8px auto 0; text-align: right; font-size: 10pt;">
-            @if($panel_chair)
+            <?php if($panel_chair): ?>
             <div style="margin-bottom: 4px; text-align: right;">
                 <span style="margin-right: 8px;">Panel Chair:</span>
                 <span style="border-bottom: 1px solid #000; display: inline-block; width: 200px; padding: 2px 4px; text-align: right;">
-                    <span style="font-weight: bold;">{{ $panel_chair }}</span>
+                    <span style="font-weight: bold;"><?php echo e($panel_chair); ?></span>
                 </span>
             </div>
-            @endif
-            @if($panel_member_1)
+            <?php endif; ?>
+            <?php if($panel_member_1): ?>
             <div style="margin-bottom: 4px; text-align: right;">
                 <span style="margin-right: 8px;">Panel Member:</span>
                 <span style="border-bottom: 1px solid #000; display: inline-block; width: 200px; padding: 2px 4px; text-align: right;">
-                    <span style="font-weight: bold;">{{ $panel_member_1 }}</span>
+                    <span style="font-weight: bold;"><?php echo e($panel_member_1); ?></span>
                 </span>
             </div>
-            @endif
-            @if($panel_member_2)
+            <?php endif; ?>
+            <?php if($panel_member_2): ?>
             <div style="margin-bottom: 4px; text-align: right;">
                 <span style="margin-right: 8px;">Panel Member:</span>
                 <span style="border-bottom: 1px solid #000; display: inline-block; width: 200px; padding: 2px 4px; text-align: right;">
-                    <span style="font-weight: bold;">{{ $panel_member_2 }}</span>
+                    <span style="font-weight: bold;"><?php echo e($panel_member_2); ?></span>
                 </span>
             </div>
-            @endif
-            @if($panel_member_3 ?? false)
+            <?php endif; ?>
+            <?php if($panel_member_3 ?? false): ?>
             <div style="margin-bottom: 4px; text-align: right;">
                 <span style="margin-right: 8px;">Panel Member:</span>
                 <span style="border-bottom: 1px solid #000; display: inline-block; width: 200px; padding: 2px 4px; text-align: right;">
-                    <span style="font-weight: bold;">{{ $panel_member_3 }}</span>
+                    <span style="font-weight: bold;"><?php echo e($panel_member_3); ?></span>
                 </span>
             </div>
-            @endif
-            @if($panel_member_4 ?? false)
+            <?php endif; ?>
+            <?php if($panel_member_4 ?? false): ?>
             <div style="margin-bottom: 4px; text-align: right;">
                 <span style="margin-right: 8px;">Panel Member:</span>
                 <span style="border-bottom: 1px solid #000; display: inline-block; width: 200px; padding: 2px 4px; text-align: right;">
-                    <span style="font-weight: bold;">{{ $panel_member_4 }}</span>
+                    <span style="font-weight: bold;"><?php echo e($panel_member_4); ?></span>
                 </span>
             </div>
-            @endif
+            <?php endif; ?>
         </div>
     </div>
 </body>
 </html>
+<?php /**PATH C:\Users\estan\OneDrive\Desktop\gradsysystem\Graduate_School_System\resources\views/pdfs/proposal_endorsement.blade.php ENDPATH**/ ?>
