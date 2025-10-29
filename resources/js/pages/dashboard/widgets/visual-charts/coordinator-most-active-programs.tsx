@@ -1,6 +1,7 @@
 "use client"
 
-import { Bar, BarChart, XAxis, YAxis } from "recharts"
+import { TrendingUp } from "lucide-react"
+import { Bar, BarChart, CartesianGrid, Rectangle, XAxis } from "recharts"
 import { useEffect, useState } from "react"
 
 import {
@@ -20,7 +21,7 @@ import {
 
 const chartConfig = {
   requests: {
-    label: "Requests",
+    label: "Defense Requests",
     color: "#e11d48",
   },
 } satisfies ChartConfig
@@ -29,6 +30,7 @@ export function CoordinatorMostActivePrograms() {
   const [chartData, setChartData] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [totalRequests, setTotalRequests] = useState(0)
+  const [activeIndex, setActiveIndex] = useState(0)
 
   useEffect(() => {
     fetch('/defense-requests', {
@@ -59,13 +61,18 @@ export function CoordinatorMostActivePrograms() {
 
         const formattedData = Object.entries(programCounts)
           .map(([program, count]) => ({
-            program: program.length > 25 ? program.substring(0, 25) + '...' : program,
+            program: program.length > 40 ? program.substring(0, 40) + '...' : program,
             requests: count,
+            fill: "#e11d48",
           }))
           .sort((a, b) => b.requests - a.requests)
-          .slice(0, 5)
+          .slice(0, 8)
 
         setChartData(formattedData)
+        // Set the highest value as active
+        if (formattedData.length > 0) {
+          setActiveIndex(0)
+        }
       })
       .catch((error) => {
         console.error('Error fetching defense requests:', error)
@@ -108,42 +115,49 @@ export function CoordinatorMostActivePrograms() {
     <Card className="rounded-xl shadow-none border">
       <CardHeader>
         <CardTitle>Most Active Programs</CardTitle>
-        <CardDescription>Top 5 programs by defense requests</CardDescription>
+        <CardDescription>Top programs by defense requests</CardDescription>
       </CardHeader>
       <CardContent>
-        <ChartContainer config={chartConfig}>
-          <BarChart
-            accessibilityLayer
-            data={chartData}
-            layout="vertical"
-            margin={{
-              left: 0,
-            }}
-          >
-            <YAxis
+        <ChartContainer config={chartConfig} className="h-[250px]">
+          <BarChart accessibilityLayer data={chartData}>
+            <CartesianGrid vertical={false} />
+            <XAxis
               dataKey="program"
-              type="category"
               tickLine={false}
               tickMargin={10}
               axisLine={false}
-              tickFormatter={(value) => value}
+              tickFormatter={(value) => value.length > 20 ? value.substring(0, 20) + '...' : value}
             />
-            <XAxis dataKey="requests" type="number" hide />
             <ChartTooltip
               cursor={false}
               content={<ChartTooltipContent hideLabel />}
             />
-            <Bar 
-              dataKey="requests" 
-              fill="var(--color-requests)"
-              radius={5}
+            <Bar
+              dataKey="requests"
+              strokeWidth={2}
+              radius={8}
+              activeIndex={activeIndex}
+              activeBar={({ ...props }) => {
+                return (
+                  <Rectangle
+                    {...props}
+                    fillOpacity={0.8}
+                    stroke={props.payload.fill}
+                    strokeDasharray={4}
+                    strokeDashoffset={4}
+                  />
+                )
+              }}
             />
           </BarChart>
         </ChartContainer>
       </CardContent>
       <CardFooter className="flex-col items-start gap-2 text-sm">
-        <div className="flex gap-2 font-medium leading-none">
-          Top program: {chartData[0].program} ({chartData[0].requests})
+        <div className="flex gap-2 leading-none font-medium">
+          Trending up by {((chartData[0].requests / totalRequests) * 100).toFixed(1)}% <TrendingUp className="h-4 w-4" />
+        </div>
+        <div className="text-muted-foreground leading-none">
+          Top program: {chartData[0].program} with {chartData[0].requests} defense requests
         </div>
       </CardFooter>
     </Card>
