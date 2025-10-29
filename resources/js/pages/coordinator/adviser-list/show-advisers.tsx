@@ -33,13 +33,16 @@ type Adviser = {
 };
 
 type Student = {
-  id: number;
+  id: number | string; // Can be number or "pending_X" for unregistered
   student_number: string | null;
   first_name: string | null;
   middle_name: string | null;
   last_name: string | null;
   email: string | null;
   program: string | null;
+  coordinator_name?: string | null;
+  is_pre_registered?: boolean; // Whether student is not registered yet
+  invitation_sent?: boolean; // For unregistered students
 };
 
 function getInitials(person: { first_name: string | null; last_name: string | null }) {
@@ -73,7 +76,14 @@ export default function ShowAdvisers() {
 
   // Confirmation dialog for sending invitation email
   const [invitationConfirmOpen, setInvitationConfirmOpen] = useState(false);
-  const [pendingInvitation, setPendingInvitation] = useState<{ name: string; email: string; adviserId: number } | null>(null);
+  const [pendingInvitation, setPendingInvitation] = useState<{ 
+    name: string; 
+    email: string; 
+    adviserId: number | null;
+    firstName: string;
+    middleName: string | null;
+    lastName: string;
+  } | null>(null);
   const [sendingInvitation, setSendingInvitation] = useState(false);
 
   // Add Student dialog state (NEW)
@@ -82,7 +92,16 @@ export default function ShowAdvisers() {
   const [addStudentError, setAddStudentError] = useState("");
   const [addingStudent, setAddingStudent] = useState(false);
   const [assignmentEmailConfirmOpen, setAssignmentEmailConfirmOpen] = useState(false);
-  const [pendingAssignment, setPendingAssignment] = useState<{ studentEmail: string } | null>(null);
+  const [pendingAssignment, setPendingAssignment] = useState<{ 
+    studentEmail: string;
+    studentData?: {
+      id?: number;
+      email: string;
+      first_name?: string;
+      last_name?: string;
+      not_registered?: boolean;
+    };
+  } | null>(null);
 
   // New: Pending students state
   const [pendingStudents, setPendingStudents] = useState<Student[]>([]);
@@ -152,12 +171,15 @@ export default function ShowAdvisers() {
 
       // Check if adviser is inactive and needs invitation
       const newAdviser = response.data?.adviser;
-      if (newAdviser?.status === 'inactive') {
+      if (newAdviser?.status === 'inactive' || newAdviser?.status === 'pending_invitation' || response.data?.needs_confirmation) {
         // Show confirmation dialog before sending email
         setPendingInvitation({
           name: `${newAdviser.first_name} ${newAdviser.last_name}`,
           email: newAdviser.email,
-          adviserId: newAdviser.id
+          adviserId: newAdviser.id,
+          firstName: newAdviser.first_name,
+          middleName: newAdviser.middle_name,
+          lastName: newAdviser.last_name,
         });
         setInvitationConfirmOpen(true);
         toast.success('Adviser registered successfully!');
@@ -182,7 +204,24 @@ export default function ShowAdvisers() {
       // Ensure fresh CSRF token before submission
       await beforeSubmit();
       
-      await axios.post(`/api/coordinator/advisers/${pendingInvitation.adviserId}/send-invitation`);
+      // If adviserId is null, this is a new invitation (not yet in database)
+      const endpoint = pendingInvitation.adviserId 
+        ? `/api/coordinator/advisers/${pendingInvitation.adviserId}/send-invitation`
+        : `/api/coordinator/advisers/pending/send-invitation`;
+      
+      const payload = pendingInvitation.adviserId ? {} : {
+        first_name: pendingInvitation.firstName,
+        middle_name: pendingInvitation.middleName,
+        last_name: pendingInvitation.lastName,
+        email: pendingInvitation.email,
+      };
+      
+      const response = await axios.post(endpoint, payload);
+      
+      // Refresh the advisers list to show the newly created adviser
+      const advisersRes = await axios.get("/api/coordinator/advisers");
+      setAdvisers(advisersRes.data);
+      
       toast.success(
         `Invitation email sent successfully to ${pendingInvitation.email}`,
         {
@@ -288,9 +327,43 @@ export default function ShowAdvisers() {
       return;
     }
     
-    // Show confirmation dialog
-    setPendingAssignment({ studentEmail: studentEmail.trim() });
-    setAssignmentEmailConfirmOpen(true);
+    setAddingStudent(true);
+    setAddStudentError("");
+    
+    try {
+      // First, check if assignment needs confirmation (don't create DB record yet)
+      const response = await axios.post(`/api/coordinator/advisers/${viewAdviser.id}/students`, {
+        email: studentEmail.trim(),
+        send_email: false,
+        confirm_assignment: false, // Just checking, not confirming yet
+      });
+      
+      // If needs confirmation, show confirmation dialog
+      if (response.data.needs_confirmation) {
+        setPendingAssignment({ 
+          studentEmail: studentEmail.trim(),
+          studentData: response.data.student_data 
+        });
+        setAssignmentEmailConfirmOpen(true);
+      } else {
+        // Shouldn't happen with current flow, but handle just in case
+        toast.success('Student assigned successfully!');
+        await fetchPendingStudents(viewAdviser.id);
+        await fetchStudents(viewAdviser.id);
+        setAddStudentDialogOpen(false);
+        setStudentEmail("");
+      }
+    } catch (err: any) {
+      setAddStudentError(err.response?.data?.error || "Failed to check student.");
+      toast.error(
+        'Failed to process student assignment',
+        {
+          description: err.response?.data?.error || 'Please try again.',
+        }
+      );
+    } finally {
+      setAddingStudent(false);
+    }
   };
 
   const handleConfirmAssignment = async (sendEmail: boolean) => {
@@ -300,20 +373,32 @@ export default function ShowAdvisers() {
     setAddStudentError("");
     
     try {
+      // Now actually create the assignment with confirmation flag
       const response = await axios.post(`/api/coordinator/advisers/${viewAdviser.id}/students`, {
         email: pendingAssignment.studentEmail,
         send_email: sendEmail,
+        confirm_assignment: true, // NOW we confirm and create the record
       });
       
       // Check if student is pending registration
       if (response.data.pending_registration) {
-        toast.success(
-          'Invitation sent!', 
-          {
-            description: `Student will be assigned when they log in. Invitation email sent to ${response.data.student_email}`,
-            duration: 6000,
-          }
-        );
+        if (sendEmail) {
+          toast.success(
+            'Invitation sent!', 
+            {
+              description: `Student will be assigned when they log in. Invitation email sent to ${response.data.student_email}`,
+              duration: 6000,
+            }
+          );
+        } else {
+          toast.success(
+            'Student assignment pending', 
+            {
+              description: `Student will be assigned to ${viewAdviser.first_name} ${viewAdviser.last_name} when they log in. Invitation was not sent.`,
+              duration: 6000,
+            }
+          );
+        }
       } else {
         await fetchPendingStudents(viewAdviser.id);
         await fetchStudents(viewAdviser.id);
@@ -858,22 +943,33 @@ export default function ShowAdvisers() {
                     </div>
                   ) : (
                     <ul className="divide-y">
-                      {pendingStudents.map(s => (
-                        <li key={s.id} className="py-2 flex items-center gap-3 text-xs">
-                          <Avatar className="h-8 w-8">
-                            <AvatarFallback>
-                              {getInitials(s)}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div className="flex-1">
-                            <div className="font-medium text-xs flex items-center gap-2 text-zinc-900 dark:text-zinc-100">
-                              {s.first_name} {s.middle_name ? s.middle_name[0] + "." : ""} {s.last_name}
+                      {pendingStudents.map(s => {
+                        const isPreRegistered = s.is_pre_registered === true;
+                        
+                        return (
+                          <li key={s.id} className="py-2 flex items-center gap-3 text-xs">
+                            <Avatar className="h-8 w-8">
+                              <AvatarFallback className={isPreRegistered ? "bg-amber-100 text-amber-700" : ""}>
+                                {getInitials(s)}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div className="flex-1">
+                              <div className="font-medium text-xs flex items-center gap-2 text-zinc-900 dark:text-zinc-100">
+                                {s.first_name} {s.middle_name ? s.middle_name[0] + "." : ""} {s.last_name}
+                                {isPreRegistered && (
+                                  <span className="text-xs px-2 py-0.5 bg-amber-100 text-amber-700 rounded-full">
+                                    Not Registered
+                                  </span>
+                                )}
+                              </div>
+                              <div className="text-xs text-gray-500 dark:text-gray-400">
+                                {s.email} • {s.student_number || 'N/A'} • {s.program || 'Awaiting Registration'}
+                              </div>
                             </div>
-                            <div className="text-xs text-gray-500 dark:text-gray-400">{s.email} • {s.student_number} • {s.program}</div>
-                          </div>
-                          {/* You can add actions for pending students here if needed */}
-                        </li>
-                      ))}
+                            {/* You can add actions for pending students here if needed */}
+                          </li>
+                        );
+                      })}
                     </ul>
                   )}
                 </div>
