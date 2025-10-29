@@ -53,9 +53,9 @@
   array (
     'paths' => 
     array (
-      0 => 'C:\\Users\\Geff\\Desktop\\Graduate_School_System\\resources\\views',
+      0 => 'C:\\Users\\estan\\OneDrive\\Desktop\\gradsysystem\\Graduate_School_System\\resources\\views',
     ),
-    'compiled' => 'C:\\Users\\Geff\\Desktop\\Graduate_School_System\\storage\\framework\\views',
+    'compiled' => 'C:\\Users\\estan\\OneDrive\\Desktop\\gradsysystem\\Graduate_School_System\\storage\\framework\\views',
   ),
   'app' => 
   array (
@@ -199,15 +199,15 @@
   ),
   'broadcasting' => 
   array (
-    'default' => 'reverb',
+    'default' => 'log',
     'connections' => 
     array (
       'reverb' => 
       array (
         'driver' => 'reverb',
-        'key' => 'utrr3yf1xzpkgx2sxgol',
-        'secret' => 'g0bpyh6dwwsmzfdvcqjk',
-        'app_id' => '868934',
+        'key' => 'l7edzjvibuvhhuk7j5kl',
+        'secret' => 'vvpqlopluzkm0no7unan',
+        'app_id' => '956474',
         'options' => 
         array (
           'host' => 'localhost',
@@ -279,8 +279,8 @@
       'file' => 
       array (
         'driver' => 'file',
-        'path' => 'C:\\Users\\Geff\\Desktop\\Graduate_School_System\\storage\\framework/cache/data',
-        'lock_path' => 'C:\\Users\\Geff\\Desktop\\Graduate_School_System\\storage\\framework/cache/data',
+        'path' => 'C:\\Users\\estan\\OneDrive\\Desktop\\gradsysystem\\Graduate_School_System\\storage\\framework/cache/data',
+        'lock_path' => 'C:\\Users\\estan\\OneDrive\\Desktop\\gradsysystem\\Graduate_School_System\\storage\\framework/cache/data',
       ),
       'memcached' => 
       array (
@@ -462,10 +462,10 @@
     'convert_entities' => true,
     'options' => 
     array (
-      'font_dir' => 'C:\\Users\\Geff\\Desktop\\Graduate_School_System\\storage\\fonts',
-      'font_cache' => 'C:\\Users\\Geff\\Desktop\\Graduate_School_System\\storage\\fonts',
-      'temp_dir' => 'C:\\Users\\Geff\\AppData\\Local\\Temp',
-      'chroot' => 'C:\\Users\\Geff\\Desktop\\Graduate_School_System',
+      'font_dir' => 'C:\\Users\\estan\\OneDrive\\Desktop\\gradsysystem\\Graduate_School_System\\storage\\fonts',
+      'font_cache' => 'C:\\Users\\estan\\OneDrive\\Desktop\\gradsysystem\\Graduate_School_System\\storage\\fonts',
+      'temp_dir' => 'C:\\Users\\estan\\AppData\\Local\\Temp',
+      'chroot' => 'C:\\Users\\estan\\OneDrive\\Desktop\\gradsysystem\\Graduate_School_System',
       'allowed_protocols' => 
       array (
         'data://' => 
@@ -518,7 +518,7 @@
       'local' => 
       array (
         'driver' => 'local',
-        'root' => 'C:\\Users\\Geff\\Desktop\\Graduate_School_System\\storage\\app/private',
+        'root' => 'C:\\Users\\estan\\OneDrive\\Desktop\\gradsysystem\\Graduate_School_System\\storage\\app/private',
         'serve' => true,
         'throw' => false,
         'report' => false,
@@ -526,7 +526,7 @@
       'public' => 
       array (
         'driver' => 'local',
-        'root' => 'C:\\Users\\Geff\\Desktop\\Graduate_School_System\\storage\\app/public',
+        'root' => 'C:\\Users\\estan\\OneDrive\\Desktop\\gradsysystem\\Graduate_School_System\\storage\\app/public',
         'url' => 'http://localhost/storage',
         'visibility' => 'public',
         'throw' => false,
@@ -548,7 +548,7 @@
     ),
     'links' => 
     array (
-      'C:\\Users\\Geff\\Desktop\\Graduate_School_System\\public\\storage' => 'C:\\Users\\Geff\\Desktop\\Graduate_School_System\\storage\\app/public',
+      'C:\\Users\\estan\\OneDrive\\Desktop\\gradsysystem\\Graduate_School_System\\public\\storage' => 'C:\\Users\\estan\\OneDrive\\Desktop\\gradsysystem\\Graduate_School_System\\storage\\app/public',
     ),
   ),
   'inertia' => 
@@ -561,7 +561,7 @@
     'ensure_pages_exist' => false,
     'page_paths' => 
     array (
-      0 => 'C:\\Users\\Geff\\Desktop\\Graduate_School_System\\resources\\js/Pages',
+      0 => 'C:\\Users\\estan\\OneDrive\\Desktop\\gradsysystem\\Graduate_School_System\\resources\\js/Pages',
     ),
     'page_extensions' => 
     array (
@@ -577,7 +577,7 @@
       'ensure_pages_exist' => true,
       'page_paths' => 
       array (
-        0 => 'C:\\Users\\Geff\\Desktop\\Graduate_School_System\\resources\\js/pages',
+        0 => 'C:\\Users\\estan\\OneDrive\\Desktop\\gradsysystem\\Graduate_School_System\\resources\\js/pages',
       ),
       'page_extensions' => 
       array (
@@ -633,14 +633,14 @@
       'single' => 
       array (
         'driver' => 'single',
-        'path' => 'C:\\Users\\Geff\\Desktop\\Graduate_School_System\\storage\\logs/laravel.log',
+        'path' => 'C:\\Users\\estan\\OneDrive\\Desktop\\gradsysystem\\Graduate_School_System\\storage\\logs/laravel.log',
         'level' => 'debug',
         'replace_placeholders' => true,
       ),
       'daily' => 
       array (
         'driver' => 'daily',
-        'path' => 'C:\\Users\\Geff\\Desktop\\Graduate_School_System\\storage\\logs/laravel.log',
+        'path' => 'C:\\Users\\estan\\OneDrive\\Desktop\\gradsysystem\\Graduate_School_System\\storage\\logs/laravel.log',
         'level' => 'debug',
         'days' => 14,
         'replace_placeholders' => true,
@@ -705,13 +705,13 @@
       ),
       'emergency' => 
       array (
-        'path' => 'C:\\Users\\Geff\\Desktop\\Graduate_School_System\\storage\\logs/laravel.log',
+        'path' => 'C:\\Users\\estan\\OneDrive\\Desktop\\gradsysystem\\Graduate_School_System\\storage\\logs/laravel.log',
       ),
     ),
   ),
   'mail' => 
   array (
-    'default' => 'smtp',
+    'default' => 'resend',
     'mailers' => 
     array (
       'smtp' => 
@@ -720,7 +720,7 @@
         'scheme' => NULL,
         'url' => NULL,
         'host' => '127.0.0.1',
-        'port' => '1025',
+        'port' => 2525,
         'username' => NULL,
         'password' => NULL,
         'timeout' => NULL,
@@ -773,15 +773,15 @@
     ),
     'from' => 
     array (
-      'address' => 'test@example.com',
-      'name' => 'Graduate_School_Systems',
+      'address' => 'noreply@diapana.dev',
+      'name' => 'Graduate School System',
     ),
     'markdown' => 
     array (
       'theme' => 'default',
       'paths' => 
       array (
-        0 => 'C:\\Users\\Geff\\Desktop\\Graduate_School_System\\resources\\views/vendor/mail',
+        0 => 'C:\\Users\\estan\\OneDrive\\Desktop\\gradsysystem\\Graduate_School_System\\resources\\views/vendor/mail',
       ),
     ),
   ),
@@ -869,7 +869,7 @@
   ),
   'resend' => 
   array (
-    'api_key' => NULL,
+    'api_key' => 're_JR3GCkYg_ExTwUHxNwmrBTKSJ2DwWiEbR',
     'domain' => NULL,
     'path' => 'resend',
     'webhook' => 
@@ -922,9 +922,9 @@
       array (
         0 => 
         array (
-          'key' => 'utrr3yf1xzpkgx2sxgol',
-          'secret' => 'g0bpyh6dwwsmzfdvcqjk',
-          'app_id' => '868934',
+          'key' => 'l7edzjvibuvhhuk7j5kl',
+          'secret' => 'vvpqlopluzkm0no7unan',
+          'app_id' => '956474',
           'options' => 
           array (
             'host' => 'localhost',
@@ -975,7 +975,7 @@
     ),
     'resend' => 
     array (
-      'key' => NULL,
+      'key' => 're_JR3GCkYg_ExTwUHxNwmrBTKSJ2DwWiEbR',
     ),
     'ses' => 
     array (
@@ -1002,10 +1002,10 @@
   'session' => 
   array (
     'driver' => 'database',
-    'lifetime' => 480,
+    'lifetime' => 120,
     'expire_on_close' => false,
     'encrypt' => false,
-    'files' => 'C:\\Users\\Geff\\Desktop\\Graduate_School_System\\storage\\framework/sessions',
+    'files' => 'C:\\Users\\estan\\OneDrive\\Desktop\\gradsysystem\\Graduate_School_System\\storage\\framework/sessions',
     'connection' => NULL,
     'table' => 'sessions',
     'store' => NULL,
@@ -1025,10 +1025,10 @@
   'uic-api' => 
   array (
     'base_url' => 'https://api.uic.edu.ph/api/v2',
-    'client_id' => '1761122832-0D26D912B8DFC51F8F93F32BB55D68114E1A8D567F217FACF44ACD162EA709AD.api.uic.edu.ph',
-    'client_secret' => 'B83643C7F6572C8B7F5C2B872B4B89D4DDCC5C3EF84684D266F9D31D022DF886',
-    'timeout' => '30',
-    'token_cache_minutes' => '1440',
+    'client_id' => NULL,
+    'client_secret' => NULL,
+    'timeout' => 30,
+    'token_cache_minutes' => 1440,
     'endpoints' => 
     array (
       'login' => '/accounts/auth/login',
@@ -1080,7 +1080,7 @@
       'enabled' => true,
       'open' => NULL,
       'driver' => 'file',
-      'path' => 'C:\\Users\\Geff\\Desktop\\Graduate_School_System\\storage\\debugbar',
+      'path' => 'C:\\Users\\estan\\OneDrive\\Desktop\\gradsysystem\\Graduate_School_System\\storage\\debugbar',
       'connection' => NULL,
       'provider' => '',
       'hostname' => '127.0.0.1',

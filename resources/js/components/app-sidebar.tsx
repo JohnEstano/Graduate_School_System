@@ -39,11 +39,7 @@ const studentNavItems: MainNavItem[] = [
         //href: '/student/documents',
        // icon: FileText,
   //  },
-    {
-        title: 'Academic Records',
-        href: '/academic-records',
-        icon: LibraryBig,
-    },
+   
     {
         title: 'Payments',
         href: '/payment',
