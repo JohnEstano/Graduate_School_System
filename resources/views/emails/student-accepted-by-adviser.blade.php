@@ -208,8 +208,6 @@
             <div class="next-steps-box">
                 <h3><i class="fas fa-list-check"></i> Next Steps</h3>
                 <ul>
-                    <li><strong>Introduce Yourself:</strong> Send a professional email to your adviser introducing yourself and expressing your enthusiasm to work together.</li>
-                    <li><strong>Schedule a Meeting:</strong> Request an initial meeting to discuss your academic goals, research interests, and program requirements.</li>
                     <li><strong>Prepare Questions:</strong> Come prepared with questions about your program, coursework selection, and research opportunities.</li>
                     <li><strong>Stay Connected:</strong> Maintain regular communication with your adviser throughout your academic journey.</li>
                     <li><strong>Use the System:</strong> Access the Graduate School System to track your defense requests, submissions, and academic progress.</li>

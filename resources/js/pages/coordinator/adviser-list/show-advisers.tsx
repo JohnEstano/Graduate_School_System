@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from "react";
-import axios from "axios";
+import axios from "@/lib/axios";
 import { Table, TableHeader, TableRow, TableCell, TableBody, TableHead } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,6 +12,13 @@ import { Badge } from "@/components/ui/badge";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { Info } from "lucide-react";
 import { toast, Toaster } from 'sonner';
+import { useCSRFProtection } from '@/hooks/use-csrf-token';
+
+// Email validation utility
+const isValidUICEmail = (email: string): boolean => {
+  const uicEmailRegex = /^[a-zA-Z0-9._%+-]+@uic\.edu\.ph$/;
+  return uicEmailRegex.test(email.trim());
+};
 
 type Adviser = {
   id: number;
@@ -42,6 +49,7 @@ function getInitials(person: { first_name: string | null; last_name: string | nu
 }
 
 export default function ShowAdvisers() {
+  const { beforeSubmit } = useCSRFProtection();
   const [advisers, setAdvisers] = useState<Adviser[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -112,7 +120,22 @@ export default function ShowAdvisers() {
   }, [filteredAdvisers.length, page, pageSize]);
 
   const handleRegister = async () => {
-    if (!adviserName.trim() || !adviserEmail.trim()) return;
+    if (!adviserName.trim() || !adviserEmail.trim()) {
+      toast.error('Please provide both name and email');
+      return;
+    }
+
+    // Validate UIC email
+    if (!isValidUICEmail(adviserEmail)) {
+      const errorMsg = 'Only @uic.edu.ph emails are allowed. Please use your UIC organizational email.';
+      setRegisterError(errorMsg);
+      toast.error('Invalid Email Address', {
+        description: errorMsg,
+        duration: 5000,
+      });
+      return;
+    }
+
     setRegistering(true);
     setRegisterError("");
     try {
@@ -142,7 +165,10 @@ export default function ShowAdvisers() {
         toast.success('Adviser registered successfully!');
       }
     } catch (error: any) {
-      setRegisterError(error.response?.data?.error || "Failed to register adviser");
+      console.error('Register adviser error:', error);
+      const errorMsg = error.response?.data?.error || error.response?.data?.message || error.message || "Failed to register adviser";
+      setRegisterError(errorMsg);
+      toast.error(errorMsg);
     } finally {
       setRegistering(false);
     }
@@ -153,6 +179,9 @@ export default function ShowAdvisers() {
     
     setSendingInvitation(true);
     try {
+      // Ensure fresh CSRF token before submission
+      await beforeSubmit();
+      
       await axios.post(`/api/coordinator/advisers/${pendingInvitation.adviserId}/send-invitation`);
       toast.success(
         `Invitation email sent successfully to ${pendingInvitation.email}`,
@@ -178,6 +207,10 @@ export default function ShowAdvisers() {
 
   const handleRemoveAdviser = async () => {
     if (!adviserToRemove) return;
+    
+    // Ensure fresh CSRF token before submission
+    await beforeSubmit();
+    
     await axios.delete(`/api/coordinator/advisers/${adviserToRemove.id}`);
     setAdvisers(advisers.filter(a => a.id !== adviserToRemove.id));
     setConfirmOpen(false);
@@ -189,6 +222,9 @@ export default function ShowAdvisers() {
     setEditLoading(true);
     setEditError("");
     try {
+      // Ensure fresh CSRF token before submission
+      await beforeSubmit();
+      
       await axios.put(`/api/coordinator/advisers/${editAdviser.id}`, {
         name: editName.trim(),
         email: editEmail.trim(),
@@ -241,6 +277,17 @@ export default function ShowAdvisers() {
   const handleAddStudent = async () => {
     if (!studentEmail.trim() || !viewAdviser) return;
     
+    // Validate UIC email
+    if (!isValidUICEmail(studentEmail)) {
+      const errorMsg = 'Only @uic.edu.ph emails are allowed. Please ensure the student is registered with UIC.';
+      setAddStudentError(errorMsg);
+      toast.error('Invalid Email Address', {
+        description: errorMsg,
+        duration: 5000,
+      });
+      return;
+    }
+    
     // Show confirmation dialog
     setPendingAssignment({ studentEmail: studentEmail.trim() });
     setAssignmentEmailConfirmOpen(true);
@@ -253,27 +300,51 @@ export default function ShowAdvisers() {
     setAddStudentError("");
     
     try {
-      await axios.post(`/api/coordinator/advisers/${viewAdviser.id}/students`, {
+      const response = await axios.post(`/api/coordinator/advisers/${viewAdviser.id}/students`, {
         email: pendingAssignment.studentEmail,
         send_email: sendEmail,
       });
       
-      await fetchPendingStudents(viewAdviser.id);
-      await fetchStudents(viewAdviser.id);
+      // Check if student is pending registration
+      if (response.data.pending_registration) {
+        toast.success(
+          'Invitation sent!', 
+          {
+            description: `Student will be assigned when they log in. Invitation email sent to ${response.data.student_email}`,
+            duration: 6000,
+          }
+        );
+      } else {
+        await fetchPendingStudents(viewAdviser.id);
+        await fetchStudents(viewAdviser.id);
+        
+        if (sendEmail) {
+          toast.success(
+            'Student assigned successfully!',
+            {
+              description: 'Email notification sent to adviser and student.',
+              duration: 5000,
+            }
+          );
+        } else {
+          toast.success('Student assigned successfully (no email sent)');
+        }
+      }
       
       setAddStudentDialogOpen(false);
       setAssignmentEmailConfirmOpen(false);
       setStudentEmail("");
       setPendingAssignment(null);
       
-      if (sendEmail) {
-        toast.success('Student assigned and email notification sent to adviser!');
-      } else {
-        toast.success('Student assigned successfully (no email sent)');
-      }
     } catch (err: any) {
       setAddStudentError(err.response?.data?.error || "Failed to add student.");
       setAssignmentEmailConfirmOpen(false);
+      toast.error(
+        'Failed to assign student',
+        {
+          description: err.response?.data?.error || 'Please try again.',
+        }
+      );
     } finally {
       setAddingStudent(false);
     }
@@ -356,12 +427,24 @@ export default function ShowAdvisers() {
                   <label className="text-sm font-medium dark:text-zinc-100">Adviser Email</label>
                   <Input
                     type="email"
-                    placeholder="Email"
+                    placeholder="adviser@uic.edu.ph"
                     value={adviserEmail}
-                    onChange={e => setAdviserEmail(e.target.value)}
+                    onChange={e => {
+                      setAdviserEmail(e.target.value);
+                      setRegisterError(""); // Clear error on change
+                    }}
                     disabled={registering}
-                    className="dark:bg-zinc-800 dark:text-zinc-100"
+                    className={`dark:bg-zinc-800 dark:text-zinc-100 ${
+                      adviserEmail && !isValidUICEmail(adviserEmail) 
+                        ? 'border-rose-500 focus-visible:ring-rose-500' 
+                        : ''
+                    }`}
                   />
+                  {adviserEmail && !isValidUICEmail(adviserEmail) && (
+                    <p className="text-xs text-rose-500 mt-1">
+                      Must be a valid @uic.edu.ph email address
+                    </p>
+                  )}
                 </div>
                 {registerError && (
                   <div className="text-xs text-rose-500 mt-1">{registerError}</div>
@@ -744,8 +827,11 @@ export default function ShowAdvisers() {
                             size="icon"
                             aria-label="Remove student"
                             className="text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900"
-                            onClick={() => {
+                            onClick={async () => {
                               if (window.confirm(`Remove ${s.first_name} ${s.last_name} from this adviser?`)) {
+                                // Ensure fresh CSRF token before submission
+                                await beforeSubmit();
+                                
                                 axios.delete(`/api/coordinator/advisers/${viewAdviser?.id}/students/${s.id}`)
                                   .then(() => setStudents(students.filter(stu => stu.id !== s.id)));
                               }
@@ -832,12 +918,24 @@ export default function ShowAdvisers() {
               </Alert>
             )}
             <Input
-              placeholder="Email"
+              placeholder="student@uic.edu.ph"
               value={studentEmail}
-              onChange={e => setStudentEmail(e.target.value)}
-              className="text-xs dark:bg-zinc-800 dark:text-zinc-100"
+              onChange={e => {
+                setStudentEmail(e.target.value);
+                setAddStudentError(""); // Clear error on change
+              }}
+              className={`text-xs dark:bg-zinc-800 dark:text-zinc-100 ${
+                studentEmail && !isValidUICEmail(studentEmail) 
+                  ? 'border-rose-500 focus-visible:ring-rose-500' 
+                  : ''
+              }`}
               disabled={addingStudent}
             />
+            {studentEmail && !isValidUICEmail(studentEmail) && (
+              <p className="text-xs text-rose-500 mt-1">
+                Must be a valid @uic.edu.ph email address
+              </p>
+            )}
           </div>
           <DialogFooter>
             <Button

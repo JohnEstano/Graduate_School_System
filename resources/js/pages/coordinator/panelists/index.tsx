@@ -10,7 +10,7 @@ import { Toaster, toast } from 'sonner';
 import { CheckCircle, CircleX, X, Trash2, Search, Users, PlusCircle, UserPlus } from 'lucide-react';
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { Checkbox } from "@/components/ui/checkbox";
-import axios from "axios";
+import axios from "@/lib/axios";
 import type { Panelist, PaymentRate } from '@/types';
 
 const breadcrumbs = [

@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Download } from "lucide-react";
-import axios from "axios";
+import axios from "@/lib/axios";
 import { ProgramRecord } from "@/pages/honorarium/Index";
 import html2canvas from "html2canvas"; 
 import { jsPDF } from "jspdf";

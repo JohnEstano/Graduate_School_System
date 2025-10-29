@@ -9,6 +9,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
 use App\Models\User;
@@ -21,6 +22,9 @@ class AuthenticatedSessionController extends Controller
      */
     public function create(Request $request): Response
     {
+        // Regenerate CSRF token to ensure fresh token on login page
+        $request->session()->regenerateToken();
+        
         return Inertia::render('auth/login', [
             'canResetPassword' => Route::has('password.request'),
             'status' => $request->session()->get('status'),
@@ -43,6 +47,95 @@ class AuthenticatedSessionController extends Controller
                 $adviser->status = 'active';
                 $adviser->user_id = $user->id;
                 $adviser->save();
+            }
+            
+            // Check if this user has any pending student assignments (pre-registered)
+            // Handle both full email (e.g., gdiapana_230000001047@uic.edu.ph) and variations
+            $pendingAssignments = \App\Models\PendingStudentAssignment::where(function($query) use ($user) {
+                $query->where('student_email', $user->email);
+                
+                // If user has a student_number, also check for email patterns with student number
+                if ($user->student_number) {
+                    $query->orWhere('student_email', 'LIKE', '%' . $user->student_number . '%@uic.edu.ph');
+                }
+                
+                // Also check if email starts with any part of user's name + student_number
+                if ($user->email) {
+                    // Extract student ID from email (e.g., 230000001047 from gdiapana_230000001047@uic.edu.ph)
+                    if (preg_match('/(\d{10,})/', $user->email, $matches)) {
+                        $studentId = $matches[1];
+                        $query->orWhere('student_email', 'LIKE', '%' . $studentId . '%@uic.edu.ph');
+                    }
+                }
+            })->get();
+            
+            if ($pendingAssignments->isNotEmpty()) {
+                foreach ($pendingAssignments as $pending) {
+                    try {
+                        // Get the adviser for this assignment
+                        $adviserForAssignment = \App\Models\Adviser::find($pending->adviser_id);
+                        
+                        if ($adviserForAssignment && $adviserForAssignment->user_id) {
+                            // Check if assignment already exists
+                            $exists = DB::table('adviser_student')
+                                ->where('adviser_id', $adviserForAssignment->user_id)
+                                ->where('student_id', $user->id)
+                                ->exists();
+                            
+                            if (!$exists) {
+                                // Create the assignment with pending status (adviser needs to accept)
+                                DB::table('adviser_student')->insert([
+                                    'adviser_id' => $adviserForAssignment->user_id,
+                                    'student_id' => $user->id,
+                                    'status' => 'pending',
+                                    'requested_by' => $pending->coordinator_id,
+                                    'created_at' => now(),
+                                    'updated_at' => now(),
+                                ]);
+                                
+                                // Create notification for adviser
+                                $coordinator = \App\Models\User::find($pending->coordinator_id);
+                                $adviserUser = \App\Models\User::find($adviserForAssignment->user_id);
+                                
+                                if ($adviserUser && $coordinator) {
+                                    \App\Models\Notification::create([
+                                        'user_id' => $adviserUser->id,
+                                        'type' => 'student_assigned',
+                                        'title' => 'New Student Assigned',
+                                        'message' => "Coordinator {$coordinator->first_name} {$coordinator->last_name} has assigned {$user->first_name} {$user->last_name} to you. Please review and accept/reject.",
+                                        'action_url' => '/adviser/pending-students',
+                                    ]);
+                                }
+                                
+                                // Create notification for student
+                                \App\Models\Notification::create([
+                                    'user_id' => $user->id,
+                                    'type' => 'assigned_to_adviser',
+                                    'title' => 'Assigned to Adviser',
+                                    'message' => "You have been assigned to an adviser. Awaiting adviser's acceptance.",
+                                    'action_url' => '/dashboard',
+                                ]);
+                                
+                                Log::info('Pre-registered student assignment activated', [
+                                    'student_id' => $user->id,
+                                    'student_email' => $user->email,
+                                    'adviser_id' => $adviserForAssignment->user_id,
+                                    'pending_assignment_id' => $pending->id
+                                ]);
+                            }
+                        }
+                        
+                        // Delete the pending assignment record
+                        $pending->delete();
+                        
+                    } catch (\Exception $e) {
+                        Log::error('Failed to process pending student assignment', [
+                            'student_email' => $user->email,
+                            'pending_id' => $pending->id,
+                            'error' => $e->getMessage()
+                        ]);
+                    }
+                }
             }
         }
 
@@ -75,6 +168,7 @@ class AuthenticatedSessionController extends Controller
         $request->session()->invalidate();
         $request->session()->regenerateToken();
 
-        return redirect('/');
+        // Redirect to login page instead of home to avoid CSRF issues
+        return redirect()->route('login');
     }
 }

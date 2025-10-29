@@ -8,6 +8,8 @@ use Illuminate\Foundation\Configuration\Exceptions;
 use App\Http\Middleware\HandleAppearance;
 use App\Http\Middleware\HandleInertiaRequests;
 use App\Http\Middleware\PreventDuplicateCompreApplication;
+use App\Http\Middleware\CheckRole;
+use App\Http\Middleware\EnsureFreshCsrfToken;
 use Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets;
 
 return Application::configure(basePath: dirname(__DIR__))
@@ -24,6 +26,7 @@ return Application::configure(basePath: dirname(__DIR__))
         // alias middleware
         $middleware->alias([
             'no-duplicate-compre' => PreventDuplicateCompreApplication::class,
+            'role' => CheckRole::class,
         ]);
 
         // add web middleware
@@ -31,6 +34,7 @@ return Application::configure(basePath: dirname(__DIR__))
             HandleAppearance::class,
             HandleInertiaRequests::class,
             AddLinkHeadersForPreloadedAssets::class,
+            EnsureFreshCsrfToken::class, // Ensure CSRF token is always fresh
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
