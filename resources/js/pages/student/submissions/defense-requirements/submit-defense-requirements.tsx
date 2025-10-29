@@ -632,7 +632,7 @@ export default function SubmitDefenseRequirements({ onFinish, open, onOpenChange
                             {data.defense_type === 'Proposal' && (
                                 <div>
                                     <Label className="text-xs">
-                                        Avisee-Adviser Attachment <span className="text-rose-500">*</span>
+                                        Advisee-Adviser Attachment <span className="text-rose-500">*</span>
                                     </Label>
                                     <div className="flex items-center gap-2">
                                         <Input
@@ -790,7 +790,7 @@ export default function SubmitDefenseRequirements({ onFinish, open, onOpenChange
                                 </div>
                                 {data.defense_type === 'Proposal' && (
                                     <div>
-                                        <span className="font-medium">Avisee-Adviser Attachment:</span> {data.avisee_adviser_attachment?.name || <span className="text-muted-foreground">—</span>}
+                                        <span className="font-medium">Advisee-Adviser Attachment:</span> {data.avisee_adviser_attachment?.name || <span className="text-muted-foreground">—</span>}
                                     </div>
                                 )}
                             </div>

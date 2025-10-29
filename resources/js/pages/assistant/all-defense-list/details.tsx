@@ -312,7 +312,7 @@ export default function Details({ defenseRequest: initialDefenseRequest }: Props
     { label: 'Proof of Payment', url: resolveFileUrl(details?.attachments?.proof_of_payment) },
     { label: 'Manuscript', url: resolveFileUrl(details?.attachments?.manuscript_proposal) },
     { label: 'Similarity Form', url: resolveFileUrl(details?.attachments?.similarity_index) },
-    { label: 'Avisee-Adviser File', url: resolveFileUrl(details?.attachments?.avisee_adviser_attachment) },
+    { label: 'Advisee-Adviser File', url: resolveFileUrl(details?.attachments?.avisee_adviser_attachment) },
     { label: 'AI Declaration Form', url: resolveFileUrl(details?.attachments?.ai_detection_certificate) },
     { label: 'Endorsement Form', url: resolveFileUrl(details?.attachments?.endorsement_form) },
   ];

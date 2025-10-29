@@ -285,7 +285,7 @@ export default function DetailsRequirementsPage(rawProps: any) {
     { label: 'Reference No.', url: request.reference_no }, // Not a file, keep as is
     { label: 'Manuscript', url: resolveFileUrl(request.manuscript_proposal) },
     { label: 'Similarity Form', url: resolveFileUrl(request.similarity_index) },
-    { label: 'Avisee-Adviser File', url: resolveFileUrl(request.avisee_adviser_attachment) },
+    { label: 'Advisee-Adviser File', url: resolveFileUrl(request.avisee_adviser_attachment) },
   ];
 
   // --- FINAL CONSISTENT WORKFLOW STEPS AND MAPPING ---

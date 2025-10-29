@@ -918,7 +918,7 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
     { label: 'Proof of Payment', url: resolveFileUrl(request.attachments?.proof_of_payment || request.proof_of_payment) },
     { label: 'Manuscript', url: resolveFileUrl(request.attachments?.manuscript_proposal || request.manuscript_proposal) },
     { label: 'Similarity Form', url: resolveFileUrl(request.attachments?.similarity_index || request.similarity_index) },
-    { label: 'Avisee-Adviser File', url: resolveFileUrl(request.attachments?.avisee_adviser_attachment || request.avisee_adviser_attachment) },
+    { label: 'Advisee-Adviser File', url: resolveFileUrl(request.attachments?.avisee_adviser_attachment || request.avisee_adviser_attachment) },
     { label: 'AI Declaration Form', url: resolveFileUrl(request.attachments?.ai_detection_certificate || request.ai_detection_certificate) },
     { label: 'Endorsement Form', url: resolveFileUrl(request.attachments?.endorsement_form || request.endorsement_form) },
   ];
