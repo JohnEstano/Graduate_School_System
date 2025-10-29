@@ -46,9 +46,28 @@
         <?php echo app('Illuminate\Foundation\Vite')->reactRefresh(); ?>
         <?php echo app('Illuminate\Foundation\Vite')(['resources/js/app.tsx', "resources/js/pages/{$page['component']}.tsx"]); ?>
         <?php if (!isset($__inertiaSsrDispatched)) { $__inertiaSsrDispatched = true; $__inertiaSsrResponse = app(\Inertia\Ssr\Gateway::class)->dispatch($page); }  if ($__inertiaSsrResponse) { echo $__inertiaSsrResponse->head; } ?>
+
+        
+        <script>
+            (function () {
+                function forceReloadIfHistoryNavigation(event) {
+                    const navEntries = performance.getEntriesByType('navigation');
+                    const navigatedBack = navEntries.length > 0 && navEntries[0].type === 'back_forward';
+
+                    if (event?.persisted || navigatedBack) {
+                        // Use replace so history does not keep the cached entry
+                        window.location.replace(window.location.href);
+                    }
+                }
+
+                window.addEventListener('pageshow', forceReloadIfHistoryNavigation);
+                // Also run immediately in case the script executes after a history navigation
+                forceReloadIfHistoryNavigation();
+            })();
+        </script>
     </head>
     <body class="font-sans antialiased">
         <?php if (!isset($__inertiaSsrDispatched)) { $__inertiaSsrDispatched = true; $__inertiaSsrResponse = app(\Inertia\Ssr\Gateway::class)->dispatch($page); }  if ($__inertiaSsrResponse) { echo $__inertiaSsrResponse->body; } else { ?><div id="app" data-page="<?php echo e(json_encode($page)); ?>"></div><?php } ?>
     </body>
 </html>
-<?php /**PATH C:\Users\estan\OneDrive\Desktop\gradsysystem\Graduate_School_System\resources\views/app.blade.php ENDPATH**/ ?>
+<?php /**PATH C:\Users\Geff\Desktop\Graduate_School_System\resources\views/app.blade.php ENDPATH**/ ?>

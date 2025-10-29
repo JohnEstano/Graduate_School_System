@@ -36,7 +36,6 @@ return Application::configure(basePath: dirname(__DIR__))
             HandleInertiaRequests::class,
             AddLinkHeadersForPreloadedAssets::class,
             EnsureFreshCsrfToken::class, // Ensure CSRF token is always fresh
-            PreventBackHistory::class, // Prevent back button after logout
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
