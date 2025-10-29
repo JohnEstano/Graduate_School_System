@@ -156,76 +156,86 @@ class CoordinatorAdviserController extends Controller
             return response()->json(['error' => 'Adviser already added.'], 409);
         }
 
-        // DO NOT check for global duplicate anymore!
-
-        // Simple check: is there a User with that email?
+        // Check if there's a User with that email
         $user = User::where('email', $validated['email'])->first();
 
-        $status = $user ? 'active' : 'inactive';
+        // If user exists, create the adviser record immediately (they're active)
+        if ($user) {
+            try {
+                $adviser = Adviser::create([
+                    'coordinator_id' => $coordinator->id,
+                    'first_name' => $user->first_name,
+                    'middle_name' => $user->middle_name,
+                    'last_name' => $user->last_name,
+                    'email' => $validated['email'],
+                    'employee_id' => $user->employee_id ?? null,
+                    'status' => 'active',
+                    'user_id' => $user->id,
+                ]);
 
-        try {
-            $adviser = Adviser::create([
+                Log::info('Active adviser created successfully', [
+                    'adviser_id' => $adviser->id,
+                    'email' => $adviser->email,
+                    'status' => $adviser->status
+                ]);
+
+                if (method_exists($user, 'coordinators')) {
+                    $user->coordinators()->syncWithoutDetaching([$coordinator->id]);
+                }
+
+                $payload = [
+                    'id' => $adviser->id,
+                    'first_name' => $adviser->first_name,
+                    'middle_name' => $adviser->middle_name,
+                    'last_name' => $adviser->last_name,
+                    'email' => $adviser->email,
+                    'employee_id' => $adviser->employee_id,
+                    'status' => $adviser->status,
+                    'students' => [],
+                ];
+
+                return response()->json(['success' => true, 'adviser' => $payload]);
+
+            } catch (QueryException $e) {
+                $errorCode = $e->errorInfo[1] ?? null;
+                if ($errorCode === 1062) {
+                    return response()->json(['error' => 'An adviser with that email already exists for this coordinator.'], 409);
+                }
+                Log::error('Failed to create adviser', [
+                    'error' => $e->getMessage(),
+                    'code' => $errorCode
+                ]);
+                return response()->json(['error' => 'Database error: ' . ($e->getMessage() ?? 'unknown')], 500);
+            }
+        }
+
+        // If no user exists, DON'T create adviser yet - return pending status
+        // The adviser will be created when the invitation is confirmed/sent
+        Log::info('Adviser invitation pending confirmation', [
+            'email' => $validated['email'],
+            'coordinator_id' => $coordinator->id
+        ]);
+
+        // Return a "pending" adviser object for the frontend to display confirmation
+        $payload = [
+            'id' => null, // No ID yet since not created
+            'first_name' => $first,
+            'middle_name' => $middle,
+            'last_name' => $last,
+            'email' => $validated['email'],
+            'employee_id' => null,
+            'status' => 'pending_invitation',
+            'students' => [],
+            'pending_data' => [ // Store this for later creation
                 'coordinator_id' => $coordinator->id,
                 'first_name' => $first,
                 'middle_name' => $middle,
                 'last_name' => $last,
                 'email' => $validated['email'],
-                'status' => $status,
-                'user_id' => $user ? $user->id : null,
-            ]);
-        } catch (QueryException $e) {
-            $errorCode = $e->errorInfo[1] ?? null;
-            if ($errorCode === 1062) {
-                return response()->json(['error' => 'An adviser with that email already exists for this coordinator.'], 409);
-            }
-            Log::error('Failed to create adviser', [
-                'error' => $e->getMessage(),
-                'code' => $errorCode
-            ]);
-            return response()->json(['error' => 'Database error: ' . ($e->getMessage() ?? 'unknown')], 500);
-        }
-
-        Log::info('Adviser created successfully', [
-            'adviser_id' => $adviser->id,
-            'email' => $adviser->email,
-            'status' => $adviser->status
-        ]);
-
-        // If matching User exists, overwrite adviser fields with authoritative user values
-        if ($user) {
-            $adviser->first_name = $user->first_name;
-            $adviser->middle_name = $user->middle_name ?? $adviser->middle_name;
-            $adviser->last_name = $user->last_name;
-            $adviser->employee_id = $user->employee_id ?? $adviser->employee_id ?? null;
-            $adviser->status = 'active';
-            $adviser->user_id = $user->id;
-            $adviser->save();
-
-            // if you maintain a pivot or coordinators() on User, keep relationship in sync
-            if (method_exists($user, 'coordinators')) {
-                $user->coordinators()->syncWithoutDetaching([$coordinator->id]);
-            }
-        } else {
-            // If no matching user exists (inactive adviser), mark as needs invitation
-            // but don't send automatically - wait for user confirmation
-            Log::info('Adviser registered as inactive, awaiting invitation confirmation', [
-                'adviser_email' => $adviser->email,
-                'adviser_id' => $adviser->id
-            ]);
-        }
-
-        $payload = [
-            'id' => $adviser->id,
-            'first_name' => $adviser->first_name,
-            'middle_name' => $adviser->middle_name,
-            'last_name' => $adviser->last_name,
-            'email' => $adviser->email,
-            'employee_id' => $adviser->employee_id ?? null,
-            'status' => $adviser->status,
-            'students' => [],
+            ]
         ];
 
-        return response()->json(['success' => true, 'adviser' => $payload]);
+        return response()->json(['success' => true, 'adviser' => $payload, 'needs_confirmation' => true]);
     }
 
     // Update adviser info
@@ -274,15 +284,70 @@ class CoordinatorAdviserController extends Controller
     {
         $coordinator = $request->user();
         
-        // Verify adviser belongs to this coordinator
-        $adviser = Adviser::where('coordinator_id', $coordinator->id)->findOrFail($id);
-        
-        // Only send invitation to inactive advisers
-        if ($adviser->status !== 'inactive') {
-            return response()->json([
-                'success' => false,
-                'message' => 'Adviser is already active.'
-            ], 400);
+        // If $id is null or 'pending', this is a new invitation
+        // Get the adviser data from the request
+        if ($id === 'pending' || !$id) {
+            $validated = $request->validate([
+                'first_name' => 'required|string|max:255',
+                'middle_name' => 'nullable|string|max:255',
+                'last_name' => 'required|string|max:255',
+                'email' => [
+                    'required',
+                    'email',
+                    'max:255',
+                    'regex:/@uic\.edu\.ph$/i'
+                ],
+            ]);
+
+            // Check if already exists
+            $existing = Adviser::where('coordinator_id', $coordinator->id)
+                ->where('email', $validated['email'])
+                ->first();
+
+            if ($existing) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Adviser already exists.'
+                ], 400);
+            }
+
+            // Create the adviser record NOW (when invitation is confirmed)
+            try {
+                $adviser = Adviser::create([
+                    'coordinator_id' => $coordinator->id,
+                    'first_name' => $validated['first_name'],
+                    'middle_name' => $validated['middle_name'],
+                    'last_name' => $validated['last_name'],
+                    'email' => $validated['email'],
+                    'status' => 'inactive',
+                    'user_id' => null,
+                ]);
+
+                Log::info('Adviser created on invitation send', [
+                    'adviser_id' => $adviser->id,
+                    'email' => $adviser->email
+                ]);
+            } catch (\Exception $e) {
+                Log::error('Failed to create adviser on invitation', [
+                    'error' => $e->getMessage(),
+                    'email' => $validated['email']
+                ]);
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Failed to create adviser record.'
+                ], 500);
+            }
+        } else {
+            // Existing adviser - verify it belongs to this coordinator
+            $adviser = Adviser::where('coordinator_id', $coordinator->id)->findOrFail($id);
+            
+            // Only send invitation to inactive advisers
+            if ($adviser->status !== 'inactive') {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Adviser is already active.'
+                ], 400);
+            }
         }
         
         try {
@@ -314,16 +379,32 @@ class CoordinatorAdviserController extends Controller
             
             return response()->json([
                 'success' => true,
-                'message' => 'Invitation email sent successfully.'
+                'message' => 'Invitation email sent successfully.',
+                'adviser' => [
+                    'id' => $adviser->id,
+                    'first_name' => $adviser->first_name,
+                    'middle_name' => $adviser->middle_name,
+                    'last_name' => $adviser->last_name,
+                    'email' => $adviser->email,
+                    'status' => $adviser->status,
+                ]
             ]);
             
         } catch (\Exception $e) {
+            // If email fails, delete the adviser record we just created
+            if (isset($adviser) && $adviser->id && $id === 'pending') {
+                $adviser->delete();
+                Log::info('Deleted adviser record due to email failure', [
+                    'adviser_id' => $adviser->id
+                ]);
+            }
+            
             Log::error('Failed to send adviser invitation email', [
                 'error' => $e->getMessage(),
                 'error_class' => get_class($e),
                 'trace' => $e->getTraceAsString(),
-                'adviser_email' => $adviser->email,
-                'adviser_id' => $adviser->id,
+                'adviser_email' => $adviser->email ?? 'unknown',
+                'adviser_id' => $adviser->id ?? null,
                 'mail_config' => [
                     'mailer' => config('mail.default'),
                     'from_address' => config('mail.from.address'),
@@ -390,9 +471,10 @@ class CoordinatorAdviserController extends Controller
         $adviserUser = User::find($adviser->user_id);
         if (!$adviserUser) return response()->json([]);
 
+        // Get accepted students assigned by this coordinator only
         $students = $adviserUser->advisedStudents()
             ->wherePivot('status', 'accepted')
-            ->wherePivot('requested_by', $coordinator->id) // <-- Only those assigned by this coordinator
+            ->wherePivot('requested_by', $coordinator->id)
             ->get()
             ->map(function ($s) use ($coordinator) {
                 $coordinatorName = null;
@@ -427,12 +509,19 @@ class CoordinatorAdviserController extends Controller
         $coordinator = $request->user();
         $adviser = Adviser::where('coordinator_id', $coordinator->id)->findOrFail($adviserId);
 
+        Log::info('Fetching pending students', [
+            'coordinator_id' => $coordinator->id,
+            'adviser_id' => $adviserId,
+            'adviser_coordinator_id' => $adviser->coordinator_id,
+        ]);
+
         $pendingStudents = [];
 
         // 1. Get registered students with pending status
         if ($adviser->user_id) {
             $adviserUser = User::find($adviser->user_id);
             if ($adviserUser) {
+                // Get pending students assigned by this coordinator only
                 $registeredPending = $adviserUser->advisedStudents()
                     ->wherePivot('status', 'pending')
                     ->wherePivot('requested_by', $coordinator->id)
@@ -464,14 +553,23 @@ class CoordinatorAdviserController extends Controller
                         ];
                     });
 
+                Log::info('Registered pending students found', ['count' => $registeredPending->count()]);
                 $pendingStudents = array_merge($pendingStudents, $registeredPending->toArray());
             }
         }
 
         // 2. Get pre-registered students (invited but not logged in yet)
-        $preRegistered = \App\Models\PendingStudentAssignment::where('adviser_id', $adviser->id)
-            ->where('coordinator_id', $coordinator->id)
-            ->get()
+        // Show only pending assignments created by this coordinator
+        $preRegisteredQuery = \App\Models\PendingStudentAssignment::where('adviser_id', $adviser->id)
+            ->where('coordinator_id', $coordinator->id);
+        
+        Log::info('Querying PendingStudentAssignment', [
+            'adviser_id' => $adviser->id,
+            'coordinator_id' => $coordinator->id,
+            'count' => $preRegisteredQuery->count(),
+        ]);
+
+        $preRegistered = $preRegisteredQuery->get()
             ->map(function ($pending) use ($coordinator) {
                 $coordinatorName = trim(
                     $coordinator->first_name . ' ' .
@@ -503,8 +601,10 @@ class CoordinatorAdviserController extends Controller
                 ];
             });
 
+        Log::info('Pre-registered students found', ['count' => $preRegistered->count()]);
         $pendingStudents = array_merge($pendingStudents, $preRegistered->toArray());
 
+        Log::info('Total pending students', ['count' => count($pendingStudents)]);
         return response()->json($pendingStudents);
     }
 
@@ -526,11 +626,13 @@ class CoordinatorAdviserController extends Controller
                     'regex:/^[a-zA-Z0-9._%+-]+@uic\.edu\.ph$/'
                 ],
                 'send_email' => 'nullable|boolean',
+                'confirm_assignment' => 'nullable|boolean', // New field to confirm actual assignment
             ], [
                 'email.regex' => 'Student email must be a valid UIC email address (@uic.edu.ph). Only registered UIC students can be added.'
             ]);
 
             $sendEmail = $validated['send_email'] ?? false;
+            $confirmAssignment = $validated['confirm_assignment'] ?? false;
 
             // Find or prepare student information
             $student = null;
@@ -547,54 +649,71 @@ class CoordinatorAdviserController extends Controller
                 if (!$student) {
                     $studentNotRegistered = true;
                     
-                    // Create pending assignment record
-                    $pendingAssignment = \App\Models\PendingStudentAssignment::updateOrCreate(
-                        ['student_email' => $studentEmail],
-                        [
-                            'adviser_id' => $adviser->id,
-                            'coordinator_id' => $coordinator->id,
-                            'invitation_sent' => $sendEmail,
-                            'invitation_sent_at' => $sendEmail ? now() : null,
-                        ]
-                    );
-                    
-                    // Extract name from email if possible (e.g., firstname.lastname@uic.edu.ph)
-                    $emailParts = explode('@', $studentEmail);
-                    $emailName = $emailParts[0] ?? 'Student';
-                    
-                    // Send invitation email immediately
-                    if ($sendEmail) {
-                        try {
-                            $adviserUser = User::find($adviser->user_id);
-                            $adviserFullName = $adviserUser ? trim("{$adviserUser->first_name} {$adviserUser->last_name}") : "Your Adviser";
-                            $coordinatorFullName = trim("{$coordinator->first_name} {$coordinator->last_name}");
-                            
-                            Mail::to($studentEmail)->send(new \App\Mail\StudentInvitation(
-                                ucfirst($emailName),  // Use email username as name
-                                $adviserFullName,
-                                $coordinatorFullName
-                            ));
-                            
-                            Log::info('Student invitation email sent (not yet registered)', [
-                                'student_email' => $studentEmail,
-                                'adviser' => $adviserFullName,
-                                'coordinator' => $coordinatorFullName,
-                                'pending_assignment_id' => $pendingAssignment->id
-                            ]);
-                        } catch (\Exception $e) {
-                            Log::error('Failed to send student invitation email', [
-                                'student_email' => $studentEmail,
-                                'error' => $e->getMessage()
-                            ]);
+                    // Only create pending assignment if confirmed
+                    if ($confirmAssignment) {
+                        $pendingAssignment = \App\Models\PendingStudentAssignment::updateOrCreate(
+                            ['student_email' => $studentEmail],
+                            [
+                                'adviser_id' => $adviser->id,
+                                'coordinator_id' => $coordinator->id,
+                                'invitation_sent' => $sendEmail,
+                                'invitation_sent_at' => $sendEmail ? now() : null,
+                            ]
+                        );
+                        
+                        // Extract name from email if possible (e.g., firstname.lastname@uic.edu.ph)
+                        $emailParts = explode('@', $studentEmail);
+                        $emailName = $emailParts[0] ?? 'Student';
+                        
+                        // Send invitation email if requested
+                        if ($sendEmail) {
+                            try {
+                                $adviserUser = User::find($adviser->user_id);
+                                $adviserFullName = $adviserUser ? trim("{$adviserUser->first_name} {$adviserUser->last_name}") : "Your Adviser";
+                                $coordinatorFullName = trim("{$coordinator->first_name} {$coordinator->last_name}");
+                                
+                                Mail::to($studentEmail)->send(new \App\Mail\StudentInvitation(
+                                    ucfirst($emailName),  // Use email username as name
+                                    $adviserFullName,
+                                    $coordinatorFullName
+                                ));
+                                
+                                Log::info('Student invitation email sent (not yet registered)', [
+                                    'student_email' => $studentEmail,
+                                    'adviser' => $adviserFullName,
+                                    'coordinator' => $coordinatorFullName,
+                                    'pending_assignment_id' => $pendingAssignment->id
+                                ]);
+                            } catch (\Exception $e) {
+                                Log::error('Failed to send student invitation email', [
+                                    'student_email' => $studentEmail,
+                                    'error' => $e->getMessage()
+                                ]);
+                                // If email fails, delete the pending assignment
+                                $pendingAssignment->delete();
+                                throw $e;
+                            }
                         }
+                        
+                        return response()->json([
+                            'success' => true,
+                            'message' => 'Invitation email sent. The student will appear in "Pending Confirmation" and be assigned automatically when they log in.',
+                            'pending_registration' => true,
+                            'student_email' => $studentEmail,
+                        ]);
+                    } else {
+                        // Return pending status without creating record - needs confirmation
+                        return response()->json([
+                            'success' => true,
+                            'pending_registration' => true,
+                            'needs_confirmation' => true,
+                            'student_email' => $studentEmail,
+                            'student_data' => [
+                                'email' => $studentEmail,
+                                'not_registered' => true,
+                            ]
+                        ]);
                     }
-                    
-                    return response()->json([
-                        'success' => true,
-                        'message' => 'Invitation email sent. The student will appear in "Pending Confirmation" and be assigned automatically when they log in.',
-                        'pending_registration' => true,
-                        'student_email' => $studentEmail,
-                    ]);
                 }
             } else {
                 return response()->json(['error' => 'student_id or email required.'], 422);
@@ -625,6 +744,21 @@ class CoordinatorAdviserController extends Controller
                 return response()->json(['error' => 'This student is already assigned to another adviser.'], 409);
             }
 
+            // If not confirmed yet, return pending status without creating record
+            if (!$confirmAssignment) {
+                return response()->json([
+                    'success' => true,
+                    'needs_confirmation' => true,
+                    'student_data' => [
+                        'id' => $student->id,
+                        'email' => $student->email,
+                        'first_name' => $student->first_name,
+                        'last_name' => $student->last_name,
+                    ]
+                ]);
+            }
+
+            // CONFIRMED - Now actually create the assignment
             // Start transaction
             DB::beginTransaction();
 

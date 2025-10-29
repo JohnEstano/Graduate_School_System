@@ -52,6 +52,8 @@ class AdviserStudentController extends Controller
     public function pending(Request $request)
     {
         $adviser = $request->user();
+        
+        // Get regular pending students (registered users in pivot table)
         $students = $adviser->advisedStudents()
             ->wherePivot('status', 'pending')
             ->get()
@@ -79,8 +81,54 @@ class AdviserStudentController extends Controller
                     'coordinator_name' => $coordinatorName,
                     'requested_by' => $s->pivot->requested_by ?? null,
                     'requested_at' => $s->pivot->created_at ?? null,
+                    'is_registered' => true, // This student is registered
                 ];
             })->values();
+
+        // Get pending assignments for unregistered students
+        $adviserRecord = \App\Models\Adviser::where('user_id', $adviser->id)->first();
+        
+        if ($adviserRecord) {
+            $unregisteredPending = \App\Models\PendingStudentAssignment::where('adviser_id', $adviserRecord->id)
+                ->get()
+                ->map(function ($pending) {
+                    // Get coordinator name
+                    $coordinatorName = null;
+                    if ($pending->coordinator_id) {
+                        $coordinator = User::find($pending->coordinator_id);
+                        if ($coordinator) {
+                            $coordinatorName = trim(
+                                $coordinator->first_name . ' ' .
+                                ($coordinator->middle_name ? strtoupper($coordinator->middle_name[0]) . '. ' : '') .
+                                $coordinator->last_name
+                            );
+                        }
+                    }
+                    
+                    // Extract name from email (e.g., firstname.lastname@uic.edu.ph)
+                    $emailParts = explode('@', $pending->student_email);
+                    $emailName = $emailParts[0] ?? 'Unknown';
+                    $nameParts = explode('.', $emailName);
+                    
+                    return [
+                        'id' => 'pending_' . $pending->id, // Special ID to indicate unregistered
+                        'student_number' => null,
+                        'first_name' => ucfirst($nameParts[0] ?? 'Unknown'),
+                        'middle_name' => null,
+                        'last_name' => ucfirst($nameParts[1] ?? ''),
+                        'email' => $pending->student_email,
+                        'program' => null,
+                        'coordinator_name' => $coordinatorName,
+                        'requested_by' => $pending->coordinator_id,
+                        'requested_at' => $pending->created_at,
+                        'is_registered' => false, // This student is NOT registered yet
+                        'invitation_sent' => $pending->invitation_sent,
+                    ];
+                });
+            
+            // Merge both collections
+            $students = $students->merge($unregisteredPending);
+        }
 
         return response()->json($students);
     }
