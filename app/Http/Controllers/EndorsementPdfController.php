@@ -138,13 +138,22 @@ class EndorsementPdfController extends Controller
         if ($adviser_id) {
             $adviserSignature = $this->getActiveSignature($adviser_id);
             if ($adviserSignature && $adviserSignature->image_path) {
-                $fullPath = storage_path('app/public/' . $adviserSignature->image_path);
+                // Normalize path - strip any prefixes to avoid double paths
+                $imagePath = $adviserSignature->image_path;
+                $imagePath = str_replace('app/public/', '', $imagePath);
+                $imagePath = str_replace('storage/', '', $imagePath);
+                $imagePath = str_replace('public/', '', $imagePath);
+                $imagePath = ltrim($imagePath, '/');
+                
+                $fullPath = storage_path('app/public/' . $imagePath);
                 
                 if (file_exists($fullPath)) {
                     $adviser_signature_path = $fullPath;
                 } else {
                     Log::warning('Adviser signature file not found', [
-                        'path' => $fullPath,
+                        'original_path' => $adviserSignature->image_path,
+                        'normalized_path' => $imagePath,
+                        'full_path' => $fullPath,
                         'user_id' => $adviser_id
                     ]);
                 }
@@ -165,13 +174,22 @@ class EndorsementPdfController extends Controller
                 
                 $coordinatorSignature = $this->getActiveSignature($coordinator->id);
                 if ($coordinatorSignature && $coordinatorSignature->image_path) {
-                    $fullPath = storage_path('app/public/' . $coordinatorSignature->image_path);
+                    // Normalize path - strip any prefixes to avoid double paths
+                    $imagePath = $coordinatorSignature->image_path;
+                    $imagePath = str_replace('app/public/', '', $imagePath);
+                    $imagePath = str_replace('storage/', '', $imagePath);
+                    $imagePath = str_replace('public/', '', $imagePath);
+                    $imagePath = ltrim($imagePath, '/');
+                    
+                    $fullPath = storage_path('app/public/' . $imagePath);
                     
                     if (file_exists($fullPath)) {
                         $coordinator_signature_path = $fullPath;
                     } else {
                         Log::warning('Coordinator signature file not found', [
-                            'path' => $fullPath,
+                            'original_path' => $coordinatorSignature->image_path,
+                            'normalized_path' => $imagePath,
+                            'full_path' => $fullPath,
                             'user_id' => $coordinator->id
                         ]);
                     }
