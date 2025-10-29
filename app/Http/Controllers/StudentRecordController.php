@@ -124,7 +124,7 @@ class StudentRecordController extends Controller
                 if (!isset($groupedPayments[$key])) {
                     $defenseDate = $payment['defense_date'] ? date('Y-m-d', strtotime($payment['defense_date'])) : null;
                     $groupedPayments[$key] = [
-                        'id' => $payment['id'],
+                        'id' => $payment['defense_request_id'], // Use defense_request_id as the ID
                         'defense_request_id' => $payment['defense_request_id'],
                         'defense_date' => $defenseDate,
                         'defense_type' => $payment['defense_type'],
@@ -458,11 +458,11 @@ class StudentRecordController extends Controller
         if ($paymentId) {
             $defenseRequest = DefenseRequest::where('id', $paymentId)
                 ->where('school_id', $student->student_id)
-                ->where('workflow_state', 'completed')
+                ->whereIn('workflow_state', ['completed', 'coordinator-approved', 'dean-approved', 'aa-verified'])
                 ->first();
         } else {
             $defenseRequest = DefenseRequest::where('school_id', $student->student_id)
-                ->where('workflow_state', 'completed')
+                ->whereIn('workflow_state', ['completed', 'coordinator-approved', 'dean-approved', 'aa-verified'])
                 ->orderBy('scheduled_date', 'desc')
                 ->first();
         }

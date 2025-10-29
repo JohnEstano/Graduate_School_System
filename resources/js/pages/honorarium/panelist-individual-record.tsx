@@ -26,7 +26,8 @@ interface Payment {
   defense_type?: string;
   panelist_role?: string;
   or_number?: string;
-  amount: number;
+  amount: number; // Total honorarium paid by student
+  panelist_receivable?: number; // Panelist's specific receivable for their role
   panelists?: Panelist[];
   grand_total?: number;
   rec_fee?: number;
@@ -71,9 +72,9 @@ export default function PanelistIndividualRecord({ panelist, onClose }: Props) {
   if (!panelist) return null;
 
   // Calculate total receivables from all payments
-  // This sums up the actual amounts paid to this panelist across all defenses
+  // This sums up the panelist's specific receivable amounts (not the total defense amount)
   const totalReceivables = (panelist.students || []).reduce((sum, student) => 
-    sum + (student.payments || []).reduce((pSum, pay) => pSum + Number(pay.amount || 0), 0), 0
+    sum + (student.payments || []).reduce((pSum, pay) => pSum + Number(pay.panelist_receivable || 0), 0), 0
   );
 
   const handlePrint = () => {

@@ -104,6 +104,8 @@ public function show($programId)
             return $panelistRecord->students->map(function($student) use ($panelistRecord) {
                 // Attach the panelist_record_id so we can filter payments correctly
                 $student->current_panelist_record_id = $panelistRecord->id;
+                // Attach the normalized role for this student-panelist assignment
+                $student->assigned_panelist_role = $panelistRecord->pivot && isset($panelistRecord->pivot->role) ? (new self)->normalizeRole($panelistRecord->pivot->role) : (new self)->normalizeRole($panelistRecord->role);
                 return $student;
             });
         });
@@ -120,11 +122,24 @@ public function show($programId)
         })->filter()->unique()->values()->all();
         $roleSummary = count($roles) === 1 ? $roles[0] : (count($roles) > 1 ? implode(', ', $roles) : ($this->normalizeRole($basePanelist->role) ?? 'N/A'));
         
-        // Calculate receivables (sum of role-specific payments across all defenses)
-        $receivableAmount = $panelistGroup->sum(function($panelistRecord) {
-            return $panelistRecord->students->sum(function($student) use ($panelistRecord) {
-                return $student->payments->where('panelist_record_id', $panelistRecord->id)->sum('amount');
-            });
+        // FIXED: Calculate receivables using actual payment amounts for this panelist's role
+        // Sum across all students (already deduplicated), checking each student's payments
+        $receivableAmount = $allStudents->sum(function($student) {
+            $normalizedRole = $student->assigned_panelist_role;
+            $panelistRecordId = $student->current_panelist_record_id;
+            
+            // Sum only the payments for this specific panelist and their role
+            return $student->payments
+                ->where('panelist_record_id', $panelistRecordId)
+                ->filter(function($payment) use ($normalizedRole) {
+                    // If payment has a role, normalize and compare
+                    if (isset($payment->role)) {
+                        return $this->normalizeRole($payment->role) === $normalizedRole;
+                    }
+                    // If no role specified, accept payment
+                    return true;
+                })
+                ->sum('amount'); // Use payment amount, not defense total
         });
         
         // Calculate total honorarium (sum of defense request totals)
@@ -176,8 +191,11 @@ public function show($programId)
                     
                     // Only add if this defense hasn't been added yet
                     if (!isset($groupedPayments[$key])) {
-                        // Use defense request amount instead of payment record amount
+                        // Use defense request amount for display (total honorarium paid by student)
                         $defenseAmount = $occurrence->defenseRequest ? (float) $occurrence->defenseRequest->amount : (float) $payment->amount;
+                        
+                        // Get the panelist's specific receivable amount for this role
+                        $panelistReceivable = (float) $payment->amount;
                         
                         $groupedPayments[$key] = [
                             'id' => $payment->id,
@@ -188,7 +206,8 @@ public function show($programId)
                             'defense_type' => $occurrence->defense_type ?? 'N/A',
                             'or_number' => $occurrence->or_number ?? 'N/A',
                             'panelist_role' => $this->normalizeRole($occurrence->pivot->role ?? null),
-                            'amount' => $defenseAmount,
+                            'amount' => $defenseAmount, // Total honorarium paid by student
+                            'panelist_receivable' => $panelistReceivable, // Panelist's specific amount
                         ];
                     }
                 }
