@@ -191,12 +191,10 @@ class AuthenticatedSessionController extends Controller
         $request->validate([
             'identifier' => 'required|string',
             'password' => 'required|string',
-            'remember' => 'boolean',
         ]);
 
         $identifier = $request->input('identifier');
         $password = $request->input('password');
-        $remember = $request->boolean('remember');
 
         // Find user by email or student_number
         $user = User::where('email', $identifier)
@@ -211,7 +209,7 @@ class AuthenticatedSessionController extends Controller
         }
 
         // Log the user in
-        Auth::login($user, $remember);
+        Auth::login($user, false);
         $request->session()->regenerate();
 
         // Update adviser status if matching adviser exists

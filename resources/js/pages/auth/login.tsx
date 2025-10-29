@@ -4,7 +4,6 @@ import { FormEventHandler } from 'react';
 
 import InputError from '@/components/input-error';
 import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import AuthLayout from '@/layouts/auth-layout';
@@ -12,7 +11,6 @@ import AuthLayout from '@/layouts/auth-layout';
 type LoginForm = {
     identifier: string; // email or student number
     password: string;
-    remember: boolean;
     mode: 'api';
 };
 
@@ -25,7 +23,6 @@ export default function LoginAPI(props: LoginProps) {
     const { data, setData, post, processing, errors, reset } = useForm<Required<LoginForm>>({
         identifier: '',
         password: '',
-        remember: false,
         mode: 'api',
     });
 
@@ -33,13 +30,14 @@ export default function LoginAPI(props: LoginProps) {
         e.preventDefault();
         // API login mode
         post(route('login'), {
-            preserveState: false,
+            preserveState: true,  // Keep state to show errors
             preserveScroll: true,
             onSuccess: () => {
                 reset('password');
             },
-            onError: () => {
+            onError: (errors) => {
                 reset('password');
+                console.log('Login errors:', errors);
             },
         });
     };
@@ -50,20 +48,19 @@ export default function LoginAPI(props: LoginProps) {
 
             {status && <div className="mb-4 text-center text-sm font-medium text-green-600">{status}</div>}
             
-            {/* Display general error message if login fails */}
+            {/* Display error message if login fails */}
             {(errors.identifier || errors.password) && (
-                <div className="mb-4 rounded-md bg-red-50 border border-red-200 p-4">
-                    <div className="flex">
+                <div className="mb-4 rounded-md bg-red-50 border border-red-200 p-3">
+                    <div className="flex items-start">
                         <div className="flex-shrink-0">
                             <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
                                 <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
                             </svg>
                         </div>
                         <div className="ml-3">
-                            <h3 className="text-sm font-medium text-red-800">Login Failed</h3>
-                            <div className="mt-2 text-sm text-red-700">
-                                {errors.identifier || errors.password || "Invalid username or password. Please check your credentials and try again."}
-                            </div>
+                            <p className="text-sm text-red-700">
+                                {errors.identifier || errors.password}
+                            </p>
                         </div>
                     </div>
                 </div>
@@ -104,18 +101,7 @@ export default function LoginAPI(props: LoginProps) {
                         <InputError message={errors.password} />
                     </div>
 
-                    <div className="flex items-center space-x-3">
-                        <Checkbox
-                            id="remember"
-                            name="remember"
-                            checked={data.remember}
-                            onClick={() => setData('remember', !data.remember)}
-                            tabIndex={3}
-                        />
-                        <Label htmlFor="remember">Remember me</Label>
-                    </div>
-
-                    <Button type="submit" className="mt-4 w-full" tabIndex={4} disabled={processing}>
+                    <Button type="submit" className="mt-4 w-full" tabIndex={3} disabled={processing}>
                         {processing && <LoaderCircle className="h-4 w-4 animate-spin" />}
                         Log in
                     </Button>

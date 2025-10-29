@@ -4,29 +4,28 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Defense Scheduled</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <style>
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif,
                 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol';
             line-height: 1.6;
             color: #333;
-            max-width: 600px;
-            margin: 0 auto;
-            padding: 20px;
+            margin: 0;
+            padding: 0;
             background-color: #f4f4f4;
         }
 
-        .container {
-            background-color: #ffffff;
-            padding: 30px;
+        .email-wrapper {
+            width: 100%;
+            background-color: #f4f4f4;
+            padding: 20px 0;
         }
 
-        .header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-bottom: 20px;
+        .email-container {
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: #ffffff;
+            padding: 30px;
         }
 
         .logo {
@@ -43,25 +42,21 @@
         h1 {
             font-size: 32px;
             font-weight: bold;
-            margin-top: 0;
-            margin-bottom: 20px;
-        }
-
-        .content {
-            margin-bottom: 30px;
+            margin: 20px 0;
+            color: #333;
         }
 
         .message {
             font-size: 16px;
             line-height: 1.8;
             margin-bottom: 20px;
+            color: #333;
         }
 
         .info-box {
             border: 1px solid #e5e7eb;
             padding: 20px;
-            margin-top: 20px;
-            border-radius: 8px;
+            margin: 20px 0;
         }
 
         .info-box h2 {
@@ -71,14 +66,14 @@
             margin-bottom: 15px;
         }
 
-        .info-box .label {
+        .label {
             font-weight: bold;
             color: #374151;
             font-size: 14px;
             margin-top: 10px;
         }
 
-        .info-box .value {
+        .value {
             color: #6b7280;
             font-size: 14px;
             margin-bottom: 10px;
@@ -88,23 +83,22 @@
             background-color: #f3f4f6;
             padding: 20px;
             margin: 20px 0;
-            border-radius: 0px;
             text-align: center;
         }
 
-        .schedule-box .date {
+        .schedule-date {
             font-size: 24px;
             font-weight: bold;
             margin-bottom: 10px;
         }
 
-        .schedule-box .time {
+        .schedule-time {
             font-size: 18px;
             color: #374151;
             margin-bottom: 10px;
         }
 
-        .schedule-box .venue {
+        .schedule-venue {
             font-size: 14px;
             color: #6b7280;
             margin-top: 10px;
@@ -112,192 +106,285 @@
 
         .notice-box {
             background-color: #fef3c7;
+            border-left: 4px solid #f59e0b;
             padding: 20px;
             margin: 20px 0;
-            border-left: 4px solid #f59e0b;
-        }
-
-        .button-container {
-            text-align: center;
-            margin: 30px 0;
-        }
-
-        .cta-button {
-            display: inline-block;
-            background-color: #FF4B64;
-            color: #ffffff;
-            padding: 15px 35px;
-            text-decoration: none;
-            border-radius: 0px;
-            font-weight: bold;
-            font-size: 16px;
-        }
-
-        .footer {
-            text-align: center;
-            margin-top: 30px;
-            padding-top: 20px;
-            font-size: 12px;
-            color: #6b7280;
-        }
-
-        .footer .logo {
-            max-width: 60px;
-            margin-bottom: 10px;
         }
 
         .mode-badge {
             display: inline-block;
             padding: 6px 12px;
-            border-radius: 4px;
             font-size: 13px;
             font-weight: 600;
             margin-top: 10px;
             background-color: #e5e7eb;
             color: #374151;
         }
+
+        .cta-button {
+            display: inline-block;
+            background-color: #FF4B64;
+            color: #ffffff !important;
+            padding: 15px 35px;
+            text-decoration: none;
+            font-weight: bold;
+            font-size: 16px;
+            margin: 20px 0;
+        }
+
+        .footer-text {
+            text-align: center;
+            font-size: 12px;
+            color: #6b7280;
+            line-height: 1.6;
+        }
+
+        .footer-logo {
+            max-width: 60px;
+            margin-bottom: 10px;
+        }
+
+        /* Mobile responsiveness */
+        @media (max-width: 600px) {
+            .email-container {
+                padding: 20px !important;
+            }
+
+            h1 {
+                font-size: 24px !important;
+            }
+
+            .message {
+                font-size: 14px !important;
+            }
+
+            .schedule-date {
+                font-size: 20px !important;
+            }
+
+            .schedule-time {
+                font-size: 16px !important;
+            }
+
+            .info-box, .schedule-box, .notice-box {
+                padding: 15px !important;
+            }
+
+            .info-box h2 {
+                font-size: 16px !important;
+            }
+
+            .cta-button {
+                display: block !important;
+                width: 100% !important;
+                text-align: center;
+                padding: 12px 20px !important;
+            }
+        }
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="header">
-            <img src="{{ asset('gss-uic-logo-v2.png') }}" alt="UIC Graduate School Logo" class="logo">
-            <span class="header-title">Graduate School System</span>
-        </div>
+    <div class="email-wrapper">
+        <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #f4f4f4;">
+            <tr>
+                <td align="center" style="padding: 20px 0;">
+                    <table class="email-container" width="600" cellpadding="0" cellspacing="0" border="0" style="background-color: #ffffff; max-width: 600px;">
+                        <tr>
+                            <td style="padding: 30px;">
+                                <!-- Header -->
+                                <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                                    <tr>
+                                        <td width="50">
+                                            <img src="{{ asset('gss-uic-logo-v2.png') }}" alt="UIC Graduate School Logo" class="logo" style="max-width: 50px; height: auto;">
+                                        </td>
+                                        <td align="right">
+                                            <span class="header-title" style="color: #FF4B64; font-size: 14px; font-weight: bold;">Graduate School System</span>
+                                        </td>
+                                    </tr>
+                                </table>
 
-        {{-- Testing Disclaimer --}}
-        @include('emails.partials.testing-disclaimer')
+                                <!-- Testing Disclaimer -->
+                                @include('emails.partials.testing-disclaimer')
 
-        @if($changes)
-            <h1>Defense Schedule Updated!</h1>
-        @else
-            <h1>Defense Has Been Scheduled!</h1>
-        @endif
+                                <!-- Main Heading -->
+                                @if($changes)
+                                    <h1 style="font-size: 32px; font-weight: bold; margin: 20px 0; color: #333;">Defense Schedule Updated!</h1>
+                                @else
+                                    <h1 style="font-size: 32px; font-weight: bold; margin: 20px 0; color: #333;">Defense Has Been Scheduled!</h1>
+                                @endif
 
-        <div class="content">
-            <p class="message">
-                <strong>Dear {{ $recipient->first_name }} {{ $recipient->last_name }},</strong>
-            </p>
+                                <!-- Content -->
+                                <p class="message" style="font-size: 16px; line-height: 1.8; margin-bottom: 20px; color: #333;">
+                                    <strong>Dear {{ $recipient->first_name }} {{ $recipient->last_name }},</strong>
+                                </p>
 
-            @if($changes)
-                <div class="notice-box">
-                    <p style="margin: 0;">
-                        <strong>⚠️ Important Update:</strong> Your defense details have been modified. Please review the updated information below.
-                    </p>
-                    @if($changes['schedule'])
-                        <p style="margin: 10px 0 0 0;">• Schedule changed: New date, time, or venue</p>
-                    @endif
-                    @if($changes['panels'])
-                        <p style="margin: 5px 0 0 0;">• Panel updated: Defense panel members have been changed or added</p>
-                    @endif
-                </div>
-            @else
-                <p class="message">
-                    This is to inform you that your {{ $defenseRequest->defense_type }} defense schedule has been finalized. Please review the details below and mark your calendar.
-                </p>
-            @endif
+                                @if($changes)
+                                    <!-- Notice Box for Updates -->
+                                    <table width="100%" cellpadding="0" cellspacing="0" border="0" class="notice-box" style="background-color: #fef3c7; border-left: 4px solid #f59e0b; margin: 20px 0;">
+                                        <tr>
+                                            <td style="padding: 20px;">
+                                                <p style="margin: 0; font-size: 16px;">
+                                                    <strong>⚠️ Important Update:</strong> Your defense details have been modified. Please review the updated information below.
+                                                </p>
+                                                @if($changes['schedule'])
+                                                    <p style="margin: 10px 0 0 0; font-size: 14px;">• Schedule changed: New date, time, or venue</p>
+                                                @endif
+                                                @if($changes['panels'])
+                                                    <p style="margin: 5px 0 0 0; font-size: 14px;">• Panel updated: Defense panel members have been changed or added</p>
+                                                @endif
+                                            </td>
+                                        </tr>
+                                    </table>
+                                @else
+                                    <p class="message" style="font-size: 16px; line-height: 1.8; margin-bottom: 20px; color: #333;">
+                                        This is to inform you that your {{ $defenseRequest->defense_type }} defense schedule has been finalized. Please review the details below and mark your calendar.
+                                    </p>
+                                @endif
 
-            <div class="schedule-box">
-                <div class="date">
-                    <i class="fa-regular fa-calendar-days"></i> {{ $defenseRequest->scheduled_date?->format('l, F j, Y') ?? 'To be announced' }}
-                </div>
-                <div class="time">
-                    <i class="fa-regular fa-clock"></i> {{ $defenseRequest->scheduled_time ?? 'To be announced' }}
-                    @if($defenseRequest->scheduled_end_time)
-                        - {{ $defenseRequest->scheduled_end_time }}
-                    @endif
-                </div>
-                @if($defenseRequest->defense_mode)
-                    <span class="mode-badge">
-                        {{ $defenseRequest->defense_mode }}
-                    </span>
-                @endif
-                @if($defenseRequest->defense_venue)
-                    <div class="venue">
-                        <strong><i class="fas fa-map-marker-alt"></i> Venue:</strong> {{ $defenseRequest->defense_venue }}
-                    </div>
-                @endif
-            </div>
+                                <!-- Schedule Box -->
+                                <table width="100%" cellpadding="0" cellspacing="0" border="0" class="schedule-box" style="background-color: #f3f4f6; margin: 20px 0;">
+                                    <tr>
+                                        <td style="padding: 20px; text-align: center;">
+                                            <div class="schedule-date" style="font-size: 24px; font-weight: bold; margin-bottom: 10px;">
+                                                📅 {{ $defenseRequest->scheduled_date?->format('l, F j, Y') ?? 'To be announced' }}
+                                            </div>
+                                            <div class="schedule-time" style="font-size: 18px; color: #374151; margin-bottom: 10px;">
+                                                🕐 {{ $defenseRequest->scheduled_time ?? 'To be announced' }}
+                                                @if($defenseRequest->scheduled_end_time)
+                                                    - {{ $defenseRequest->scheduled_end_time }}
+                                                @endif
+                                            </div>
+                                            @if($defenseRequest->defense_mode)
+                                                <span class="mode-badge" style="display: inline-block; padding: 6px 12px; font-size: 13px; font-weight: 600; margin-top: 10px; background-color: #e5e7eb; color: #374151;">
+                                                    {{ $defenseRequest->defense_mode }}
+                                                </span>
+                                            @endif
+                                            @if($defenseRequest->defense_venue)
+                                                <div class="schedule-venue" style="font-size: 14px; color: #6b7280; margin-top: 10px;">
+                                                    <strong>📍 Venue:</strong> {{ $defenseRequest->defense_venue }}
+                                                </div>
+                                            @endif
+                                        </td>
+                                    </tr>
+                                </table>
 
-            <div class="info-box">
-                <h2>Defense Details</h2>
-                
-                <div class="label">Student</div>
-                <div class="value">{{ $defenseRequest->first_name }} {{ $defenseRequest->last_name }} ({{ $defenseRequest->school_id }})</div>
+                                <!-- Defense Details Box -->
+                                <table width="100%" cellpadding="0" cellspacing="0" border="0" class="info-box" style="border: 1px solid #e5e7eb; margin: 20px 0;">
+                                    <tr>
+                                        <td style="padding: 20px;">
+                                            <h2 style="font-size: 18px; font-weight: bold; margin-top: 0; margin-bottom: 15px;">Defense Details</h2>
+                                            
+                                            <div class="label" style="font-weight: bold; color: #374151; font-size: 14px; margin-top: 10px;">Student</div>
+                                            <div class="value" style="color: #6b7280; font-size: 14px; margin-bottom: 10px;">{{ $defenseRequest->first_name }} {{ $defenseRequest->last_name }} ({{ $defenseRequest->school_id }})</div>
 
-                <div class="label">Defense Type</div>
-                <div class="value">{{ $defenseRequest->defense_type }} Defense</div>
+                                            <div class="label" style="font-weight: bold; color: #374151; font-size: 14px; margin-top: 10px;">Defense Type</div>
+                                            <div class="value" style="color: #6b7280; font-size: 14px; margin-bottom: 10px;">{{ $defenseRequest->defense_type }} Defense</div>
 
-                <div class="label">Thesis Title</div>
-                <div class="value" style="font-style: italic;">{{ $defenseRequest->thesis_title }}</div>
+                                            <div class="label" style="font-weight: bold; color: #374151; font-size: 14px; margin-top: 10px;">Thesis Title</div>
+                                            <div class="value" style="color: #6b7280; font-size: 14px; margin-bottom: 10px; font-style: italic;">{{ $defenseRequest->thesis_title }}</div>
 
-                @if($defenseRequest->defense_adviser)
-                    <div class="label">Adviser</div>
-                    <div class="value">{{ $defenseRequest->defense_adviser }}</div>
-                @endif
-            </div>
+                                            @if($defenseRequest->defense_adviser)
+                                                <div class="label" style="font-weight: bold; color: #374151; font-size: 14px; margin-top: 10px;">Adviser</div>
+                                                <div class="value" style="color: #6b7280; font-size: 14px; margin-bottom: 10px;">{{ $defenseRequest->defense_adviser }}</div>
+                                            @endif
+                                        </td>
+                                    </tr>
+                                </table>
 
-            @php
-                $panelists = collect([
-                    $defenseRequest->defense_chairperson,
-                    $defenseRequest->defense_panelist1,
-                    $defenseRequest->defense_panelist2,
-                    $defenseRequest->defense_panelist3,
-                    $defenseRequest->defense_panelist4,
-                ])->filter()->values();
-            @endphp
+                                @php
+                                    $panelists = collect([
+                                        $defenseRequest->defense_chairperson,
+                                        $defenseRequest->defense_panelist1,
+                                        $defenseRequest->defense_panelist2,
+                                        $defenseRequest->defense_panelist3,
+                                        $defenseRequest->defense_panelist4,
+                                    ])->filter()->values();
+                                @endphp
 
-            @if($panelists->count() > 0)
-                <div class="info-box">
-                    <h2>Defense Panel Members</h2>
-                    @if($defenseRequest->defense_chairperson)
-                        <div class="label">Chairperson</div>
-                        <div class="value">{{ $defenseRequest->defense_chairperson }}</div>
-                    @endif
-                    @foreach([$defenseRequest->defense_panelist1, $defenseRequest->defense_panelist2, $defenseRequest->defense_panelist3, $defenseRequest->defense_panelist4] as $index => $panelist)
-                        @if($panelist)
-                            <div class="label">Panelist {{ $index + 1 }}</div>
-                            <div class="value">{{ $panelist }}</div>
-                        @endif
-                    @endforeach
-                </div>
-            @endif
+                                @if($panelists->count() > 0)
+                                    <!-- Panel Members Box -->
+                                    <table width="100%" cellpadding="0" cellspacing="0" border="0" class="info-box" style="border: 1px solid #e5e7eb; margin: 20px 0;">
+                                        <tr>
+                                            <td style="padding: 20px;">
+                                                <h2 style="font-size: 18px; font-weight: bold; margin-top: 0; margin-bottom: 15px;">Defense Panel Members</h2>
+                                                @if($defenseRequest->defense_chairperson)
+                                                    <div class="label" style="font-weight: bold; color: #374151; font-size: 14px; margin-top: 10px;">Chairperson</div>
+                                                    <div class="value" style="color: #6b7280; font-size: 14px; margin-bottom: 10px;">{{ $defenseRequest->defense_chairperson }}</div>
+                                                @endif
+                                                @foreach([$defenseRequest->defense_panelist1, $defenseRequest->defense_panelist2, $defenseRequest->defense_panelist3, $defenseRequest->defense_panelist4] as $index => $panelist)
+                                                    @if($panelist)
+                                                        <div class="label" style="font-weight: bold; color: #374151; font-size: 14px; margin-top: 10px;">Panelist {{ $index + 1 }}</div>
+                                                        <div class="value" style="color: #6b7280; font-size: 14px; margin-bottom: 10px;">{{ $panelist }}</div>
+                                                    @endif
+                                                @endforeach
+                                            </td>
+                                        </tr>
+                                    </table>
+                                @endif
 
-            <div class="info-box">
-                <h2>Pre-Defense Checklist</h2>
-                <ul>
-                    <li>Prepare your defense presentation (PPT/PDF)</li>
-                    <li>Print required copies of your manuscript</li>
-                    <li>Review all panel feedback and revisions</li>
-                    <li>Practice your presentation (20-30 minutes)</li>
-                    <li>Arrive 15 minutes early @if($defenseRequest->defense_mode === 'Online') / Join meeting link on time @endif</li>
-                    <li>Dress appropriately (business attire)</li>
-                </ul>
-            </div>
+                                <!-- Pre-Defense Checklist Box -->
+                                <table width="100%" cellpadding="0" cellspacing="0" border="0" class="info-box" style="border: 1px solid #e5e7eb; margin: 20px 0;">
+                                    <tr>
+                                        <td style="padding: 20px;">
+                                            <h2 style="font-size: 18px; font-weight: bold; margin-top: 0; margin-bottom: 15px;">Pre-Defense Checklist</h2>
+                                            <ul style="padding-left: 20px; margin: 0; font-size: 14px; line-height: 1.8;">
+                                                <li>Prepare your defense presentation (PPT/PDF)</li>
+                                                <li>Print required copies of your manuscript</li>
+                                                <li>Review all panel feedback and revisions</li>
+                                                <li>Practice your presentation (20-30 minutes)</li>
+                                                <li>Arrive 15 minutes early @if($defenseRequest->defense_mode === 'Online') / Join meeting link on time @endif</li>
+                                                <li>Dress appropriately (business attire)</li>
+                                            </ul>
+                                        </td>
+                                    </tr>
+                                </table>
 
-            <div class="button-container">
-                <a href="{{ url('/defense-request/' . $defenseRequest->id) }}" class="cta-button">
-                    View Full Defense Details
-                </a>
-            </div>
+                                <!-- Button -->
+                                <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                                    <tr>
+                                        <td align="center" style="padding: 20px 0;">
+                                            <a href="{{ url('/defense-request/' . $defenseRequest->id) }}" class="cta-button" style="display: inline-block; background-color: #FF4B64; color: #ffffff; padding: 15px 35px; text-decoration: none; font-weight: bold; font-size: 16px;">
+                                                View Full Defense Details
+                                            </a>
+                                        </td>
+                                    </tr>
+                                </table>
 
-            <p class="message" style="font-size: 14px; color: #6b7280;">
-                If you need to reschedule or have any concerns, please contact the Graduate School office immediately.
-            </p>
-        </div>
-    </div>
+                                <p class="message" style="font-size: 14px; line-height: 1.8; color: #6b7280;">
+                                    If you need to reschedule or have any concerns, please contact the Graduate School office immediately.
+                                </p>
+                            </td>
+                        </tr>
 
-    <div class="footer">
-        <img src="{{ asset('gss-uic-logo-v2.png') }}" alt="UIC Graduate School Logo" class="logo">
-        <p>
-            <strong>University of the Immaculate Conception</strong><br>
-            Graduate School Office<br>
-            Father Selga St., Davao City, Philippines 8000
-        </p>
-        <p style="margin-top: 15px;">
-            This is an automated message from the Graduate School System. Please do not
-            reply to this email.
-        </p>
+                        <!-- Footer -->
+                        <tr>
+                            <td style="padding: 20px 30px; border-top: 1px solid #e5e7eb;">
+                                <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                                    <tr>
+                                        <td align="center">
+                                            <img src="{{ asset('gss-uic-logo-v2.png') }}" alt="UIC Graduate School Logo" class="footer-logo" style="max-width: 60px; margin-bottom: 10px;">
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td align="center" class="footer-text" style="font-size: 12px; color: #6b7280; line-height: 1.6;">
+                                            <strong>University of the Immaculate Conception</strong><br>
+                                            Graduate School Office<br>
+                                            Father Selga St., Davao City, Philippines 8000
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td align="center" class="footer-text" style="font-size: 12px; color: #6b7280; padding-top: 15px;">
+                                            This is an automated message from the Graduate School System. Please do not
+                                            reply to this email.
+                                        </td>
+                                    </tr>
+                                </table>
+                            </td>
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+        </table>
     </div>
 </body>
 </html>

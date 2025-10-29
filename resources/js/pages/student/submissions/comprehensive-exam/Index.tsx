@@ -59,7 +59,7 @@ type Eligibility = {
 };
 
 // --- Dev simulation (disable in prod) ---
-const DEV_SIMULATE = false; // Use real UIC API data
+const DEV_SIMULATE = true; // Use real UIC API data
 const SIM_ELIG = {
   examOpen: true,
   gradesComplete: true,

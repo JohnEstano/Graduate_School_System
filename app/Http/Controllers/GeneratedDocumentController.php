@@ -10,6 +10,68 @@ use Illuminate\Support\Facades\Storage;
 class GeneratedDocumentController extends Controller {
 
   public function show(GeneratedDocument $doc) {
+    $user = \Illuminate\Support\Facades\Auth::user();
+    
+    if (!$user) {
+        abort(403, 'Unauthorized access');
+    }
+
+    // SECURITY: Get the defense request associated with this document
+    $defenseRequest = $doc->defenseRequest;
+    
+    if (!$defenseRequest) {
+        abort(404, 'Associated defense request not found');
+    }
+
+    // AUTHORIZATION: Check if user has permission to access this document
+    $hasAccess = false;
+
+    // 1. Student who submitted the request
+    if ($user->id === $defenseRequest->submitted_by) {
+        $hasAccess = true;
+    }
+
+    // 2. Adviser assigned to this defense
+    if ($user->id === $defenseRequest->adviser_user_id) {
+        $hasAccess = true;
+    }
+
+    // 3. Coordinator assigned to this defense
+    if ($user->id === $defenseRequest->coordinator_user_id) {
+        $hasAccess = true;
+    }
+
+    // 4. Panelists assigned to this defense
+    $panelistUserIds = [];
+    foreach (['defense_chairperson', 'defense_panelist1', 'defense_panelist2', 'defense_panelist3', 'defense_panelist4'] as $field) {
+        $value = $defenseRequest->$field;
+        if ($value && is_numeric($value)) {
+            $panelist = \App\Models\Panelist::find($value);
+            if ($panelist && $panelist->user_id) {
+                $panelistUserIds[] = $panelist->user_id;
+            }
+        }
+    }
+    if (in_array($user->id, $panelistUserIds)) {
+        $hasAccess = true;
+    }
+
+    // 5. Administrative Assistant or Dean
+    if (in_array($user->role, ['Administrative Assistant', 'Dean'])) {
+        $hasAccess = true;
+    }
+
+    // 6. Coordinators can access approved requests
+    if ($user->role === 'Coordinator' && in_array($defenseRequest->workflow_state, [
+        'coordinator-approved', 'panels-assigned', 'scheduled', 'completed'
+    ])) {
+        $hasAccess = true;
+    }
+
+    if (!$hasAccess) {
+        abort(403, 'You do not have permission to access this document');
+    }
+
     return Storage::download($doc->output_path);
   }
 

@@ -6,26 +6,40 @@
     <title>Student Registration Complete</title>
     <style>
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif,
-                'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol';
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
             line-height: 1.6;
             color: #333;
-            max-width: 600px;
-            margin: 0 auto;
-            padding: 20px;
             background-color: #f4f4f4;
         }
 
-        .container {
+        .email-wrapper {
+            width: 100%;
+            background-color: #f4f4f4;
+            padding: 20px 0;
+        }
+
+        .email-container {
+            max-width: 600px;
+            margin: 0 auto;
             background-color: #ffffff;
             padding: 30px;
         }
 
+        @media only screen and (max-width: 600px) {
+            .email-container {
+                padding: 20px;
+            }
+        }
+
         .header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
+            width: 100%;
             margin-bottom: 20px;
+        }
+
+        .header table {
+            width: 100%;
         }
 
         .logo {
@@ -37,67 +51,84 @@
             color: #FF4B64;
             font-size: 14px;
             font-weight: bold;
+            text-align: right;
         }
 
         h1 {
             font-size: 32px;
             font-weight: bold;
-            margin-top: 0;
-            margin-bottom: 50px;
+            margin: 0 0 30px 0;
+            color: #1f2937;
         }
 
-        .content {
-            margin-bottom: 30px;
+        @media only screen and (max-width: 600px) {
+            h1 {
+                font-size: 24px;
+            }
         }
 
         .message {
             font-size: 16px;
             line-height: 1.8;
-            margin-bottom: 32px;
-        }
-
-        .notice-box {
-            background-color: #f3f4f6;
-            padding: 20px;
-            margin: 20px 0;
-            display: flex;
-            align-items: center;
-        }
-
-        .notice-icon {
-            font-size: 20px;
-            margin-right: 15px;
-            color: #FF4B64;
+            margin-bottom: 24px;
+            color: #4b5563;
         }
 
         .info-box {
             border: 1px solid #e5e7eb;
             padding: 20px;
-            margin-top: 20px;
+            margin: 20px 0;
             border-radius: 8px;
             background-color: #fafafa;
+        }
+
+        @media only screen and (max-width: 600px) {
+            .info-box {
+                padding: 15px;
+            }
         }
 
         .info-box h2 {
             font-size: 18px;
             font-weight: bold;
-            margin-top: 0;
-            margin-bottom: 15px;
+            margin: 0 0 15px 0;
+            color: #1f2937;
         }
 
-        .info-box .info-row {
-            display: flex;
+        .info-row {
             margin-bottom: 10px;
         }
 
-        .info-box .info-label {
+        .info-label {
             font-weight: bold;
+            color: #6b7280;
+            display: inline-block;
             min-width: 120px;
-            color: #555;
         }
 
-        .info-box .info-value {
-            color: #333;
+        @media only screen and (max-width: 600px) {
+            .info-label {
+                display: block;
+                min-width: auto;
+                margin-bottom: 4px;
+            }
+        }
+
+        .info-value {
+            color: #1f2937;
+        }
+
+        .notice-box {
+            background-color: #f3f4f6;
+            padding: 16px;
+            margin: 20px 0;
+            border-radius: 6px;
+        }
+
+        .notice-icon {
+            font-size: 20px;
+            color: #FF4B64;
+            margin-right: 12px;
         }
 
         .button-container {
@@ -108,13 +139,19 @@
         .cta-button {
             display: inline-block;
             background-color: #FF4B64;
-            color: #ffffff;
+            color: #ffffff !important;
             padding: 15px 35px;
             text-decoration: none;
-            border-radius: 0px;
+            border-radius: 6px;
             font-weight: bold;
             font-size: 16px;
-            margin-top: 20px;
+        }
+
+        @media only screen and (max-width: 600px) {
+            .cta-button {
+                display: block;
+                padding: 12px 20px;
+            }
         }
 
         .footer {
@@ -123,6 +160,7 @@
             padding-top: 20px;
             font-size: 12px;
             color: #6b7280;
+            border-top: 1px solid #e5e7eb;
         }
 
         .footer .logo {
@@ -133,18 +171,25 @@
 </head>
 
 <body>
-    <div class="container">
-        <div class="header">
-            <img src="{{ asset('gss-uic-logo-v2.png') }}" alt="UIC Graduate School Logo" class="logo">
-            <span class="header-title">Graduate School System</span>
-        </div>
-        
-        {{-- Testing Disclaimer --}}
-        @include('emails.partials.testing-disclaimer')
+    <div class="email-wrapper">
+        <div class="email-container">
+            <div class="header">
+                <table border="0" cellpadding="0" cellspacing="0" width="100%">
+                    <tr>
+                        <td width="60">
+                            <img src="{{ asset('gss-uic-logo-v2.png') }}" alt="UIC Graduate School Logo" class="logo">
+                        </td>
+                        <td class="header-title">
+                            Graduate School System
+                        </td>
+                    </tr>
+                </table>
+            </div>
+            
+            @include('emails.partials.testing-disclaimer')
 
-        <h1>Student Registration Complete!</h1>
+            <h1>Student Registration Complete!</h1>
 
-        <div class="content">
             <p class="message">
                 <strong>Dear {{ $adviserName }},</strong>
             </p>
@@ -173,13 +218,19 @@
                 </div>
             </div>
 
-            <div class="notice-box">
-                <span class="notice-icon">⏰</span>
-                <p style="margin: 0;">
-                    <strong>Action Required:</strong> This student is currently in your "Pending Confirmation" list. 
-                    Please review their information and accept or reject the assignment.
-                </p>
-            </div>
+            <table width="100%" border="0" cellpadding="0" cellspacing="0" class="notice-box">
+                <tr>
+                    <td valign="top" width="32" style="padding-right: 12px;">
+                        <span class="notice-icon">⏰</span>
+                    </td>
+                    <td valign="top">
+                        <p style="margin: 0; color: #374151; font-size: 14px; line-height: 1.5;">
+                            <strong>Action Required:</strong> This student is currently in your "Pending Confirmation" list. 
+                            Please review their information and accept or reject the assignment.
+                        </p>
+                    </td>
+                </tr>
+            </table>
 
             <div class="button-container">
                 <a href="{{ $actionUrl }}" class="cta-button">
@@ -191,19 +242,19 @@
                 If you have any questions about this assignment or need assistance, please contact 
                 the Graduate School office or <strong>{{ $coordinatorName }}</strong>.
             </p>
-        </div>
-    </div>
 
-    <div class="footer">
-        <img src="{{ asset('gss-uic-logo-v2.png') }}" alt="UIC Graduate School Logo" class="logo">
-        <p>
-            <strong>University of the Immaculate Conception</strong><br>
-            Graduate School Office<br>
-            Father Selga St., Davao City, Philippines 8000
-        </p>
-        <p style="margin-top: 15px;">
-            This is an automated message from the Graduate School System. Please do not reply to this email.
-        </p>
+            <div class="footer">
+                <img src="{{ asset('gss-uic-logo-v2.png') }}" alt="UIC Graduate School Logo" class="logo">
+                <p>
+                    <strong>University of the Immaculate Conception</strong><br>
+                    Graduate School Office<br>
+                    Father Selga St., Davao City, Philippines 8000
+                </p>
+                <p style="margin-top: 15px;">
+                    This is an automated message from the Graduate School System. Please do not reply to this email.
+                </p>
+            </div>
+        </div>
     </div>
 </body>
 </html>

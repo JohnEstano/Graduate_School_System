@@ -2437,4 +2437,106 @@ class DefenseRequestController extends Controller
             ], 500);
         }
     }
+
+    /**
+     * Download defense attachment file
+     * Allows authenticated users to download defense-related documents
+     * WITH PROPER AUTHORIZATION CHECKS TO PREVENT UNAUTHORIZED ACCESS
+     */
+    public function downloadAttachment($filename)
+    {
+        $user = Auth::user();
+        
+        if (!$user) {
+            abort(403, 'Unauthorized access');
+        }
+
+        // Sanitize filename to prevent directory traversal
+        $filename = basename($filename);
+        
+        // Build the full path
+        $path = 'defense-attachments/' . $filename;
+        
+        // Check if file exists in storage
+        if (!Storage::disk('public')->exists($path)) {
+            abort(404, 'File not found');
+        }
+
+        // SECURITY: Find which defense request this file belongs to
+        $defenseRequest = DefenseRequest::where(function ($query) use ($path, $filename) {
+            $query->where('advisers_endorsement', 'LIKE', '%' . $filename)
+                  ->orWhere('rec_endorsement', 'LIKE', '%' . $filename)
+                  ->orWhere('proof_of_payment', 'LIKE', '%' . $filename)
+                  ->orWhere('manuscript_proposal', 'LIKE', '%' . $filename)
+                  ->orWhere('similarity_index', 'LIKE', '%' . $filename)
+                  ->orWhere('avisee_adviser_attachment', 'LIKE', '%' . $filename)
+                  ->orWhere('ai_detection_certificate', 'LIKE', '%' . $filename)
+                  ->orWhere('endorsement_form', 'LIKE', '%' . $filename);
+        })->first();
+
+        if (!$defenseRequest) {
+            abort(404, 'File not found or not associated with any defense request');
+        }
+
+        // AUTHORIZATION: Check if user has permission to access this file
+        $hasAccess = false;
+
+        // 1. Student who submitted the request
+        if ($user->id === $defenseRequest->submitted_by) {
+            $hasAccess = true;
+        }
+
+        // 2. Adviser assigned to this defense
+        if ($user->id === $defenseRequest->adviser_user_id) {
+            $hasAccess = true;
+        }
+
+        // 3. Coordinator assigned to this defense
+        if ($user->id === $defenseRequest->coordinator_user_id) {
+            $hasAccess = true;
+        }
+
+        // 4. Panelists assigned to this defense
+        $panelistUserIds = [];
+        foreach (['defense_chairperson', 'defense_panelist1', 'defense_panelist2', 'defense_panelist3', 'defense_panelist4'] as $field) {
+            $value = $defenseRequest->$field;
+            if ($value && is_numeric($value)) {
+                // It's a Panelist ID - get the associated user
+                $panelist = \App\Models\Panelist::find($value);
+                if ($panelist && $panelist->user_id) {
+                    $panelistUserIds[] = $panelist->user_id;
+                }
+            }
+        }
+        if (in_array($user->id, $panelistUserIds)) {
+            $hasAccess = true;
+        }
+
+        // 5. Administrative Assistant or Dean (can access all files)
+        if (in_array($user->role, ['Administrative Assistant', 'Dean'])) {
+            $hasAccess = true;
+        }
+
+        // 6. Coordinator role (any coordinator can access approved requests)
+        if ($user->role === 'Coordinator' && in_array($defenseRequest->workflow_state, [
+            'coordinator-approved', 'panels-assigned', 'scheduled', 'completed'
+        ])) {
+            $hasAccess = true;
+        }
+
+        if (!$hasAccess) {
+            abort(403, 'You do not have permission to access this file');
+        }
+
+        // Get the full file path
+        $filePath = Storage::disk('public')->path($path);
+        
+        // Determine MIME type
+        $mimeType = mime_content_type($filePath) ?: 'application/octet-stream';
+        
+        // Return file download response
+        return response()->download($filePath, $filename, [
+            'Content-Type' => $mimeType,
+        ]);
+    }
 }
