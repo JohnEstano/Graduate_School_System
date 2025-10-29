@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Student Registration Complete</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
         body {
             margin: 0;
@@ -156,11 +157,14 @@
 
         .footer {
             text-align: center;
-            margin-top: 30px;
-            padding-top: 20px;
+            padding: 20px 30px;
+            border-top: 1px solid #e5e7eb;
+        }
+
+        .footer-text {
             font-size: 12px;
             color: #6b7280;
-            border-top: 1px solid #e5e7eb;
+            margin: 0;
         }
 
         .footer .logo {
@@ -245,12 +249,12 @@
 
             <div class="footer">
                 <img src="{{ asset('gss-uic-logo-v2.png') }}" alt="UIC Graduate School Logo" class="logo">
-                <p>
+                <p class="footer-text">
                     <strong>University of the Immaculate Conception</strong><br>
                     Graduate School Office<br>
                     Father Selga St., Davao City, Philippines 8000
                 </p>
-                <p style="margin-top: 15px;">
+                <p class="footer-text" style="margin-top: 15px;">
                     This is an automated message from the Graduate School System. Please do not reply to this email.
                 </p>
             </div>

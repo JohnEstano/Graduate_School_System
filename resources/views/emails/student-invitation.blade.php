@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Graduate School System Invitation</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif,
@@ -109,15 +110,21 @@
             margin: 20px 0;
         }
 
-        .footer-text {
+        .footer {
             text-align: center;
-            font-size: 12px;
-            color: #6b7280;
-            line-height: 1.6;
+            padding: 20px 30px;
+            border-top: 1px solid #e5e7eb;
         }
 
-        .footer-logo {
-            max-width: 60px;
+        .footer-text {
+            font-size: 12px;
+            color: #6b7280;
+            margin: 0;
+        }
+
+        .footer .logo {
+            max-width: 50px;
+            height: auto;
             margin-bottom: 10px;
         }
 
@@ -276,27 +283,17 @@
 
                         <!-- Footer -->
                         <tr>
-                            <td style="padding: 20px 30px; border-top: 1px solid #e5e7eb;">
-                                <table width="100%" cellpadding="0" cellspacing="0" border="0">
-                                    <tr>
-                                        <td align="center">
-                                            <img src="{{ asset('gss-uic-logo-v2.png') }}" alt="UIC Graduate School Logo" class="footer-logo" style="max-width: 60px; margin-bottom: 10px;">
-                                        </td>
-                                    </tr>
-                                    <tr>
-                                        <td align="center" class="footer-text" style="font-size: 12px; color: #6b7280; line-height: 1.6;">
-                                            <strong>University of the Immaculate Conception</strong><br>
-                                            Graduate School Office<br>
-                                            Father Selga St., Davao City, Philippines 8000
-                                        </td>
-                                    </tr>
-                                    <tr>
-                                        <td align="center" class="footer-text" style="font-size: 12px; color: #6b7280; padding-top: 15px;">
-                                            This is an automated message from the Graduate School System. Please do not
-                                            reply to this email.
-                                        </td>
-                                    </tr>
-                                </table>
+                            <td class="footer">
+                                <img src="{{ asset('gss-uic-logo-v2.png') }}" alt="UIC Graduate School Logo" class="logo">
+                                <p class="footer-text">
+                                    <strong>University of the Immaculate Conception</strong><br>
+                                    Graduate School Office<br>
+                                    Father Selga St., Davao City, Philippines 8000
+                                </p>
+                                <p class="footer-text" style="margin-top: 15px;">
+                                    This is an automated message from the Graduate School System. Please do not
+                                    reply to this email.
+                                </p>
                             </td>
                         </tr>
                     </table>

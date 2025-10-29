@@ -1,6 +1,6 @@
 {{-- Testing Disclaimer Banner --}}
 <table width="100%" border="0" cellpadding="0" cellspacing="0" role="presentation" 
-       style="margin: 24px 0; background-color: #fef3c7; border-left: 4px solid #f59e0b; border-radius: 6px;">
+       style="margin: 24px 0; background-color: #fef3c7; border-left: 4px solid #f59e0b; border-radius: 0px;">
     <tr>
         <td style="padding: 16px;">
             <table width="100%" border="0" cellpadding="0" cellspacing="0" role="presentation">

@@ -155,7 +155,8 @@
 
         .footer .logo {
             max-width: 60px;
-            margin-bottom: 10px;
+            margin: 0 auto 10px auto;
+            display: block;
         }
 
         .mode-badge {
