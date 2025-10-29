@@ -33,6 +33,8 @@ export default function LoginAPI(props: LoginProps) {
         e.preventDefault();
         // API login mode
         post(route('login'), {
+            preserveState: false,
+            preserveScroll: true,
             onSuccess: () => {
                 reset('password');
             },

@@ -33,6 +33,8 @@ export default function LoginLocal(props: LoginProps) {
         e.preventDefault();
         // Local login mode
         post(route('login.local.submit'), {
+            preserveState: false,
+            preserveScroll: true,
             onSuccess: () => {
                 reset('password');
             },

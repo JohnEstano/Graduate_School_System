@@ -13,11 +13,17 @@ class EnsureFreshCsrfToken
      *
      * Ensures that every response includes the current CSRF token in headers.
      * This allows JavaScript to always have access to the current token.
+     * For auth pages, regenerate token on each visit to prevent stale tokens.
      *
      * @param  \Closure(\Illuminate\Http\Request): (\Symfony\Component\HttpFoundation\Response)  $next
      */
     public function handle(Request $request, Closure $next): Response
     {
+        // Regenerate CSRF token on auth pages to prevent stale tokens
+        if ($request->is('login*') || $request->is('register')) {
+            $request->session()->regenerateToken();
+        }
+        
         $response = $next($request);
 
         // Add current CSRF token to response headers for JavaScript access
