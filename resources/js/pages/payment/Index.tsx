@@ -32,7 +32,7 @@ type PageProps = {
 
 export default function Index() {
   const { props } = usePage<PageProps>();
-  const { student, canSubmit, payment, paymentWindowOpen } = props;
+  const { student, canSubmit, payment, paymentWindowOpenx  } = props;
 
   // Can open form if: canSubmit (has approved app + window open) AND (no payment OR payment rejected)
   const canOpenForm = canSubmit && (!payment || payment.status === 'rejected');
