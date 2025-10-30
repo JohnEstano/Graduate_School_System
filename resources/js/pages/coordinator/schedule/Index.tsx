@@ -293,7 +293,27 @@ const DraggableEventCard = ({
       committee.push(...event.raw.committee);
     }
 
-    if (committee.length === 0) return null;
+    // If no committee members, show a placeholder instead of returning null
+    if (committee.length === 0) {
+      return (
+        <div
+          ref={setNodeRef}
+          {...attributes}
+          {...listeners}
+          className={cn(
+            "px-1 py-1 rounded cursor-pointer opacity-50",
+            isDragging && "opacity-50"
+          )}
+          onClick={onClick}
+        >
+          <div className="flex -space-x-2">
+            <div className="h-8 w-8 rounded-full bg-zinc-200 dark:bg-zinc-700 border-2 border-white dark:border-zinc-800 flex items-center justify-center text-[10px] font-semibold text-muted-foreground">
+              ?
+            </div>
+          </div>
+        </div>
+      );
+    }
 
     return (
       <div
@@ -483,7 +503,27 @@ const DraggableWeekEvent = ({
       committee.push(...event.raw.committee);
     }
 
-    if (committee.length === 0) return null;
+    // Show placeholder if no committee members
+    if (committee.length === 0) {
+      return (
+        <div
+          ref={setNodeRef}
+          className="absolute rounded-md p-2 text-xs flex items-center justify-center cursor-pointer bg-zinc-50 dark:bg-zinc-800/50 hover:bg-zinc-100/80 dark:hover:bg-zinc-800/70 border border-zinc-200 dark:border-zinc-700/50 opacity-50"
+          style={{
+            top: `calc(${topPct}%)`,
+            height: `calc(${heightPct}%)`,
+            left: `calc(${(l?.leftPct ?? 0)}%)`,
+            width: `calc(${(l?.widthPct ?? 100)}%)`,
+          }}
+          onClick={onClick}
+          title={`${event.title} - No panelists assigned`}
+        >
+          <div className="h-8 w-8 rounded-full bg-zinc-200 dark:bg-zinc-700 border-2 border-white dark:border-zinc-800 flex items-center justify-center text-[10px] font-semibold text-muted-foreground">
+            ?
+          </div>
+        </div>
+      );
+    }
 
     return (
       <div
@@ -602,7 +642,27 @@ const DraggableDayEvent = ({
       committee.push(...event.raw.committee);
     }
 
-    if (committee.length === 0) return null;
+    // Show placeholder if no committee members
+    if (committee.length === 0) {
+      return (
+        <div
+          ref={setNodeRef}
+          className="absolute rounded-md p-2 text-xs flex items-center justify-center cursor-pointer bg-zinc-50 dark:bg-zinc-800/50 hover:bg-zinc-100/80 dark:hover:bg-zinc-800/70 border border-zinc-200 dark:border-zinc-700/50 opacity-50"
+          style={{
+            top: `calc(${topPct}%)`,
+            height: `calc(${heightPct}%)`,
+            left: `calc(${(l?.leftPct ?? 0)}%)`,
+            width: `calc(${(l?.widthPct ?? 100)}%)`,
+          }}
+          onClick={onClick}
+          title={`${event.title} - No panelists assigned`}
+        >
+          <div className="h-8 w-8 rounded-full bg-zinc-200 dark:bg-zinc-700 border-2 border-white dark:border-zinc-800 flex items-center justify-center text-[10px] font-semibold text-muted-foreground">
+            ?
+          </div>
+        </div>
+      );
+    }
 
     return (
       <div
