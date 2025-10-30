@@ -4,11 +4,15 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class ExamApplication extends Model
 {
     protected $table = 'exam_application';
     protected $primaryKey = 'application_id';
+    public $incrementing = true;
+    protected $keyType = 'int';
+    protected $guarded = [];
     public $timestamps = false;
 
     protected $fillable = [
@@ -27,8 +31,28 @@ class ExamApplication extends Model
         'created_at',
     ];
 
+    // Relationship for subjects (already likely present; ensure name matches)
     public function subjects(): HasMany
     {
-        return $this->hasMany(ExamApplicationSubject::class, 'application_id', 'application_id');
+        return $this->hasMany(\App\Models\ExamApplicationSubject::class, 'application_id', 'application_id');
     }
+
+    // Registrar reviews history
+    public function registrarReviews(): HasMany
+    {
+        return $this->hasMany(\App\Models\ExamRegistrarReview::class, 'exam_application_id', 'application_id');
+    }
+
+    // Latest registrar review (used by list API)
+    public function latestRegistrarReview(): HasOne
+    {
+        return $this->hasOne(\App\Models\ExamRegistrarReview::class, 'exam_application_id', 'application_id')->latestOfMany();
+    }
+
+    
+    public function getRouteKeyName(): string
+    {
+        return 'application_id';
+    }
+    
 }

@@ -1,4 +1,27 @@
 <?php return array (
+  'barryvdh/laravel-debugbar' => 
+  array (
+    'aliases' => 
+    array (
+      'Debugbar' => 'Barryvdh\\Debugbar\\Facades\\Debugbar',
+    ),
+    'providers' => 
+    array (
+      0 => 'Barryvdh\\Debugbar\\ServiceProvider',
+    ),
+  ),
+  'barryvdh/laravel-dompdf' => 
+  array (
+    'aliases' => 
+    array (
+      'PDF' => 'Barryvdh\\DomPDF\\Facade\\Pdf',
+      'Pdf' => 'Barryvdh\\DomPDF\\Facade\\Pdf',
+    ),
+    'providers' => 
+    array (
+      0 => 'Barryvdh\\DomPDF\\ServiceProvider',
+    ),
+  ),
   'inertiajs/inertia-laravel' => 
   array (
     'providers' => 
@@ -13,6 +36,18 @@
       0 => 'Laravel\\Pail\\PailServiceProvider',
     ),
   ),
+  'laravel/reverb' => 
+  array (
+    'aliases' => 
+    array (
+      'Output' => 'Laravel\\Reverb\\Output',
+    ),
+    'providers' => 
+    array (
+      0 => 'Laravel\\Reverb\\ApplicationManagerServiceProvider',
+      1 => 'Laravel\\Reverb\\ReverbServiceProvider',
+    ),
+  ),
   'laravel/sail' => 
   array (
     'providers' => 
@@ -25,17 +60,6 @@
     'providers' => 
     array (
       0 => 'Laravel\\Sanctum\\SanctumServiceProvider',
-    ),
-  ),
-  'laravel/socialite' => 
-  array (
-    'aliases' => 
-    array (
-      'Socialite' => 'Laravel\\Socialite\\Facades\\Socialite',
-    ),
-    'providers' => 
-    array (
-      0 => 'Laravel\\Socialite\\SocialiteServiceProvider',
     ),
   ),
   'laravel/tinker' => 

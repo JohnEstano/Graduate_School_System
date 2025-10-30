@@ -4,6 +4,11 @@ namespace App\Providers;
 
 use Illuminate\Foundation\Support\Providers\EventServiceProvider as ServiceProvider;
 
+use App\Models\DefenseRequest;
+use App\Observers\DefenseRequestObserver;
+
+
+
 class EventServiceProvider extends ServiceProvider
 {
     /**
@@ -28,5 +33,10 @@ class EventServiceProvider extends ServiceProvider
 
         // register User observer to keep advisers in sync when users are created/updated
         \App\Models\User::observe(\App\Observers\UserObserver::class);
+
+
+        // register DefenseRequest observer to keep advisers in sync when defense requests are created/updated
+        DefenseRequest::observe(DefenseRequestObserver::class);
+
     }
 }

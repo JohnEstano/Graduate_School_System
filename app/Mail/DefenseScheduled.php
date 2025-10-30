@@ -17,10 +17,13 @@ class DefenseScheduled extends Mailable implements ShouldQueue
 
     /**
      * Create a new message instance.
+     * ISSUE #7: Updated to accept any user (student, adviser, or panel member)
+     * Note: $recipient can be a User model OR an object with email properties (for external panelists)
      */
     public function __construct(
         public DefenseRequest $defenseRequest,
-        public User $student
+        public object $recipient,  // Changed from User to object to support panelists table
+        public ?array $changes = null  // Track what changed: ['schedule' => bool, 'panels' => bool]
     ) {
         //
     }
@@ -30,9 +33,19 @@ class DefenseScheduled extends Mailable implements ShouldQueue
      */
     public function envelope(): Envelope
     {
-        return new Envelope(
-            subject: "Defense Scheduled - {$this->defenseRequest->defense_type} Defense on {$this->defenseRequest->scheduled_date?->format('M j, Y')}",
-        );
+        $subject = "Defense Scheduled - {$this->defenseRequest->defense_type} Defense on {$this->defenseRequest->scheduled_date?->format('M j, Y')}";
+        
+        if ($this->changes) {
+            if ($this->changes['schedule'] && $this->changes['panels']) {
+                $subject = "Defense Rescheduled & Panel Updated - {$this->defenseRequest->defense_type} Defense";
+            } elseif ($this->changes['schedule']) {
+                $subject = "Defense Rescheduled - {$this->defenseRequest->defense_type} Defense";
+            } elseif ($this->changes['panels']) {
+                $subject = "Defense Panel Updated - {$this->defenseRequest->defense_type} Defense";
+            }
+        }
+        
+        return new Envelope(subject: $subject);
     }
 
     /**

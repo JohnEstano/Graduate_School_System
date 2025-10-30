@@ -158,23 +158,36 @@
     }
 }
 
-
+/* Scrollbar styles for light and dark mode */
 ::-webkit-scrollbar {
   width: 10px;
   background: transparent;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #f6f3f6;
+  background: #e4e4e7;
   border-radius: 10px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #f6f3f6; 
+  background: #d4d4d8;
+}
+
+/* Dark mode scrollbar */
+.dark ::-webkit-scrollbar-thumb {
+  background: #3f3f46;
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: #52525b;
 }
 
 /* For Firefox */
 * {
   scrollbar-width: thin;
-  scrollbar-color: #f6f3f6 transparent;
+  scrollbar-color: #e4e4e7 transparent;
+}
+
+.dark * {
+  scrollbar-color: #3f3f46 transparent;
 }

@@ -46,6 +46,25 @@
         @viteReactRefresh
         @vite(['resources/js/app.tsx', "resources/js/pages/{$page['component']}.tsx"])
         @inertiaHead
+
+        {{-- Force refresh when page is restored from browser cache (back/forward button) --}}
+        <script>
+            (function () {
+                function forceReloadIfHistoryNavigation(event) {
+                    const navEntries = performance.getEntriesByType('navigation');
+                    const navigatedBack = navEntries.length > 0 && navEntries[0].type === 'back_forward';
+
+                    if (event?.persisted || navigatedBack) {
+                        // Use replace so history does not keep the cached entry
+                        window.location.replace(window.location.href);
+                    }
+                }
+
+                window.addEventListener('pageshow', forceReloadIfHistoryNavigation);
+                // Also run immediately in case the script executes after a history navigation
+                forceReloadIfHistoryNavigation();
+            })();
+        </script>
     </head>
     <body class="font-sans antialiased">
         @inertia

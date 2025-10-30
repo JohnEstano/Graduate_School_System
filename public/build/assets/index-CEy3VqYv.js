@@ -1,1 +1,0 @@
-import{r as e,c as s}from"./app-BAKMM9W6.js";import{u}from"./index-DUmeJSti.js";var c=s.useId||(()=>{}),n=0;function i(t){const[r,a]=e.useState(c());return u(()=>{a(o=>o??String(n++))},[t]),t||(r?`radix-${r}`:"")}export{i as u};

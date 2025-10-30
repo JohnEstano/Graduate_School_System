@@ -19,6 +19,13 @@ import {
   UserCheck,
   Signature,
   ArrowRightLeft,
+  Info,
+  Loader2,
+  AlertTriangle,
+  Banknote,
+  DollarSign,
+  Hourglass,
+  ArrowRight,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -27,6 +34,10 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
+import { cn } from '@/lib/utils';
+import EndorsementDialog from './endorsement-dialog';
 
 type DefenseRequestFull = {
   id: number;
@@ -40,6 +51,11 @@ type DefenseRequestFull = {
   priority?: 'Low' | 'Medium' | 'High';
   workflow_state?: string;
   defense_adviser?: string;
+  defense_chairperson?: string;
+  defense_panelist1?: string;
+  defense_panelist2?: string;
+  defense_panelist3?: string;
+  defense_panelist4?: string;
   advisers_endorsement?: string;
   rec_endorsement?: string;
   proof_of_payment?: string;
@@ -54,13 +70,20 @@ type DefenseRequestFull = {
   ai_detection_certificate?: string;
   endorsement_form?: string;
   adviser_status?: string;
+  adviser_comments?: string;
   coordinator_status?: string;
+  coordinator_comments?: string;
   defense_venue?: string;
   defense_mode?: string;
   scheduling_notes?: string;
   scheduled_time?: string;
   scheduled_date?: string;
   scheduled_end_time?: string;
+  amount?: number;
+  program_level?: string;
+  aa_verification_status?: 'pending' | 'ready_for_finance' | 'in_progress' | 'paid' | 'completed' | 'invalid';
+  aa_verification_id?: number | null;
+  invalid_comment?: string | null;
 };
 
 interface PageProps {
@@ -78,7 +101,11 @@ type WorkflowStepKey =
   | 'coordinator-rejected'
   | 'coordinator-retrieved'
   | 'panels-assigned'
-  | 'scheduled';
+  | 'scheduled'
+  | 'payment-ready'
+  | 'payment-in-progress'
+  | 'payment-paid'
+  | 'payment-invalid';
 
 type WorkflowStep = {
   key: WorkflowStepKey;
@@ -91,7 +118,7 @@ export default function DetailsRequirementsPage(rawProps: any) {
   const requestProp: DefenseRequestFull | null = props.defenseRequest || null;
   const userRole: string = props.userRole || '';
 
-  const [tab, setTab] = useState<'details' | 'link-documents'>('details');
+  const [tab, setTab] = useState<'details' | 'upload-certificate'>('details');
 
   const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Dashboard', href: '/dashboard' },
@@ -128,102 +155,96 @@ export default function DetailsRequirementsPage(rawProps: any) {
   }
 
   const [request, setRequest] = useState<DefenseRequestFull>(requestProp);
-  const [confirm, setConfirm] = useState<{ open: boolean; action: 'approve' | 'reject' | 'retrieve' | null }>({
+  const [confirm, setConfirm] = useState<{ open: boolean; action: 'reject' | 'retrieve' | null }>({
     open: false,
     action: null,
   });
+  const [rejectionReason, setRejectionReason] = useState('');
+  const [endorsementDialogOpen, setEndorsementDialogOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
-  // For document linking form
+  // For AI Declaration Form upload
   const [aiDetectionCertFile, setAiDetectionCertFile] = useState<File | null>(null);
-  const [endorsementFormFile, setEndorsementFormFile] = useState<File | null>(null);
   const [aiDetectionCertUploading, setAiDetectionCertUploading] = useState(false);
-  const [endorsementFormUploading, setEndorsementFormUploading] = useState(false);
-  const [autoGenerating, setAutoGenerating] = useState(false);
-
   const aiDetectionInputRef = useRef<HTMLInputElement>(null);
-  const endorsementInputRef = useRef<HTMLInputElement>(null);
 
   function csrf() {
-    return (
-      (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)
-        ?.content || ''
-    );
+    const token = (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content || '';
+    return token;
   }
 
-  // --- Add state for missing docs alert ---
-  const [missingDocsAlert, setMissingDocsAlert] = useState<string | null>(null);
+  // Fetch fresh CSRF token from server
+  async function refreshCsrfToken() {
+    try {
+      // Make a simple GET request to refresh the session
+      await fetch('/sanctum/csrf-cookie', { credentials: 'include' });
+      // Give it a moment to update the meta tag
+      await new Promise(resolve => setTimeout(resolve, 100));
+    } catch (err) {
+      console.error('Failed to refresh CSRF token:', err);
+    }
+  }
 
-  // --- Approve/Reject/Retrieve logic ---
-  async function handleStatusChange(action: 'approve' | 'reject' | 'retrieve') {
+  // --- Reject/Retrieve logic (Approve is handled by endorsement dialog) ---
+  async function handleStatusChange(action: 'reject' | 'retrieve') {
     if (!request.id) return;
 
-    // Restrict Endorse if required documents are missing
-    if (action === 'approve') {
-      if (!request.ai_detection_certificate || !request.endorsement_form) {
-        setMissingDocsAlert(
-          'You must upload both the AI Detection Certificate and Endorsement Form before endorsing this request.'
-        );
-        setConfirm({ open: false, action: null });
-        toast.error('You must upload both the AI Detection Certificate and Endorsement Form before endorsing.');
-        return;
-      }
-      // Restrict Endorse if no coordinator relationship exists
-      if (!coordinators.length || !coordinators[0].id) {
-        setMissingDocsAlert(
-          'You must have a coordinator linked before you can endorse this request.'
-        );
-        setConfirm({ open: false, action: null });
-        toast.error('You must have a coordinator linked before you can endorse.');
-        return;
-      }
-    }
-
     setIsLoading(true);
-    setMissingDocsAlert(null);
+
+    // Refresh CSRF token before making the request
+    await refreshCsrfToken();
 
     // Map action to new adviser_status value
     let newAdviserStatus: string = 'Pending';
-    if (action === 'approve') newAdviserStatus = 'Approved';
-    else if (action === 'reject') newAdviserStatus = 'Rejected';
+    if (action === 'reject') newAdviserStatus = 'Rejected';
     else if (action === 'retrieve') newAdviserStatus = 'Pending';
 
     try {
       const payload: any = { adviser_status: newAdviserStatus };
-      // Only include coordinator_user_id when approving and a coordinator is available
-      if (action === 'approve' && coordinators.length > 0 && coordinators[0].id) {
-        payload.coordinator_user_id = coordinators[0].id;
+      
+      // Add rejection reason if rejecting
+      if (action === 'reject' && rejectionReason.trim()) {
+        payload.adviser_comments = rejectionReason.trim();
       }
 
-      const res = await fetchWithCsrfRetry(`/adviser/defense-requirements/${request.id}/adviser-status`, {
+      const response = await fetch(`/adviser/defense-requirements/${request.id}/adviser-status`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
-          Accept: 'application/json',
+          'X-CSRF-TOKEN': csrf(),
+          'Accept': 'application/json',
         },
+        credentials: 'include',
         body: JSON.stringify(payload),
       });
-      const data = await res.json();
-      if (res.ok) {
-        if (data.request) {
-          setRequest(data.request); // This will update workflow_history and re-render the workflow section
-        } else {
-          setRequest(r => ({
-            ...r,
-            adviser_status: newAdviserStatus,
-            workflow_history: data.workflow_history || r.workflow_history,
-            workflow_state: data.workflow_state || r.workflow_state,
-          }));
-        }
-        toast.success(`Adviser status set to ${newAdviserStatus}`);
-      } else {
-        toast.error(data?.error || 'Failed to update adviser status');
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: 'Failed to update status' }));
+        throw new Error(errorData.message || `HTTP ${response.status}`);
       }
-    } catch {
-      toast.error('Network error updating adviser status');
+
+      const data = await response.json();
+      
+      // Update local state with the server response
+      setRequest(prev => ({
+        ...prev,
+        adviser_status: data.adviser_status || newAdviserStatus,
+        adviser_comments: data.adviser_comments || prev.adviser_comments,
+        workflow_state: data.workflow_state || prev.workflow_state,
+        workflow_history: data.workflow_history || prev.workflow_history,
+        last_status_updated_by: data.last_status_updated_by || prev.last_status_updated_by,
+        last_status_updated_at: data.last_status_updated_at || prev.last_status_updated_at,
+      }));
+
+      setConfirm({ open: false, action: null });
+      setRejectionReason(''); // Clear reason after submission
+      
+      toast.success(`Status updated to ${newAdviserStatus}!`);
+    } catch (err) {
+      console.error('Status update error:', err);
+      toast.error(err instanceof Error ? err.message : 'Failed to update status');
     } finally {
       setIsLoading(false);
-      setConfirm({ open: false, action: null });
     }
   }
 
@@ -256,15 +277,15 @@ export default function DetailsRequirementsPage(rawProps: any) {
     return `/storage/${url.replace(/^\/?storage\//, '')}`;
   }
 
-  // Attachments
+    // Attachments
   const attachments = [
-    { label: "Adviser’s Endorsement", url: resolveFileUrl(request.advisers_endorsement) },
+    { label: "Adviser's Endorsement", url: resolveFileUrl(request.advisers_endorsement) },
     { label: 'REC Endorsement', url: resolveFileUrl(request.rec_endorsement) },
     { label: 'Proof of Payment', url: resolveFileUrl(request.proof_of_payment) },
     { label: 'Reference No.', url: request.reference_no }, // Not a file, keep as is
     { label: 'Manuscript', url: resolveFileUrl(request.manuscript_proposal) },
-    { label: 'Similarity Index', url: resolveFileUrl(request.similarity_index) },
-    { label: 'Avisee-Adviser File', url: resolveFileUrl(request.avisee_adviser_attachment) },
+    { label: 'Similarity Form', url: resolveFileUrl(request.similarity_index) },
+    { label: 'Advisee-Adviser File', url: resolveFileUrl(request.avisee_adviser_attachment) },
   ];
 
   // --- FINAL CONSISTENT WORKFLOW STEPS AND MAPPING ---
@@ -314,21 +335,60 @@ export default function DetailsRequirementsPage(rawProps: any) {
       label: 'Scheduled',
       icon: <Clock className="h-5 w-5" />,
     },
+    {
+      key: 'payment-ready',
+      label: 'Payment Ready for Finance',
+      icon: <ArrowRight className="h-5 w-5" />,
+    },
+    {
+      key: 'payment-in-progress',
+      label: 'Payment In Progress',
+      icon: <Hourglass className="h-5 w-5" />,
+    },
+    {
+      key: 'payment-paid',
+      label: 'Payment Paid',
+      icon: <Banknote className="h-5 w-5" />,
+    },
+    {
+      key: 'payment-invalid',
+      label: 'Payment Invalid',
+      icon: <AlertTriangle className="h-5 w-5" />,
+    },
   ];
 
   // Map event/to_state to workflow step key
-  function getStepForEvent(event: string): WorkflowStepKey | 'adviser-pending' | '' {
+  function getStepForEvent(event: string, toState?: string): WorkflowStepKey | 'adviser-pending' | '' {
     event = (event || '').toLowerCase();
+    const state = (toState || '').toLowerCase();
+    
     if (event === 'submitted') return 'submitted';
-    if (event === 'adviser-approved') return 'adviser-approved';
-    if (event === 'adviser-rejected') return 'adviser-rejected';
-    if (event === 'adviser-retrieved') return 'adviser-retrieved';
+    
+    // Handle adviser actions based on to_state
+    if (event.includes('adviser')) {
+      if (state.includes('reject')) return 'adviser-rejected';
+      if (state.includes('retrieved') || state.includes('pending')) return 'adviser-retrieved';
+      if (state.includes('approved') || state.includes('endorsed')) return 'adviser-approved';
+      return 'adviser-approved'; // default for adviser actions
+    }
+    
+    // Handle coordinator actions based on to_state
+    if (event.includes('coordinator')) {
+      if (state.includes('reject')) return 'coordinator-rejected';
+      if (state.includes('retrieved') || state.includes('pending')) return 'coordinator-retrieved';
+      if (state.includes('approved')) return 'coordinator-approved';
+      return 'coordinator-approved'; // default for coordinator actions
+    }
+    
+    // Handle payment-related events
+    if (event.includes('payment ready') || event.includes('ready for finance')) return 'payment-ready';
+    if (event.includes('payment in progress') || event.includes('in progress')) return 'payment-in-progress';
+    if (event.includes('payment paid') || event.includes('paid')) return 'payment-paid';
+    if (event.includes('payment invalid') || event.includes('invalid')) return 'payment-invalid';
+    
     if (event === 'adviser-review' || event === 'pending') return 'adviser-pending';
-    if (event === 'coordinator-approved') return 'coordinator-approved';
-    if (event === 'coordinator-rejected') return 'coordinator-rejected';
-    if (event === 'coordinator-retrieved') return 'coordinator-retrieved';
-    if (event === 'panels-assigned') return 'panels-assigned';
-    if (event === 'scheduled') return 'scheduled';
+    if (event.includes('panels')) return 'panels-assigned';
+    if (event.includes('schedule')) return 'scheduled';
     return '';
   }
 
@@ -375,123 +435,56 @@ export default function DetailsRequirementsPage(rawProps: any) {
     return { event, desc, from, to, created, userName };
   }
 
-  // Handle document submission for the "Link Documents" tab
-  async function handleDocumentsSubmit(e: React.FormEvent<HTMLFormElement>) {
+    // Handle AI Declaration Form upload
+  async function handleAiCertificateSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (!request.id) return;
-    if (!aiDetectionCertFile && !endorsementFormFile) {
-      toast.error('Please select at least one document to upload.');
+    if (!aiDetectionCertFile) {
+      toast.error('Please select a file first');
       return;
     }
 
     const formData = new FormData();
-    if (aiDetectionCertFile) {
-      formData.append('ai_detection_certificate', aiDetectionCertFile);
-    }
-    if (endorsementFormFile) {
-      formData.append('endorsement_form', endorsementFormFile);
-    }
+    formData.append('ai_detection_certificate', aiDetectionCertFile);
+    
+    setAiDetectionCertUploading(true);
+    
+    // Refresh CSRF token before upload
+    await refreshCsrfToken();
 
     try {
-      if (aiDetectionCertFile) setAiDetectionCertUploading(true);
-      if (endorsementFormFile) setEndorsementFormUploading(true);
-
-      const res = await fetchWithCsrfRetry(`/adviser/defense-requirements/${request.id}/documents`, {
+      const response = await fetch(`/adviser/defense-requirements/${request.id}/documents`, {
         method: 'POST',
+        headers: {
+          'X-CSRF-TOKEN': csrf(),
+          'Accept': 'application/json',
+        },
+        credentials: 'include',
         body: formData,
       });
-      const data = await res.json();
-      if (res.ok) {
-        setRequest(r => ({
-          ...r,
-          ai_detection_certificate: data.ai_detection_certificate || r.ai_detection_certificate,
-          endorsement_form: data.endorsement_form || r.endorsement_form,
-          advisers_endorsement: data.advisers_endorsement || r.advisers_endorsement,
-        }));
-        setAiDetectionCertFile(null);
-        setEndorsementFormFile(null);
-        toast.success('Documents uploaded successfully.');
-      } else {
-        toast.error(data?.error || 'Failed to upload documents.');
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: 'Upload failed' }));
+        throw new Error(errorData.message || `HTTP ${response.status}`);
       }
-    } catch {
-      toast.error('Network error uploading documents.');
+
+      const data = await response.json();
+      
+      // Update local state
+      setRequest(prev => ({
+        ...prev,
+        ai_detection_certificate: data.ai_detection_certificate || prev.ai_detection_certificate,
+      }));
+
+      setAiDetectionCertFile(null);
+      if (aiDetectionInputRef.current) aiDetectionInputRef.current.value = '';
+      
+      toast.success('AI Declaration Form uploaded successfully!');
+    } catch (err) {
+      console.error('Upload error:', err);
+      toast.error(err instanceof Error ? err.message : 'Failed to upload file');
     } finally {
       setAiDetectionCertUploading(false);
-      setEndorsementFormUploading(false);
-    }
-  }
-
-  // Add state for templates
-  const [templates, setTemplates] = useState<any[]>([]);
-  const [templatesLoading, setTemplatesLoading] = useState(true);
-
-  useEffect(() => {
-    setTemplatesLoading(true);
-    fetch('/api/document-templates')
-      .then(r => r.json())
-      .then(setTemplates)
-      .finally(() => setTemplatesLoading(false));
-  }, []);
-
-  // Helper to get template name by defense type
-  function getTemplateNameForDefenseType(defenseType: string) {
-    if (/proposal/i.test(defenseType)) return "Endorsement Form (Proposal)";
-    if (/prefinal/i.test(defenseType)) return "Endorsement Form (Prefinal)";
-    if (/final/i.test(defenseType)) return "Endorsement (Final)";
-    return null;
-  }
-
-  // Auto Generate handler
-  async function handleAutoGenerate() {
-    setAutoGenerating(true);
-    toast.loading("Generating document...");
-    const templateName = getTemplateNameForDefenseType(request.defense_type || "");
-    if (templatesLoading) {
-      toast.error("Templates are still loading. Please wait.");
-      setAutoGenerating(false);
-      return;
-    }
-    const template = templates.find(t => t.name === templateName);
-    if (!template) {
-      toast.error("No template found for this defense type.");
-      setAutoGenerating(false);
-      return;
-    }
-    try {
-      const res = await fetch("/api/generate-document", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Accept": "application/pdf",
-          "X-CSRF-TOKEN": csrf(),
-        },
-        body: JSON.stringify({
-          template_id: template.id,
-          defense_request_id: request.id,
-          fields: {},
-        }),
-      });
-      if (!res.ok) {
-        toast.error("Failed to generate document.");
-        setAutoGenerating(false);
-        return;
-      }
-      const blob = await res.blob();
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = 'endorsement_form.pdf';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(url);
-      toast.success("Endorsement Form generated and downloaded!");
-    } catch (e) {
-      toast.error("Network error generating document.");
-    } finally {
-      setAutoGenerating(false);
-      toast.dismiss();
     }
   }
 
@@ -509,22 +502,40 @@ export default function DetailsRequirementsPage(rawProps: any) {
     return status || '—';
   }
 
-  // Always show missing docs alert if not linked
-  const missingDocs =
-    !request.ai_detection_certificate || !request.endorsement_form;
-  const missingDocsAlertMsg = !request.ai_detection_certificate && !request.endorsement_form
-    ? "*You haven't uploaded the AI Detection Certificate and Endorsement Form yet."
-    : !request.ai_detection_certificate
-      ? "*You haven't uploaded the AI Detection Certificate yet."
-      : !request.endorsement_form
-        ? "*You haven't uploaded the Endorsement Form yet."
-        : null;
-
-
   const coordinators = props.coordinators ?? [];
   const loadingCoordinators = false; // No need to fetch, already loaded
 
+  // Add panelMembers state for resolving panel member info
+  const [panelMembers, setPanelMembers] = useState<any[]>([]);
+  const [loadingMembers, setLoadingMembers] = useState(false);
 
+  useEffect(() => {
+    let alive = true;
+    async function loadPanelMembers() {
+      setLoadingMembers(true);
+      try {
+        const res = await fetch('/api/panel-members', { 
+          headers: { Accept: 'application/json' } 
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (alive) setPanelMembers(Array.isArray(data) ? data : []);
+        }
+      } catch (e) {
+        console.warn('Failed to load panel members', e);
+      } finally {
+        if (alive) setLoadingMembers(false);
+      }
+    }
+    loadPanelMembers();
+    return () => { alive = false; };
+  }, []);
+
+  // Helper to find panelist by name
+  function findPanelMember(name: string | null | undefined) {
+    if (!name) return null;
+    return panelMembers.find(m => m.name === name);
+  }
 
   return (
     <AppLayout breadcrumbs={breadcrumbs}>
@@ -544,28 +555,23 @@ export default function DetailsRequirementsPage(rawProps: any) {
             <Tabs value={tab} onValueChange={v => setTab(v as typeof tab)}>
               <TabsList className="h-8">
                 <TabsTrigger value="details" className="flex items-center gap-1 text-sm font-medium px-3">
-                  <FileText className="h-4 w-4" /> Details
+                  <Info className="h-4 w-4" /> Details
                 </TabsTrigger>
-                <TabsTrigger value="link-documents" className="flex items-center gap-1 text-sm font-medium px-3">
-                  <FileText className="h-4 w-4" /> Link Documents
+                <TabsTrigger value="upload-certificate" className="flex items-center gap-1 text-sm font-medium px-3">
+                  <FileText className="h-4 w-4" /> Upload AI Declaration Form
                 </TabsTrigger>
               </TabsList>
             </Tabs>
-            {/* Always show missing docs alert here, regardless of tab */}
-            {missingDocs && (
-              <span className="ml-4 text-xs text-rose-600 font-medium">
-                {missingDocsAlertMsg}
-              </span>
-            )}
           </div>
           <div className="flex gap-2">
             <Button
               size="sm"
               variant="outline"
-              onClick={() => setConfirm({ open: true, action: 'approve' })}
+              onClick={() => setEndorsementDialogOpen(true)}
               disabled={
                 isLoading ||
                 request.adviser_status === 'Approved' ||
+                request.coordinator_status === 'Approved' ||
                 !coordinators.length || !coordinators[0].id // Disable if no coordinator
               }
             >
@@ -576,7 +582,11 @@ export default function DetailsRequirementsPage(rawProps: any) {
               size="sm"
               variant="outline"
               onClick={() => setConfirm({ open: true, action: 'reject' })}
-              disabled={isLoading || request.adviser_status === 'Rejected'}
+              disabled={
+                isLoading || 
+                request.adviser_status === 'Rejected' ||
+                request.coordinator_status === 'Approved' // Disable if coordinator already approved
+              }
             >
               <XCircle className="h-4 w-4 mr-1 text-red-600" />
               Reject
@@ -585,7 +595,11 @@ export default function DetailsRequirementsPage(rawProps: any) {
               size="sm"
               variant="outline"
               onClick={() => setConfirm({ open: true, action: 'retrieve' })}
-              disabled={isLoading || request.adviser_status === 'Pending'}
+              disabled={
+                isLoading || 
+                request.adviser_status === 'Pending' ||
+                request.coordinator_status === 'Approved' // Disable if coordinator already approved
+              }
             >
               <CircleArrowLeft className="h-4 w-4 mr-1 text-blue-600" />
               Retrieve
@@ -657,6 +671,70 @@ export default function DetailsRequirementsPage(rawProps: any) {
                       </Badge>
                     </div>
 
+                    {/* Reference No. */}
+                    <div>
+                      <div className="text-xs text-muted-foreground mb-1">Reference No.</div>
+                      <div className="font-medium text-sm">{request.reference_no || '—'}</div>
+                    </div>
+
+                    {/* Amount */}
+                    <div>
+                      <div className="text-xs text-muted-foreground mb-1">Amount</div>
+                      <div className="font-medium text-sm">
+                        {request.amount ? `₱${Number(request.amount).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '—'}
+                      </div>
+                    </div>
+
+                    {/* AA Verification Status */}
+                    <div>
+                      <div className="text-xs text-muted-foreground mb-1">AA Payment Status</div>
+                      <Badge
+                        variant="secondary"
+                        className={cn(
+                          "text-xs font-semibold px-2 py-1 h-fit flex items-center gap-1.5 w-fit",
+                          request.aa_verification_status === 'completed'
+                            ? 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300'
+                            : request.aa_verification_status === 'paid'
+                            ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300'
+                            : request.aa_verification_status === 'ready_for_finance'
+                            ? 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300'
+                            : request.aa_verification_status === 'in_progress'
+                            ? 'bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300'
+                            : request.aa_verification_status === 'invalid'
+                            ? 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300'
+                            : 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300'
+                        )}
+                      >
+                        {request.aa_verification_status === 'completed' && <CheckCircle className="h-3 w-3" />}
+                        {request.aa_verification_status === 'paid' && <Banknote className="h-3 w-3" />}
+                        {request.aa_verification_status === 'ready_for_finance' && <DollarSign className="h-3 w-3" />}
+                        {request.aa_verification_status === 'in_progress' && <Hourglass className="h-3 w-3" />}
+                        {request.aa_verification_status === 'invalid' && <AlertTriangle className="h-3 w-3" />}
+                        {!request.aa_verification_status && <Clock className="h-3 w-3" />}
+                        {request.aa_verification_status === 'completed'
+                          ? 'Completed'
+                          : request.aa_verification_status === 'paid'
+                          ? 'Paid'
+                          : request.aa_verification_status === 'ready_for_finance'
+                          ? 'Ready for Finance'
+                          : request.aa_verification_status === 'in_progress'
+                          ? 'In Progress'
+                          : request.aa_verification_status === 'invalid'
+                          ? 'Invalid'
+                          : 'Pending'}
+                      </Badge>
+                    </div>
+
+                    {/* Invalid Comment Display */}
+                    {request.invalid_comment && (
+                      <div className="md:col-span-2">
+                        <div className="p-3 bg-red-50 border border-red-200 rounded-md">
+                          <p className="text-xs text-muted-foreground mb-1">Invalid Reason</p>
+                          <p className="text-sm text-red-800">{request.invalid_comment}</p>
+                        </div>
+                      </div>
+                    )}
+
                     <div>
                       <div className="text-xs text-muted-foreground mb-1">Submitted At</div>
                       <div className="font-medium text-sm">{formatDate(request.submitted_at)}</div>
@@ -724,20 +802,82 @@ export default function DetailsRequirementsPage(rawProps: any) {
                   </div>
                 </div>
 
-                {/* Attachments moved to sidebar */}
+                {/* Committee Table - NEW */}
+                <div className="rounded-lg border p-5 space-y-3">
+                  <h2 className="text-sm font-semibold flex items-center gap-2">
+                    <Users className="h-4 w-4" /> Committee
+                  </h2>
+                  <Separator />
+                  {(() => {
+                    const memberFor = (value: string | null | undefined, fallbackRole: string) => {
+                      const resolved = findPanelMember(value);
+                      return {
+                        displayName: resolved?.name || value || '—',
+                        email: resolved?.email || '',
+                        rawValue: value || '',
+                        role: fallbackRole,
+                      };
+                    };
+
+                    const rows = [
+                      { key: 'adviser', info: memberFor(request.defense_adviser, 'Adviser') },
+                      { key: 'chairperson', info: memberFor(request.defense_chairperson, 'Chairperson') },
+                      { key: 'panelist1', info: memberFor(request.defense_panelist1, 'Panel Member') },
+                      { key: 'panelist2', info: memberFor(request.defense_panelist2, 'Panel Member') },
+                      { key: 'panelist3', info: memberFor(request.defense_panelist3, 'Panel Member') },
+                      { key: 'panelist4', info: memberFor(request.defense_panelist4, 'Panel Member') },
+                    ].map(r => {
+                      const namePresent = !!(r.info.rawValue || (r.info.displayName && r.info.displayName !== '—'));
+                      const emailPresent = !!(r.info.email);
+                      const status = namePresent ? (emailPresent ? 'Assigned' : 'Pending confirmation') : '—';
+
+                      return {
+                        name: r.info.displayName,
+                        email: r.info.email || '—',
+                        role: r.info.role,
+                        status,
+                      };
+                    });
+
+                    return (
+                      <div className="rounded-md  overflow-x-auto">
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead className="min-w-[200px]">Name & Email</TableHead>
+                              <TableHead className="min-w-[100px]">Role</TableHead>
+                            
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {rows.map((r, idx) => (
+                              <TableRow key={idx}>
+                                <TableCell>
+                                  <div className="flex flex-col">
+                                    <span className="font-medium text-sm">{r.name}</span>
+                                    <span className="text-xs text-muted-foreground">{r.email}</span>
+                                  </div>
+                                </TableCell>
+                                <TableCell className="text-xs">{r.role}</TableCell>
+                              
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    );
+                  })()}
+                </div>
+
+                {/* Attachments */}
                 <div className={sectionClass}>
                   <h2 className="text-sm font-semibold mb-2 flex items-center gap-2">
                     <FileText className="h-4 w-4" /> Attachments
                   </h2>
-                  {missingDocs && (
-                    <div className="mb-2">
-                      <span className="text-xs text-rose-600 font-medium">{missingDocsAlertMsg}</span>
-                    </div>
-                  )}
                   <Separator />
                   <div className="space-y-2 text-sm mt-3">
                     {attachments
-                      .filter(a => a.label !== 'AI Detection Certificate' && a.label !== 'Endorsement Form')
+                      .filter(a => a.label !== 'AI Declaration Form' && a.label !== 'Endorsement Form')
                       .map(a =>
                         a.url ? (
                           <a
@@ -758,7 +898,7 @@ export default function DetailsRequirementsPage(rawProps: any) {
 
                     <div className="flex items-center gap-2 px-3 py-2 rounded-md border bg-white dark:bg-zinc-900">
                       <FileText className="h-4 w-4" />
-                      <span className="font-medium">AI Detection Certificate</span>
+                      <span className="font-medium">AI Declaration Form</span>
                       {request.ai_detection_certificate ? (
                         <a
                           href={request.ai_detection_certificate}
@@ -800,32 +940,16 @@ export default function DetailsRequirementsPage(rawProps: any) {
                   </div>
                 </div>
 
-                {/* Committee (read-only summary) */}
-                <div className={sectionClass}>
-                  <h2 className="text-sm font-semibold flex items-center gap-2">
-                    <Users className="h-4 w-4" /> Committee
-                  </h2>
-                  <Separator />
-                  <div className="grid md:grid-cols-2 gap-4 text-sm">
-                    <div>
-                      <div className="text-[11px] text-muted-foreground uppercase tracking-wide">
-                        Adviser
-                      </div>
-                      <div className="font-medium">
-                        {request.defense_adviser || '—'}
-                      </div>
-                    </div>
-                  </div>
-                </div>
+                {/* Remove old Committee (read-only summary) section */}
               </TabsContent>
 
-              {/* LINK DOCUMENTS TAB */}
-              <TabsContent value="link-documents" className="space-y-5">
-                <form onSubmit={handleDocumentsSubmit} className="space-y-5">
-                  {/* AI Detection Certificate Section */}
+              {/* UPLOAD AI DECLARATION FORM TAB */}
+              <TabsContent value="upload-certificate" className="space-y-5">
+                <form onSubmit={handleAiCertificateSubmit} className="space-y-5">
+                  {/* AI Declaration Form Section */}
                   <div className={sectionClass + " text-sm"}>
                     <h2 className="text-sm font-semibold flex items-center gap-2">
-                      <FileText className="h-5 w-5" /> AI Detection Certificate
+                      <FileText className="h-5 w-5" /> AI Declaration Form
                     </h2>
                     <Separator />
                     <div className="flex flex-col gap-3 mt-2">
@@ -834,7 +958,7 @@ export default function DetailsRequirementsPage(rawProps: any) {
                           htmlFor="ai-detection-upload"
                           className="block text-xs font-medium text-zinc-700 dark:text-zinc-200"
                         >
-                          Upload Certificate
+                          Upload Declaration Form
                         </label>
                         {request.ai_detection_certificate && !aiDetectionCertFile ? (
                           <div className="flex items-center gap-2 w-full">
@@ -883,101 +1007,22 @@ export default function DetailsRequirementsPage(rawProps: any) {
                       </div>
                     </div>
                   </div>
-
-                  {/* Endorsement Form Section */}
-                  <div className={sectionClass + " text-sm"}>
-                    <h2 className="text-sm font-semibold flex items-center gap-2">
-                      <FileText className="h-5 w-5" /> Endorsement Form
-                    </h2>
-                    <Separator />
-                    <div className="flex flex-col gap-3 mt-2">
-                      <div className="grid w-full max-w-sm items-center gap-1.5">
-                        <label
-                          htmlFor="endorsement-upload"
-                          className="block text-xs font-medium text-zinc-700 dark:text-zinc-200"
-                        >
-                          Upload Endorsement Form
-                        </label>
-                        {request.endorsement_form && !endorsementFormFile ? (
-                          <div className="flex items-center gap-2 w-full">
-                            <Input
-                              type="text"
-                              value={request.endorsement_form.split('/').pop() || ''}
-                              disabled
-                              className="flex-1 bg-zinc-100 text-zinc-700 cursor-default"
-                            />
-                            <Button
-                              type="button"
-                              size="icon"
-                              variant="ghost"
-                              className="h-7 w-7"
-                              onClick={() => {
-                                setRequest(r => ({ ...r, endorsement_form: undefined }));
-                                if (endorsementInputRef.current) endorsementInputRef.current.value = "";
-                              }}
-                              title="Remove linked file"
-                            >
-                              <XCircle className="h-4 w-4 text-black" />
-                            </Button>
-                          </div>
-                        ) : (
-                          <div className="flex items-center gap-2">
-                            <input
-                              id="endorsement-upload"
-                              ref={endorsementInputRef}
-                              type="file"
-                              accept=".pdf,.jpg,.jpeg,.png"
-                              className="flex-1 text-xs file:bg-rose-500 file:text-white file:rounded file:border-0 file:px-3 file:py-1.5 file:text-xs file:font-semibold file:cursor-pointer"
-                              style={{ maxWidth: 220 }}
-                              onChange={e => setEndorsementFormFile(e.target.files?.[0] || null)}
-                              disabled={endorsementFormUploading}
-                            />
-                          </div>
-                        )}
-                        <div className="text-xs text-muted-foreground mt-1">
-                          {endorsementFormFile
-                            ? `Selected: ${endorsementFormFile.name}`
-                            : null}
-                        </div>
-                        {/* Auto Generate button on a separate row */}
-                        <div className="mt-2">
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            onClick={handleAutoGenerate}
-                            disabled={endorsementFormUploading || autoGenerating || templatesLoading}
-                          >
-                            {autoGenerating || templatesLoading ? (
-                              <span className="flex items-center gap-2">
-                                <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
-                                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
-                                </svg>
-                                Generating...
-                              </span>
-                            ) : (
-                              "Auto Generate"
-                            )}
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
                   <div className="flex justify-end">
                     <Button
                       type="submit"
                       className="gap-2 bg-rose-500 hover:bg-rose-600 text-white"
-                      disabled={aiDetectionCertUploading || endorsementFormUploading}
+                      disabled={aiDetectionCertUploading || !aiDetectionCertFile}
                     >
-                      {aiDetectionCertUploading || endorsementFormUploading ? (
+                      {aiDetectionCertUploading ? (
                         <span>Uploading...</span>
                       ) : (
-                        <span>Submit Documents</span>
+                        <span>Upload Declaration Form</span>
                       )}
                     </Button>
                   </div>
                 </form>
               </TabsContent>
+
             </Tabs>
           </div>
 
@@ -994,19 +1039,22 @@ export default function DetailsRequirementsPage(rawProps: any) {
                   request.workflow_history.map((item: any, idx: number) => {
                     // Map "adviser-status-updated" to the actual workflow step
                     let event = item.action;
+                    let toState = item.to_state;
                     if (event === "adviser-status-updated" && item.to_state) {
                       event = item.to_state;
                     }
                     if (event === "adviser-review" || event === "pending") {
                       event = "adviser-review";
                     }
-                    const stepKey = getStepForEvent(event);
+                    const stepKey = getStepForEvent(event, toState);
                     const step = workflowSteps.find(s => s.key === stepKey) || {
                       label: event.charAt(0).toUpperCase() + event.slice(1),
                       icon: <Clock className="h-5 w-5 text-gray-500" />,
                     };
                     const isLast = idx === ((request.workflow_history ?? []).length - 1);
-                    const iconBoxColor = 'bg-gray-100 text-gray-500';
+                    const isInvalid = event.toLowerCase().includes('invalid');
+                    const iconBoxColor = isInvalid ? 'bg-red-100 text-red-600' : 'bg-gray-100 text-gray-500';
+                    const comment = item.comment || item.rejection_reason || '';
                     return (
                       <div key={idx} className="flex items-start gap-3 relative">
                         <div className="flex flex-col items-center">
@@ -1017,7 +1065,7 @@ export default function DetailsRequirementsPage(rawProps: any) {
                             <div className="h-8 border-l-2 border-dotted border-gray-300 dark:border-zinc-700 mx-auto"></div>
                           )}
                         </div>
-                        <div className="pb-4">
+                        <div className="pb-4 flex-1">
                           <div className="font-semibold text-xs">{step.label}</div>
                           <div className="text-[11px] text-muted-foreground">
                             {item.user_name && <span>{item.user_name}</span>}
@@ -1029,8 +1077,14 @@ export default function DetailsRequirementsPage(rawProps: any) {
                             )}
                           </div>
 
-                          {item.comment && (
-                            <div className="text-xs text-muted-foreground mt-1">{item.comment}</div>
+                          {comment && (
+                            <div className={`mt-2 p-2 rounded text-[11px] ${
+                              isInvalid 
+                                ? 'bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 text-red-900 dark:text-red-100'
+                                : 'bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 text-amber-900 dark:text-amber-100'
+                            }`}>
+                             {comment}
+                            </div>
                           )}
                         </div>
                       </div>
@@ -1044,63 +1098,83 @@ export default function DetailsRequirementsPage(rawProps: any) {
           </div>
         </div>
 
-        <div className="text-[11px] text-muted-foreground">
-          Last updated by:{' '}
-          {request.last_status_updated_by || '—'}{' '}
-          {request.last_status_updated_at
-            ? `(${request.last_status_updated_at})`
-            : ''}
-        </div>
+        
       </div>
 
-      {/* Confirmation Dialog for Endorse/Reject/Retrieve */}
-      <Dialog open={confirm.open} onOpenChange={o => { if (!o) setConfirm({ open: false, action: null }); }}>
-        <DialogContent>
+      {/* Confirmation Dialog for Reject/Retrieve */}
+      <Dialog open={confirm.open} onOpenChange={o => { 
+        if (!o) {
+          setConfirm({ open: false, action: null });
+          setRejectionReason(''); // Clear reason when closing
+        }
+      }}>
+        <DialogContent className="max-w-md">
           <DialogTitle>Confirm Action</DialogTitle>
           <DialogDescription>
-            {confirm.action === 'approve'
-              ? 'Please review before endorsing.'
-              : 'Apply this status change?'}
+            {confirm.action === 'reject' 
+              ? 'Please provide a reason for rejecting this defense request.' 
+              : 'Are you sure you want to retrieve this request back to pending status?'}
           </DialogDescription>
-          <div className="mt-3 text-sm space-y-3">
-            <p>
-              Set request to{' '}
-              <span className="font-semibold">
-                {confirm.action === 'approve'
-                  ? 'Endorsed'
-                  : confirm.action === 'reject'
-                    ? 'Rejected'
-                    : 'Pending'}
-              </span>?
-            </p>
-            {confirm.action === 'approve' && coordinators.length > 0 && (
-              <div className="text-xs text-muted-foreground">
-                This will be sent to your coordinator: <span className="font-semibold">{coordinators[0].name}</span>
-              </div>
-            )}
-            {confirm.action === 'approve' && (
-              <div className="flex flex-col items-center gap-3 rounded-md border bg-muted/40 p-5">
-                <div className="rounded-full bg-primary/10 p-4">
-                  <Signature className="h-14 w-14 text-primary" />
-                </div>
-                <p className="text-center text-sm leading-relaxed">
-                  Endorsing this defense request authorizes the use of your signature
-                  on the official defense documents.
-                </p>
-              </div>
-            )}
-          </div>
+          
+          {confirm.action === 'reject' && (
+            <div className="mt-4 space-y-2">
+              <Label htmlFor="rejectionReason" className="text-sm font-medium">
+                Rejection Reason <span className="text-red-500">*</span>
+              </Label>
+              <textarea
+                id="rejectionReason"
+                value={rejectionReason}
+                onChange={(e) => setRejectionReason(e.target.value)}
+                placeholder="Explain why this defense request is being rejected..."
+                className="w-full min-h-[120px] p-3 text-sm border rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-primary"
+                maxLength={500}
+              />
+              <p className="text-xs text-muted-foreground">
+                {rejectionReason.length}/500 characters
+              </p>
+            </div>
+          )}
+          
           <div className="flex justify-end gap-2 mt-4">
-            <Button variant="ghost" onClick={() => setConfirm({ open: false, action: null })}>Cancel</Button>
+            <Button 
+              variant="ghost" 
+              onClick={() => {
+                setConfirm({ open: false, action: null });
+                setRejectionReason('');
+              }}
+            >
+              Cancel
+            </Button>
             <Button
               onClick={() => confirm.action && handleStatusChange(confirm.action)}
-              disabled={isLoading}
+              disabled={isLoading || (confirm.action === 'reject' && !rejectionReason.trim())}
+              variant={confirm.action === 'reject' ? 'destructive' : 'default'}
             >
-              Confirm
+              {isLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Processing...
+                </>
+              ) : (
+                confirm.action === 'reject' ? 'Reject Request' : 'Confirm Retrieve'
+              )}
             </Button>
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Endorsement Dialog */}
+      <EndorsementDialog
+        open={endorsementDialogOpen}
+        onOpenChange={setEndorsementDialogOpen}
+        defenseRequest={request}
+        coordinatorId={coordinators.length > 0 ? coordinators[0].id : undefined}
+        coordinatorName={coordinators.length > 0 ? coordinators[0].name : 'Coordinator'}
+        onEndorseComplete={() => {
+          // Simply reload the entire page to get fresh data
+          window.location.reload();
+        }}
+      />
     </AppLayout>
   );
 }

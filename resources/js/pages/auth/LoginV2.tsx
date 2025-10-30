@@ -3,7 +3,6 @@ import { Head, useForm } from '@inertiajs/react';
 
 interface Props {
   status?: string;
-  canResetPassword?: boolean;
 }
 
 const LoginV2: React.FC<Props> = () => {

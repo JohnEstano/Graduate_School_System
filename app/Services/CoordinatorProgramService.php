@@ -55,7 +55,7 @@ class CoordinatorProgramService
         ],
         
         'hbeltran@uic.edu.ph' => [
-            'Doctor in Business Management major in Information Systems',
+            'Doctor in Business Management with specialization in Information Systems',
             'Doctor of Philosophy in Information Technology Integration',
             'Master of Arts in Education major in Information Technology Integration',
             'Master in Information Systems',

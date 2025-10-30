@@ -1,12 +1,16 @@
 import React, { useEffect, useState } from 'react';
 import { usePage } from '@inertiajs/react';
-import { Sun, Moon, Users, CalendarDays, ClipboardList, DollarSign, CircleEllipsis, BarChart3 } from 'lucide-react';
+import { Sun, Moon, Users, CalendarDays, ClipboardList, DollarSign, CircleEllipsis,ChartLine } from 'lucide-react';
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import QuickActionsWidget from '../widgets/quick-actions-widget';
 import WeeklyDefenseSchedulesWidget from '../widgets/weekly-defense-schedule-widget';
-import PendingDefenseRequestsWidget from '../widgets/pending-defense-request-widget';
+import DefenseCountLineChart from '../widgets/visual-charts/defense-count';
+import { HonorariumPaymentTrends } from '../widgets/visual-charts/honorarium-payment-trends';
+import { DefenseTypeDistribution } from '../widgets/visual-charts/defense-type-distribution';
+import { OverallProgramActivity } from '../widgets/visual-charts/overall-program-activity';
+import { PaymentTrendsInteractive } from '../widgets/visual-charts/payment-trends-interactive';
 
 type PageProps = {
     auth: {
@@ -57,10 +61,8 @@ export default function AssistantDashboard() {
     const [todaysDefenses, setTodaysDefenses] = useState<number | null>(stats.todays_defenses ?? null);
     const [pendingApplications, setPendingApplications] = useState<number>(stats.pending_applications ?? 0);
     const [pendingPayments, setPendingPayments] = useState<number>(stats.pending_payments ?? 0);
-    const [pendingDefenseRequests, setPendingDefenseRequests] = useState<number>(stats.pending_defense_requests ?? 0);
 
     const [allRequests, setAllRequests] = useState<any[]>([]);
-    const [pendingRequests, setPendingRequests] = useState<any[]>([]);
     const [selectedDay, setSelectedDay] = useState<number>(new Date().getDay());
 
     const weekDays = [
@@ -79,29 +81,22 @@ export default function AssistantDashboard() {
 
         setLoading(true);
         Promise.all([
-            fetch('/api/pending-honorariums').then(res => res.ok ? res.json() : { count: 0 }).catch(() => ({ count: 0 })),
+            fetch('/api/assistant/pending-honorariums').then(res => res.ok ? res.json() : { pending_count: 0 }).catch(() => ({ pending_count: 0 })),
             fetch('/api/todays-defenses').then(res => res.ok ? res.json() : { count: 0 }).catch(() => ({ count: 0 })),
             fetch('/api/pending-applications').then(res => res.ok ? res.json() : { count: 0 }).catch(() => ({ count: 0 })),
             fetch('/api/pending-payments').then(res => res.ok ? res.json() : { count: 0 }).catch(() => ({ count: 0 })),
-            fetch('/api/pending-defense-requests').then(res => res.ok ? res.json() : { count: 0 }).catch(() => ({ count: 0 })),
             fetch('/defense-requests', { headers: { 'Accept': 'application/json' } }).then(res => res.ok ? res.json() : []).catch(() => []),
         ])
-            .then(([honorariums, defenses, applications, payments, defenseRequests, allDefenseRequests]) => {
-                setPendingHonorariums(honorariums.count ?? 0);
+            .then(([honorariums, defenses, applications, payments, allDefenseRequests]) => {
+                setPendingHonorariums(honorariums.pending_count ?? 0);
                 setTodaysDefenses(defenses.count ?? 0);
                 setPendingApplications(applications.count ?? 0);
                 setPendingPayments(payments.count ?? 0);
-                setPendingDefenseRequests(defenseRequests.count ?? 0);
 
                 const requests = Array.isArray(allDefenseRequests)
                     ? allDefenseRequests
                     : (allDefenseRequests.defenseRequests ?? []);
                 setAllRequests(requests);
-
-                const pending = requests.filter(
-                    (r: any) => (r.normalized_status || r.status) === 'Pending'
-                );
-                setPendingRequests(pending);
             })
             .finally(() => setLoading(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -141,14 +136,6 @@ export default function AssistantDashboard() {
             icon: <CircleEllipsis />,
             iconTheme: "bg-violet-100 text-violet-600 dark:bg-violet-900 dark:text-violet-300",
             iconColorClass: "text-violet-500"
-        },
-        {
-            title: "Defense Requests",
-            value: pendingDefenseRequests,
-            description: "Defense requests to process",
-            icon: <ClipboardList />,
-            iconTheme: "bg-rose-100 text-rose-600 dark:bg-rose-900 dark:text-rose-300",
-            iconColorClass: "text-rose-500"
         },
     ];
 
@@ -193,17 +180,17 @@ export default function AssistantDashboard() {
                     </div>
 
                     {/* Tabs - Mobile Responsive */}
-                    <div className="w-full max-w-screen-xl mx-auto px-4 md:px-7">
+                    <div className="w-full px-4 md:px-7">
                         <Tabs value={tab} onValueChange={setTab} className="w-full">
                             <TabsList className="mb-2 ">
                                 <TabsTrigger value="overview" className="flex-1 sm:flex-none">Overview</TabsTrigger>
-                                <TabsTrigger value="analytics" className="flex-1 sm:flex-none">Analytics</TabsTrigger>
+                                <TabsTrigger value="analytics" className="flex-1 sm:flex-none"> Analytics </TabsTrigger>
                             </TabsList>
 
                             {/* Overview Tab */}
                             <TabsContent value="overview" className="w-full">
                                 {/* Metric Cards - Mobile Optimized */}
-                                <div className="w-full max-w-screen-xl mx-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 px-0 mb-4 md:mb-6">
+                                <div className="w-full grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 px-0 mb-4 md:mb-6">
                                     {metrics.map((metric, idx) => (
                                         <Card
                                             key={idx}
@@ -241,25 +228,29 @@ export default function AssistantDashboard() {
                                             referenceDate={new Date()}
                                             loading={loading}
                                         />
-                                        <PendingDefenseRequestsWidget pendingRequests={pendingRequests} loading={loading} />
+                                        <PaymentTrendsInteractive />
                                     </div>
                                 </div>
                             </TabsContent>
 
-                            {/* Analytics Tab - Mobile Responsive */}
+                            {/* Analytics Tab */}
                             <TabsContent value="analytics" className="w-full">
-                                <div className="w-full max-w-screen-xl mx-auto grid grid-cols-1 gap-4 mb-4 md:mb-6">
-                                    {/* Icon analytic card */}
-                                    <Card className="flex flex-row items-center gap-3 md:gap-4 p-4 md:p-6">
-                                        <div className="rounded-full bg-violet-100 dark:bg-violet-900 p-2 md:p-3 flex items-center justify-center flex-shrink-0">
-                                            <BarChart3 className="size-6 md:size-8 text-violet-600 dark:text-violet-300" />
-                                        </div>
-                                        <div>
-                                            <div className="text-base md:text-lg font-bold text-gray-900 dark:text-white">Analytics</div>
-                                            <div className="text-xs md:text-sm text-gray-500 dark:text-gray-400">Visualize assistant workflow metrics and trends here.</div>
-                                        </div>
-                                    </Card>
-                                    {/* Add more analytics widgets here later */}
+                                <div className="flex flex-col gap-4 md:gap-6 mb-4 md:mb-6">
+                                    {/* Row 1: Defense Count */}
+                                    <div className="w-full">
+                                        <DefenseCountLineChart />
+                                    </div>
+                                    
+                                    {/* Row 2: Honorarium Payments + Defense Types */}
+                                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
+                                        <HonorariumPaymentTrends />
+                                        <DefenseTypeDistribution />
+                                    </div>
+                                    
+                                    {/* Row 3: Overall Program Activity (full width) */}
+                                    <div className="w-full">
+                                        <OverallProgramActivity />
+                                    </div>
                                 </div>
                             </TabsContent>
                         </Tabs>

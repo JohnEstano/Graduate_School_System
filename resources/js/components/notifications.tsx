@@ -1,9 +1,9 @@
-import { useState } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Bell, CheckCheck, CheckCircle, Info } from "lucide-react";
 import type { Notification } from "@/types";
-import { Link, router } from "@inertiajs/react";
+import { Link, router, usePage } from "@inertiajs/react";
 import { Button } from "@/components/ui/button";
 
 function getTimeAgo(dateStr: string) {
@@ -38,28 +38,75 @@ function getIcon(type?: string, read?: boolean) {
     return <Bell size={18} className="text-muted-foreground" />;
 }
 
-export default function Notifications({ notifications }: { notifications: Notification[] }) {
+export default function Notifications() {
     const [tab, setTab] = useState<"unread" | "read">("unread");
-    const [localNotifications, setLocalNotifications] = useState<Notification[]>(notifications);
+    const page = usePage<{ notifications?: Notification[]; unreadCount?: number }>();
+    const [localNotifications, setLocalNotifications] = useState<Notification[]>(
+        page.props.notifications || []
+    );
+
+    // Update when props change
+    useEffect(() => {
+        if (page.props.notifications) {
+            setLocalNotifications(page.props.notifications);
+        }
+    }, [page.props.notifications]);
 
     const unread = localNotifications.filter(n => !n.read);
     const read = localNotifications.filter(n => n.read);
 
     const markAllAsRead = () => {
-        // Optimistically update local state
         setLocalNotifications(localNotifications.map(n => ({ ...n, read: true })));
         router.post('/notifications/read-all', {}, {
             preserveScroll: true,
             preserveState: true,
-            // Optionally reload props after, but UI updates instantly
             onSuccess: () => {
                 router.reload({ only: ['notifications', 'unreadCount'] });
             }
         });
     };
 
+    const handleNotificationClick = useCallback((notification: Notification, e: React.MouseEvent) => {
+        if (notification.read || !notification.link) {
+            return;
+        }
+
+        e.preventDefault();
+
+        setLocalNotifications(prev => 
+            prev.map(n => n.id === notification.id ? { ...n, read: true } : n)
+        );
+
+        router.post(`/notifications/${notification.id}/read`, {}, {
+            preserveScroll: true,
+            preserveState: true,
+            onSuccess: () => {
+                router.visit(notification.link!);
+            }
+        });
+    }, []);
+
     const groupedUnread = groupNotifications(unread);
     const groupedRead = groupNotifications(read);
+
+    // Reusable notification item component
+    const NotificationItem = ({ notification }: { notification: Notification }) => (
+        <Link
+            href={notification.link ?? "#"}
+            onClick={(e) => handleNotificationClick(notification, e)}
+            className="flex items-start gap-2 px-3 py-3 border-b last:border-none hover:bg-muted/70 transition rounded-md"
+            style={{ textDecoration: "none" }}
+        >
+            <div className="pt-1">{getIcon(notification.type, notification.read)}</div>
+            <div className="flex-1">
+                <div className="flex items-center gap-1">
+                    <span className="font-medium text-xs">{notification.title}</span>
+                </div>
+                <div className="text-xs text-muted-foreground">{notification.message}</div>
+                <div className="text-[10px] text-muted-foreground mt-1">{getTimeAgo(notification.created_at)}</div>
+            </div>
+        </Link>
+    );
 
     return (
         <div className="p-2 ">
@@ -104,21 +151,7 @@ export default function Notifications({ notifications }: { notifications: Notifi
                                     )}
                                 </div>
                                 {groupedUnread.today.map(n => (
-                                    <Link
-                                        href={n.link ?? "#"}
-                                        key={n.id}
-                                        className="flex items-start gap-2 px-3 py-3 border-b last:border-none hover:bg-muted/70 transition rounded-md"
-                                        style={{ textDecoration: "none" }}
-                                    >
-                                        <div className="pt-1">{getIcon(n.type, n.read)}</div>
-                                        <div className="flex-1">
-                                            <div className="flex items-center gap-1">
-                                                <span className="font-medium text-xs">{n.title}</span>
-                                            </div>
-                                            <div className="text-xs text-muted-foreground">{n.message}</div>
-                                            <div className="text-[10px] text-muted-foreground mt-1">{getTimeAgo(n.created_at)}</div>
-                                        </div>
-                                    </Link>
+                                    <NotificationItem key={n.id} notification={n} />
                                 ))}
                             </div>
                         )}
@@ -126,21 +159,7 @@ export default function Notifications({ notifications }: { notifications: Notifi
                             <div>
                                 <div className="text-[11px] font-semibold text-muted-foreground mb-1 pl-1">Yesterday</div>
                                 {groupedUnread.yesterday.map(n => (
-                                    <Link
-                                        href={n.link ?? "#"}
-                                        key={n.id}
-                                        className="flex items-start gap-2 px-3 py-3 border-b last:border-none hover:bg-muted/70 transition rounded-md"
-                                        style={{ textDecoration: "none" }}
-                                    >
-                                        <div className="pt-1">{getIcon(n.type, n.read)}</div>
-                                        <div className="flex-1">
-                                            <div className="flex items-center gap-1">
-                                                <span className="font-medium text-xs">{n.title}</span>
-                                            </div>
-                                            <div className="text-xs text-muted-foreground">{n.message}</div>
-                                            <div className="text-[10px] text-muted-foreground mt-1">{getTimeAgo(n.created_at)}</div>
-                                        </div>
-                                    </Link>
+                                    <NotificationItem key={n.id} notification={n} />
                                 ))}
                             </div>
                         )}
@@ -148,21 +167,7 @@ export default function Notifications({ notifications }: { notifications: Notifi
                             <div>
                                 <div className="text-[11px] font-semibold text-muted-foreground mb-1 pl-1">Earlier</div>
                                 {groupedUnread.earlier.map(n => (
-                                    <Link
-                                        href={n.link ?? "#"}
-                                        key={n.id}
-                                        className="flex items-start gap-2 px-3 py-3 border-b last:border-none hover:bg-muted/70 transition rounded-md"
-                                        style={{ textDecoration: "none" }}
-                                    >
-                                        <div className="pt-1">{getIcon(n.type, n.read)}</div>
-                                        <div className="flex-1">
-                                            <div className="flex items-center gap-1">
-                                                <span className="font-medium text-xs">{n.title}</span>
-                                            </div>
-                                            <div className="text-xs text-muted-foreground">{n.message}</div>
-                                            <div className="text-[10px] text-muted-foreground mt-1">{getTimeAgo(n.created_at)}</div>
-                                        </div>
-                                    </Link>
+                                    <NotificationItem key={n.id} notification={n} />
                                 ))}
                             </div>
                         )}
@@ -177,21 +182,7 @@ export default function Notifications({ notifications }: { notifications: Notifi
                             <div>
                                 <div className="text-[11px] font-semibold text-muted-foreground mb-1 pl-1">Today</div>
                                 {groupedRead.today.map(n => (
-                                    <Link
-                                        href={n.link ?? "#"}
-                                        key={n.id}
-                                        className="flex items-start gap-2 px-3 py-3 border-b last:border-none rounded-md hover:bg-muted/70 transition"
-                                        style={{ textDecoration: "none" }}
-                                    >
-                                        <div className="pt-1">{getIcon(n.type, n.read)}</div>
-                                        <div className="flex-1">
-                                            <div className="flex items-center gap-1">
-                                                <span className="font-medium text-xs">{n.title}</span>
-                                            </div>
-                                            <div className="text-xs text-muted-foreground">{n.message}</div>
-                                            <div className="text-[10px] text-muted-foreground mt-1">{getTimeAgo(n.created_at)}</div>
-                                        </div>
-                                    </Link>
+                                    <NotificationItem key={n.id} notification={n} />
                                 ))}
                             </div>
                         )}
@@ -199,21 +190,7 @@ export default function Notifications({ notifications }: { notifications: Notifi
                             <div>
                                 <div className="text-[11px] font-semibold text-muted-foreground mb-1 pl-1">Yesterday</div>
                                 {groupedRead.yesterday.map(n => (
-                                    <Link
-                                        href={n.link ?? "#"}
-                                        key={n.id}
-                                        className="flex items-start gap-2 px-3 py-3 border-b last:border-none rounded-md hover:bg-muted/70 transition"
-                                        style={{ textDecoration: "none" }}
-                                    >
-                                        <div className="pt-1">{getIcon(n.type, n.read)}</div>
-                                        <div className="flex-1">
-                                            <div className="flex items-center gap-1">
-                                                <span className="font-medium text-xs">{n.title}</span>
-                                            </div>
-                                            <div className="text-xs text-muted-foreground">{n.message}</div>
-                                            <div className="text-[10px] text-muted-foreground mt-1">{getTimeAgo(n.created_at)}</div>
-                                        </div>
-                                    </Link>
+                                    <NotificationItem key={n.id} notification={n} />
                                 ))}
                             </div>
                         )}
@@ -221,21 +198,7 @@ export default function Notifications({ notifications }: { notifications: Notifi
                             <div>
                                 <div className="text-[11px] font-semibold text-muted-foreground mb-1 pl-1">Earlier</div>
                                 {groupedRead.earlier.map(n => (
-                                    <Link
-                                        href={n.link ?? "#"}
-                                        key={n.id}
-                                        className="flex items-start gap-2 px-3 py-3 border-b last:border-none rounded-md hover:bg-muted/70 transition"
-                                        style={{ textDecoration: "none" }}
-                                    >
-                                        <div className="pt-1">{getIcon(n.type, n.read)}</div>
-                                        <div className="flex-1">
-                                            <div className="flex items-center gap-1">
-                                                <span className="font-medium text-xs">{n.title}</span>
-                                            </div>
-                                            <div className="text-xs text-muted-foreground">{n.message}</div>
-                                            <div className="text-[10px] text-muted-foreground mt-1">{getTimeAgo(n.created_at)}</div>
-                                        </div>
-                                    </Link>
+                                    <NotificationItem key={n.id} notification={n} />
                                 ))}
                             </div>
                         )}

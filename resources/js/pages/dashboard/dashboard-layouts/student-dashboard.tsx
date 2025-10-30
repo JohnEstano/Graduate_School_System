@@ -66,6 +66,18 @@ function isDaytime() {
     return hour >= 6 && hour < 18;
 }
 
+function getAdviserInfo(user: any) {
+    if (!user?.advisers || !Array.isArray(user.advisers) || user.advisers.length === 0) return null;
+    const adviser = user.advisers[0];
+    const name = adviser.name
+        || [adviser.first_name, adviser.middle_name ? `${adviser.middle_name[0].toUpperCase()}.` : '', adviser.last_name]
+            .filter(Boolean).join(' ');
+    return {
+        name,
+        email: adviser.email,
+    };
+}
+
 
 
 export default function StudentDashboard() {
@@ -130,6 +142,8 @@ export default function StudentDashboard() {
     const recentPaymentAmount = page.recentPayment?.amount ?? 0; // If you have recentPayment in props
 
     // --- Student Metrics Cards ---
+    const adviserInfo = getAdviserInfo(user);
+
     const metrics = [
         {
             title: "Defense Submissions",
@@ -146,18 +160,25 @@ export default function StudentDashboard() {
             iconTheme: "bg-blue-100 text-blue-600 dark:bg-blue-900 dark:text-blue-300",
         },
         {
-            title: "Recent Payment",
-            value: `₱${recentPaymentAmount.toLocaleString()}`,
-            description: "Most recent payment made",
-            icon: <BadgeDollarSign />,
-            iconTheme: "bg-amber-100 text-amber-600 dark:bg-amber-900 dark:text-amber-300",
-        },
-        {
             title: "Exam Eligibility",
             value: <ExamEligibilityWidget simple />,
             description: "Check if you are eligible for exams",
             icon: <Users />,
             iconTheme: "bg-green-100 text-green-600 dark:bg-green-900 dark:text-green-300",
+        },
+        {
+            title: "Adviser",
+            value: adviserInfo
+                ? (
+                    <div>
+                        <div className="font-bold text-sm truncate">{adviserInfo.name}</div>
+                        <div className="text-xs text-gray-400 dark:text-gray-500">{adviserInfo.email}</div>
+                    </div>
+                )
+                : <span className="text-xs text-gray-400 dark:text-gray-500">No adviser assigned</span>,
+            description: "",
+            icon: <UserPlus />,
+            iconTheme: "bg-yellow-100 text-yellow-600 dark:bg-yellow-900 dark:text-yellow-300",
         },
     ];
 
@@ -268,7 +289,7 @@ export default function StudentDashboard() {
 
 
                     {/* Metrics Cards - Optimized for Mobile */}
-                    <div className="w-full max-w-screen-xl mx-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 px-4 md:px-7 mb-4 md:mb-6">
+                    <div className="w-full grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 px-4 md:px-7 mb-4 md:mb-6">
                         {metrics.map((metric, idx) => (
                             <Card
                                 key={idx}
@@ -297,8 +318,8 @@ export default function StudentDashboard() {
 
                     {/* Widgets Body - Mobile Responsive */}
                     <div className="flex flex-col gap-4 md:gap-6 bg-gray-100 dark:bg-muted mx-2 md:mx-4 rounded-lg md:rounded-xl mt-2 mb-2 px-3 md:px-5 py-4 md:py-8">
-                        <div className="w-full mb-2 flex flex-col gap-4">
-                            {/* Schedules first */}
+                        {/* Weekly Schedule - Full Width */}
+                        <div className="w-full mb-2">
                             <WeeklyDefenseSchedulesWidget
                                 weekDays={weekDays}
                                 selectedDay={selectedDay}
@@ -308,7 +329,9 @@ export default function StudentDashboard() {
                                 loading={loading}
                                 studentId={user?.id}
                             />
-                            {/* Defense Status Widget beside the schedule widget on desktop, below on mobile */}
+                        </div>
+                        {/* Defense Status Widget - Full Width */}
+                        <div className="w-full">
                             <DefenseStatusWidget
                                 recentRequests={approvedDefenses as any}
                                 loading={loading}

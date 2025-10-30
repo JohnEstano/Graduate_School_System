@@ -23,10 +23,22 @@ return new class extends Migration
     /**
      * Reverse the migrations.
      */
-    public function down(): void
-    {
-        Schema::table('defense_requests', function (Blueprint $table) {
-            $table->dropColumn(['status', 'priority', 'last_status_updated_at', 'last_status_updated_by', 'updated_by']);
-        });
-    }
+public function down()
+{
+    Schema::table('defense_requests', function (Blueprint $table) {
+        // Drop the foreign key first
+        $table->dropForeign('actual_foreign_key_name_here');
+ // the column in square brackets
+
+        // Now you can drop the column
+        $table->dropColumn([
+            'status',
+            'priority',
+            'last_status_updated_at',
+            'last_status_updated_by',
+            'updated_by'
+        ]);
+    });
+}
+
 };

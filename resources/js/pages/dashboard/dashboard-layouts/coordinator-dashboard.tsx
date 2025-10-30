@@ -13,8 +13,12 @@ import type { DefenseRequest } from '@/types';
 import { Users, CalendarDays, ClipboardList, BadgeDollarSign } from 'lucide-react';
 import { Skeleton } from "@/components/ui/skeleton";
 import DefenseCountLineChart from '../widgets/visual-charts/defense-count';
-import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area"; // Make sure ScrollBar is imported
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { CoordinatorMostActivePrograms } from '../widgets/visual-charts/coordinator-most-active-programs';
+import { CoordinatorAdviserStudentRatio } from '../widgets/visual-charts/coordinator-adviser-student-ratio';
+import { DefenseTypeDistribution } from '../widgets/visual-charts/defense-type-distribution';
+import { DefenseModeBreakdown } from '../widgets/visual-charts/defense-mode-breakdown';
 
 type PageProps = {
     auth: {
@@ -99,6 +103,10 @@ export default function CoordinatorDashboard() {
 
     // Example: Assigned programs count (replace with real API if available)
     const [assignedProgramsCount, setAssignedProgramsCount] = useState<number>(0);
+
+    // Add state for AA payment verifications
+    const [aaVerifications, setAaVerifications] = useState<any[]>([]);
+    const [pendingHonorariumsCount, setPendingHonorariumsCount] = useState<number>(0);
 
     const weekDays = [
         { label: 'Sun', value: 0 },
@@ -191,6 +199,13 @@ export default function CoordinatorDashboard() {
                 setAssignedProgramsCount(Array.isArray(data) ? data.length : 0);
             })
             .catch(() => setAssignedProgramsCount(0));
+
+       fetch('/api/coordinator/pending-honorariums', {
+            headers: { 'Accept': 'application/json' }
+        })
+            .then(res => res.ok ? res.json() : { pending_count: 0 })
+            .then((data) => setPendingHonorariumsCount(data.pending_count ?? 0))
+            .catch(() => setPendingHonorariumsCount(0));
     }, []);
 
     // Dynamic metrics
@@ -218,15 +233,15 @@ export default function CoordinatorDashboard() {
         },
         {
             title: "Pending Honorariums",
-            value: 7, // Replace with real value if available
-            description: "Honorariums not yet processed",
+            value: pendingHonorariumsCount,
+            description: "AA verifications pending",
             icon: <BadgeDollarSign className="size-5 text-amber-500" />,
             iconTheme: "bg-amber-100 text-amber-600 dark:bg-amber-900 dark:text-amber-300",
         },
         {
             title: "Assigned Programs",
             value: assignedProgramsCount,
-            description: "Programs you coordinate",
+            description: "Total number of assigned programs",
             icon: <ClipboardList className="size-5 text-violet-500" />,
             iconTheme: "bg-violet-100 text-violet-600 dark:bg-violet-900 dark:text-violet-300",
         },
@@ -292,7 +307,7 @@ export default function CoordinatorDashboard() {
                     </div>
 
                     {/* Tabs - Mobile Responsive */}
-                    <div className="w-full max-w-screen-xl mx-auto px-4 md:px-7">
+                    <div className="w-full px-4 md:px-7">
                         <Tabs value={tab} onValueChange={setTab} className="">
                             <TabsList className="mb-2 ">
                                 <TabsTrigger value="overview" className="flex-1 ">Overview</TabsTrigger>
@@ -302,7 +317,7 @@ export default function CoordinatorDashboard() {
                             {/* Overview Tab */}
                             <TabsContent value="overview" className="w-full">
                                 {/* Metric Cards - Mobile Optimized */}
-                                <div className="w-full max-w-screen-xl mx-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-4 px-0 mb-4 md:mb-6">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-4 px-0 mb-4 md:mb-6">
                                     {metrics.map((metric, idx) => (
                                         <Card
                                             key={idx}
@@ -325,7 +340,7 @@ export default function CoordinatorDashboard() {
                                                     {metric.description}
                                                 </span>
                                             </div>
-                                        </Card>
+                                        </Card>     
                                     ))}
                                 </div>
 
@@ -347,9 +362,20 @@ export default function CoordinatorDashboard() {
 
                             {/* Analytics Tab - Mobile Responsive */}
                             <TabsContent value="analytics" className="w-full">
-                                <div className="w-full max-w-screen-xl mx-auto grid grid-cols-1 gap-4 mb-4 md:mb-6">
-                                    <DefenseCountLineChart />
-                                    {/* Add more analytics widgets here later */}
+                                {/* Row Layout for Analytics */}
+                                <div className="flex flex-col gap-4 md:gap-6 mb-4 md:mb-6">
+                                    {/* Row 1: Total Defenses Line Chart - Full Width */}
+                                    <div className="w-full">
+                                        <DefenseCountLineChart />
+                                    </div>
+                                    
+                                    {/* Row 2: Bar Chart + Three Radial Charts Grid */}
+                                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
+                                        <CoordinatorMostActivePrograms />
+                                        <DefenseTypeDistribution />
+                                        <DefenseModeBreakdown />
+                                        <CoordinatorAdviserStudentRatio />
+                                    </div>
                                 </div>
                             </TabsContent>
                         </Tabs>

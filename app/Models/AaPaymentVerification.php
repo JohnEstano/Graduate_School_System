@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 class AaPaymentVerification extends Model
 {
     protected $fillable = [
-        'defense_request_id', 'assigned_to', 'batch_id', 'status', 'remarks'
+        'defense_request_id', 'assigned_to', 'batch_id', 'status', 'remarks', 'invalid_comment'
     ];
 
     public function defenseRequest()

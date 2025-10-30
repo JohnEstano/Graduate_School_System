@@ -3,72 +3,718 @@
 namespace App\Http\Controllers;
 
 use App\Models\StudentRecord;
+use App\Models\ProgramRecord;
+use App\Models\DefenseRequest;
+use App\Models\PaymentRecord;
+use App\Models\HonorariumPayment;
+use App\Models\PaymentRate;
+use App\Helpers\ProgramLevel;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\DB;
 
 class StudentRecordController extends Controller
 {
+    // Display all programs (first page)
     public function index(Request $request)
     {
-        $records = StudentRecord::with('payments') // eager load payments
+        $records = ProgramRecord::orderBy('date_edited', 'desc')->get();
+
+        return Inertia::render('student-records/Index', [
+            'records' => $records
+        ]);
+    }
+
+    // API endpoint to get students by program (used by frontend)
+    public function getByProgram($programId)
+    {
+        $program = ProgramRecord::findOrFail($programId);
+        
+        $students = StudentRecord::where('program_record_id', $programId)
+            ->with(['payments.panelist'])
+            ->orderBy('last_name', 'asc')
+            ->get();
+
+        return response()->json([
+            'program' => $program,
+            'students' => $students
+        ]);
+    }
+
+    // Display students under a specific program (second page)
+    public function showProgramStudents(Request $request, $programId)
+    {
+        $program = ProgramRecord::findOrFail($programId);
+        
+        // Get all student records for this program
+        $allStudentRecords = StudentRecord::where('program_record_id', $programId)
+            ->with(['payments.panelist']) // Eager load payments with panelist info
             ->when($request->input('search'), function ($query, $search) {
-                $query->where('first_name', 'like', "%{$search}%")
+                $query->where(function($q) use ($search) {
+                    $q->where('first_name', 'like', "%{$search}%")
                       ->orWhere('middle_name', 'like', "%{$search}%")
                       ->orWhere('last_name', 'like', "%{$search}%")
                       ->orWhere('student_id', 'like', "%{$search}%");
+                });
             })
-            ->when($request->input('year'), function ($query, $year) {
-                $query->where('school_year', $year);
-            })
-            ->when($request->input('program'), function ($query, $program) {
-                $query->where('program', $program);
-            })
-            ->orderBy('created_at', 'desc')
-            ->paginate(10)
-            ->withQueryString();
+            ->orderBy('last_name', 'asc')
+            ->get();
+        
+        // Group student records by student_id to combine multiple defenses
+        $groupedStudents = $allStudentRecords->groupBy('student_id')->map(function ($records) {
+            // Take the first record as the base (all should have same student info)
+            $baseStudent = $records->first();
+            
+            // Collect all payments from all records (defenses)
+            $allPayments = $records->flatMap(function ($record) {
+                return $record->payments->map(function ($payment) use ($record) {
+                    return [
+                        'id' => $payment->id,
+                        'defense_request_id' => $record->defense_request_id, // ✅ Add this to identify each defense uniquely
+                        'defense_date' => $record->defense_date,
+                        'defense_type' => $record->defense_type,
+                        'defense_status' => $payment->defense_status,
+                        'or_number' => $record->or_number,
+                        'payment_date' => $payment->payment_date,
+                        'amount' => $payment->amount,
+                        'role' => $payment->role,
+                        'panelist' => $payment->panelist
+                    ];
+                });
+            });
+            
+            // Store all payments on the base student
+            $baseStudent->all_payments = $allPayments;
+            $baseStudent->defense_count = $records->count();
+            
+            return $baseStudent;
+        })->values();
+        
+        // Paginate the grouped students manually
+        $currentPage = $request->input('page', 1);
+        $perPage = 15;
+        $total = $groupedStudents->count();
+        $students = new \Illuminate\Pagination\LengthAwarePaginator(
+            $groupedStudents->forPage($currentPage, $perPage),
+            $total,
+            $perPage,
+            $currentPage,
+            ['path' => $request->url(), 'query' => $request->query()]
+        );
 
-        return Inertia::render('student-records/Index', [
-            'records' => $records,
-            'filters' => $request->only(['search', 'year', 'program'])
+        // Transform payments to include panelist breakdown
+        $students->getCollection()->transform(function ($student) {
+            // Group payments by defense_request_id to keep defenses separate
+            $groupedPayments = [];
+            
+            // Use all_payments collection
+            $allPayments = $student->all_payments ?? collect();
+            
+            // CRITICAL FIX: Deduplicate payments by defense_request_id + panelist_record_id
+            // This prevents counting the same panelist twice if there are duplicate student_records
+            // Filter out payments without panelists and deduplicate
+            $allPayments = $allPayments
+                ->filter(function($payment) {
+                    return isset($payment['panelist']) && $payment['panelist'] !== null;
+                })
+                ->unique(function($payment) {
+                    return $payment['defense_request_id'] . '_' . $payment['panelist']->id;
+                });
+            
+            foreach ($allPayments as $payment) {
+                // Use defense_request_id as the key to uniquely identify each defense
+                $key = $payment['defense_request_id'];
+                
+                if (!isset($groupedPayments[$key])) {
+                    $defenseDate = $payment['defense_date'] ? date('Y-m-d', strtotime($payment['defense_date'])) : null;
+                    $groupedPayments[$key] = [
+                        'id' => $payment['defense_request_id'], // Use defense_request_id as the ID
+                        'defense_request_id' => $payment['defense_request_id'],
+                        'defense_date' => $defenseDate,
+                        'defense_type' => $payment['defense_type'],
+                        'defense_status' => $payment['defense_status'],
+                        'or_number' => $payment['or_number'],
+                        'payment_date' => $payment['payment_date'] ? date('Y-m-d', strtotime($payment['payment_date'])) : null,
+                        'amount' => 0,
+                        'panelists' => [],
+                        'panelist_ids' => [] // Track added panelists to avoid duplicates
+                    ];
+                }
+                
+                // Add to total amount
+                $groupedPayments[$key]['amount'] += floatval($payment['amount']);
+                
+                // Add panelist info (avoid duplicates by checking panelist name + role)
+                if ($payment['panelist']) {
+                    $panelist = $payment['panelist'];
+                    $panelistName = trim("{$panelist->pfirst_name} {$panelist->pmiddle_name} {$panelist->plast_name}");
+                    $panelistRole = $payment['role'] ?? $panelist->role;
+                    
+                    // Create unique key for this panelist (name + role)
+                    $panelistKey = $panelistName . '|' . $panelistRole;
+                    
+                    // Only add if not already added
+                    if (!in_array($panelistKey, $groupedPayments[$key]['panelist_ids'])) {
+                        $groupedPayments[$key]['panelists'][] = [
+                            'name' => $panelistName,
+                            'role' => $panelistRole,
+                            'amount' => $payment['amount']
+                        ];
+                        $groupedPayments[$key]['panelist_ids'][] = $panelistKey;
+                    }
+                }
+            }
+            
+            // Get all unique defense_request_ids to fetch their amounts
+            $defenseRequestIds = array_keys($groupedPayments);
+            $defenseRequests = DefenseRequest::whereIn('id', $defenseRequestIds)
+                ->get()
+                ->keyBy('id');
+            
+            // Use defense_request amount directly (it already includes panelists + REC FEE + SCHOOL SHARE)
+            foreach ($groupedPayments as $defenseId => &$payment) {
+                $defenseRequest = $defenseRequests->get($defenseId);
+
+                // If we couldn't find by id, try to find a matching defense request by student and date
+                if (!$defenseRequest && !empty($payment['defense_date']) && isset($student->student_id)) {
+                    $possible = DefenseRequest::where('school_id', $student->student_id)
+                        ->whereDate('scheduled_date', $payment['defense_date'])
+                        ->where('workflow_state', 'completed')
+                        ->first();
+
+                    if ($possible) {
+                        $defenseRequest = $possible;
+                    }
+                }
+
+                if ($defenseRequest && $defenseRequest->amount) {
+                    // Use the defense_request amount (already calculated correctly)
+                    $grandTotal = floatval($defenseRequest->amount);
+
+                    // Calculate panelist total (sum of all panelist payments)
+                    $panelistTotal = floatval($payment['amount']);
+
+                    // Try to use configured REC Fee and School Share rates for this defense's program + type
+                    $programLevelForDefense = ProgramLevel::getLevel($defenseRequest->program);
+                    $recFeeRate = PaymentRate::where('program_level', $programLevelForDefense)
+                        ->where('defense_type', $defenseRequest->defense_type)
+                        ->where('type', 'REC Fee')
+                        ->first();
+                    $schoolShareRate = PaymentRate::where('program_level', $programLevelForDefense)
+                        ->where('defense_type', $defenseRequest->defense_type)
+                        ->where('type', 'School Share')
+                        ->first();
+
+                    $recFee = $recFeeRate ? floatval($recFeeRate->amount) : null;
+                    $schoolShare = $schoolShareRate ? floatval($schoolShareRate->amount) : null;
+
+                    // If both rates are available, trust them and compute panelist total as remainder
+                    if (!is_null($recFee) || !is_null($schoolShare)) {
+                        $recFee = $recFee ?? 0;
+                        $schoolShare = $schoolShare ?? 0;
+
+                        // Ensure panelist total doesn't go negative
+                        $calculatedPanelistTotal = $grandTotal - $recFee - $schoolShare;
+                        $panelistTotal = $calculatedPanelistTotal > 0 ? $calculatedPanelistTotal : $panelistTotal;
+                    } else {
+                        // Fallback: split the difference if rates not configured
+                        $recFeeAndSchoolShare = $grandTotal - $panelistTotal;
+                        $recFee = round($recFeeAndSchoolShare / 2, 2);
+                        $schoolShare = $recFeeAndSchoolShare - $recFee;
+                    }
+
+                    // Add REC FEE entry (use numeric 0 if none so frontend formats it)
+                    $payment['panelists'][] = [
+                        'name' => '-',
+                        'role' => 'REC FEE',
+                        'amount' => $recFee > 0 ? $recFee : 0
+                    ];
+
+                    // Add SCHOOL SHARE entry
+                    $payment['panelists'][] = [
+                        'name' => '-',
+                        'role' => 'SCHOOL SHARE',
+                        'amount' => $schoolShare > 0 ? $schoolShare : 0
+                    ];
+
+                    // Use defense_request amount as the grand total
+                    $payment['amount'] = $grandTotal;
+                    $payment['panelist_total'] = $panelistTotal;
+                    $payment['rec_fee'] = $recFee;
+                    $payment['school_share'] = $schoolShare;
+                    $payment['grand_total'] = $grandTotal;
+                } else {
+                    // Fallback: If defense_request not found or amount is null, keep panelist total as is
+                    $payment['amount'] = floatval($payment['amount']);
+                    $payment['panelist_total'] = floatval($payment['amount']);
+                    $payment['rec_fee'] = 0;
+                    $payment['school_share'] = 0;
+                    $payment['grand_total'] = floatval($payment['amount']);
+                }
+
+                // Remove internal tracking array
+                unset($payment['panelist_ids']);
+            }
+            
+            // Format student dates
+            $student->defense_date = $student->defense_date ? date('Y-m-d', strtotime($student->defense_date)) : null;
+            $student->payment_date = $student->payment_date ? date('Y-m-d', strtotime($student->payment_date)) : null;
+            
+            // Convert to array to avoid Laravel collection serialization issues
+            $studentArray = $student->toArray();
+            $studentArray['payments'] = array_values($groupedPayments);
+            
+            return $studentArray;
+        });
+
+        return Inertia::render('student-records/program-students', [
+            'program' => $program,
+            'students' => $students,
+            'filters' => $request->only(['search'])
         ]);
     }
 
-    public function show(StudentRecord $studentRecord)
+    public function show($id)
     {
-        // Load related payments
-        $studentRecord->load('payments');
+        $studentRecord = StudentRecord::findOrFail($id);
 
-        return Inertia::render('student-records/individual-records', [
-            'record' => $studentRecord
+        // Get all completed defense requests for this student
+        $defenseRequests = DefenseRequest::where('school_id', $studentRecord->student_id)
+            ->where('workflow_state', 'completed')
+            ->orderBy('scheduled_date', 'desc')
+            ->get();
+
+        // Map each defense to its payment breakdown
+        $defenseGroups = $defenseRequests->map(function ($defense) use ($studentRecord) {
+            return $this->buildDefensePaymentData($defense, $studentRecord);
+        })->values();
+
+        return response()->json([
+            'student' => $studentRecord,
+            'payments' => $defenseGroups,
         ]);
     }
 
-    public function update(Request $request, StudentRecord $studentRecord)
+    /**
+     * Helper function to split full name into first and last name
+     */
+    private function splitName($fullName)
     {
-        $request->validate([
-            'first_name' => 'required|string|max:255',
-            'middle_name' => 'nullable|string|max:255',
-            'last_name' => 'required|string|max:255',
-            'gender' => 'nullable|string|max:255',
-            'program' => 'required|string|max:255',
-            'school_year' => 'nullable|string|max:255',
-            'student_id' => 'nullable|string|max:255',
-            'course_section' => 'nullable|string|max:255',
-            'birthdate' => 'nullable|date',
-            'academic_status' => 'nullable|string|max:255',
-            'or_number' => 'required|string|max:255',
-            'payment_date' => 'required|date',
-        ]);
+        if (!$fullName) {
+            return ['first' => 'Unknown', 'last' => ''];
+        }
 
-        $studentRecord->update($request->all());
-
-        return redirect()->back()->with('success', 'Record updated successfully.');
+        $parts = explode(' ', trim($fullName));
+        
+        if (count($parts) === 1) {
+            return ['first' => $parts[0], 'last' => ''];
+        }
+        
+        // Last part is last name, everything else is first name
+        $lastName = array_pop($parts);
+        $firstName = implode(' ', $parts);
+        
+        return ['first' => $firstName, 'last' => $lastName];
     }
 
-    public function destroy(StudentRecord $studentRecord)
+    /**
+     * Build complete payment data for a defense request
+     */
+    private function buildDefensePaymentData(DefenseRequest $defense, StudentRecord $student)
     {
-        $studentRecord->delete();
+        $programLevel = ProgramLevel::getLevel($defense->program);
+        
+        // Get all payment rates for this defense
+        $rates = PaymentRate::where('program_level', $programLevel)
+            ->where('defense_type', $defense->defense_type)
+            ->get()
+            ->keyBy('type');
 
-        return redirect()->back()->with('success', 'Record deleted successfully.');
+        Log::info('Building defense payment data', [
+            'defense_id' => $defense->id,
+            'program' => $defense->program,
+            'program_level' => $programLevel,
+            'defense_type' => $defense->defense_type,
+            'rates_found' => $rates->count(),
+            'adviser' => $defense->defense_adviser,
+            'chairperson' => $defense->defense_chairperson,
+        ]);
+
+        // Build panelists array with their roles and amounts
+        $panelists = [];
+
+        // 1. Adviser
+        if ($defense->defense_adviser) {
+            $adviserRate = $rates->get('Adviser');
+            $nameParts = $this->splitName($defense->defense_adviser);
+            
+            $panelists[] = [
+                'id' => null,
+                'role' => 'Adviser',
+                'pfirst_name' => $nameParts['first'],
+                'plast_name' => $nameParts['last'],
+                'amount' => $adviserRate ? $adviserRate->amount : 0,
+            ];
+        }
+
+        // 2. Panel Chair
+        if ($defense->defense_chairperson) {
+            $chairRate = $rates->get('Panel Chair');
+            $nameParts = $this->splitName($defense->defense_chairperson);
+            
+            $panelists[] = [
+                'id' => null,
+                'role' => 'Panel Chair',
+                'pfirst_name' => $nameParts['first'],
+                'plast_name' => $nameParts['last'],
+                'amount' => $chairRate ? $chairRate->amount : 0,
+            ];
+        }
+
+        // 3. Panel Members (Each panel member has their own numbered rate)
+        if ($defense->defense_panelist1) {
+            $memberRate1 = $rates->get('Panel Member 1') ?? $rates->get('Panel Member'); // fallback
+            $nameParts = $this->splitName($defense->defense_panelist1);
+            $panelists[] = [
+                'id' => null,
+                'role' => 'Panel Member 1',
+                'pfirst_name' => $nameParts['first'],
+                'plast_name' => $nameParts['last'],
+                'amount' => $memberRate1 ? $memberRate1->amount : 0,
+            ];
+        }
+        
+        if ($defense->defense_panelist2) {
+            $memberRate2 = $rates->get('Panel Member 2') ?? $rates->get('Panel Member 1') ?? $rates->get('Panel Member'); // fallback
+            $nameParts = $this->splitName($defense->defense_panelist2);
+            $panelists[] = [
+                'id' => null,
+                'role' => 'Panel Member 2',
+                'pfirst_name' => $nameParts['first'],
+                'plast_name' => $nameParts['last'],
+                'amount' => $memberRate2 ? $memberRate2->amount : 0,
+            ];
+        }
+        
+        if ($defense->defense_panelist3) {
+            $memberRate3 = $rates->get('Panel Member 3') ?? $rates->get('Panel Member 1') ?? $rates->get('Panel Member'); // fallback
+            $nameParts = $this->splitName($defense->defense_panelist3);
+            $panelists[] = [
+                'id' => null,
+                'role' => 'Panel Member 3',
+                'pfirst_name' => $nameParts['first'],
+                'plast_name' => $nameParts['last'],
+                'amount' => $memberRate3 ? $memberRate3->amount : 0,
+            ];
+        }
+        
+        if ($defense->defense_panelist4) {
+            $memberRate4 = $rates->get('Panel Member 4') ?? $rates->get('Panel Member 1') ?? $rates->get('Panel Member'); // fallback
+            $nameParts = $this->splitName($defense->defense_panelist4);
+            $panelists[] = [
+                'id' => null,
+                'role' => 'Panel Member 4',
+                'pfirst_name' => $nameParts['first'],
+                'plast_name' => $nameParts['last'],
+                'amount' => $memberRate4 ? $memberRate4->amount : 0,
+            ];
+        }
+
+        // Calculate total amount from panelists
+        $totalAmount = collect($panelists)->sum('amount');
+
+        // Use defense request amount if available, otherwise use calculated total
+        $finalAmount = $defense->amount ?? $totalAmount;
+
+        Log::info('Defense payment data built', [
+            'defense_id' => $defense->id,
+            'panelists_count' => count($panelists),
+            'calculated_total' => $totalAmount,
+            'defense_amount' => $defense->amount,
+            'final_amount' => $finalAmount
+        ]);
+
+        return [
+            'id' => $defense->id,
+            'defense_date' => $defense->scheduled_date ? $defense->scheduled_date->format('Y-m-d') : null,
+            'defense_type' => $defense->defense_type,
+            'defense_status' => 'completed',
+            'or_number' => $defense->reference_no ?? '-',
+            'payment_date' => $defense->scheduled_date ? $defense->scheduled_date->format('Y-m-d') : null,
+            'amount' => $finalAmount,
+            'total_amount' => $finalAmount,
+            'panelists' => $panelists,
+        ];
+    }
+
+    public function downloadPdf(Request $request, $id)
+    {
+        $student = StudentRecord::with(['payments.panelist', 'program'])->findOrFail($id);
+        $paymentId = $request->query('payment_id');
+        
+        Log::info('Generating PDF for student', [
+            'student_id' => $id,
+            'payment_id' => $paymentId,
+            'student_record_student_id' => $student->student_id,
+        ]);
+        
+        // Try to get defense request for this student - if payment_id is provided, get that specific defense
+        if ($paymentId) {
+            $defenseRequest = DefenseRequest::where('id', $paymentId)
+                ->where('school_id', $student->student_id)
+                ->whereIn('workflow_state', ['completed', 'coordinator-approved', 'dean-approved', 'aa-verified'])
+                ->first();
+        } else {
+            $defenseRequest = DefenseRequest::where('school_id', $student->student_id)
+                ->whereIn('workflow_state', ['completed', 'coordinator-approved', 'dean-approved', 'aa-verified'])
+                ->orderBy('scheduled_date', 'desc')
+                ->first();
+        }
+        
+        Log::info('Found defense request', [
+            'defense_request_id' => $defenseRequest?->id,
+            'defense_program' => $defenseRequest?->program ?? 'N/A',
+            'adviser' => $defenseRequest?->defense_adviser,
+            'chairperson' => $defenseRequest?->defense_chairperson,
+            'panelist1' => $defenseRequest?->defense_panelist1,
+            'panelist2' => $defenseRequest?->defense_panelist2,
+            'panelist3' => $defenseRequest?->defense_panelist3,
+            'panelist4' => $defenseRequest?->defense_panelist4,
+        ]);
+        
+        // If we have a defense request, build panel members from it
+        $panelists = [];
+        if ($defenseRequest) {
+            $programLevel = ProgramLevel::getLevel($defenseRequest->program);
+            
+            Log::info('Fetching payment rates for PDF', [
+                'program' => $defenseRequest->program,
+                'program_level' => $programLevel,
+                'defense_type' => $defenseRequest->defense_type,
+            ]);
+            
+            // Get payment rates
+            $rates = PaymentRate::where('program_level', $programLevel)
+                ->where('defense_type', $defenseRequest->defense_type)
+                ->get()
+                ->keyBy('type');
+            
+            Log::info('Payment rates fetched', [
+                'rates_count' => $rates->count(),
+                'rate_types' => $rates->keys()->toArray(),
+                'rates_detail' => $rates->map(fn($r) => ['type' => $r->type, 'amount' => $r->amount])->toArray(),
+            ]);
+            
+            // Adviser
+            if ($defenseRequest->defense_adviser) {
+                $adviserRate = $rates->get('Adviser');
+                $amount = $adviserRate ? floatval($adviserRate->amount) : 0;
+                $panelists[] = [
+                    'name' => $defenseRequest->defense_adviser,
+                    'role' => 'Adviser',
+                    'amount' => $amount,
+                ];
+                
+                Log::info('Added Adviser', [
+                    'name' => $defenseRequest->defense_adviser,
+                    'rate_found' => $adviserRate ? 'yes' : 'no',
+                    'amount' => $amount,
+                ]);
+            }
+            
+            // Panel Chair
+            if ($defenseRequest->defense_chairperson) {
+                $chairRate = $rates->get('Panel Chair');
+                $amount = $chairRate ? floatval($chairRate->amount) : 0;
+                $panelists[] = [
+                    'name' => $defenseRequest->defense_chairperson,
+                    'role' => 'Panel Chair',
+                    'amount' => $amount,
+                ];
+                
+                Log::info('Added Panel Chair', [
+                    'name' => $defenseRequest->defense_chairperson,
+                    'rate_found' => $chairRate ? 'yes' : 'no',
+                    'amount' => $amount,
+                ]);
+            }
+            
+            // Panel Members (Each panel member has their own numbered rate)
+            if ($defenseRequest->defense_panelist1) {
+                $memberRate1 = $rates->get('Panel Member 1');
+                $amount = $memberRate1 ? floatval($memberRate1->amount) : 0;
+                $panelists[] = [
+                    'name' => $defenseRequest->defense_panelist1,
+                    'role' => 'Panel Member',
+                    'amount' => $amount,
+                ];
+                
+                Log::info('Added Panel Member 1', [
+                    'name' => $defenseRequest->defense_panelist1,
+                    'rate_found' => $memberRate1 ? 'yes' : 'no',
+                    'amount' => $amount,
+                ]);
+            }
+            
+            if ($defenseRequest->defense_panelist2) {
+                $memberRate2 = $rates->get('Panel Member 2');
+                $amount = $memberRate2 ? floatval($memberRate2->amount) : 0;
+                $panelists[] = [
+                    'name' => $defenseRequest->defense_panelist2,
+                    'role' => 'Panel Member',
+                    'amount' => $amount,
+                ];
+                
+                Log::info('Added Panel Member 2', [
+                    'name' => $defenseRequest->defense_panelist2,
+                    'rate_found' => $memberRate2 ? 'yes' : 'no',
+                    'amount' => $amount,
+                ]);
+            }
+            
+            if ($defenseRequest->defense_panelist3) {
+                $memberRate3 = $rates->get('Panel Member 3');
+                $amount = $memberRate3 ? floatval($memberRate3->amount) : 0;
+                $panelists[] = [
+                    'name' => $defenseRequest->defense_panelist3,
+                    'role' => 'Panel Member',
+                    'amount' => $amount,
+                ];
+                
+                Log::info('Added Panel Member 3', [
+                    'name' => $defenseRequest->defense_panelist3,
+                    'rate_found' => $memberRate3 ? 'yes' : 'no',
+                    'amount' => $amount,
+                ]);
+            }
+            
+            if ($defenseRequest->defense_panelist4) {
+                $memberRate4 = $rates->get('Panel Member 4');
+                $amount = $memberRate4 ? floatval($memberRate4->amount) : 0;
+                $panelists[] = [
+                    'name' => $defenseRequest->defense_panelist4,
+                    'role' => 'Panel Member',
+                    'amount' => $amount,
+                ];
+                
+                Log::info('Added Panel Member 4', [
+                    'name' => $defenseRequest->defense_panelist4,
+                    'rate_found' => $memberRate4 ? 'yes' : 'no',
+                    'amount' => $amount,
+                ]);
+            }
+            
+            Log::info('Built panelists from defense request', [
+                'defense_id' => $defenseRequest->id,
+                'program' => $defenseRequest->program,
+                'program_level' => $programLevel,
+                'defense_type' => $defenseRequest->defense_type,
+                'panelists_count' => count($panelists),
+                'panelists' => $panelists,
+            ]);
+        }
+        
+        // Fallback: Get payments from student record if no defense request
+        if (empty($panelists)) {
+            $payments = $student->payments;
+            
+            foreach ($payments as $payment) {
+                if ($payment->panelist) {
+                    $panelists[] = [
+                        'name' => trim("{$payment->panelist->pfirst_name} {$payment->panelist->pmiddle_name} {$payment->panelist->plast_name}"),
+                        'role' => $payment->panelist->role,
+                        'amount' => $payment->amount
+                    ];
+                }
+            }
+            
+            Log::info('Built panelists from payment records', [
+                'panelists_count' => count($panelists),
+            ]);
+        }
+        
+        // Determine program level. MUST use defense request program for accurate rates
+        if ($defenseRequest && $defenseRequest->program) {
+            $programLevel = ProgramLevel::getLevel($defenseRequest->program);
+            $programName = $defenseRequest->program;
+            
+            Log::info('Using defense request program for rates', [
+                'program' => $defenseRequest->program,
+                'program_level' => $programLevel,
+            ]);
+        } else {
+            // Fallback: Use program from student record
+            $programRecord = $student->program()->first();
+            $programName = $programRecord ? $programRecord->name : $student->program;
+            $programLevel = ProgramLevel::getLevel($programName);
+            
+            Log::warning('Defense request program not available, using student record fallback', [
+                'program' => $programName,
+                'program_level' => $programLevel,
+            ]);
+        }
+        
+        // Calculate panelist total
+        $panelistTotal = collect($panelists)->sum('amount');
+        
+        // Get REC FEE and SCHOOL SHARE
+        $defenseType = $defenseRequest ? $defenseRequest->defense_type : $student->defense_type;
+        
+        $recFeeRate = PaymentRate::where('program_level', $programLevel)
+            ->where('defense_type', $defenseType)
+            ->where('type', 'REC Fee')
+            ->first();
+        
+        $schoolShareRate = PaymentRate::where('program_level', $programLevel)
+            ->where('defense_type', $defenseType)
+            ->where('type', 'School Share')
+            ->first();
+        
+        $recFee = $recFeeRate ? floatval($recFeeRate->amount) : 0;
+        $schoolShare = $schoolShareRate ? floatval($schoolShareRate->amount) : 0;
+        $grandTotal = $panelistTotal + $recFee + $schoolShare;
+        
+        Log::info('PDF calculations complete', [
+            'program_level' => $programLevel,
+            'defense_type' => $defenseType,
+            'panelist_total' => $panelistTotal,
+            'rec_fee' => $recFee,
+            'school_share' => $schoolShare,
+            'grand_total' => $grandTotal,
+        ]);
+        
+        // Prepare data for the blade template
+        $data = [
+            'student_name' => strtoupper("{$student->first_name} {$student->middle_name} {$student->last_name}"),
+            'program' => $programName,
+            'program_name' => $programName,
+            'defense_type' => $defenseType ?? '',
+            'defense_mode' => $defenseRequest?->defense_mode ?? $student->defense_mode ?? 'Onsite',
+            'defense_date' => $defenseRequest?->scheduled_date?->format('Y-m-d') ?? $student->defense_date ?? '',
+            'or_number' => $defenseRequest?->reference_no ?? $student->or_number ?? '',
+            'panelists' => $panelists,
+            'rec_fee' => $recFee,
+            'school_share' => $schoolShare,
+            'grand_total' => $grandTotal,
+            'today_date' => now()->format('F d, Y'),
+        ];
+        
+        Log::info('PDF data prepared', [
+            'panelists_count' => count($data['panelists']),
+            'panelists' => array_map(fn($p) => ['name' => $p['name'], 'role' => $p['role'], 'amount' => $p['amount']], $data['panelists']),
+            'rec_fee' => $data['rec_fee'],
+            'school_share' => $data['school_share'],
+            'grand_total' => $data['grand_total'],
+        ]);
+        
+        // Render the blade view to HTML
+        $html = view('pdfs.payment-summary', $data)->render();
+        
+        // Use dompdf to generate PDF
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadHTML($html);
+        $pdf->setPaper('A4', 'portrait');
+        
+        return $pdf->download("payment_receipt_{$student->student_id}.pdf");
     }
 }

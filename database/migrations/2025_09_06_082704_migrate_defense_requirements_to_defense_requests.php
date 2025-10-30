@@ -15,8 +15,12 @@ return new class extends Migration
         // First, add missing fields to defense_requests table that exist in defense_requirements
         Schema::table('defense_requests', function (Blueprint $table) {
             // Add fields that defense_requirements has but defense_requests doesn't
-            $table->string('manuscript_proposal')->nullable()->after('advisers_endorsement');
-            $table->string('similarity_index')->nullable()->after('manuscript_proposal');
+            if (!Schema::hasColumn('defense_requests', 'manuscript_proposal')) {
+                $table->string('manuscript_proposal')->nullable()->after('advisers_endorsement');
+            }
+            if (!Schema::hasColumn('defense_requests', 'similarity_index')) {
+                $table->string('similarity_index')->nullable()->after('manuscript_proposal');
+            }
         });
 
         // Migrate all data from defense_requirements to defense_requests
@@ -98,7 +102,12 @@ return new class extends Migration
     {
         // Remove the added columns
         Schema::table('defense_requests', function (Blueprint $table) {
-            $table->dropColumn(['manuscript_proposal', 'similarity_index']);
+            if (Schema::hasColumn('defense_requests', 'manuscript_proposal')) {
+                $table->dropColumn('manuscript_proposal');
+            }
+            if (Schema::hasColumn('defense_requests', 'similarity_index')) {
+                $table->dropColumn('similarity_index');
+            }
         });
         
         // Note: We don't restore defense_requirements data in down() 

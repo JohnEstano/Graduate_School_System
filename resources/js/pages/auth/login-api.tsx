@@ -1,0 +1,118 @@
+import { Head, useForm, Link } from '@inertiajs/react';
+import { LoaderCircle } from 'lucide-react';
+import { FormEventHandler } from 'react';
+
+import InputError from '@/components/input-error';
+import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import AuthLayout from '@/layouts/auth-layout';
+
+type LoginForm = {
+    identifier: string; // email or student number
+    password: string;
+    remember: boolean;
+    mode: 'api';
+};
+
+interface LoginProps {
+    status?: string;
+}
+
+export default function LoginAPI(props: LoginProps) {
+    const { status } = props;
+    const { data, setData, post, processing, errors, reset } = useForm<Required<LoginForm>>({
+        identifier: '',
+        password: '',
+        remember: false,
+        mode: 'api',
+    });
+
+    const submit: FormEventHandler = (e) => {
+        e.preventDefault();
+        // API login mode
+        post(route('login'), {
+            onSuccess: () => {
+                reset('password');
+            },
+            onError: () => {
+                reset('password');
+            },
+        });
+    };
+
+    return (
+        <AuthLayout title="Graduate School System" description="Login to your UIC account">
+            <Head title="Log in - API" />
+
+            {status && <div className="mb-4 text-center text-sm font-medium text-green-600">{status}</div>}
+
+            <form className="flex flex-col gap-6" onSubmit={submit}>
+                <div className="grid gap-6">
+                    {/* Login method info */}
+                    <div className="grid gap-2">
+                        <div className="flex items-center justify-between">
+                            <span className="text-sm font-medium">Login Method: <span className="text-primary font-semibold">API</span></span>
+                            <Link 
+                                href={route('login.local')} 
+                                className="text-sm text-muted-foreground hover:text-primary transition-colors underline"
+                            >
+                                Switch to Local
+                            </Link>
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                            Using UIC API authentication. If API is down, switch to Local login.
+                        </div>
+                    </div>
+
+                    <div className="grid gap-2">
+                        <Label htmlFor="identifier">Email or Student Number</Label>
+                        <Input
+                            id="identifier"
+                            name="identifier"
+                            type="text"
+                            required
+                            autoComplete="username"
+                            value={data.identifier}
+                            onChange={e => setData('identifier', e.target.value)}
+                            placeholder="Use your myuic credentials"
+                        />
+                        <InputError message={errors.identifier} />
+                    </div>
+
+                    <div className="grid gap-2">
+                        <Label htmlFor="password">Password</Label>
+                        <Input
+                            id="password"
+                            type="password"
+                            required
+                            tabIndex={2}
+                            autoComplete="current-password"
+                            value={data.password}
+                            onChange={(e) => setData('password', e.target.value)}
+                            placeholder="Password"
+                        />
+                        <InputError message={errors.password} />
+                    </div>
+
+                    <div className="flex items-center space-x-3">
+                        <Checkbox
+                            id="remember"
+                            name="remember"
+                            checked={data.remember}
+                            onClick={() => setData('remember', !data.remember)}
+                            tabIndex={3}
+                        />
+                        <Label htmlFor="remember">Remember me</Label>
+                    </div>
+
+                    <Button type="submit" className="mt-4 w-full" tabIndex={4} disabled={processing}>
+                        {processing && <LoaderCircle className="h-4 w-4 animate-spin" />}
+                        Log in
+                    </Button>
+                </div>
+            </form>
+        </AuthLayout>
+    );
+}

@@ -2,7 +2,7 @@ import { Button } from '@/components/ui/button';
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/table';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
-import { CheckCircle, XCircle, Clock } from 'lucide-react';
+import { CheckCircle, XCircle, Clock, DollarSign, Banknote, Hourglass, CircleCheck } from 'lucide-react';
 import { format } from 'date-fns';
 import { router } from '@inertiajs/react';
 
@@ -24,15 +24,13 @@ export type DefenseRequestSummary = {
   last_status_updated_at?: string;
   workflow_state?: string;
   adviser?: string;
+  coordinator_status?: 'Pending' | 'Approved' | 'Rejected' | null;
+  aa_status?: 'pending' | 'ready_for_finance' | 'in_progress' | 'paid' | 'completed' | null;
 };
 
 export type TableDefenseRequestsProps = {
   paged: DefenseRequestSummary[];
   columns: Record<string, boolean>;
-  selected: number[];
-  toggleSelectOne: (id: number) => void;
-  headerChecked: boolean;
-  toggleSelectAll: () => void;
   toggleSort: () => void;
   sortDir: 'asc' | 'desc' | null | undefined;
   onPriorityChange: (id: number, priority: string) => Promise<void>;
@@ -46,13 +44,38 @@ export type TableDefenseRequestsProps = {
   hideSelect?: boolean;
 };
 
+function getAaStatusBadge(status?: 'pending' | 'ready_for_finance' | 'in_progress' | 'paid' | 'completed' | null) {
+  // Default to 'pending' when status is null/undefined (before AA starts processing)
+  if (status === 'completed') {
+    return <Badge className="bg-green-100 text-green-700 border-green-200 flex items-center gap-1"><CircleCheck className="h-3 w-3" />Completed</Badge>;
+  }
+  if (status === 'paid') {
+    return <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200 flex items-center gap-1"><Banknote className="h-3 w-3" />Paid</Badge>;
+  }
+  if (status === 'ready_for_finance') {
+    return <Badge className="bg-blue-100 text-blue-700 border-blue-200 flex items-center gap-1"><DollarSign className="h-3 w-3" />Ready for Finance</Badge>;
+  }
+  if (status === 'in_progress') {
+    return <Badge className="bg-amber-100 text-amber-700 border-amber-200 flex items-center gap-1"><Hourglass className="h-3 w-3" />In Progress</Badge>;
+  }
+  // Default: pending (includes null/undefined and explicit 'pending')
+  return <Badge className="bg-yellow-100 text-yellow-700 border-yellow-200 flex items-center gap-1"><Clock className="h-3 w-3" />Pending</Badge>;
+}
+
+function getCoordinatorStatusBadge(status?: 'Pending' | 'Approved' | 'Rejected' | null) {
+  if (status === 'Approved') {
+    return <Badge className="bg-green-100 text-green-700 border-green-200 flex items-center gap-1"><CheckCircle className="h-3 w-3" />Approved</Badge>;
+  }
+  if (status === 'Rejected') {
+    return <Badge className="bg-red-100 text-red-700 border-red-200 flex items-center gap-1"><XCircle className="h-3 w-3" />Rejected</Badge>;
+  }
+  // Default: pending (includes null/undefined and explicit 'Pending')
+  return <Badge className="bg-yellow-100 text-yellow-700 border-yellow-200 flex items-center gap-1"><Clock className="h-3 w-3" />Pending</Badge>;
+}
+
 export default function TableDefenseRequests({
   paged,
   columns,
-  selected,
-  toggleSelectOne,
-  headerChecked,
-  toggleSelectAll,
   toggleSort,
   sortDir,
   onPriorityChange,
@@ -71,21 +94,18 @@ export default function TableDefenseRequests({
         <Table className="w-full text-sm table-auto">
           <TableHeader>
             <TableRow>
-              {!hideSelect && (
-                <TableHead className="w-[40px] py-2">
-                  <Checkbox checked={headerChecked} onCheckedChange={toggleSelectAll} />
-                </TableHead>
-              )}
               {columns.title && <TableHead className="px-3 min-w-[180px]">Thesis Title</TableHead>}
               {columns.presenter && <TableHead className="px-2 min-w-[120px]">Presenter</TableHead>}
               {columns.adviser && <TableHead className="px-2 min-w-[120px]">Adviser</TableHead>}
               {columns.program && <TableHead className="px-2 min-w-[100px]">Program</TableHead>}
-              {columns.status && <TableHead className="px-2 min-w-[100px] text-center">Status</TableHead>}
+              {/* Coordinator Status */}
+              {columns.status && <TableHead className="px-2 min-w-[100px] text-center">Coordinator Status</TableHead>}
+              {/* AA Status */}
+              <TableHead className="px-2 min-w-[100px] text-center">AA Status</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {paged.map(r => {
-              const isSelected = selected.includes(r.id);
               const handleRowClick = (e: React.MouseEvent) => {
                 const tag = (e.target as HTMLElement).tagName;
                 if (
@@ -107,19 +127,8 @@ export default function TableDefenseRequests({
                   className="hover:bg-muted/40 cursor-pointer"
                   onClick={handleRowClick}
                 >
-                  {!hideSelect && (
-                    <TableCell className="px-2 py-2">
-                      <Checkbox
-                        checked={isSelected}
-                        onCheckedChange={() => toggleSelectOne(r.id)}
-                        className="action-btn"
-                        onClick={e => e.stopPropagation()}
-                      />
-                    </TableCell>
-                  )}
                   {columns.title && (
                     <TableCell className="px-3 py-2 font-medium truncate leading-tight align-middle" title={r.thesis_title}>
-                      {/* Type badge before title */}
                       <Badge variant="outline" className="mr-2">
                         {r.defense_type || '—'}
                       </Badge>
@@ -133,7 +142,8 @@ export default function TableDefenseRequests({
                   )}
                   {columns.adviser && (
                     <TableCell className="px-2 py-2 text-xs text-muted-foreground whitespace-nowrap align-middle">
-                      {r.adviser || '—'}
+                      {/* Fix: Render adviser name from r.adviser, fallback to blank if not present */}
+                        {r.adviser && r.adviser.trim() !== '' ? r.adviser : '—'}
                     </TableCell>
                   )}
                   {columns.program && (
@@ -141,30 +151,16 @@ export default function TableDefenseRequests({
                       {r.program || '—'}
                     </TableCell>
                   )}
+                  {/* Coordinator Status */}
                   {columns.status && (
                     <TableCell className="px-2 py-2 text-xs whitespace-nowrap text-center align-middle">
-                      <Badge
-                        className={
-                          r.status === 'Approved'
-                            ? 'bg-green-100 text-green-700 border-green-200 flex items-center gap-1'
-                            : r.status === 'Rejected'
-                            ? 'bg-red-100 text-red-700 border-red-200 flex items-center gap-1'
-                            : r.status === 'Pending'
-                            ? 'bg-yellow-100 text-yellow-700 border-yellow-200 flex items-center gap-1'
-                            : r.status === 'Needs-info'
-                            ? 'bg-blue-100 text-blue-700 border-blue-200 flex items-center gap-1'
-                            : r.status === 'In progress'
-                            ? 'bg-purple-100 text-purple-700 border-purple-200 flex items-center gap-1'
-                            : 'bg-gray-100 text-gray-700 border-gray-200 flex items-center gap-1'
-                        }
-                      >
-                        {r.status === 'Approved' && <CheckCircle size={14} className="mr-1" />}
-                        {r.status === 'Rejected' && <XCircle size={14} className="mr-1" />}
-                        {r.status === 'Pending' && <Clock size={14} className="mr-1" />}
-                        {r.status}
-                      </Badge>
+                      {getCoordinatorStatusBadge(r.coordinator_status)}
                     </TableCell>
                   )}
+                  {/* AA Status: Show actual value if available, fallback to '—' */}
+                    <TableCell className="px-2 py-2 text-xs whitespace-nowrap text-center align-middle">
+                      {getAaStatusBadge(r.aa_status)}
+                  </TableCell>
                 </TableRow>
               );
             })}
@@ -172,12 +168,12 @@ export default function TableDefenseRequests({
               <TableRow>
                 <TableCell
                   colSpan={
-                    (hideSelect ? 0 : 1) +
                     (columns.title ? 1 : 0) +
                     (columns.presenter ? 1 : 0) +
                     (columns.adviser ? 1 : 0) +
                     (columns.program ? 1 : 0) +
-                    (columns.status ? 1 : 0)
+                    (columns.status ? 1 : 0) +
+                    1 // AA Status
                   }
                   className="text-center py-10 text-muted-foreground"
                 >

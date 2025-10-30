@@ -8,15 +8,13 @@ use Illuminate\Support\Facades\Log;
 use App\Models\User;
 use App\Models\Panelist;
 use App\Models\HonorariumPayment;
-use App\Models\PanelistHonorariumSpec;
+use App\Models\PaymentRate;
 use Carbon\Carbon;
+use App\Helpers\ProgramLevel;
 
 class DefenseRequest extends Model
 {
     protected $guarded = [];
-    // If you use $fillable, add:
-    // protected $fillable = [..., 'ai_detection_certificate', 'endorsement_form'];
-
     protected $casts = [
         'workflow_history'           => 'array',
         'last_status_updated_at'     => 'datetime',
@@ -30,6 +28,7 @@ class DefenseRequest extends Model
         'coordinator_assigned_at'    => 'datetime',
         'coordinator_manually_assigned' => 'boolean',
         'amount' => 'decimal:2',
+        'payment_date' => 'date',
     ];
 
     public function user()                { return $this->belongsTo(User::class,'submitted_by'); }
@@ -49,16 +48,53 @@ class DefenseRequest extends Model
     }
 
     // Helper: get all panelists as models (Panelist or User)
-    public function getPanelists()
+    public function getPanelistsAttribute()
     {
-        $ids = [
+        $fields = [
             $this->defense_chairperson,
             $this->defense_panelist1,
             $this->defense_panelist2,
             $this->defense_panelist3,
             $this->defense_panelist4,
         ];
-        return Panelist::whereIn('id', array_filter($ids))->get();
+
+        // Collect numeric IDs to fetch Panelist records in one query
+        $ids = array_values(array_filter(array_map(function ($v) {
+            return is_numeric($v) ? (int)$v : null;
+        }, $fields)));
+
+        $panelistRecords = collect();
+        if (!empty($ids)) {
+            $panelistRecords = Panelist::whereIn('id', $ids)->get()->keyBy(function ($p) {
+                return (int) $p->id;
+            });
+        }
+
+        $result = collect();
+        foreach ($fields as $f) {
+            if (!$f) continue;
+
+            if (is_numeric($f) && isset($panelistRecords[(int)$f])) {
+                $result->push($panelistRecords[(int)$f]);
+                continue;
+            }
+
+            // Try to find internal faculty user by exact full name (fallback)
+            $user = User::whereRaw("CONCAT(first_name, ' ', last_name) = ?", [$f])->first();
+            if ($user) {
+                $result->push($user);
+                continue;
+            }
+
+            // Last fallback: simple object with name
+            $obj = new \stdClass();
+            $obj->id = null;
+            $obj->name = $f;
+            $obj->email = null;
+            $result->push($obj);
+        }
+
+        return $result->values();
     }
 
     public function scopeForAdviser($q, User $user)
@@ -475,5 +511,36 @@ class DefenseRequest extends Model
             return 'Approved';
         }
         return 'Pending';
+    }
+
+    public function aaVerification()
+    {
+        return $this->hasOne(\App\Models\AAPaymentVerification::class, 'defense_request_id');
+    }
+
+    /**
+     * Calculate and set the expected amount based on payment rates
+     * Returns the calculated amount
+     */
+    public function calculateAndSetAmount(): float
+    {
+        // Get program level (Masteral or Doctorate)
+        $programLevel = ProgramLevel::getLevel($this->program);
+        
+        // Normalize defense type (Prefinal -> Pre-final)
+        $defenseType = $this->defense_type;
+        if (strtolower($defenseType) === 'prefinal') {
+            $defenseType = 'Pre-final';
+        }
+        
+        // Sum all rates for this program level and defense type
+        $totalAmount = PaymentRate::where('program_level', $programLevel)
+            ->where('defense_type', $defenseType)
+            ->sum('amount');
+        
+        // Set the amount on this model
+        $this->amount = $totalAmount;
+        
+        return (float) $totalAmount;
     }
 }

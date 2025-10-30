@@ -14,8 +14,10 @@ export default function Details({ payment }: { payment: ComprePaymentSummary }) 
   const money = (amt?: number | null) =>
     amt == null ? '—' : new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' }).format(amt);
 
+  const wasRejected = payment.status === 'approved' && !!payment.remarks;
+
   return (
-    <div className="p-3 text-sm">
+    <div className="max-w-md w-full text-sm mx-auto">
       {/* Header */}
       <div className="flex items-center gap-2 mb-3">
         <div className="inline-flex h-8 w-8 items-center justify-center rounded-md bg-primary/10 text-primary">
@@ -28,7 +30,7 @@ export default function Details({ payment }: { payment: ComprePaymentSummary }) 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <div className="flex items-center gap-2 text-[15px] font-medium">
-              <User2 className="h-4 w-4 text-muted-foreground" />
+              <User2 className="h-5 w-5 text-muted-foreground" />
               <span className="text-base md:text-[17px] font-semibold">
                 {payment.last_name}, {payment.first_name} {payment.middle_name ? `${payment.middle_name[0]}.` : ''}
               </span>
@@ -45,9 +47,11 @@ export default function Details({ payment }: { payment: ComprePaymentSummary }) 
           </div>
 
           <div>
-            <div className="flex items-center gap-2 text-[15px]">
-              <GraduationCap className="h-4 w-4 text-muted-foreground" />
-              <span className="text-foreground">{payment.program || '—'}</span>
+            <div className="flex items-start gap-2 text-[15px] min-w-0">
+              <GraduationCap className="h-5 w-5 shrink-0 text-muted-foreground" />
+              <span className="text-foreground leading-tight break-words whitespace-normal min-w-0">
+                {payment.program || '—'}
+              </span>
             </div>
             <div className="mt-2 flex flex-wrap items-center gap-2">
               <Badge variant="outline" className={`rounded-full ${statusCls}`}>
@@ -74,7 +78,9 @@ export default function Details({ payment }: { payment: ComprePaymentSummary }) 
           </div>
           {payment.remarks ? (
             <div className="md:col-span-2">
-              <div className="text-xs text-muted-foreground">Remarks</div>
+              <div className="text-xs text-muted-foreground">
+                Remarks{wasRejected ? ' (from previous rejection)' : ''}
+              </div>
               <div className="font-normal text-foreground">{payment.remarks}</div>
             </div>
           ) : null}

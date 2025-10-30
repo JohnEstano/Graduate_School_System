@@ -3,9 +3,14 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use App\Models\User;
 
 class CoordinatorProgramAssignment extends Model
 {
+    // ensure this matches your DB table name
+    protected $table = 'coordinator_program_assignments';
+
     protected $fillable = [
         'coordinator_user_id',
         'program_name',
@@ -23,7 +28,7 @@ class CoordinatorProgramAssignment extends Model
     /**
      * Get the coordinator user
      */
-    public function coordinator()
+    public function coordinator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'coordinator_user_id');
     }
@@ -31,17 +36,19 @@ class CoordinatorProgramAssignment extends Model
     /**
      * Get the user who assigned this program
      */
-    public function assignedBy()
+    public function assignedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'assigned_by');
     }
 
     /**
-     * Get the coordinator for a specific program
+     * Get the coordinator for a specific program (case-insensitive)
      */
     public static function getCoordinatorForProgram(string $programName): ?User
     {
-        $assignment = self::where('program_name', $programName)
+        $p = mb_strtolower(trim(preg_replace('/\s+/', ' ', $programName)));
+
+        $assignment = self::whereRaw("LOWER(TRIM(REGEXP_REPLACE(program_name, '\\s+', ' '))) = ?", [$p])
             ->where('is_active', true)
             ->with('coordinator')
             ->first();
@@ -50,14 +57,19 @@ class CoordinatorProgramAssignment extends Model
     }
 
     /**
-     * Get all programs assigned to a coordinator
+     * Get all programs assigned to a coordinator (normalized)
      */
     public static function getProgramsForCoordinator(int $coordinatorUserId): array
     {
-        return self::where('coordinator_user_id', $coordinatorUserId)
+        $programs = self::where('coordinator_user_id', $coordinatorUserId)
             ->where('is_active', true)
             ->pluck('program_name')
             ->toArray();
+
+        // normalize whitespace and trim
+        return array_values(array_unique(array_map(function ($p) {
+            return trim(preg_replace('/\s+/', ' ', (string) $p));
+        }, $programs)));
     }
 }
 

@@ -70,7 +70,7 @@ class RealCoordinatorSeeder extends Seeder
             ],
             [
                 'email' => 'hbeltran@uic.edu.ph',
-                'first_name' => 'Hannah',
+                'first_name' => 'Harrold',
                 'last_name' => 'Beltran',
                 'role' => 'Program Coordinator',
                 'programs' => 'Doctor in Business Management major in Information Systems (DBM-IS), Doctor of Philosophy in Information Technology Integration (PhDITI), Master of Arts in Education major in Information Technology Integration (MAED-ITI), Master in Information Systems (MIS), Master in Information Technology (MIT)',

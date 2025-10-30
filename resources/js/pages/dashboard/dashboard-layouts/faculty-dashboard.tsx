@@ -147,7 +147,7 @@ export default function FacultyDashboard() {
                     </div>
 
                     {/* Metric Cards - Mobile Optimized */}
-                    <div className="w-full max-w-screen-xl mx-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4 px-4 md:px-7 mb-4 md:mb-6">
+                    <div className="w-full grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4 px-4 md:px-7 mb-4 md:mb-6">
                         {metrics.map((metric, idx) => (
                             <Card
                                 key={idx}
@@ -176,11 +176,15 @@ export default function FacultyDashboard() {
 
                     {/* Widgets Body - Mobile Responsive */}
                     <div className="flex flex-col gap-4 md:gap-6 bg-gray-100 dark:bg-zinc-900 mx-2 md:mx-4 rounded-lg md:rounded-xl mt-2 mb-2 px-3 md:px-5 py-4 md:py-8">
-                        <div className="w-full mb-2 flex flex-col gap-4">
+                        {/* Immediate Action Widget - Full Width */}
+                        <div className="w-full">
                             <ImmediateActionDefenseRequestsWidget
                                 requests={immediateRequests}
                                 loading={loading}
                             />
+                        </div>
+                        {/* Weekly Schedule Widget - Full Width */}
+                        <div className="w-full">
                             <WeeklyDefenseSchedulesWidget
                                 weekDays={weekDays}
                                 selectedDay={selectedDay}

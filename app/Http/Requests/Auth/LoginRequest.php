@@ -13,6 +13,7 @@ use Illuminate\Auth\Events\Lockout;
 use Illuminate\Support\Str;
 use App\Models\User;
 use App\Services\LegacyPortalClient;
+use App\Services\UicApiClient;
 
 class LoginRequest extends FormRequest
 {
@@ -26,6 +27,7 @@ class LoginRequest extends FormRequest
         return [
             'identifier' => ['required', 'string', 'max:100'],
             'password' => ['required', 'string'],
+            'mode' => ['nullable', 'in:auto,local,api,uic-api'],
         ];
     }
 
@@ -58,7 +60,7 @@ class LoginRequest extends FormRequest
             }
             
             if (Hash::check($password, $superAdmin->password)) {
-                Auth::login($superAdmin, $this->boolean('remember'));
+                Auth::login($superAdmin, false);
                 RateLimiter::clear($this->throttleKey());
                 return;
             } else {
@@ -109,35 +111,105 @@ class LoginRequest extends FormRequest
             }
         }
         
-        // Legacy authentication
-        try {
-            Log::info("Login: Attempting legacy authentication", [
-                'mapped_numeric' => $mappedNumeric,
-                'is_student' => !empty($mappedNumeric),
-                'existing_user' => $user ? 'yes' : 'no'
-            ]);
-            
+        // Try LOCAL authentication first unless explicitly forced to API
+        $mode = (string)($this->input('mode') ?? 'auto');
+
+        if ($mode !== 'api') {
+            // Attempt local DB auth if a user exists with a password hash
+            $localUser = null;
             if ($mappedNumeric) {
-                $legacySession = $legacy->login($mappedNumeric, $password);
-                Log::info("Login: Legacy student login successful", [
-                    'student_id' => $mappedNumeric
-                ]);
-            } else {
-                $legacySession = $legacy->loginCoordinator($identifier, $password);
-                $isStaff = true;
-                Log::info("Login: Legacy staff login successful", [
-                    'identifier' => $identifier
+                $localUser = User::where('student_number', $mappedNumeric)
+                    ->orWhere('school_id', $mappedNumeric)
+                    ->first();
+            }
+            if (!$localUser) {
+                $email = str_contains($identifier, '@') ? strtolower($identifier) : strtolower($identifier) . '@uic.edu.ph';
+                $localUser = User::where('email', $email)->first();
+            }
+
+            if ($localUser && $localUser->password && Hash::check($password, $localUser->password)) {
+                Auth::login($localUser, false);
+                RateLimiter::clear($this->throttleKey());
+                return;
+            }
+
+            if ($mode === 'local') {
+                // If forced local and failed, stop here
+                RateLimiter::hit($this->throttleKey());
+                throw ValidationException::withMessages([
+                    'identifier' => 'Invalid local credentials.',
                 ]);
             }
+        }
+
+        // STEP 1: UIC API v2 Authentication - Primary authentication method
+        $uicApiToken = null;
+        $uicApiAuthenticated = false;
+        
+        try {
+            Log::info("Login: Step 1 - Attempting UIC API v2 authentication", [
+                'identifier' => $identifier,
+                'mapped_numeric' => $mappedNumeric
+            ]);
+
+            $uicApi = app(UicApiClient::class);
+            $uicApiResult = $uicApi->login($mappedNumeric ?: $identifier, $password);
+            
+            $uicApiToken = $uicApiResult['bearer_token'];
+            $uicApiAuthenticated = true;
+            
+            Log::info("Login: Step 1 - UIC API v2 authentication SUCCESS", [
+                'identifier' => $identifier,
+                'has_token' => !empty($uicApiToken),
+                'token_preview' => substr($uicApiToken, 0, 20) . '...',
+                'user_data_keys' => array_keys($uicApiResult['user_data'] ?? [])
+            ]);
+            
         } catch (\Throwable $e) {
-            Log::error("Login: Legacy authentication failed", [
+            Log::error("Login: Step 1 - UIC API v2 authentication FAILED", [
                 'error' => $e->getMessage(),
                 'identifier' => $identifier
             ]);
+            
+            // UIC API failed - cannot proceed
             RateLimiter::hit($this->throttleKey());
             throw ValidationException::withMessages([
-                'identifier' => 'Invalid credentials.',
+                'identifier' => 'Authentication failed. Please check your credentials.',
             ]);
+        }
+
+        // STEP 2: Legacy Portal Scraping - Data enrichment (only if UIC API succeeded)
+        $legacySession = null;
+        
+        if ($uicApiAuthenticated) {
+            try {
+                Log::info("Login: Step 2 - UIC API succeeded, now scraping legacy portal for data enrichment", [
+                    'mapped_numeric' => $mappedNumeric,
+                    'is_student' => !empty($mappedNumeric),
+                    'existing_user' => $user ? 'yes' : 'no'
+                ]);
+                
+                if ($mappedNumeric) {
+                    $legacySession = $legacy->login($mappedNumeric, $password);
+                    Log::info("Login: Step 2 - Legacy student scraping successful", [
+                        'student_id' => $mappedNumeric
+                    ]);
+                } else {
+                    $legacySession = $legacy->loginCoordinator($identifier, $password);
+                    $isStaff = true;
+                    Log::info("Login: Step 2 - Legacy staff scraping successful", [
+                        'identifier' => $identifier
+                    ]);
+                }
+            } catch (\Throwable $e) {
+                // Legacy scraping failed, but that's OK - we already have UIC API token
+                Log::warning("Login: Step 2 - Legacy scraping failed (non-critical)", [
+                    'error' => $e->getMessage(),
+                    'identifier' => $identifier,
+                    'note' => 'User will still be logged in with UIC API token'
+                ]);
+                // Don't throw error - continue with UIC API authentication
+            }
         }
 
         // Fetch clearance data for new students
@@ -247,11 +319,10 @@ class LoginRequest extends FormRequest
 
         Log::info("Login: About to authenticate user session", [
             'user_id' => $user->id,
-            'email' => $user->email,
-            'remember' => $this->boolean('remember')
+            'email' => $user->email
         ]);
         
-        Auth::login($user, $this->boolean('remember'));
+        Auth::login($user, false);
         
         Log::info("Login: User session authenticated successfully", [
             'user_id' => $user->id,
@@ -260,15 +331,39 @@ class LoginRequest extends FormRequest
             'session_id' => session()->getId()
         ]);
 
+        // Cache UIC API bearer token if available
+        if ($uicApiToken) {
+            try {
+                $uicApi = app(UicApiClient::class);
+                $uicApi->cacheToken($user->id, $uicApiToken, 1440); // Cache for 24 hours
+                
+                Log::info("Login: UIC API bearer token cached successfully", [
+                    'user_id' => $user->id,
+                    'token_preview' => substr($uicApiToken, 0, 20) . '...',
+                    'expires_in_minutes' => 1440
+                ]);
+            } catch (\Throwable $e) {
+                Log::error("Login: Failed to cache UIC API token", [
+                    'user_id' => $user->id,
+                    'error' => $e->getMessage()
+                ]);
+            }
+        } else {
+            Log::warning("Login: No UIC API bearer token available to cache", [
+                'user_id' => $user->id
+            ]);
+        }
+
+        // Process legacy session data (if available from scraping)
         if ($legacySession) {
-            Log::info("Login: Processing legacy session data", [
+            Log::info("Login: Processing legacy session data for data enrichment", [
                 'user_id' => $user->id,
                 'has_legacy_session' => !empty($legacySession)
             ]);
             
             try {
                 Cache::put('legacy_session_' . $user->id, $legacySession, now()->addMinutes(30));
-                Log::info("Login: Legacy session cached", [
+                Log::info("Login: Legacy session cached for data scraping", [
                     'user_id' => $user->id
                 ]);
             } catch (\Throwable $e) {
@@ -282,7 +377,7 @@ class LoginRequest extends FormRequest
             // This is the master key that connects everything in the legacy system
             if ($user->role === 'Student' && (!$user->legacy_account_id || !$user->clearance_statuscode) && $user->last_name && $user->last_name !== 'User') {
                 try {
-                    Log::info("Login: Fetching/refreshing clearance data from API", [
+                    Log::info("Login: Fetching/refreshing clearance data from legacy API", [
                         'user_id' => $user->id,
                         'last_name' => $user->last_name,
                         'has_legacy_account_id' => !empty($user->legacy_account_id),
@@ -326,10 +421,22 @@ class LoginRequest extends FormRequest
                 ]);
             }
         } else {
-            Log::info("Login: No legacy session data available", [
-                'user_id' => $user->id
+            Log::info("Login: No legacy session data available for scraping", [
+                'user_id' => $user->id,
+                'note' => 'Legacy scraping failed but user authenticated via UIC API'
             ]);
         }
+        
+        // Final authentication summary
+        Log::info("Login: Authentication complete - SUMMARY", [
+            'user_id' => $user->id,
+            'email' => $user->email,
+            'has_uic_api_token' => !empty($uicApiToken),
+            'has_legacy_session' => !empty($legacySession),
+            'authentication_method' => 'UIC API v2 (Primary)',
+            'data_enrichment' => !empty($legacySession) ? 'Legacy scraping (Success)' : 'Legacy scraping (Failed/Skipped)',
+            'status' => 'SUCCESS'
+        ]);
         
         RateLimiter::clear($this->throttleKey());
     }

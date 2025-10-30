@@ -63,26 +63,28 @@ class DocumentTemplateController extends Controller {
       $template = \App\Models\DocumentTemplate::findOrFail($request->template_id);
       $defenseRequest = \App\Models\DefenseRequest::findOrFail($request->defense_request_id);
 
-      // You may want to merge $request->fields into the defenseRequest data for the generator
       $generator = new \App\Services\DocumentGenerator();
       try {
           $generated = $generator->generate($template, $defenseRequest, $request->fields ?? []);
+          
+          // Return the URL to download the generated document
+          $url = $generated->output_path
+              ? \Storage::disk('public')->url($generated->output_path)
+              : null;
+
+          return response()->json([
+              'ok' => true,
+              'download_url' => $url,
+              'generated_id' => $generated->id,
+          ]);
       } catch (\Throwable $e) {
-          \Log::error('Document generation failed: '.$e->getMessage());
+          \Log::error('Document generation failed: '.$e->getMessage(), [
+              'trace' => $e->getTraceAsString()
+          ]);
           return response()->json([
               'ok' => false,
               'error' => 'Document generation failed: '.$e->getMessage(),
           ], 500);
       }
-
-      // Assume $generated is a GeneratedDocument model with output_path
-      $url = $generated->output_path
-          ? \Storage::disk('public')->url($generated->output_path)
-          : null;
-
-      return response()->json([
-          'ok' => true,
-          'download_url' => $url,
-      ]);
   }
 }

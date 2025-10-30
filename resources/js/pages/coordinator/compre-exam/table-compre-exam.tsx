@@ -3,24 +3,33 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogTrigger, DialogContent } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Info, Filter, Check } from 'lucide-react';
+import { Info, Filter, Check, Pencil } from 'lucide-react';
 import { format } from 'date-fns';
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import type { CompreExamApplicationSummary } from './Index';
 import Details from './details';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@/components/ui/dropdown-menu';
+import { DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { toast } from '@/components/ui/sonner';
 
 type Columns = { student: boolean; program: boolean; eligibility: boolean; applied: boolean; appStatus: boolean; actions: boolean };
 
 type Props = {
   paged: CompreExamApplicationSummary[];
   columns: Columns;
+  onVisibleCountChange?: (n: number) => void;
 };
 
-export default function TableCompreExam({ paged, columns }: Props) {
+export default function TableCompreExam({ paged, columns, onVisibleCountChange }: Props) {
   const [selected, setSelected] = useState<number[]>([]);
   const [selectedIndex, setSelectedIndex] = useState<number>(0);
   const [selectedRow, setSelectedRow] = useState<CompreExamApplicationSummary | null>(null);
+  const [scoreOpen, setScoreOpen] = useState(false);
+  const [scoreLoading, setScoreLoading] = useState(false);
+  const [scoreRows, setScoreRows] = useState<{ id: number; subject_name: string; score: number | null }[]>([]);
+  const [savingScores, setSavingScores] = useState(false);
 
   // Eligibility filter
   const [eligibilityFilter, setEligibilityFilter] = useState<'all' | 'eligible' | 'not'>('all');
@@ -28,8 +37,6 @@ export default function TableCompreExam({ paged, columns }: Props) {
   const [appliedFilter, setAppliedFilter] = useState<'all' | 'yes' | 'no'>('all');
   // Application status filter
   const [statusFilter, setStatusFilter] = useState<'all' | 'approved' | 'pending' | 'rejected' | 'not_yet_applied'>('all');
-
-  const headerChecked = selected.length > 0 && selected.length === paged.length;
 
   const sorted = useMemo(() => {
     // sort by submitted_at desc, nulls last
@@ -56,8 +63,18 @@ export default function TableCompreExam({ paged, columns }: Props) {
     return out;
   }, [sorted, eligibilityFilter, appliedFilter, statusFilter]);
 
+  // headerChecked should reflect currently visible (filtered) rows
+  const headerChecked = selected.length > 0 && selected.length === filtered.length;
+
+  // notify parent about visible count when filters/search change
+  useEffect(() => {
+    if (typeof onVisibleCountChange === 'function') {
+      onVisibleCountChange(filtered.length);
+    }
+  }, [filtered, onVisibleCountChange]);
+
   function toggleSelectAll() {
-    setSelected(headerChecked ? [] : paged.map(p => p.id));
+    setSelected(headerChecked ? [] : filtered.map(p => p.id));
   }
   function toggleSelectOne(id: number) {
     setSelected(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
@@ -100,6 +117,64 @@ export default function TableCompreExam({ paged, columns }: Props) {
     rejected: 'Rejected',
     not_yet_applied: 'Not yet applied',
   };
+
+  async function openScoresDialog(r: CompreExamApplicationSummary) {
+    // requires application_id (added in controller output)
+    const anyId = (r as any).application_id as number | undefined;
+    if (!anyId) return;
+    setSelectedRow(r);
+    setScoreRows([]);
+    setScoreOpen(true);
+    setScoreLoading(true);
+    try {
+      const routeFn = (window as any).route;
+      const url = routeFn ? routeFn('api.exam-applications.subjects', { application: anyId }) : `/api/exam-applications/${anyId}/subjects`;
+      const res = await fetch(url, {
+        headers: { Accept: 'application/json' },
+        cache: 'no-store',
+        credentials: 'same-origin',
+      });
+      const data = await res.json();
+      const mapped = Array.isArray(data) ? data.map((d: any) => ({ id: Number(d.id), subject_name: String(d.subject_name || ''), score: d.score === null || d.score === undefined ? null : Number(d.score) })) : [];
+      setScoreRows(mapped);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setScoreLoading(false);
+    }
+  }
+
+  function setScoreRow(id: number, val: string) {
+    const n = val.trim();
+    setScoreRows(prev => prev.map(r => r.id === id ? { ...r, score: n === '' ? null : Math.max(0, Math.min(100, Number(n))) } : r));
+  }
+
+  async function saveScores() {
+    if (!selectedRow) return;
+    const anyId = (selectedRow as any).application_id as number | undefined;
+    if (!anyId) return;
+    setSavingScores(true);
+    try {
+      const payload = { scores: scoreRows.map(r => ({ id: r.id, score: r.score })) };
+      const routeFn = (window as any).route;
+      const url = routeFn ? routeFn('coordinator.exam-applications.scores', { application: anyId }) : `/coordinator/exam-applications/${anyId}/scores`;
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest', 'X-CSRF-Token': getCsrfToken(), Accept: 'application/json' },
+        credentials: 'same-origin',
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      setScoreOpen(false);
+      toast.success('Scores posted.', { description: 'Scores have been saved successfully.' });
+    } catch (e) {
+      console.error(e);
+      const msg = e instanceof Error ? e.message : String(e);
+      toast.error('Failed to save scores', { description: msg });
+    } finally {
+      setSavingScores(false);
+    }
+  }
 
   return (
     <div className="rounded-md overflow-x-auto border border-border bg-white dark:bg-background dark:border-border w-full max-w-full">
@@ -179,9 +254,6 @@ export default function TableCompreExam({ paged, columns }: Props) {
       <Table className="min-w-[900px] text-sm dark:text-muted-foreground">
         <TableHeader>
           <TableRow className="dark:bg-muted/40">
-            <TableHead className="w-[4%] py-2 dark:bg-muted/30 dark:texxt-muted-foreground">
-              <Checkbox checked={headerChecked} onCheckedChange={toggleSelectAll} />
-            </TableHead>
             {columns.student && <TableHead className="w-[28%] px-2 dark:bg-muted/30 dark:text-muted-foreground">Student</TableHead>}
             {columns.program && <TableHead className="w-[22%] px-2 dark:bg-muted/30 dark:text-muted-foreground">Program</TableHead>}
             {columns.eligibility && <TableHead className="w-[14%] text-center px-1 py-2 dark:bg-muted/30 dark:text-muted-foreground">Eligibility</TableHead>}
@@ -193,9 +265,6 @@ export default function TableCompreExam({ paged, columns }: Props) {
         <TableBody>
           {filtered.map((r, i) => (
             <TableRow key={r.id} className="hover:bg-muted/50 dark:hover:bg-muted/70">
-              <TableCell className="px-2 py-2">
-                <Checkbox checked={selected.includes(r.id)} onCheckedChange={() => toggleSelectOne(r.id)} />
-              </TableCell>
 
               {columns.student && (
                 <TableCell className="px-2 py-2 font-semibold truncate leading-tight dark:text-foreground" style={{ maxWidth: '260px' }}>
@@ -254,12 +323,23 @@ export default function TableCompreExam({ paged, columns }: Props) {
                         <Info />
                       </Button>
                     </DialogTrigger>
-                    <DialogContent className="max-w-3xl min-w-260 w-full max-h-[90vh]">
-                      <div className="max-h-[80vh] overflow-y-auto px-1">
+                    <DialogContent className="max-w-md w-full max-h-[90vh]">
+                      <div className="max-h-[80vh] overflow-y-auto">
                         {selectedRow && <Details application={selectedRow} />}
                       </div>
                     </DialogContent>
                   </Dialog>
+                  {(r as any).application_id && (r.application_status === 'approved') ? (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="ml-1 h-8 px-2"
+                      title="Post Score"
+                      onClick={() => openScoresDialog(r)}
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                  ) : null}
                 </TableCell>
               )}
             </TableRow>
@@ -273,6 +353,50 @@ export default function TableCompreExam({ paged, columns }: Props) {
           )}
         </TableBody>
       </Table>
+
+      {/* Scores Dialog */}
+      <Dialog open={scoreOpen} onOpenChange={(o) => (o ? setScoreOpen(true) : setScoreOpen(false))}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Post Scores</DialogTitle>
+            <DialogDescription>Enter scores for each subject (0-100). Average ≤ 74 will mark the application failed.</DialogDescription>
+          </DialogHeader>
+          <div className="mt-2">
+            {scoreLoading ? (
+              <div className="text-sm text-muted-foreground">Loading subjects…</div>
+            ) : (
+              <ScoreDialogContent rows={scoreRows} onChange={setScoreRow} />
+            )}
+          </div>
+          <div className="mt-4 flex items-center justify-end gap-2">
+            <Button onClick={saveScores} disabled={savingScores}>
+              {savingScores ? 'Saving…' : 'Save scores'}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
+function getCsrfToken(): string {
+  const el = document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement | null;
+  return el?.content || '';
+}
+
+// Inline dialog for posting scores
+function ScoreDialogContent({ rows, onChange }: { rows: { id: number; subject_name: string; score: number | null }[]; onChange: (id: number, val: string) => void }) {
+  return (
+    <div className="space-y-3">
+      {rows.map((r) => (
+        <div key={r.id} className="grid grid-cols-12 gap-2 items-center">
+          <div className="col-span-8 text-sm truncate" title={r.subject_name}>{r.subject_name}</div>
+          <div className="col-span-4">
+            <Input type="number" min={0} max={100} value={r.score ?? ''} onChange={(e) => onChange(r.id, e.target.value)} placeholder="0-100" className="h-8" />
+          </div>
+        </div>
+      ))}
+      {rows.length === 0 && <div className="text-sm text-muted-foreground">No subjects found.</div>}
     </div>
   );
 }
