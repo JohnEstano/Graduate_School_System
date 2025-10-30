@@ -284,12 +284,12 @@ const DraggableEventCard = ({
     const committee: Array<{ name: string; role: string }> = [];
     if (event.raw.adviser) committee.push({ name: event.raw.adviser, role: 'Adviser' });
     if (event.raw.panel_chair) committee.push({ name: event.raw.panel_chair, role: 'Panel Chair' });
-    if (event.raw.panel_members) {
+    if (event.raw.panel_members && Array.isArray(event.raw.panel_members)) {
       event.raw.panel_members.forEach(member => {
         committee.push({ name: member, role: 'Panel Member' });
       });
     }
-    if (event.raw.committee) {
+    if (event.raw.committee && Array.isArray(event.raw.committee)) {
       committee.push(...event.raw.committee);
     }
 //HELLO
@@ -496,10 +496,10 @@ const DraggableWeekEvent = ({
     const committee: Array<{ name: string; role: string }> = [];
     if (event.raw.adviser) committee.push({ name: event.raw.adviser, role: 'Adviser' });
     if (event.raw.panel_chair) committee.push({ name: event.raw.panel_chair, role: 'Panel Chair' });
-    if (event.raw.panel_members) {
+    if (event.raw.panel_members && Array.isArray(event.raw.panel_members)) {
       event.raw.panel_members.forEach(m => committee.push({ name: m, role: 'Panelist' }));
     }
-    if (event.raw.committee) {
+    if (event.raw.committee && Array.isArray(event.raw.committee)) {
       committee.push(...event.raw.committee);
     }
 
@@ -635,10 +635,10 @@ const DraggableDayEvent = ({
     const committee: Array<{ name: string; role: string }> = [];
     if (event.raw.adviser) committee.push({ name: event.raw.adviser, role: 'Adviser' });
     if (event.raw.panel_chair) committee.push({ name: event.raw.panel_chair, role: 'Panel Chair' });
-    if (event.raw.panel_members) {
+    if (event.raw.panel_members && Array.isArray(event.raw.panel_members)) {
       event.raw.panel_members.forEach(m => committee.push({ name: m, role: 'Panelist' }));
     }
-    if (event.raw.committee) {
+    if (event.raw.committee && Array.isArray(event.raw.committee)) {
       committee.push(...event.raw.committee);
     }
 
