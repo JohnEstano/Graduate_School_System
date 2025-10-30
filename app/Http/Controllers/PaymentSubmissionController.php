@@ -14,6 +14,7 @@ use App\Models\CoordinatorProgram;
 use App\Models\CoordinatorProgramAssignment;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
+use App\Models\SystemSetting;
 
 class PaymentSubmissionController extends Controller
 {
@@ -49,6 +50,9 @@ class PaymentSubmissionController extends Controller
     {
         $user = Auth::user();
 
+        // Check if payment window is open
+        $paymentWindowOpen = SystemSetting::get('payment_window_open', true);
+
         // Require an approved comprehensive exam application (Dean-approved)
         $hasApp = $this->userHasApprovedExamApplication($user);
 
@@ -63,7 +67,7 @@ class PaymentSubmissionController extends Controller
                 'program' => $user->program ?? null,
                 'email'   => $user->email ?? null,
             ],
-            'canSubmit' => $hasApp, // allow submit after application exists
+            'canSubmit' => $hasApp && $paymentWindowOpen, // allow submit only if application approved AND window is open
             'payment' => $payment ? [
                 'payment_id'   => $payment->payment_id,
                 'or_number'    => $payment->or_number,
@@ -74,6 +78,7 @@ class PaymentSubmissionController extends Controller
                 'amount_paid'  => $payment->amount_paid,
                 'created_at'   => optional($payment->created_at)->format('Y-m-d H:i:s'),
             ] : null,
+            'paymentWindowOpen' => $paymentWindowOpen, // pass to frontend
         ]);
     }
 

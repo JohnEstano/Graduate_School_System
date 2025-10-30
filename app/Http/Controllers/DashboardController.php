@@ -227,7 +227,8 @@ class DashboardController extends Controller
             
             // Add exam settings
             $props['examSettings'] = [
-                'examWindowOpen' => \App\Models\SystemSetting::get('exam_window_open', true)
+                'exam_window_open' => \App\Models\SystemSetting::get('exam_window_open', true),
+                'payment_window_open' => \App\Models\SystemSetting::get('payment_window_open', true)
             ];
         }
 
