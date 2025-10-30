@@ -162,7 +162,7 @@ class DeanCompreExamController extends Controller
                     $reviewerName = $request->user()->first_name . ' ' . $request->user()->last_name;
 
                     if ($validated['status'] === 'approved') {
-                        Mail::to($student->email)->send(
+                        Mail::to($student->email)->queue(
                             new ComprehensiveExamApproved(
                                 $application,
                                 $student,
@@ -176,7 +176,7 @@ class DeanCompreExamController extends Controller
                             'approved_by' => 'dean'
                         ]);
                     } else {
-                        Mail::to($student->email)->send(
+                        Mail::to($student->email)->queue(
                             new ComprehensiveExamRejected(
                                 $application,
                                 $student,
@@ -257,7 +257,7 @@ class DeanCompreExamController extends Controller
 
                     if ($student && $student->email) {
                         if ($status === 'approved') {
-                            Mail::to($student->email)->send(
+                            Mail::to($student->email)->queue(
                                 new ComprehensiveExamApproved(
                                     $application,
                                     $student,
@@ -266,7 +266,7 @@ class DeanCompreExamController extends Controller
                                 )
                             );
                         } else {
-                            Mail::to($student->email)->send(
+                            Mail::to($student->email)->queue(
                                 new ComprehensiveExamRejected(
                                     $application,
                                     $student,

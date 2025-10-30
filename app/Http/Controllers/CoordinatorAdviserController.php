@@ -800,7 +800,7 @@ class CoordinatorAdviserController extends Controller
                     
                     // Send email to adviser about the new assignment
                     if ($adviserUser->email) {
-                        Mail::to($adviserUser->email)->send(new \App\Mail\StudentAssignedToAdviser($adviserUser, $student, $coordinator));
+                        Mail::to($adviserUser->email)->queue(new \App\Mail\StudentAssignedToAdviser($adviserUser, $student, $coordinator));
                         Log::info('Student assignment email sent to adviser', ['adviser_email' => $adviserUser->email]);
                     }
                     
@@ -810,7 +810,7 @@ class CoordinatorAdviserController extends Controller
                         $adviserFullName = trim("{$adviserUser->first_name} {$adviserUser->last_name}");
                         $coordinatorFullName = trim("{$coordinator->first_name} {$coordinator->last_name}");
                         
-                        Mail::to($student->email)->send(new \App\Mail\StudentInvitation(
+                        Mail::to($student->email)->queue(new \App\Mail\StudentInvitation(
                             $studentFullName,
                             $adviserFullName,
                             $coordinatorFullName

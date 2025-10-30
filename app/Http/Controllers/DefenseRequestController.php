@@ -43,6 +43,17 @@ class DefenseRequestController extends Controller
             // Coordinator view: show queue of adviser-approved onward
             $query = DefenseRequest::query();
 
+            // FILTER: Only show requests that have been approved by adviser (not 'submitted' or 'adviser-review')
+            $query->whereIn('workflow_state', [
+                'adviser-approved',
+                'coordinator-review',
+                'coordinator-approved',
+                'coordinator-rejected',
+                'panels-assigned',
+                'scheduled',
+                'completed'
+            ]);
+
             // --- AA filter ---
             if ($user->role === 'Administrative Assistant') {
                 $query->where('coordinator_status', 'Approved');
@@ -992,7 +1003,7 @@ class DefenseRequestController extends Controller
             if ($status === 'Rejected') {
                 Log::info('Sending rejection email to student');
                 if ($student && $student->email) {
-                    Mail::to($student->email)->send(new DefenseRequestRejected(
+                    Mail::to($student->email)->queue(new DefenseRequestRejected(
                         $defenseRequest,
                         $student,
                         'coordinator',
@@ -1121,7 +1132,7 @@ class DefenseRequestController extends Controller
                     $changes = ['schedule' => $scheduleChanged, 'panels' => $panelsChanged];
                 }
                 
-                Mail::to($student->email)->send(new DefenseScheduled(
+                Mail::to($student->email)->queue(new DefenseScheduled(
                     $defenseRequest,
                     $student,
                     $changes
@@ -1145,7 +1156,7 @@ class DefenseRequestController extends Controller
                     $changes = ['schedule' => $scheduleChanged, 'panels' => $panelsChanged];
                 }
                 
-                Mail::to($adviser->email)->send(new DefenseScheduled(
+                Mail::to($adviser->email)->queue(new DefenseScheduled(
                     $defenseRequest,
                     $adviser,
                     $changes
@@ -1177,7 +1188,7 @@ class DefenseRequestController extends Controller
                         'email' => $member->email,
                         'changes' => $changes
                     ]);
-                    Mail::to($member->email)->send(new DefenseScheduled(
+                    Mail::to($member->email)->queue(new DefenseScheduled(
                         $defenseRequest,
                         $member,
                         $changes
@@ -1854,7 +1865,7 @@ class DefenseRequestController extends Controller
                             'defense_request_id' => $defenseRequest->id
                         ]);
                         
-                        Mail::to($coordinator->email)->send(new DefenseRequestAssignedToCoordinator($defenseRequest));
+                        Mail::to($coordinator->email)->queue(new DefenseRequestAssignedToCoordinator($defenseRequest));
                         
                         \Log::info('updateAdviserStatus: Coordinator email queued/sent successfully');
                     } catch (\Exception $mailError) {
@@ -2032,7 +2043,8 @@ class DefenseRequestController extends Controller
             'panels-assigned',
             'scheduled',
             'completed',
-            'coordinator-rejected'
+            'coordinator-rejected',
+            'pending-panels'  // <-- ADDED: Requests waiting for panel assignment
         ]);
 
         if ($user->role === 'Administrative Assistant') {

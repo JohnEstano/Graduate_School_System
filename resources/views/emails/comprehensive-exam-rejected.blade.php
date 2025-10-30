@@ -114,15 +114,19 @@
 
         .footer {
             text-align: center;
-            margin-top: 30px;
-            padding-top: 20px;
-            font-size: 12px;
-            color: #6b7280;
+            padding: 20px 30px;
+            border-top: 1px solid #e5e7eb;
         }
 
         .footer .logo {
             max-width: 60px;
             margin-bottom: 10px;
+        }
+        
+        .footer-text {
+            font-size: 12px;
+            color: #6b7280;
+            line-height: 1.6;
         }
     
         @media (max-width: 600px) {
@@ -211,20 +215,24 @@
                     View Application Status
                 </a>
             </div>
-        </td>
-                        </tr>
                         <tr>
-                            <td style="padding: 20px 30px; border-top: 1px solid #e5e7eb;">
-        <img src="{{ asset('gss-uic-logo-v2.png') }}" alt="UIC Graduate School Logo" class="logo">
-        <p>
-            <strong>University of the Immaculate Conception</strong><br>
-            Graduate School Office<br>
-            Father Selga St., Davao City, Philippines 8000
-        </p>
-        <p style="margin-top: 15px;">
-            This is an automated message from the Graduate School System. Please do not
-            reply to this email.
-        </p>
+                            <td class="footer">
+                                <img src="{{ asset('gss-uic-logo-v2.png') }}" alt="UIC Graduate School Logo" class="logo">
+                                <p class="footer-text">
+                                    <strong>University of the Immaculate Conception</strong><br>
+                                    Graduate School Office<br>
+                                    Father Selga St., Davao City, Philippines 8000
+                                </p>
+                                <p class="footer-text" style="margin-top: 15px;">
+                                    This is an automated message from the Graduate School System. Please do not
+                                    reply to this email.
+                                </p>
+                            </td>
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+        </table>
     </div>
 </body>
 </html>

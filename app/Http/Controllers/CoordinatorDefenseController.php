@@ -619,7 +619,7 @@ class CoordinatorDefenseController extends Controller
         $student = $defenseRequest->user;
         try {
             if ($student && $student->email) {
-                Mail::to($student->email)->send(new \App\Mail\DefenseScheduledStudent($defenseRequest));
+                Mail::to($student->email)->queue(new \App\Mail\DefenseScheduledStudent($defenseRequest));
                 $emailsSent[] = "Student: {$student->email}";
                 Log::info('Defense notification sent to student', [
                     'defense_request_id' => $defenseRequest->id,
@@ -639,7 +639,7 @@ class CoordinatorDefenseController extends Controller
         $adviser = $defenseRequest->adviserUser;
         try {
             if ($adviser && $adviser->email) {
-                Mail::to($adviser->email)->send(new \App\Mail\DefenseScheduledAdviser($defenseRequest));
+                Mail::to($adviser->email)->queue(new \App\Mail\DefenseScheduledAdviser($defenseRequest));
                 $emailsSent[] = "Adviser: {$adviser->email}";
                 Log::info('Defense notification sent to adviser', [
                     'defense_request_id' => $defenseRequest->id,
@@ -662,7 +662,7 @@ class CoordinatorDefenseController extends Controller
                 $email = $panel->email ?? null;
                 if ($email) {
                     $role = (isset($panel->pivot) && isset($panel->pivot->role)) ? $panel->pivot->role : 'Panel Member';
-                    Mail::to($email)->send(new \App\Mail\DefensePanelInvitation(
+                    Mail::to($email)->queue(new \App\Mail\DefensePanelInvitation(
                         $defenseRequest, 
                         $panel, 
                         $role

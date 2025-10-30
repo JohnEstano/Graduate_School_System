@@ -4,9 +4,13 @@ namespace App\Http\Controllers;
 
 use App\Models\ExamApplication;
 use App\Models\ExamApplicationSubject;
+use App\Models\User;
+use App\Mail\ComprehensiveExamResultsPosted;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Log;
 
 class CoordinatorExamScoreController extends Controller
 {
@@ -48,7 +52,7 @@ class CoordinatorExamScoreController extends Controller
             $rows = $q->get();
             return response()->json($rows);
         } catch (\Throwable $e) {
-            \Log::error('Failed to load exam subjects', [
+            Log::error('Failed to load exam subjects', [
                 'application_id' => $application ?? null,
                 'error' => $e->getMessage(),
             ]);
@@ -151,9 +155,12 @@ class CoordinatorExamScoreController extends Controller
                 }
             });
 
+            // Send email notification if all scores are posted
+            $this->sendResultsEmail($app);
+
             return response()->json(['ok' => true]);
         } catch (\Throwable $e) {
-            \Log::error('Failed to save exam scores', [
+            Log::error('Failed to save exam scores', [
                 'application_id' => $application ?? null,
                 'payload' => $request->all(),
                 'error' => $e->getMessage(),
@@ -163,6 +170,97 @@ class CoordinatorExamScoreController extends Controller
                 $payload['error'] = $e->getMessage();
             }
             return response()->json($payload, 500);
+        }
+    }
+
+    /**
+     * Send results email notification to student when all scores are posted.
+     */
+    protected function sendResultsEmail(ExamApplication $app)
+    {
+        try {
+            // Check if all scores are posted
+            $hasSubjectScore = Schema::hasColumn('exam_application_subject', 'score');
+            if (!$hasSubjectScore) {
+                return; // No score column, skip email
+            }
+
+            $subjectCol = Schema::hasColumn('exam_application_subject', 'subject_name')
+                ? 'subject_name'
+                : (Schema::hasColumn('exam_application_subject', 'subject') ? 'subject' : 'subject_name');
+
+            // Get all subjects with scores
+            $subjects = DB::table('exam_application_subject')
+                ->where('application_id', $app->application_id)
+                ->select('id', DB::raw("$subjectCol as subject_name"), 'score')
+                ->get();
+
+            // Only send email if all subjects have scores
+            $allScored = $subjects->every(fn($s) => $s->score !== null);
+            if (!$allScored) {
+                return; // Not all scores posted yet, skip email
+            }
+
+            // Check if average and result status exist
+            $hasAvg = Schema::hasColumn('exam_application', 'average_score');
+            $hasResult = Schema::hasColumn('exam_application', 'result_status');
+
+            if (!$hasAvg || !$hasResult) {
+                return; // Required fields not available
+            }
+
+            // Refresh application to get updated average and result
+            $app->refresh();
+
+            if ($app->average_score === null || $app->result_status === null) {
+                return; // Results not calculated yet
+            }
+
+            // Find student
+            $student = User::where('school_id', $app->student_id)
+                ->orWhere('student_number', $app->student_id)
+                ->orWhere('id', $app->student_id)
+                ->first();
+
+            if (!$student || !$student->email) {
+                Log::warning('Student not found or has no email for exam results notification', [
+                    'application_id' => $app->application_id,
+                    'student_id' => $app->student_id
+                ]);
+                return;
+            }
+
+            // Prepare subjects array for email
+            $subjectsForEmail = $subjects->map(fn($s) => [
+                'subject_name' => $s->subject_name,
+                'score' => $s->score,
+            ])->toArray();
+
+            // Send email
+            Mail::to($student->email)->queue(
+                new ComprehensiveExamResultsPosted(
+                    $app,
+                    $student,
+                    $app->average_score,
+                    $app->result_status,
+                    $subjectsForEmail
+                )
+            );
+
+            Log::info('Comprehensive exam results email sent', [
+                'application_id' => $app->application_id,
+                'student_email' => $student->email,
+                'average_score' => $app->average_score,
+                'result_status' => $app->result_status
+            ]);
+
+        } catch (\Throwable $e) {
+            Log::error('Failed to send comprehensive exam results email', [
+                'application_id' => $app->application_id ?? null,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            // Don't fail the score saving if email fails
         }
     }
 }

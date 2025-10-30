@@ -180,7 +180,7 @@ class AdviserStudentController extends Controller
         // Send email if send_email checkbox is checked
         $sendEmail = $request->input('send_email', false);
         if ($sendEmail) {
-            Mail::to($student->email)->send(new StudentAcceptedByAdviser($student, $adviser));
+            Mail::to($student->email)->queue(new StudentAcceptedByAdviser($student, $adviser));
         }
 
         return response()->json(['success' => true]);
@@ -238,7 +238,7 @@ class AdviserStudentController extends Controller
                         $coordinator = User::find($coordinatorId);
                         if ($coordinator) {
                             Mail::to($student->email)
-                                ->send(new \App\Mail\StudentRejectedByAdviser($student, $adviser, $coordinator));
+                                ->queue(new \App\Mail\StudentRejectedByAdviser($student, $adviser, $coordinator));
                             
                             Log::info('Student Rejection: Email sent to student', [
                                 'student_id' => $student->id,
