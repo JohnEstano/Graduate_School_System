@@ -25,6 +25,8 @@ type PageProps = {
     };
     examSettings?: {
         exam_window_open: boolean;
+        payment_window_open: boolean;
+        eligibility_bypass_enabled: boolean;
     };
     flash?: {
         success?: string;
@@ -51,12 +53,14 @@ export default function SuperAdminDashboard() {
     const {
         auth: { user },
         stats = { total_users: 0, total_programs: 0, pending_requests: 0 },
-        examSettings = { exam_window_open: true },
+        examSettings = { exam_window_open: true, payment_window_open: true, eligibility_bypass_enabled: false },
         flash
     } = usePage<PageProps>().props;
 
     const [selectedTab, setSelectedTab] = useState('overview');
     const [examWindowOpen, setExamWindowOpen] = useState(examSettings.exam_window_open);
+    const [paymentWindowOpen, setPaymentWindowOpen] = useState(examSettings.payment_window_open);
+    const [eligibilityBypassEnabled, setEligibilityBypassEnabled] = useState(examSettings.eligibility_bypass_enabled);
     const [isUpdating, setIsUpdating] = useState(false);
 
     const greeting = isDaytime() ? 'Good morning' : 'Good evening';
@@ -74,7 +78,9 @@ export default function SuperAdminDashboard() {
     // Update local state when props change
     useEffect(() => {
         setExamWindowOpen(examSettings.exam_window_open);
-    }, [examSettings.exam_window_open]);
+        setPaymentWindowOpen(examSettings.payment_window_open);
+        setEligibilityBypassEnabled(examSettings.eligibility_bypass_enabled);
+    }, [examSettings.exam_window_open, examSettings.payment_window_open, examSettings.eligibility_bypass_enabled]);
 
     const handleExamWindowToggle = async (checked: boolean) => {
         setIsUpdating(true);
@@ -93,6 +99,52 @@ export default function SuperAdminDashboard() {
                     });
                     // Revert on error
                     setExamWindowOpen(!checked);
+                    setIsUpdating(false);
+                }
+            }
+        );
+    };
+
+    const handlePaymentWindowToggle = async (checked: boolean) => {
+        setIsUpdating(true);
+        setPaymentWindowOpen(checked); // Optimistic update
+        
+        router.post('/api/superadmin/settings/payment-window', 
+            { value: checked },
+            {
+                preserveScroll: true,
+                onSuccess: () => {
+                    setIsUpdating(false);
+                },
+                onError: (errors: any) => {
+                    toast.error('Failed to update payment window setting', {
+                        description: errors?.message || 'Please try again later'
+                    });
+                    // Revert on error
+                    setPaymentWindowOpen(!checked);
+                    setIsUpdating(false);
+                }
+            }
+        );
+    };
+
+    const handleEligibilityBypassToggle = async (checked: boolean) => {
+        setIsUpdating(true);
+        setEligibilityBypassEnabled(checked); // Optimistic update
+        
+        router.post('/api/superadmin/settings/eligibility-bypass', 
+            { value: checked },
+            {
+                preserveScroll: true,
+                onSuccess: () => {
+                    setIsUpdating(false);
+                },
+                onError: (errors: any) => {
+                    toast.error('Failed to update eligibility bypass setting', {
+                        description: errors?.message || 'Please try again later'
+                    });
+                    // Revert on error
+                    setEligibilityBypassEnabled(!checked);
                     setIsUpdating(false);
                 }
             }
@@ -317,6 +369,205 @@ export default function SuperAdminDashboard() {
                                         </p>
                                         <p>
                                             When the exam window is <strong>closed</strong>, the submission form will be disabled for all students regardless of eligibility.
+                                        </p>
+                                    </AlertDescription>
+                                </Alert>
+                            </CardContent>
+                        </Card>
+
+                        {/* Payment Window Card */}
+                        <Card>
+                            <CardHeader>
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-10 h-10 rounded-full bg-rose-100 dark:bg-rose-900 flex items-center justify-center">
+                                            <GraduationCap className="w-5 h-5 text-rose-600 dark:text-rose-400" />
+                                        </div>
+                                        <div>
+                                            <CardTitle>Payment Submission Window</CardTitle>
+                                            <CardDescription className="mt-1">
+                                                Control student access to comprehensive exam payment submissions
+                                            </CardDescription>
+                                        </div>
+                                    </div>
+                                </div>
+                            </CardHeader>
+                            <CardContent className="space-y-6">
+                                {/* Payment Window Toggle */}
+                                <div className="flex items-center justify-between p-4 rounded-lg border bg-card">
+                                    <div className="space-y-1 flex-1">
+                                        <Label htmlFor="payment-window" className="text-base font-semibold">
+                                            Payment Window Status
+                                        </Label>
+                                        <p className="text-sm text-muted-foreground">
+                                            {paymentWindowOpen 
+                                                ? 'Students can currently submit comprehensive exam payment receipts' 
+                                                : 'Payment submissions are currently closed'}
+                                        </p>
+                                    </div>
+                                    <div className="flex items-center gap-3">
+                                        {isUpdating && (
+                                            <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
+                                        )}
+                                        <Switch
+                                            id="payment-window"
+                                            checked={paymentWindowOpen}
+                                            onCheckedChange={handlePaymentWindowToggle}
+                                            disabled={isUpdating}
+                                            className="data-[state=checked]:bg-green-500"
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* Status Indicator */}
+                                <div className={`flex items-center gap-3 p-4 rounded-lg border-2 ${
+                                    paymentWindowOpen 
+                                        ? 'bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-800' 
+                                        : 'bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-800'
+                                }`}>
+                                    {paymentWindowOpen ? (
+                                        <>
+                                            <div className="w-10 h-10 rounded-full bg-green-100 dark:bg-green-900 flex items-center justify-center flex-shrink-0">
+                                                <CheckCircle2 className="w-5 h-5 text-green-600 dark:text-green-400" />
+                                            </div>
+                                            <div className="flex-1">
+                                                <h3 className="font-semibold text-green-900 dark:text-green-100">
+                                                    Payment Window is Open
+                                                </h3>
+                                                <p className="text-sm text-green-700 dark:text-green-300 mt-0.5">
+                                                    Students can submit payment receipts for approved applications
+                                                </p>
+                                            </div>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <div className="w-10 h-10 rounded-full bg-red-100 dark:bg-red-900 flex items-center justify-center flex-shrink-0">
+                                                <XCircle className="w-5 h-5 text-red-600 dark:text-red-400" />
+                                            </div>
+                                            <div className="flex-1">
+                                                <h3 className="font-semibold text-red-900 dark:text-red-100">
+                                                    Payment Window is Closed
+                                                </h3>
+                                                <p className="text-sm text-red-700 dark:text-red-300 mt-0.5">
+                                                    Students cannot submit payment receipts at this time
+                                                </p>
+                                            </div>
+                                        </>
+                                    )}
+                                </div>
+
+                                {/* Information Alert */}
+                                <Alert>
+                                    <Settings className="h-4 w-4" />
+                                    <AlertTitle>About Payment Window</AlertTitle>
+                                    <AlertDescription className="text-sm space-y-2">
+                                        <p>
+                                            When the payment window is <strong>open</strong>, students with approved comprehensive exam applications can submit their payment receipts for verification.
+                                        </p>
+                                        <p>
+                                            When the payment window is <strong>closed</strong>, the payment submission form will be disabled for all students regardless of their application status.
+                                        </p>
+                                    </AlertDescription>
+                                </Alert>
+                            </CardContent>
+                        </Card>
+
+                        {/* Eligibility Bypass Card */}
+                        <Card className="border-2 border-yellow-200 dark:border-yellow-800">
+                            <CardHeader>
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-10 h-10 rounded-full bg-yellow-100 dark:bg-yellow-900 flex items-center justify-center">
+                                            <Shield className="w-5 h-5 text-yellow-600 dark:text-yellow-400" />
+                                        </div>
+                                        <div>
+                                            <CardTitle>Eligibility Bypass (Testing Mode)</CardTitle>
+                                            <CardDescription className="mt-1">
+                                                Override eligibility requirements for comprehensive exam applications
+                                            </CardDescription>
+                                        </div>
+                                    </div>
+                                </div>
+                            </CardHeader>
+                            <CardContent className="space-y-6">
+                                {/* Eligibility Bypass Toggle */}
+                                <div className="flex items-center justify-between p-4 rounded-lg border-2 border-yellow-200 dark:border-yellow-800 bg-yellow-50 dark:bg-yellow-950/20">
+                                    <div className="space-y-1 flex-1">
+                                        <Label htmlFor="eligibility-bypass" className="text-base font-semibold text-yellow-900 dark:text-yellow-100">
+                                            Bypass Eligibility Checks
+                                        </Label>
+                                        <p className="text-sm text-yellow-800 dark:text-yellow-300">
+                                            {eligibilityBypassEnabled 
+                                                ? '⚠️ All students can submit applications regardless of grades/balance' 
+                                                : 'Students must meet all eligibility requirements'}
+                                        </p>
+                                    </div>
+                                    <div className="flex items-center gap-3">
+                                        {isUpdating && (
+                                            <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
+                                        )}
+                                        <Switch
+                                            id="eligibility-bypass"
+                                            checked={eligibilityBypassEnabled}
+                                            onCheckedChange={handleEligibilityBypassToggle}
+                                            disabled={isUpdating}
+                                            className="data-[state=checked]:bg-yellow-500"
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* Status Indicator */}
+                                <div className={`flex items-center gap-3 p-4 rounded-lg border-2 ${
+                                    eligibilityBypassEnabled 
+                                        ? 'bg-yellow-50 dark:bg-yellow-950/20 border-yellow-200 dark:border-yellow-800' 
+                                        : 'bg-gray-50 dark:bg-gray-950/20 border-gray-200 dark:border-gray-800'
+                                }`}>
+                                    {eligibilityBypassEnabled ? (
+                                        <>
+                                            <div className="w-10 h-10 rounded-full bg-yellow-100 dark:bg-yellow-900 flex items-center justify-center flex-shrink-0">
+                                                <Shield className="w-5 h-5 text-yellow-600 dark:text-yellow-400" />
+                                            </div>
+                                            <div className="flex-1">
+                                                <h3 className="font-semibold text-yellow-900 dark:text-yellow-100">
+                                                    ⚠️ Eligibility Bypass is ENABLED
+                                                </h3>
+                                                <p className="text-sm text-yellow-700 dark:text-yellow-300 mt-0.5">
+                                                    All students can submit applications without eligibility checks
+                                                </p>
+                                            </div>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <div className="w-10 h-10 rounded-full bg-gray-100 dark:bg-gray-900 flex items-center justify-center flex-shrink-0">
+                                                <CheckCircle2 className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+                                            </div>
+                                            <div className="flex-1">
+                                                <h3 className="font-semibold text-gray-900 dark:text-gray-100">
+                                                    Eligibility Bypass is Disabled
+                                                </h3>
+                                                <p className="text-sm text-gray-700 dark:text-gray-300 mt-0.5">
+                                                    Normal eligibility requirements are enforced
+                                                </p>
+                                            </div>
+                                        </>
+                                    )}
+                                </div>
+
+                                {/* Warning Alert */}
+                                <Alert className="border-yellow-200 dark:border-yellow-800 bg-yellow-50 dark:bg-yellow-950/20">
+                                    <Shield className="h-4 w-4 text-yellow-600" />
+                                    <AlertTitle className="text-yellow-900 dark:text-yellow-100">⚠️ Testing/Development Feature</AlertTitle>
+                                    <AlertDescription className="text-sm space-y-2 text-yellow-800 dark:text-yellow-300">
+                                        <p>
+                                            When <strong>enabled</strong>, this bypass allows ALL students to submit comprehensive exam applications even if they:
+                                        </p>
+                                        <ul className="list-disc list-inside space-y-1 ml-2">
+                                            <li>Have incomplete grades</li>
+                                            <li>Have outstanding tuition balance</li>
+                                            <li>Don't meet registrar requirements</li>
+                                        </ul>
+                                        <p className="font-semibold mt-2">
+                                            ⚠️ This should only be used for testing purposes and disabled in production!
                                         </p>
                                     </AlertDescription>
                                 </Alert>

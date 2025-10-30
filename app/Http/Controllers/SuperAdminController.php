@@ -30,6 +30,46 @@ class SuperAdminController extends Controller
     }
 
     /**
+     * Update payment window setting
+     */
+    public function updatePaymentWindow(Request $request)
+    {
+        // Verify user is Super Admin (with space)
+        if (!Auth::check() || Auth::user()->role !== 'Super Admin') {
+            abort(403, 'Unauthorized access');
+        }
+
+        $validated = $request->validate([
+            'value' => 'required|boolean'
+        ]);
+
+        SystemSetting::set('payment_window_open', $validated['value'], 'boolean', 'Controls whether students can submit comprehensive exam payment receipts');
+
+        // Return a redirect back with flash message for Inertia
+        return redirect()->back()->with('success', $validated['value'] ? 'Payment window opened successfully' : 'Payment window closed successfully');
+    }
+
+    /**
+     * Update eligibility bypass setting
+     */
+    public function updateEligibilityBypass(Request $request)
+    {
+        // Verify user is Super Admin (with space)
+        if (!Auth::check() || Auth::user()->role !== 'Super Admin') {
+            abort(403, 'Unauthorized access');
+        }
+
+        $validated = $request->validate([
+            'value' => 'required|boolean'
+        ]);
+
+        SystemSetting::set('eligibility_bypass_enabled', $validated['value'], 'boolean', 'Bypasses eligibility checks for comprehensive exam applications');
+
+        // Return a redirect back with flash message for Inertia
+        return redirect()->back()->with('success', $validated['value'] ? 'Eligibility bypass enabled successfully' : 'Eligibility bypass disabled successfully');
+    }
+
+    /**
      * Get SuperAdmin dashboard data
      */
     public function dashboard()
@@ -43,7 +83,9 @@ class SuperAdminController extends Controller
 
         // Get exam settings
         $examSettings = [
-            'exam_window_open' => SystemSetting::get('exam_window_open', true)
+            'exam_window_open' => SystemSetting::get('exam_window_open', true),
+            'payment_window_open' => SystemSetting::get('payment_window_open', true),
+            'eligibility_bypass_enabled' => SystemSetting::get('eligibility_bypass_enabled', false)
         ];
 
         return inertia('dashboard/Index', [

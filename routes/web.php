@@ -504,6 +504,10 @@ Route::get('/honorarium/individual-record/{programId}', [HonorariumSummaryContro
     Route::middleware('role:Super Admin')->group(function () {
         Route::post('/api/superadmin/settings/exam-window', [\App\Http\Controllers\SuperAdminController::class, 'updateExamWindow'])
             ->name('api.superadmin.settings.exam-window');
+        Route::post('/api/superadmin/settings/payment-window', [\App\Http\Controllers\SuperAdminController::class, 'updatePaymentWindow'])
+            ->name('api.superadmin.settings.payment-window');
+        Route::post('/api/superadmin/settings/eligibility-bypass', [\App\Http\Controllers\SuperAdminController::class, 'updateEligibilityBypass'])
+            ->name('api.superadmin.settings.eligibility-bypass');
     });
 
     /* Workflow actions */

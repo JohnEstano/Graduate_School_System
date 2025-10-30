@@ -58,15 +58,6 @@ type Eligibility = {
   error?: string | null;
 };
 
-// --- Dev simulation (disable in prod) ---
-const DEV_SIMULATE = true; // Use real UIC API data
-const SIM_ELIG = {
-  examOpen: true,
-  gradesComplete: true,
-  noOutstandingBalance: true
-};
-// ----------------------------------------
-
 export default function ComprehensiveExamIndex() {
   const { props } = usePage<PageProps>();
   const { application } = props;
@@ -94,23 +85,6 @@ export default function ComprehensiveExamIndex() {
     setElig((e) => ({ ...e, loading: true, error: null }));
 
     try {
-      // --- Simulation short-circuit
-      if (DEV_SIMULATE) {
-        const q = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
-        const getBool = (k: string, fallback: boolean) => (q?.has(k) ? q.get(k) === '1' : fallback);
-
-        const simulated: Eligibility = {
-          examOpen: getBool('open', SIM_ELIG.examOpen),
-          gradesComplete: getBool('grades', SIM_ELIG.gradesComplete),
-          noOutstandingBalance: getBool('bal', SIM_ELIG.noOutstandingBalance),
-          loading: false,
-          error: null,
-        };
-        setElig(simulated);
-        setRetryCount(0);
-        return;
-      }
-
       const headers: HeadersInit = {
         Accept: 'application/json',
         'X-Requested-With': 'XMLHttpRequest',

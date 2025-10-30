@@ -70,6 +70,33 @@ class ComprehensiveExamEligibilityController extends Controller
 
         Log::info('Eligibility check started', ['user_id' => $user->id, 'user_email' => $user->email]);
 
+        // CHECK ELIGIBILITY BYPASS SETTING - Super Admin can enable bypass
+        $eligibilityBypassEnabled = SystemSetting::get('eligibility_bypass_enabled', false);
+        
+        if ($eligibilityBypassEnabled) {
+            Log::info('Eligibility bypass is ENABLED - returning eligible=true for all students', [
+                'user_id' => $user->id
+            ]);
+            
+            return response()->json([
+                'eligible' => true,
+                'bypassed' => true,
+                'requirements' => [
+                    [
+                        'name' => 'Complete grades (registrar verified)',
+                        'completed' => true,
+                        'description' => 'BYPASSED by Super Admin'
+                    ],
+                    [
+                        'name' => 'No outstanding tuition balance',
+                        'completed' => true,
+                        'description' => 'BYPASSED by Super Admin'
+                    ]
+                ],
+                'message' => 'Eligibility requirements bypassed by system administrator'
+            ]);
+        }
+
         try {
             // Get UIC API bearer token
             $bearerToken = Cache::get('uic_bearer_token_' . $user->id);
