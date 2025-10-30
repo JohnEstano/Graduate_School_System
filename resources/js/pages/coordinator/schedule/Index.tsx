@@ -292,7 +292,7 @@ const DraggableEventCard = ({
     if (event.raw.committee) {
       committee.push(...event.raw.committee);
     }
-
+//HELLO
     // If no committee members, show a placeholder instead of returning null
     if (committee.length === 0) {
       return (
