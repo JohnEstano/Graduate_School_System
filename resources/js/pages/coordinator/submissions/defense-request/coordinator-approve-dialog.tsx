@@ -95,9 +95,9 @@ export default function CoordinatorApproveDialog({
   useEffect(() => {
     if (open) {
       loadSignatures();
-      // Auto-generate the endorsement form with coordinator signature
+      // Save panels and schedule FIRST, then generate the PDF preview
       if (!endorsementPdfUrl && !isGenerating) {
-        handleGenerateDocument();
+        saveDataAndGeneratePreview();
       }
     } else {
       // Reset state when dialog closes
@@ -124,6 +124,64 @@ export default function CoordinatorApproveDialog({
       console.error('Failed to load signatures:', err);
     } finally {
       setLoadingSignatures(false);
+    }
+  }
+
+  async function saveDataAndGeneratePreview() {
+    if (!defenseRequest?.id) {
+      toast.error('Invalid defense request');
+      return;
+    }
+
+    setIsGenerating(true);
+    
+    try {
+      console.log('💾 Saving panels and schedule before generating preview...');
+      console.log('📦 Panels to save:', panelsData);
+      console.log('📅 Schedule to save:', scheduleData);
+      
+      // STEP 1: Save panels if provided
+      if (panelsData) {
+        console.log('💾 Saving panel assignments...');
+        const panelsRes = await postWithCsrf(`/coordinator/defense-requests/${defenseRequest.id}/panels`, panelsData);
+        
+        if (!panelsRes.ok) {
+          const errorText = await panelsRes.text();
+          console.error('❌ Failed to save panels:', errorText);
+          toast.error('Failed to save panel assignments');
+          setIsGenerating(false);
+          return;
+        }
+        console.log('✅ Panels saved successfully');
+      }
+      
+      // STEP 2: Save schedule if provided
+      if (scheduleData) {
+        console.log('💾 Saving schedule information...');
+        const scheduleRes = await postWithCsrf(`/coordinator/defense-requests/${defenseRequest.id}/schedule`, scheduleData);
+        
+        if (!scheduleRes.ok) {
+          const errorText = await scheduleRes.text();
+          console.error('❌ Failed to save schedule:', errorText);
+          toast.error('Failed to save schedule information');
+          setIsGenerating(false);
+          return;
+        }
+        console.log('✅ Schedule saved successfully');
+      }
+      
+      // STEP 3: Wait for database commit
+      console.log('⏳ Waiting for database commit...');
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // STEP 4: Now generate the PDF with the updated data
+      console.log('🔄 Generating PDF preview with assigned panels and schedule...');
+      await handleGenerateDocument();
+      
+    } catch (err) {
+      console.error('💥 Error saving data:', err);
+      toast.error('Failed to save panel/schedule data');
+      setIsGenerating(false);
     }
   }
 
@@ -303,6 +361,8 @@ export default function CoordinatorApproveDialog({
   }
 
   function handleApproveClick() {
+    console.log('🔘 Approve button clicked - showing email dialog');
+    
     // Validate first
     if (!endorsementPdfUrl && !uploadedFile) {
       toast.error('Please generate or upload an endorsement form first');
@@ -315,6 +375,7 @@ export default function CoordinatorApproveDialog({
     }
 
     // Show email confirmation dialog
+    console.log('✅ Validation passed - opening email confirmation dialog');
     setShowEmailDialog(true);
   }
 
@@ -334,37 +395,14 @@ export default function CoordinatorApproveDialog({
     
     try {
       console.log('🚀 Starting coordinator approval process...');
+      console.log('📦 Defense Request ID:', defenseRequest.id);
+      console.log('� Using existing PDF (panels/schedule already saved during preview generation)');
       
-      // STEP 1: Save panels and schedule first
-      if (panelsData) {
-        console.log('💾 Saving panel assignments...', panelsData);
-        const panelsRes = await postWithCsrf(`/coordinator/defense-requests/${defenseRequest.id}/panels`, panelsData);
-
-        if (!panelsRes.ok) {
-          const errorText = await panelsRes.text();
-          console.error('❌ Failed to save panels:', errorText);
-          toast.error('Failed to save panel assignments');
-          setIsApproving(false);
-          return;
-        }
-        console.log('✅ Panels saved successfully');
-      }
-
-      if (scheduleData) {
-        console.log('💾 Saving schedule information...', scheduleData);
-        const scheduleRes = await postWithCsrf(`/coordinator/defense-requests/${defenseRequest.id}/schedule`, scheduleData);
-
-        if (!scheduleRes.ok) {
-          const errorText = await scheduleRes.text();
-          console.error('❌ Failed to save schedule:', errorText);
-          toast.error('Failed to save schedule information');
-          setIsApproving(false);
-          return;
-        }
-        console.log('✅ Schedule saved successfully');
-      }
-
-      // STEP 2: Upload the generated PDF with coordinator signature (like adviser workflow)
+      // Panels and schedule were already saved when the dialog opened (in saveDataAndGeneratePreview)
+      // The PDF preview already shows the correct data
+      // So we just need to upload the PDF and update the status
+      
+      // STEP 1: Upload the generated PDF with coordinator signature
       console.log('📤 Uploading coordinator-signed endorsement form...');
       
       let endorsementFormSaved = false;
@@ -436,7 +474,7 @@ export default function CoordinatorApproveDialog({
 
       console.log('✅ Endorsement form saved successfully, updating coordinator status...');
 
-      // STEP 3: Update coordinator status to approved
+      // STEP 2: Update coordinator status to approved
       const payload: any = {
         coordinator_status: 'Approved'
       };

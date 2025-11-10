@@ -309,59 +309,60 @@
             </tr>
         </table>
 
-        <!-- Defense Schedule Section -->
+        <!-- Defense Schedule and Panel Information - Below the requirements table -->
         <div style="width: 100%; margin: 12px auto 0; text-align: right; font-size: 10pt;">
             <div style="display: inline-block; text-align: right;">
                 <span style="margin-right: 8px;">Date/Time of Defense:</span>
-                <span style="border-bottom: 1px solid #000; display: inline-block; width: 200px; padding: 2px 4px; text-align: right;">
-                    <span style="font-weight: bold;">
-                        @if($scheduled_date && $defense_time)
-                            {{ $scheduled_date }} at {{ $defense_time }}
-                        @endif
-                    </span>
+                <span style="border-bottom: 1px solid #000; display: inline-block; min-width: 200px; padding: 2px 4px; text-align: left;">
+                    @if($scheduled_date && $defense_time)
+                        {{ $scheduled_date }} at {{ $defense_time }}
+                    @endif
                 </span>
             </div>
         </div>
 
-        <!-- Panel Information Section -->
         <div style="width: 100%; margin: 8px auto 0; text-align: right; font-size: 10pt;">
             @if($panel_chair)
             <div style="margin-bottom: 4px; text-align: right;">
                 <span style="margin-right: 8px;">Panel Chair:</span>
-                <span style="border-bottom: 1px solid #000; display: inline-block; width: 200px; padding: 2px 4px; text-align: right;">
-                    <span style="font-weight: bold;">{{ $panel_chair }}</span>
+                <span style="border-bottom: 1px solid #000; display: inline-block; min-width: 200px; padding: 2px 4px; text-align: left;">
+                    {{ $panel_chair }}
                 </span>
             </div>
             @endif
+            
             @if($panel_member_1)
             <div style="margin-bottom: 4px; text-align: right;">
                 <span style="margin-right: 8px;">Panel Member:</span>
-                <span style="border-bottom: 1px solid #000; display: inline-block; width: 200px; padding: 2px 4px; text-align: right;">
-                    <span style="font-weight: bold;">{{ $panel_member_1 }}</span>
+                <span style="border-bottom: 1px solid #000; display: inline-block; min-width: 200px; padding: 2px 4px; text-align: left;">
+                    {{ $panel_member_1 }}
                 </span>
             </div>
             @endif
+            
             @if($panel_member_2)
             <div style="margin-bottom: 4px; text-align: right;">
                 <span style="margin-right: 8px;">Panel Member:</span>
-                <span style="border-bottom: 1px solid #000; display: inline-block; width: 200px; padding: 2px 4px; text-align: right;">
-                    <span style="font-weight: bold;">{{ $panel_member_2 }}</span>
+                <span style="border-bottom: 1px solid #000; display: inline-block; min-width: 200px; padding: 2px 4px; text-align: left;">
+                    {{ $panel_member_2 }}
                 </span>
             </div>
             @endif
+            
             @if($panel_member_3 ?? false)
             <div style="margin-bottom: 4px; text-align: right;">
                 <span style="margin-right: 8px;">Panel Member:</span>
-                <span style="border-bottom: 1px solid #000; display: inline-block; width: 200px; padding: 2px 4px; text-align: right;">
-                    <span style="font-weight: bold;">{{ $panel_member_3 }}</span>
+                <span style="border-bottom: 1px solid #000; display: inline-block; min-width: 200px; padding: 2px 4px; text-align: left;">
+                    {{ $panel_member_3 }}
                 </span>
             </div>
             @endif
+            
             @if($panel_member_4 ?? false)
             <div style="margin-bottom: 4px; text-align: right;">
                 <span style="margin-right: 8px;">Panel Member:</span>
-                <span style="border-bottom: 1px solid #000; display: inline-block; width: 200px; padding: 2px 4px; text-align: right;">
-                    <span style="font-weight: bold;">{{ $panel_member_4 }}</span>
+                <span style="border-bottom: 1px solid #000; display: inline-block; min-width: 200px; padding: 2px 4px; text-align: left;">
+                    {{ $panel_member_4 }}
                 </span>
             </div>
             @endif

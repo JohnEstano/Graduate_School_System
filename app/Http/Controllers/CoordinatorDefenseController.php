@@ -866,7 +866,26 @@ class CoordinatorDefenseController extends Controller
             'defense_panelist4' => 'nullable|string|max:255',
         ]);
 
+        \Log::info('🔵 assignPanelsJson called', [
+            'defense_request_id' => $defenseRequest->id,
+            'incoming_data' => $data,
+            'before_update' => [
+                'defense_chairperson' => $defenseRequest->defense_chairperson,
+                'defense_panelist1' => $defenseRequest->defense_panelist1,
+                'defense_panelist2' => $defenseRequest->defense_panelist2,
+            ]
+        ]);
+
         $defenseRequest->update($data);
+
+        \Log::info('✅ Panels saved', [
+            'defense_request_id' => $defenseRequest->id,
+            'after_update' => [
+                'defense_chairperson' => $defenseRequest->defense_chairperson,
+                'defense_panelist1' => $defenseRequest->defense_panelist1,
+                'defense_panelist2' => $defenseRequest->defense_panelist2,
+            ]
+        ]);
 
         return response()->json(['ok' => true, 'request' => $defenseRequest]);
     }
@@ -901,6 +920,15 @@ class CoordinatorDefenseController extends Controller
 
         try {
             DB::beginTransaction();
+
+            \Log::info('🔵 scheduleDefenseJson called', [
+                'defense_request_id' => $defenseRequest->id,
+                'incoming_data' => $data,
+                'before_update' => [
+                    'scheduled_date' => $defenseRequest->scheduled_date,
+                    'scheduled_time' => $defenseRequest->scheduled_time,
+                ]
+            ]);
 
             $origState = $defenseRequest->workflow_state;
             
@@ -948,6 +976,14 @@ class CoordinatorDefenseController extends Controller
             $defenseRequest->last_status_updated_at = now();
             $defenseRequest->last_status_updated_by = Auth::id();
             $defenseRequest->save();
+
+            \Log::info('✅ Schedule saved', [
+                'defense_request_id' => $defenseRequest->id,
+                'after_save' => [
+                    'scheduled_date' => $defenseRequest->scheduled_date,
+                    'scheduled_time' => $defenseRequest->scheduled_time,
+                ]
+            ]);
 
             DB::commit();
             

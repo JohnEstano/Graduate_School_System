@@ -300,21 +300,14 @@ export default function Details({ defenseRequest: initialDefenseRequest }: Props
     }
   }
 
-  // Attachments
+  // Attachments - Only show Proof of Payment for assistant role
   function resolveFileUrl(url?: string | null) {
     if (!url) return null;
     if (/^https?:\/\//i.test(url) || url.startsWith('/storage/')) return url;
     return `/storage/${url.replace(/^\/?storage\//, '')}`;
   }
   const attachments = [
-    { label: "Adviser's Endorsement", url: resolveFileUrl(details?.attachments?.advisers_endorsement) },
-    { label: 'REC Endorsement', url: resolveFileUrl(details?.attachments?.rec_endorsement) },
     { label: 'Proof of Payment', url: resolveFileUrl(details?.attachments?.proof_of_payment) },
-    { label: 'Manuscript', url: resolveFileUrl(details?.attachments?.manuscript_proposal) },
-    { label: 'Similarity Form', url: resolveFileUrl(details?.attachments?.similarity_index) },
-    { label: 'Advisee-Adviser File', url: resolveFileUrl(details?.attachments?.avisee_adviser_attachment) },
-    { label: 'AI Declaration Form', url: resolveFileUrl(details?.attachments?.ai_detection_certificate) },
-    { label: 'Endorsement Form', url: resolveFileUrl(details?.attachments?.endorsement_form) },
   ];
 
   const sectionClass = 'rounded-lg border p-5 space-y-3';

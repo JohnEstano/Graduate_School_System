@@ -448,26 +448,22 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
     userRole
   );
 
-  // Options for assignment comboboxes: exclude adviser-type entries
+  // Options for assignment comboboxes: only exclude the actual thesis adviser
   const panelOptionsForAssignment = useMemo(() => {
     const adviserName = (request.defense_adviser || '').toLowerCase().trim();
-    const adviserEmail = (request.coordinator?.email || '').toLowerCase().trim();
 
     return panelMembers.filter(pm => {
-      const t = (pm.type || '').toLowerCase();
       const name = (pm.name || '').toLowerCase();
-      const email = (pm.email || '').toLowerCase();
 
-      // exclude adviser/advisor types (covers both spellings) - case-insensitive
-      if (t.includes('advis')) return false;
+      // ONLY exclude if this panel member's name matches the actual thesis/dissertation adviser
+      if (adviserName && name && (name === adviserName || name.includes(adviserName) || adviserName.includes(name))) {
+        return false;
+      }
 
-      // Exclude if this panel member appears to be the request's adviser by name or email
-      if (adviserName && name && (name === adviserName || name.includes(adviserName) || adviserName.includes(name))) return false;
-      if (adviserEmail && email && email === adviserEmail) return false;
-
+      // Include everyone else from the panelists table
       return true;
     });
-  }, [panelMembers]);
+  }, [panelMembers, request.defense_adviser]);
 
   // Helper to always get a fresh CSRF token
   async function getFreshCsrfToken(): Promise<string> {
@@ -544,6 +540,10 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
   async function savePanels() {
     const toastId = toast.loading('Saving panel assignments...');
     setSavingPanels(true);
+    
+    console.log('🔵 savePanels - Request ID:', request.id);
+    console.log('🔵 savePanels - Panel data being sent:', JSON.stringify(panels, null, 2));
+    
     try {
       const res = await fetchWithCsrfRetry(
         `/coordinator/defense-requests/${request.id}/panels`,
@@ -556,6 +556,8 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
           body: JSON.stringify(panels)
         }
       );
+      
+      console.log('🔵 savePanels - Response status:', res.status);
 
       const contentType = res.headers.get('content-type') || '';
       let data: any = {};
@@ -571,6 +573,7 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
       }
 
       if (res.ok && data.ok) {
+        console.log('✅ savePanels - Response data:', JSON.stringify(data.request, null, 2));
         setRequest(r => ({ ...r, ...data.request }));
         toast.success('Panels saved', {
           id: toastId,
@@ -583,6 +586,7 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
           ].filter(Boolean).join(', ')
         });
       } else {
+        console.error('❌ savePanels - Error response:', data);
         toast.error(data.error || `Failed (${res.status})`, { id: toastId });
       }
     } catch {
@@ -617,6 +621,10 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
     }
     const toastId = toast.loading('Saving schedule...');
     setSavingSchedule(true);
+    
+    console.log('🔵 saveSchedule - Request ID:', request.id);
+    console.log('🔵 saveSchedule - Schedule data being sent:', JSON.stringify(schedule, null, 2));
+    
     try {
       const res = await fetchWithCsrfRetry(
         `/coordinator/defense-requests/${request.id}/schedule`,
@@ -629,6 +637,8 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
           body: JSON.stringify(schedule)
         }
       );
+      
+      console.log('🔵 saveSchedule - Response status:', res.status);
 
       const contentType = res.headers.get('content-type') || '';
       let data: any = {};
@@ -644,6 +654,7 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
       }
 
       if (res.ok && data.request) {
+        console.log('✅ saveSchedule - Response data:', JSON.stringify(data.request, null, 2));
         setRequest(r => ({ ...r, ...data.request }));
         toast.success('Schedule saved', {
           id: toastId,
@@ -654,6 +665,7 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
           }`
         });
       } else {
+        console.error('❌ saveSchedule - Error response:', data);
         toast.error(data.error || `Failed (${res.status})`, { id: toastId });
       }
     } catch (err: any) {
@@ -713,8 +725,14 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
     }
     
     console.log('✅ Validation passed. Opening approval dialog...');
-    console.log('📋 Panels data to be saved:', panels);
-    console.log('� Schedule data to be saved:', schedule);
+    console.log('📋 Panels data to be saved:', JSON.stringify(panels, null, 2));
+    console.log('📅 Schedule data to be saved:', JSON.stringify(schedule, null, 2));
+    console.log('🔍 Current request data from server:', {
+      defense_chairperson: request.defense_chairperson,
+      defense_panelist1: request.defense_panelist1,
+      scheduled_date: request.scheduled_date,
+      scheduled_time: request.scheduled_time
+    });
     
     // Open the approval dialog - panels and schedule will be saved on final approval
     setApproveDialogOpen(true);
@@ -1685,6 +1703,12 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
                                   ? format(date, "yyyy-MM-dd")
                                   : ""
                               }));
+                            }}
+                            disabled={(date) => {
+                              // Disable dates before today
+                              const today = new Date();
+                              today.setHours(0, 0, 0, 0);
+                              return date < today;
                             }}
                             initialFocus
                           />

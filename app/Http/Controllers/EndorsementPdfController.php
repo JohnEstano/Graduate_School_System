@@ -24,8 +24,24 @@ class EndorsementPdfController extends Controller
         $role = $validated['role'];
 
         try {
+            // Clear any model cache and fetch fresh from database
             $defenseRequest = DefenseRequest::with(['student', 'adviserUser', 'coordinator'])
                 ->findOrFail($defenseRequestId);
+            
+            // Force refresh from database to ensure we have latest data
+            $defenseRequest->refresh();
+            
+            // Log the actual data we're working with
+            Log::info('Generating PDF for defense request', [
+                'id' => $defenseRequest->id,
+                'scheduled_date' => $defenseRequest->scheduled_date,
+                'scheduled_time' => $defenseRequest->scheduled_time,
+                'defense_chairperson' => $defenseRequest->defense_chairperson,
+                'defense_panelist1' => $defenseRequest->defense_panelist1,
+                'defense_panelist2' => $defenseRequest->defense_panelist2,
+                'defense_panelist3' => $defenseRequest->defense_panelist3,
+                'defense_panelist4' => $defenseRequest->defense_panelist4,
+            ]);
 
             $pdf = $this->generateEndorsementPdf($defenseRequest, $role);
 
@@ -227,6 +243,21 @@ class EndorsementPdfController extends Controller
         $panel_member_2 = $defenseRequest->defense_panelist2 ?? null;
         $panel_member_3 = $defenseRequest->defense_panelist3 ?? null;
         $panel_member_4 = $defenseRequest->defense_panelist4 ?? null;
+
+        // Log schedule and panel data for debugging
+        Log::info('Endorsement PDF data prepared', [
+            'defense_request_id' => $defenseRequest->id,
+            'role' => $role,
+            'scheduled_date' => $scheduled_date,
+            'defense_time' => $defense_time,
+            'panel_chair' => $panel_chair,
+            'panel_members' => [
+                'member_1' => $panel_member_1,
+                'member_2' => $panel_member_2,
+                'member_3' => $panel_member_3,
+                'member_4' => $panel_member_4,
+            ]
+        ]);
 
         return compact(
             'student_name',

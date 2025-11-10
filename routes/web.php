@@ -825,7 +825,8 @@ Route::middleware(['auth'])->group(function () {
 
     Route::get('/api/exam-subject-offerings', [ExamSubjectOfferingController::class, 'index'])
         ->name('api.exam-subject-offerings.index');
-    
+
+
     // Coordinators API - for dean dashboard
     Route::get('/api/coordinators', function () {
         return User::where('role', 'Coordinator')
