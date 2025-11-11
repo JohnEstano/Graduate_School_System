@@ -102,8 +102,8 @@ const facultyNavItems: MainNavItem[] = [
 
 const deanNavItems: MainNavItem[] = [
     { title: 'Dashboard', href: '/dashboard', icon: LayoutGrid },
+    { title: 'Defense Requests', href: '/dean/defense-requests', icon: GraduationCap },
     { title: 'Comprehensive Exams', href: '/dean/compre-exam', icon: ScrollText },
-    
     { title: 'Schedules', href: '/schedules', icon: CalendarFold },
     { title: 'Student Records', href: '/student-records', icon: Users },
     { title: 'Payment Rates', href: '/dean/payment-rates', icon: CircleDollarSign },

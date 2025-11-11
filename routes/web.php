@@ -40,6 +40,7 @@ use Illuminate\Http\Request;
 use App\Models\ExamSubjectOffering;
 use App\Http\Controllers\RegistrarExamApplicationController;
 use App\Http\Controllers\DeanCompreExamController;
+use App\Http\Controllers\DeanDefenseController;
 use App\Http\Controllers\Api\ComprehensiveExamEligibilityController as ApiCompreEligController;
 
 
@@ -700,7 +701,7 @@ Route::get('/honorarium/individual-record/{programId}', [HonorariumSummaryContro
     });
 
     Route::middleware(['auth','verified','role:Dean'])->group(function () {
-        // Dean page
+        // Dean Comprehensive Exams
         Route::get('/dean/compre-exam', [DeanCompreExamController::class, 'page'])
             ->name('dean.compre-exam.index');
         // APIs
@@ -716,6 +717,20 @@ Route::get('/honorarium/individual-record/{programId}', [HonorariumSummaryContro
             ->name('dean.exam-applications.bulk-revert');
         Route::get('/api/dean/exam-applications/{application}/reviews', [DeanCompreExamController::class, 'reviews'])
             ->name('api.dean.exam-applications.reviews');
+
+        // Dean Defense Requests - Final Approval with Signature
+        Route::get('/dean/defense-requests', [DeanDefenseController::class, 'index'])
+            ->name('dean.defense-requests.index');
+        Route::get('/dean/defense-requests/{id}/details', [DeanDefenseController::class, 'details'])
+            ->name('dean.defense-requests.details');
+        Route::get('/dean/defense-requests/all-defense-requests', [DeanDefenseController::class, 'allDefenseRequests'])
+            ->name('dean.defense-requests.all');
+        Route::post('/dean/defense-requests/generate-preview', [DeanDefenseController::class, 'generatePreview'])
+            ->name('dean.defense-requests.generate-preview');
+        Route::post('/dean/defense-requests/generate-document', [DeanDefenseController::class, 'generateDocument'])
+            ->name('dean.defense-requests.generate-document');
+        Route::post('/dean/defense-requests/{defenseRequest}/approve', [DeanDefenseController::class, 'approve'])
+            ->name('dean.defense-requests.approve');
     });
 
     /* Honorarium / Reports */
@@ -819,6 +834,42 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/api/signatures', [UserSignatureController::class, 'index']);
     Route::post('/api/signatures', [UserSignatureController::class, 'store']);
     Route::patch('/api/signatures/{signature}/activate', [UserSignatureController::class, 'activate']);
+
+    // Coordinator: Check delegation status
+    Route::get('/api/coordinator/delegation-status', function () {
+        $user = Auth::user();
+        if ($user->role !== 'Coordinator') {
+            return response()->json(['can_sign_on_behalf' => false]);
+        }
+        
+        // Find dean (assuming there's one dean or specific to coordinator's program)
+        $dean = \DB::table('users')->where('role', 'Dean')->first();
+        if (!$dean) {
+            return response()->json(['can_sign_on_behalf' => false]);
+        }
+        
+        $setting = \DB::table('coordinator_delegation_settings')
+            ->where('dean_id', $dean->id)
+            ->where('coordinator_id', $user->id)
+            ->first();
+        
+        return response()->json([
+            'can_sign_on_behalf' => $setting ? (bool)$setting->can_sign_on_behalf : false,
+        ]);
+    });
+
+    // Coordinator: Get dean's signatures (not their own)
+    Route::get('/api/dean-signatures', function () {
+        // Find dean
+        $dean = \DB::table('users')->where('role', 'Dean')->first();
+        if (!$dean) {
+            return response()->json([]);
+        }
+        
+        // Get dean's signatures
+        $signatures = \App\Models\UserSignature::where('user_id', $dean->id)->get();
+        return response()->json($signatures);
+    });
 
     Route::get('/generated-documents/{doc}', [GeneratedDocumentController::class, 'show'])
         ->name('generated-documents.show');

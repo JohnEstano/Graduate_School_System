@@ -21,7 +21,8 @@ import {
   RefreshCw,
   FileText,
   Mail,
-  Users
+  Users,
+  ShieldCheck
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -51,7 +52,7 @@ interface CoordinatorApproveDialogProps {
   };
 }
 
-type ApprovalTab = 'preview' | 'signature' | 'upload';
+type ApprovalTab = 'preview' | 'upload';
 
 export default function CoordinatorApproveDialog({
   open,
@@ -69,13 +70,17 @@ export default function CoordinatorApproveDialog({
   const [isApproving, setIsApproving] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   
-  // Signature states
+  // Signature states - DEAN'S signatures (not coordinator's)
   const [signatures, setSignatures] = useState<any[]>([]);
   const [activeSignature, setActiveSignature] = useState<any | null>(null);
   const [loadingSignatures, setLoadingSignatures] = useState(false);
   const [showDrawSignature, setShowDrawSignature] = useState(false);
   const [isSavingSignature, setIsSavingSignature] = useState(false);
   const sigPad = useRef<SignatureCanvas>(null);
+  
+  // Delegation status
+  const [canSignOnBehalf, setCanSignOnBehalf] = useState(false);
+  const [checkingDelegation, setCheckingDelegation] = useState(true);
 
   // Upload states
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
@@ -91,14 +96,14 @@ export default function CoordinatorApproveDialog({
   const [showEmailDialog, setShowEmailDialog] = useState(false);
   const [sendEmail, setSendEmail] = useState(true); // Default to true - emails are important!
 
-  // Auto-generate document with coordinator signature when dialog opens (like adviser workflow)
+  // Check delegation status and load dean's signatures
   useEffect(() => {
     if (open) {
-      loadSignatures();
-      // Save panels and schedule FIRST, then generate the PDF preview
-      if (!endorsementPdfUrl && !isGenerating) {
-        saveDataAndGeneratePreview();
-      }
+      const initDialog = async () => {
+        await checkDelegationStatus();
+        await loadDeanSignatures();
+      };
+      initDialog();
     } else {
       // Reset state when dialog closes
       if (endorsementPdfUrl && endorsementPdfUrl.startsWith('blob:')) {
@@ -107,13 +112,38 @@ export default function CoordinatorApproveDialog({
       setEndorsementPdfUrl(null);
       setCurrentTab('preview');
       setUploadedFile(null);
+      setCheckingDelegation(true);
     }
   }, [open]);
 
-  async function loadSignatures() {
+  // Auto-generate document when dialog opens (regardless of delegation)
+  useEffect(() => {
+    if (open && !checkingDelegation && !endorsementPdfUrl && !isGenerating) {
+      saveDataAndGeneratePreview();
+    }
+  }, [open, checkingDelegation]);
+
+  async function checkDelegationStatus() {
+    setCheckingDelegation(true);
+    try {
+      const res = await fetch('/api/coordinator/delegation-status');
+      if (res.ok) {
+        const data = await res.json();
+        setCanSignOnBehalf(data.can_sign_on_behalf || false);
+      }
+    } catch (err) {
+      console.error('Failed to check delegation status:', err);
+      setCanSignOnBehalf(false);
+    } finally {
+      setCheckingDelegation(false);
+    }
+  }
+
+  async function loadDeanSignatures() {
     setLoadingSignatures(true);
     try {
-      const res = await fetch('/api/signatures');
+      // Fetch DEAN's signatures (not coordinator's)
+      const res = await fetch('/api/dean-signatures');
       if (res.ok) {
         const data = await res.json();
         setSignatures(data);
@@ -121,11 +151,13 @@ export default function CoordinatorApproveDialog({
         setActiveSignature(active || null);
       }
     } catch (err) {
-      console.error('Failed to load signatures:', err);
+      console.error('Failed to load dean signatures:', err);
     } finally {
       setLoadingSignatures(false);
     }
   }
+
+
 
   async function saveDataAndGeneratePreview() {
     if (!defenseRequest?.id) {
@@ -302,81 +334,75 @@ export default function CoordinatorApproveDialog({
     toast.success('Uploaded file ready for preview');
   }
 
-  async function handleSaveDrawnSignature() {
-    if (!sigPad.current) return;
-    
-    const canvas = sigPad.current.getCanvas();
-    
-    // Create a new canvas with transparent background
-    const tempCanvas = document.createElement('canvas');
-    tempCanvas.width = canvas.width;
-    tempCanvas.height = canvas.height;
-    const tempCtx = tempCanvas.getContext('2d');
-    
-    if (tempCtx) {
-      // Don't fill background - keep it transparent
-      tempCtx.drawImage(canvas, 0, 0);
-    }
-    
-    const dataUrl = tempCanvas.toDataURL('image/png');
-    
-    setIsSavingSignature(true);
-    try {
-      const res = await postWithCsrf('/api/signatures', {
-        image_base64: dataUrl,
-        label: 'Drawn Signature',
-        natural_width: canvas.width,
-        natural_height: canvas.height
-      });
-
-      if (res.ok) {
-        toast.success('Signature saved successfully!');
-        setShowDrawSignature(false);
-        loadSignatures();
-      } else {
-        toast.error('Failed to save signature');
-      }
-    } catch (err) {
-      console.error('Save signature error:', err);
-      toast.error('Failed to save signature');
-    } finally {
-      setIsSavingSignature(false);
-    }
-  }
-
-  async function handleActivateSignature(sigId: number) {
-    try {
-      const res = await patchWithCsrf(`/api/signatures/${sigId}/activate`, {});
-
-      if (res.ok) {
-        toast.success('Signature activated!');
-        loadSignatures();
-      } else {
-        toast.error('Failed to activate signature');
-      }
-    } catch (err) {
-      console.error('Activate signature error:', err);
-      toast.error('Failed to activate signature');
-    }
-  }
+  
 
   function handleApproveClick() {
-    console.log('🔘 Approve button clicked - showing email dialog');
+    console.log('🔘 Approve button clicked');
     
-    // Validate first
+    // If not delegated, send to dean directly
+    if (!canSignOnBehalf) {
+      handleSendToDean();
+      return;
+    }
+    
+    // Validate document for delegated approval
     if (!endorsementPdfUrl && !uploadedFile) {
-      toast.error('Please generate or upload an endorsement form first');
+      toast.error('Please generate or upload a document first');
       return;
     }
 
+    // Validate dean's signature exists
     if (!activeSignature) {
-      toast.error('Please set an active signature first');
+      toast.error('Dean must set up signature first');
       return;
     }
 
     // Show email confirmation dialog
     console.log('✅ Validation passed - opening email confirmation dialog');
     setShowEmailDialog(true);
+  }
+
+  async function handleSendToDean() {
+    setIsApproving(true);
+    try {
+      console.log('📤 Sending to Dean for approval...');
+      
+      // Save panels and schedule, then update status to "Pending Dean Approval"
+      if (panelsData) {
+        await postWithCsrf(`/coordinator/defense-requests/${defenseRequest.id}/panels`, panelsData);
+      }
+      if (scheduleData) {
+        await postWithCsrf(`/coordinator/defense-requests/${defenseRequest.id}/schedule`, scheduleData);
+      }
+      
+      const payload: any = {
+        coordinator_status: 'Pending Dean Approval'
+      };
+      if (coordinatorId) {
+        payload.coordinator_user_id = coordinatorId;
+      }
+
+      const statusRes = await patchWithCsrf(
+        `/coordinator/defense-requirements/${defenseRequest.id}/coordinator-status`,
+        payload
+      );
+
+      if (statusRes.ok) {
+        toast.success('Sent to Dean for approval');
+        onOpenChange(false);
+        if (onApproveComplete) {
+          onApproveComplete();
+        }
+        setTimeout(() => window.location.reload(), 500);
+      } else {
+        toast.error('Failed to send to Dean');
+      }
+    } catch (err) {
+      console.error('❌ Error:', err);
+      toast.error('Failed to send to Dean');
+    } finally {
+      setIsApproving(false);
+    }
   }
 
   async function handleFinalApprove() {
@@ -553,9 +579,13 @@ export default function CoordinatorApproveDialog({
             <div className="w-72 border-r bg-muted/30 flex flex-col shrink-0">
               <div className="p-6 pb-4 shrink-0">
                 <DialogHeader>
-                  <DialogTitle className="text-lg">Approve Defense Request</DialogTitle>
+                  <DialogTitle className="text-lg">
+                    {checkingDelegation ? 'Checking...' : canSignOnBehalf ? 'Approve Defense Request' : 'Send to Dean'}
+                  </DialogTitle>
                   <DialogDescription className="text-xs mt-2">
-                    Review the adviser's endorsement and add your signature
+                    {checkingDelegation ? 'Checking authorization...' : canSignOnBehalf 
+                      ? 'Review and approve with Dean\'s signature' 
+                      : 'Review and send to Dean for final approval'}
                   </DialogDescription>
                 </DialogHeader>
               </div>
@@ -565,6 +595,28 @@ export default function CoordinatorApproveDialog({
               {/* Scrollable middle section */}
               <ScrollArea className="flex-1 min-h-0">
                 <div className="px-6 py-4 space-y-6">
+                  {/* Delegation Status Alert - Simplified */}
+                  {checkingDelegation ? (
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                      <span>Checking...</span>
+                    </div>
+                  ) : !canSignOnBehalf ? (
+                    <Alert className="py-2">
+                      <AlertCircle className="h-4 w-4" />
+                      <AlertDescription className="text-xs">
+                        This will be sent to the Dean for approval
+                      </AlertDescription>
+                    </Alert>
+                  ) : (
+                    <Alert className="py-2">
+                      <ShieldCheck className="h-4 w-4" />
+                      <AlertDescription className="text-xs">
+                        You can approve using Dean's signature
+                      </AlertDescription>
+                    </Alert>
+                  )}
+                  
                   <nav className="space-y-1">
                     <Button
                       variant={currentTab === 'preview' ? 'secondary' : 'ghost'}
@@ -573,15 +625,6 @@ export default function CoordinatorApproveDialog({
                     >
                       <Eye className="mr-2 h-4 w-4" />
                       Preview Document
-                    </Button>
-
-                    <Button
-                      variant={currentTab === 'signature' ? 'secondary' : 'ghost'}
-                      className="w-full justify-start"
-                      onClick={() => setCurrentTab('signature')}
-                    >
-                      <Signature className="mr-2 h-4 w-4" />
-                      My Signature
                     </Button>
 
                     <Button
@@ -603,30 +646,30 @@ export default function CoordinatorApproveDialog({
                 <Button
                   className="w-full"
                   size="lg"
-                  disabled={!endorsementPdfUrl && !uploadedFile || !activeSignature || isApproving}
+                  disabled={checkingDelegation || isApproving || (canSignOnBehalf && !activeSignature)}
                   onClick={handleApproveClick}
                 >
                   {isApproving ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Approving...
+                      Processing...
                     </>
-                  ) : (
+                  ) : canSignOnBehalf ? (
                     <>
                       <Send className="mr-2 h-4 w-4" />
                       Approve & Sign
                     </>
+                  ) : (
+                    <>
+                      <Send className="mr-2 h-4 w-4" />
+                      Send to Dean
+                    </>
                   )}
                 </Button>
                 
-                {!activeSignature && (
+                {canSignOnBehalf && !activeSignature && !checkingDelegation && (
                   <p className="text-xs text-center text-muted-foreground mt-2">
-                    Please set an active signature first
-                  </p>
-                )}
-                {(!endorsementPdfUrl && !uploadedFile) && (
-                  <p className="text-xs text-center text-muted-foreground mt-2">
-                    Generate or upload an endorsement form
+                    Dean must set up signature first
                   </p>
                 )}
               </div>
@@ -652,33 +695,29 @@ export default function CoordinatorApproveDialog({
                   {/* Preview Tab */}
                   {!isLoadingPdf && currentTab === 'preview' && (
                     <div className="space-y-6">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <h3 className="text-lg font-semibold">Endorsement Form Preview</h3>
-                          <p className="text-sm text-muted-foreground">
-                            Review the endorsement before approving
-                          </p>
+                      {endorsementPdfUrl && (
+                        <div className="flex justify-end">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={handleGenerateDocument}
+                            disabled={isGenerating}
+                          >
+                            {isGenerating ? (
+                              <>
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                Regenerating...
+                              </>
+                            ) : (
+                              <>
+                                <RefreshCw className="mr-2 h-4 w-4" />
+                                Regenerate
+                              </>
+                            )}
+                          </Button>
                         </div>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={handleGenerateDocument}
-                          disabled={isGenerating}
-                        >
-                          {isGenerating ? (
-                            <>
-                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                              Generating...
-                            </>
-                          ) : (
-                            <>
-                              <RefreshCw className="mr-2 h-4 w-4" />
-                              {endorsementPdfUrl ? 'Regenerate' : 'Generate'}
-                            </>
-                          )}
-                        </Button>
-                      </div>
-
+                      )}
+                      
                       {endorsementPdfUrl ? (
                         <div className="border rounded-lg overflow-hidden" style={{ height: '700px' }}>
                           <iframe
@@ -687,59 +726,18 @@ export default function CoordinatorApproveDialog({
                             title="Endorsement Form Preview"
                           />
                         </div>
-                      ) : (
-                        <Alert>
-                          <AlertCircle className="h-4 w-4" />
-                          <AlertDescription>
-                            Click "Generate" to create the endorsement form with your signature.
-                          </AlertDescription>
-                        </Alert>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Signature Tab */}
-                  {currentTab === 'signature' && (
-                    <div className="space-y-6">
-                      <div>
-                        <h3 className="text-lg font-semibold mb-2">Manage Your Signature</h3>
-                        <p className="text-sm text-muted-foreground">
-                          Your signature will be added to the endorsement form
-                        </p>
-                      </div>
-
-                      {/* Active Signature */}
-                      {activeSignature && (
-                        <div className="border rounded-lg p-4 space-y-3">
-                          <div className="flex items-center justify-between">
-                            <Label className="text-sm font-medium">Active Signature</Label>
-                            <Check className="h-4 w-4 text-green-600" />
-                          </div>
-                          <div className="bg-muted/50 rounded-lg p-4 flex items-center justify-center">
-                            <img
-                              src={`/storage/${activeSignature.image_path}`}
-                              alt="Active signature"
-                              className="max-h-24 object-contain"
-                            />
+                      ) : isGenerating ? (
+                        <div className="flex items-center justify-center h-[600px]">
+                          <div className="text-center space-y-3">
+                            <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto" />
+                            <p className="text-sm text-muted-foreground">Generating document...</p>
                           </div>
                         </div>
-                      )}
-
-                      {/* Draw New Signature */}
-                      <div className="border rounded-lg p-4 space-y-3">
-                        <Label className="text-sm font-medium">Draw New Signature</Label>
-                        <Button
-                          variant="outline"
-                          className="w-full"
-                          onClick={() => setShowDrawSignature(true)}
-                        >
-                          <Pencil className="mr-2 h-4 w-4" />
-                          Draw Signature
-                        </Button>
-                      </div>
+                      ) : null}
                     </div>
                   )}
 
+                  {/* Signature Tab - Dean's Signature */}
                   {/* Upload Tab */}
                   {currentTab === 'upload' && (
                     <div className="space-y-6">
@@ -916,72 +914,6 @@ export default function CoordinatorApproveDialog({
         </DialogContent>
       </Dialog>
 
-      {/* Draw Signature Dialog */}
-      <Dialog open={showDrawSignature} onOpenChange={setShowDrawSignature}>
-        <DialogContent className="max-w-4xl">
-          <DialogHeader>
-            <DialogTitle>Draw Your Signature</DialogTitle>
-            <DialogDescription>
-              Draw your signature below. This will replace any existing signatures.
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-4">
-            <div className="border rounded-lg p-4 bg-muted/30">
-              <SignatureCanvas
-                ref={sigPad}
-                penColor="black"
-                backgroundColor="rgba(0,0,0,0)"
-                minWidth={2}
-                maxWidth={4}
-                velocityFilterWeight={0.7}
-                canvasProps={{
-                  width: 690,
-                  height: 300,
-                  className: 'border border-border rounded bg-background w-full',
-                  style: { cursor: 'crosshair' }
-                }}
-                onEnd={drawGuideLine}
-              />
-            </div>
-
-            <div className="flex gap-2 justify-end">
-              <Button
-                variant="outline"
-                onClick={() => {
-                  sigPad.current?.clear();
-                  drawGuideLine();
-                }}
-              >
-                <Trash2 className="mr-2 h-4 w-4" />
-                Clear
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => setShowDrawSignature(false)}
-              >
-                Cancel
-              </Button>
-              <Button
-                onClick={handleSaveDrawnSignature}
-                disabled={isSavingSignature}
-              >
-                {isSavingSignature ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Saving...
-                  </>
-                ) : (
-                  <>
-                    <Check className="mr-2 h-4 w-4" />
-                    Save Signature
-                  </>
-                )}
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
     </>
   );
 }

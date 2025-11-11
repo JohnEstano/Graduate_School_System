@@ -124,4 +124,64 @@ Route::middleware(['auth','verified'])->group(function () {
             'initialAdviserCode' => $user->adviser_code,
         ]);
     })->name('settings.adviser');
+
+    // Dean Delegation Settings
+    Route::get('/settings/dean-delegation', function () {
+        abort_unless(Auth::user()->role === 'Dean', 403);
+        return Inertia::render('settings/dean-delegation');
+    })->name('settings.dean-delegation');
+
+    // API: Get coordinators and their delegation status
+    Route::get('/api/dean/coordinator-delegation', function () {
+        abort_unless(Auth::user()->role === 'Dean', 403);
+        
+        $deanId = Auth::id();
+        
+        // Get all coordinators
+        $coordinators = \DB::table('users')
+            ->where('role', 'Coordinator')
+            ->select('id', 'first_name', 'last_name', 'email', 'program')
+            ->get()
+            ->map(function ($coord) use ($deanId) {
+                $setting = \DB::table('coordinator_delegation_settings')
+                    ->where('dean_id', $deanId)
+                    ->where('coordinator_id', $coord->id)
+                    ->first();
+                
+                return [
+                    'id' => $coord->id,
+                    'name' => trim($coord->first_name . ' ' . $coord->last_name),
+                    'email' => $coord->email,
+                    'program' => $coord->program,
+                    'can_sign_on_behalf' => $setting ? (bool)$setting->can_sign_on_behalf : false,
+                ];
+            });
+        
+        return response()->json($coordinators);
+    });
+
+    // API: Update delegation setting
+    Route::post('/api/dean/coordinator-delegation', function (Request $request) {
+        abort_unless(Auth::user()->role === 'Dean', 403);
+        
+        $validated = $request->validate([
+            'coordinator_id' => 'required|exists:users,id',
+            'can_sign_on_behalf' => 'required|boolean',
+        ]);
+        
+        $deanId = Auth::id();
+        
+        \DB::table('coordinator_delegation_settings')->updateOrInsert(
+            [
+                'dean_id' => $deanId,
+                'coordinator_id' => $validated['coordinator_id'],
+            ],
+            [
+                'can_sign_on_behalf' => $validated['can_sign_on_behalf'],
+                'updated_at' => now(),
+            ]
+        );
+        
+        return response()->json(['ok' => true]);
+    });
 });

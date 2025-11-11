@@ -20,6 +20,7 @@ const baseNav: NavItem[] = [
 const extraNav: NavItem[] = [
   //{ title:'Document Templates', href:'/settings/documents', roles:['Dean','Coordinator'] },
   { title:'E‑Signatures',       href:'/settings/signatures', roles:['Dean','Coordinator','Adviser','Faculty'] },
+  { title:'Coordinator Delegation', href:'/settings/dean-delegation', roles:['Dean'] },
 ];
 
 export default function SettingsLayout({ children }: PropsWithChildren) {

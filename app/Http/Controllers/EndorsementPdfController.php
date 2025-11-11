@@ -17,7 +17,7 @@ class EndorsementPdfController extends Controller
     {
         $validated = $request->validate([
             'defense_request_id' => 'required|exists:defense_requests,id',
-            'role' => 'required|in:adviser,coordinator'
+            'role' => 'required|in:adviser,coordinator,dean'
         ]);
 
         $defenseRequestId = $validated['defense_request_id'];
@@ -176,43 +176,74 @@ class EndorsementPdfController extends Controller
             }
         }
 
-        // Coordinator information - get from authenticated user when role is coordinator
+        // Dean information - Check delegation status first
         $coordinator_name = null;
         $coordinator_title = null;
         $coordinator_signature_path = null;
-        $approver_name = null; // Initialize approver_name
+        $approver_name = null;
         
-        if ($role === 'coordinator') {
-            // Get coordinator from authenticated user
-            $coordinator = auth()->user();
-            if ($coordinator) {
-                $coordinator_name = trim(($coordinator->first_name ?? '') . ' ' . ($coordinator->middle_name ?? '') . ' ' . ($coordinator->last_name ?? ''));
-                $coordinator_title = 'Program Coordinator, Graduate School';
-                $approver_name = $coordinator_name; // Use coordinator's name in "Dear" section
-                
-                $coordinatorSignature = $this->getActiveSignature($coordinator->id);
-                if ($coordinatorSignature && $coordinatorSignature->image_path) {
-                    // Normalize path - strip any prefixes to avoid double paths
-                    $imagePath = $coordinatorSignature->image_path;
-                    $imagePath = str_replace('app/public/', '', $imagePath);
-                    $imagePath = str_replace('storage/', '', $imagePath);
-                    $imagePath = str_replace('public/', '', $imagePath);
-                    $imagePath = ltrim($imagePath, '/');
-                    
-                    $fullPath = storage_path('app/public/' . $imagePath);
-                    
-                    if (file_exists($fullPath)) {
-                        $coordinator_signature_path = $fullPath;
-                    } else {
-                        Log::warning('Coordinator signature file not found', [
-                            'original_path' => $coordinatorSignature->image_path,
-                            'normalized_path' => $imagePath,
-                            'full_path' => $fullPath,
-                            'user_id' => $coordinator->id
-                        ]);
-                    }
+        // Find the dean
+        $dean = \App\Models\User::where('role', 'Dean')->first();
+        
+        // Check if coordinator has delegation (only if role is coordinator)
+        $hasDelegation = false;
+        if ($role === 'coordinator' && $defenseRequest->coordinator_user_id && $dean) {
+            $delegation = \DB::table('coordinator_delegation_settings')
+                ->where('dean_id', $dean->id)
+                ->where('coordinator_id', $defenseRequest->coordinator_user_id)
+                ->first();
+            $hasDelegation = $delegation && (bool)$delegation->can_sign_on_behalf;
+            
+            Log::info('Delegation check for coordinator', [
+                'dean_id' => $dean->id,
+                'coordinator_user_id' => $defenseRequest->coordinator_user_id,
+                'delegation_found' => $delegation !== null,
+                'can_sign_on_behalf' => $delegation ? $delegation->can_sign_on_behalf : null,
+                'has_delegation' => $hasDelegation
+            ]);
+        } elseif ($role === 'dean') {
+            // Dean always has delegation to use their own signature
+            $hasDelegation = true;
+            Log::info('Dean generating document - always has delegation');
+        }
+        
+        if ($dean && $hasDelegation) {
+            $coordinator_name = trim(($dean->first_name ?? '') . ' ' . 
+                                   ($dean->middle_name ? ($dean->middle_name . ' ') : '') . 
+                                   ($dean->last_name ?? ''));
+            $coordinator_title = 'Dean, Graduate School';
+            
+            // Get DEAN's signature (only if has delegation)
+            $deanSignature = $this->getActiveSignature($dean->id);
+            if ($deanSignature && $deanSignature->image_path) {
+                $storagePath = storage_path('app/public/' . $deanSignature->image_path);
+                if (file_exists($storagePath)) {
+                    $coordinator_signature_path = $storagePath;
+                    Log::info('✅ Using Dean signature with delegation', [
+                        'dean_id' => $dean->id,
+                        'dean_name' => $coordinator_name,
+                        'has_delegation' => $hasDelegation,
+                        'signature_path' => $deanSignature->image_path
+                    ]);
+                } else {
+                    Log::warning('Dean signature file not found', [
+                        'path' => $storagePath,
+                        'image_path' => $deanSignature->image_path
+                    ]);
                 }
+            } else {
+                Log::warning('Dean has no active signature', [
+                    'dean_id' => $dean->id
+                ]);
             }
+            
+            $approver_name = $coordinator_name;
+        } else {
+            Log::info('❌ No delegation - document generated without Dean signature', [
+                'role' => $role,
+                'has_delegation' => $hasDelegation,
+                'dean_found' => $dean !== null
+            ]);
         }
 
         // If coordinator info not available, use stored coordinator from defense request
