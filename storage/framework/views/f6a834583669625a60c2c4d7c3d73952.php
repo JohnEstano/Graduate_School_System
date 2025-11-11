@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Defense Panel Invitation</title>
+    <title>Defense Request Assigned for Review</title>
     <style>
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif,
@@ -56,7 +56,7 @@
 
         .message { font-size: 16px; line-height: 1.8; margin-bottom: 20px; color: #333; }
 
-        .role-badge {
+        .assignment-badge {
             display: inline-block;
             background-color: #FF4B64;
             color: #ffffff;
@@ -67,7 +67,6 @@
             text-transform: uppercase;
             letter-spacing: 1px;
             margin: 20px 0;
-            margin-bottom: 5px;
         }
 
         .info-box {
@@ -98,49 +97,13 @@
             font-size: 16px;
         }
 
-        .panel-section {
-            margin-top: 20px;
-            padding-top: 20px;
-            border-top: 1px solid #e5e7eb;
-        }
-
-        .panel-section h3 {
-            font-size: 16px;
-            font-weight: bold;
-            margin-top: 0;
-            margin-bottom: 15px;
-            color: #333;
-        }
-
-        .panel-member {
-            background-color: #f9fafb;
-            padding: 12px 15px;
-            margin-bottom: 8px;
-            border-left: 3px solid #FF4B64;
-        }
-
-        .panel-member-name {
-            font-weight: 600;
-            color: #333;
-            font-size: 15px;
-        }
-
-        .panel-member-role {
-            color: #FF4B64;
-            font-size: 12px;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            margin-top: 4px;
-        }
-
-        .responsibilities-box {
+        .next-steps-box {
             background-color: #f3f4f6;
             padding: 20px;
             margin: 20px 0;
         }
 
-        .responsibilities-box h3 {
+        .next-steps-box h3 {
             font-size: 16px;
             font-weight: bold;
             margin-top: 0;
@@ -148,14 +111,25 @@
             color: #333;
         }
 
-        .responsibilities-box ul {
+        .next-steps-box ul {
             margin: 0;
             padding-left: 20px;
         }
 
-        .responsibilities-box li {
+        .next-steps-box li {
             margin-bottom: 8px;
             color: #333;
+        }
+
+        .cta-button {
+            display: inline-block;
+            background-color: #FF4B64;
+            color: #ffffff;
+            padding: 15px 35px;
+            text-decoration: none;
+            font-weight: bold;
+            font-size: 16px;
+            margin-top: 20px;
         }
 
         .footer {
@@ -191,97 +165,77 @@
         <table width="100%" cellpadding="0" cellspacing="0" border="0">
                                     <tr>
                                         <td width="50">
-                                            <img src="{{ asset('gss-uic-logo-v2.png') }}" alt="UIC Graduate School Logo" style="max-width: 50px; height: auto;">
+                                            <img src="<?php echo e(asset('gss-uic-logo-v2.png')); ?>" alt="UIC Graduate School Logo" style="max-width: 50px; height: auto;">
                                         </td>
                                         <td align="right">
                                             <span style="color: #FF4B64; font-size: 14px; font-weight: bold;">Graduate School System</span>
                                         </td>
                                     </tr>
                                 </table>
-        {{-- Testing Disclaimer --}}
-        @include('emails.partials.testing-disclaimer')
+        
+        <?php echo $__env->make('emails.partials.testing-disclaimer', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
 
-        <h1>Defense Panel Invitation!</h1>
+        <h1>New Defense Request Assigned!</h1>
 
         
             <p class="message">
-                <strong>Dear Prof. {{ $panelistName }},</strong>
+                <strong>Hello, <?php echo e($coordinatorName); ?>!</strong>
             </p>
             <p class="message">
-                You are cordially invited to serve on the defense panel for a graduate student at the University of the Immaculate Conception Graduate School. Your expertise and insights would be invaluable to this academic evaluation.
+                A new thesis defense request has been assigned to you for review. The request has been approved by the adviser and is now awaiting your evaluation.
             </p>
 
             <div style="text-align: center;">
-                <span class="role-badge"> <i class="fa-solid fa-user"></i> {{ strtoupper($role) }}</span>
+                <span class="assignment-badge"><i class="fas fa-clipboard-check"></i> Assigned for Coordinator Review</span>
             </div>
 
             <div class="info-box">
-                <h2>Defense Details</h2>
+                <h2>Defense Request Details</h2>
                 
-                <div class="label">Student</div>
-                <div class="value">{{ $studentName }}</div>
+                <div class="label">Student Name</div>
+                <div class="value"><?php echo e($studentName); ?></div>
                 
-                <div class="label">Defense Title</div>
-                <div class="value" style="font-style: italic;">{{ $defenseTitle }}</div>
-                
-                <div class="label">Adviser</div>
-                <div class="value">{{ $adviserName }}</div>
-                
-                <div class="label">Date</div>
-                <div class="value"><i class="fas fa-calendar-alt"></i> {{ \Carbon\Carbon::parse($defenseDate)->format('l, F j, Y') }}</div>
-                
-                <div class="label">Time</div>
-                <div class="value"><i class="fas fa-clock"></i> {{ \Carbon\Carbon::parse($defenseTime)->format('g:i A') }} - {{ \Carbon\Carbon::parse($defenseEndTime)->format('g:i A') }}</div>
-                
-                <div class="label">Mode</div>
-                <div class="value">{{ ucfirst($defenseMode) }}</div>
-                
-                <div class="label">Venue</div>
-                <div class="value"><i class="fas fa-map-marker-alt"></i> {{ $defenseVenue }}</div>
+                <div class="label">School ID</div>
+                <div class="value"><?php echo e($defenseRequest->school_id); ?></div>
 
-                @if(count($otherPanels) > 0)
-                <div class="panel-section">
-                    <h3>Other Panel Members</h3>
-                    @foreach($otherPanels as $panel)
-                        <div class="panel-member">
-                            <div class="panel-member-name">{{ $panel->name }}</div>
-                            <div class="panel-member-role">{{ $panel->role }}</div>
-                        </div>
-                    @endforeach
-                </div>
-                @endif
+                <div class="label">Program</div>
+                <div class="value"><?php echo e($defenseRequest->program); ?></div>
+
+                <div class="label">Thesis Title</div>
+                <div class="value" style="font-style: italic;"><?php echo e($defenseRequest->thesis_title); ?></div>
+
+                <div class="label">Adviser</div>
+                <div class="value"><?php echo e($adviserName); ?></div>
+
+                <div class="label">Defense Type</div>
+                <div class="value"><?php echo e($defenseRequest->defense_type); ?></div>
+
+                <div class="label">Submitted On</div>
+                <div class="value"><i class="fas fa-calendar-alt"></i> <?php echo e($defenseRequest->created_at->format('F d, Y \a\t g:i A')); ?></div>
             </div>
 
-            <div class="responsibilities-box">
-                <h3><i class="fa-regular fa-user"></i> Your Role as {{ ucfirst($role) }}</h3>
+            <div class="next-steps-box">
+                <h3><i class="fas fa-list-check"></i> Next Steps</h3>
                 <ul>
-                    @if($role === 'chair')
-                        <li>Preside over the defense proceedings</li>
-                        <li>Ensure the defense follows proper academic protocols</li>
-                        <li>Facilitate questions and discussions among panel members</li>
-                        <li>Lead the panel in deliberations and final evaluation</li>
-                    @else
-                        <li>Review the student's thesis/dissertation manuscript</li>
-                        <li>Prepare questions and comments for the defense</li>
-                        <li>Evaluate the quality and rigor of the research</li>
-                        <li>Participate in panel deliberations and provide feedback</li>
-                    @endif
-                    <li>Arrive at least 15 minutes before the scheduled time</li>
-                    <li>Submit evaluation forms after the defense</li>
+                    <li>Review the defense request details carefully</li>
+                    <li>Verify that all required information is complete</li>
+                    <li>Approve the request to proceed with panel assignment</li>
+                    <li>Reject if any issues need to be addressed</li>
                 </ul>
             </div>
 
-            <p class="message" style="font-size: 14px; color: #6b7280;">
-                Please confirm your availability for this defense at your earliest convenience. If you are unable to attend or have any concerns, kindly inform the Graduate School office immediately.
-            </p>
-            <p class="message" style="font-size: 14px; color: #6b7280;">
-                Thank you for your service to the academic community and your contribution to maintaining the quality of graduate education at UIC.
+            <div style="text-align: center;">
+                <a href="<?php echo e(url('/dashboard')); ?>" class="cta-button"> Click to Review Defense Request</a>
+            </div>
+
+            <p class="message" style="font-size: 14px; color: #6b7280; text-align: center; margin-top: 30px;">
+                <em>This request was automatically assigned to you based on the student's program (<?php echo e($defenseRequest->program); ?>). If you believe this was assigned in error, please contact the system administrator.</em>
             </p>
         </td>
                         </tr>
                         <tr>
                             <td style="padding: 20px 30px; border-top: 1px solid #e5e7eb;">
-                                @include('emails.partials.footer')
+                                <?php echo $__env->make('emails.partials.footer', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
                             </td>
                         </tr>
                     </table>
@@ -291,3 +245,4 @@
     </div>
 </body>
 </html>
+<?php /**PATH C:\xampp\htdocs\Graduate_School_System\resources\views/emails/defense-assigned-coordinator.blade.php ENDPATH**/ ?>

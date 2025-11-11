@@ -149,21 +149,21 @@
         <table width="100%" cellpadding="0" cellspacing="0" border="0">
                                     <tr>
                                         <td width="50">
-                                            <img src="{{ asset('gss-uic-logo-v2.png') }}" alt="UIC Graduate School Logo" style="max-width: 50px; height: auto;">
+                                            <img src="<?php echo e(asset('gss-uic-logo-v2.png')); ?>" alt="UIC Graduate School Logo" style="max-width: 50px; height: auto;">
                                         </td>
                                         <td align="right">
                                             <span style="color: #FF4B64; font-size: 14px; font-weight: bold;">Graduate School System</span>
                                         </td>
                                     </tr>
                                 </table>
-        {{-- Testing Disclaimer --}}
-        @include('emails.partials.testing-disclaimer')
+        
+        <?php echo $__env->make('emails.partials.testing-disclaimer', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
 
         <h1>Defense Scheduled - Adviser Notification</h1>
 
         
             <p class="message">
-                <strong>Dear Prof. {{ $defenseRequest->defense_adviser }},</strong>
+                <strong>Dear Prof. <?php echo e($defenseRequest->defense_adviser); ?>,</strong>
             </p>
             <p class="message">
                 This is to inform you that the thesis/dissertation defense for your advisee has been officially approved and scheduled by the Graduate School coordinator.
@@ -171,34 +171,38 @@
 
             <div class="schedule-box">
                 <div class="date">
-                    <i class="fas fa-calendar-alt"></i> {{ $defenseRequest->scheduled_date->format('l, F j, Y') }}
+                    <i class="fas fa-calendar-alt"></i> <?php echo e($defenseRequest->scheduled_date->format('l, F j, Y')); ?>
+
                 </div>
                 <div class="time">
-                    <i class="fa-regular fa-clock"></i>  {{ $defenseRequest->scheduled_time }} - {{ $defenseRequest->scheduled_end_time }}
+                    <i class="fa-regular fa-clock"></i>  <?php echo e($defenseRequest->scheduled_time); ?> - <?php echo e($defenseRequest->scheduled_end_time); ?>
+
                 </div>
-                @if($defenseRequest->defense_mode)
+                <?php if($defenseRequest->defense_mode): ?>
                     <span class="mode-badge">
-                        {{ ucfirst($defenseRequest->defense_mode) }}
+                        <?php echo e(ucfirst($defenseRequest->defense_mode)); ?>
+
                     </span>
-                @endif
-                @if($defenseRequest->defense_venue)
+                <?php endif; ?>
+                <?php if($defenseRequest->defense_venue): ?>
                     <div class="venue">
-                        <strong><i class="fas fa-map-marker-alt"></i> Venue:</strong> {{ $defenseRequest->defense_venue }}
+                        <strong><i class="fas fa-map-marker-alt"></i> Venue:</strong> <?php echo e($defenseRequest->defense_venue); ?>
+
                     </div>
-                @endif
+                <?php endif; ?>
             </div>
 
             <div class="info-box">
                 <h2>Defense Details</h2>
                 
                 <div class="label">Student</div>
-                <div class="value">{{ $defenseRequest->first_name }} {{ $defenseRequest->middle_name }} {{ $defenseRequest->last_name }}</div>
+                <div class="value"><?php echo e($defenseRequest->first_name); ?> <?php echo e($defenseRequest->middle_name); ?> <?php echo e($defenseRequest->last_name); ?></div>
 
                 <div class="label">Defense Title</div>
-                <div class="value" style="font-style: italic;">{{ $defenseRequest->thesis_title }}</div>
+                <div class="value" style="font-style: italic;"><?php echo e($defenseRequest->thesis_title); ?></div>
             </div>
 
-            @php
+            <?php
                 $panelists = collect([
                     $defenseRequest->defense_chairperson,
                     $defenseRequest->defense_panelist1,
@@ -206,23 +210,23 @@
                     $defenseRequest->defense_panelist3,
                     $defenseRequest->defense_panelist4,
                 ])->filter()->values();
-            @endphp
+            ?>
 
-            @if($panelists->count() > 0)
+            <?php if($panelists->count() > 0): ?>
                 <div class="info-box">
                     <h2>Defense Panel Composition</h2>
-                    @if($defenseRequest->defense_chairperson)
+                    <?php if($defenseRequest->defense_chairperson): ?>
                         <div class="label">Chairperson</div>
-                        <div class="value">{{ $defenseRequest->defense_chairperson }}</div>
-                    @endif
-                    @foreach([$defenseRequest->defense_panelist1, $defenseRequest->defense_panelist2, $defenseRequest->defense_panelist3, $defenseRequest->defense_panelist4] as $index => $panelist)
-                        @if($panelist)
-                            <div class="label">Panelist {{ $index + 1 }}</div>
-                            <div class="value">{{ $panelist }}</div>
-                        @endif
-                    @endforeach
+                        <div class="value"><?php echo e($defenseRequest->defense_chairperson); ?></div>
+                    <?php endif; ?>
+                    <?php $__currentLoopData = [$defenseRequest->defense_panelist1, $defenseRequest->defense_panelist2, $defenseRequest->defense_panelist3, $defenseRequest->defense_panelist4]; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $index => $panelist): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                        <?php if($panelist): ?>
+                            <div class="label">Panelist <?php echo e($index + 1); ?></div>
+                            <div class="value"><?php echo e($panelist); ?></div>
+                        <?php endif; ?>
+                    <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
                 </div>
-            @endif
+            <?php endif; ?>
 
             <p class="message" style="font-size: 14px; color: #6b7280;">
                 As the adviser, your presence and guidance during the defense are greatly appreciated. Please ensure your advisee is well-prepared for this important academic milestone.
@@ -234,7 +238,7 @@
                         </tr>
                         <tr>
                             <td style="padding: 20px 30px; border-top: 1px solid #e5e7eb;">
-                                @include('emails.partials.footer')
+                                <?php echo $__env->make('emails.partials.footer', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
                             </td>
                         </tr>
                     </table>
@@ -244,3 +248,4 @@
     </div>
 </body>
 </html>
+<?php /**PATH C:\xampp\htdocs\Graduate_School_System\resources\views/emails/defense-scheduled-adviser.blade.php ENDPATH**/ ?>

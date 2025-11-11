@@ -234,7 +234,7 @@
                             <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
                                 <tr>
                                     <td width="50">
-                                        <img src="{{ asset('gss-uic-logo-v2.png') }}" alt="UIC Graduate School Logo" class="logo" style="max-width: 50px; height: auto;" />
+                                        <img src="<?php echo e(asset('gss-uic-logo-v2.png')); ?>" alt="UIC Graduate School Logo" class="logo" style="max-width: 50px; height: auto;" />
                                     </td>
                                     <td align="right">
                                         <span class="header-title" style="color: #FF4B64; font-size: 14px; font-weight: bold;">Graduate School System</span>
@@ -246,7 +246,7 @@
                             <h1>Comprehensive Exam Results</h1>
 
                             <div class="message">
-                                <strong>Dear {{ $student->first_name }} {{ $student->last_name }},</strong>
+                                <strong>Dear <?php echo e($student->first_name); ?> <?php echo e($student->last_name); ?>,</strong>
                             </div>
 
                             <div class="message">
@@ -255,35 +255,35 @@
                             </div>
 
                             <!-- Result Status Box -->
-                            @if($resultStatus === 'passed')
+                            <?php if($resultStatus === 'passed'): ?>
                                 <div class="success-box">
                                     <h2>Congratulations - You Passed</h2>
-                                    <p>You have successfully passed the comprehensive examination with an average score of {{ $averageScore }}.</p>
+                                    <p>You have successfully passed the comprehensive examination with an average score of <?php echo e($averageScore); ?>.</p>
                                 </div>
-                            @else
+                            <?php else: ?>
                                 <div class="warning-box">
                                     <h2>Results Notification</h2>
-                                    <p>Your comprehensive examination results show an average score of {{ $averageScore }}. Unfortunately, this does not meet the passing requirement.</p>
+                                    <p>Your comprehensive examination results show an average score of <?php echo e($averageScore); ?>. Unfortunately, this does not meet the passing requirement.</p>
                                 </div>
-                            @endif
+                            <?php endif; ?>
 
                             <!-- Application Details -->
                             <table class="details-table" role="presentation">
                                 <tr>
                                     <td>Application ID</td>
-                                    <td>{{ $examApplication->application_id }}</td>
+                                    <td><?php echo e($examApplication->application_id); ?></td>
                                 </tr>
                                 <tr>
                                     <td>Student ID</td>
-                                    <td>{{ $examApplication->student_id }}</td>
+                                    <td><?php echo e($examApplication->student_id); ?></td>
                                 </tr>
                                 <tr>
                                     <td>Program</td>
-                                    <td>{{ $examApplication->program }}</td>
+                                    <td><?php echo e($examApplication->program); ?></td>
                                 </tr>
                                 <tr>
                                     <td>School Year</td>
-                                    <td>{{ $examApplication->school_year }}</td>
+                                    <td><?php echo e($examApplication->school_year); ?></td>
                                 </tr>
                             </table>
 
@@ -301,21 +301,23 @@
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    @foreach($subjects as $subject)
+                                    <?php $__currentLoopData = $subjects; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $subject): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
                                         <tr>
-                                            <td>{{ $subject['subject_name'] }}</td>
-                                            <td style="text-align: center;" class="{{ $subject['score'] > 74 ? 'score-passed' : 'score-failed' }}">
-                                                {{ $subject['score'] }}
+                                            <td><?php echo e($subject['subject_name']); ?></td>
+                                            <td style="text-align: center;" class="<?php echo e($subject['score'] > 74 ? 'score-passed' : 'score-failed'); ?>">
+                                                <?php echo e($subject['score']); ?>
+
                                             </td>
-                                            <td style="text-align: center;" class="{{ $subject['score'] > 74 ? 'score-passed' : 'score-failed' }}">
-                                                {{ $subject['score'] > 74 ? 'Passed' : 'Failed' }}
+                                            <td style="text-align: center;" class="<?php echo e($subject['score'] > 74 ? 'score-passed' : 'score-failed'); ?>">
+                                                <?php echo e($subject['score'] > 74 ? 'Passed' : 'Failed'); ?>
+
                                             </td>
                                         </tr>
-                                    @endforeach
+                                    <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
                                     <tr class="average-row">
                                         <td>Overall Average</td>
-                                        <td style="text-align: center;">{{ $averageScore }}</td>
-                                        <td style="text-align: center;">{{ $resultStatus === 'passed' ? 'Passed' : 'Failed' }}</td>
+                                        <td style="text-align: center;"><?php echo e($averageScore); ?></td>
+                                        <td style="text-align: center;"><?php echo e($resultStatus === 'passed' ? 'Passed' : 'Failed'); ?></td>
                                     </tr>
                                 </tbody>
                             </table>
@@ -323,24 +325,24 @@
                             <!-- Next Steps -->
                             <div class="info-box">
                                 <h3>Next Steps</h3>
-                                @if($resultStatus === 'passed')
+                                <?php if($resultStatus === 'passed'): ?>
                                     <p>1. Your results will be forwarded to the Registrar's Office for processing</p>
                                     <p>2. You will receive further instructions regarding completion requirements</p>
                                     <p>3. Please wait for official communication regarding your next steps</p>
                                     <p>4. Contact the Graduate School Office if you have any questions</p>
-                                @else
+                                <?php else: ?>
                                     <p>1. Review your performance in each subject area</p>
                                     <p>2. Consult with your adviser regarding retake procedures</p>
                                     <p>3. Contact the Graduate School Office for guidance on next steps</p>
                                     <p>4. A passing score of 75 or higher is required (average must be above 74)</p>
-                                @endif
+                                <?php endif; ?>
                             </div>
 
                             <!-- CTA Button -->
                             <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
                                 <tr>
                                     <td align="center">
-                                        <a href="{{ url('/comprehensive-exam') }}" class="cta-button">
+                                        <a href="<?php echo e(url('/comprehensive-exam')); ?>" class="cta-button">
                                             View Full Details
                                         </a>
                                     </td>
@@ -354,14 +356,14 @@
                                 within 5 working days of receiving this notification.
                             </div>
 
-                            @include('emails.partials.testing-disclaimer')
+                            <?php echo $__env->make('emails.partials.testing-disclaimer', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
                         </td>
                     </tr>
                     
                     <!-- Footer -->
                     <tr>
                         <td style="padding: 20px 30px; border-top: 1px solid #e5e7eb;">
-                            @include('emails.partials.footer')
+                            <?php echo $__env->make('emails.partials.footer', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
                         </td>
                     </tr>
                 </table>
@@ -370,3 +372,4 @@
     </table>
 </body>
 </html>
+<?php /**PATH C:\xampp\htdocs\Graduate_School_System\resources\views/emails/comprehensive-exam-results-posted.blade.php ENDPATH**/ ?>

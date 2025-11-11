@@ -137,68 +137,68 @@
         <table width="100%" cellpadding="0" cellspacing="0" border="0">
                                     <tr>
                                         <td width="50">
-                                            <img src="{{ asset('gss-uic-logo-v2.png') }}" alt="UIC Graduate School Logo" style="max-width: 50px; height: auto;">
+                                            <img src="<?php echo e(asset('gss-uic-logo-v2.png')); ?>" alt="UIC Graduate School Logo" style="max-width: 50px; height: auto;">
                                         </td>
                                         <td align="right">
                                             <span style="color: #FF4B64; font-size: 14px; font-weight: bold;">Graduate School System</span>
                                         </td>
                                     </tr>
                                 </table>
-        {{-- Testing Disclaimer --}}
-        @include('emails.partials.testing-disclaimer')
+        
+        <?php echo $__env->make('emails.partials.testing-disclaimer', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
 
         <h1>Defense Request Approved!</h1>
 
         
             <p class="message">
-                <strong>Dear {{ $student->first_name }} {{ $student->last_name }},</strong>
+                <strong>Dear <?php echo e($student->first_name); ?> <?php echo e($student->last_name); ?>,</strong>
             </p>
             <p class="message">
-                Great news! Your defense request has been <strong>approved by your {{ $approvedBy }}</strong>.
+                Great news! Your defense request has been <strong>approved by your <?php echo e($approvedBy); ?></strong>.
             </p>
 
             <div class="info-box">
                 <h2>Request Details</h2>
                 <div class="label">Defense Type</div>
-                <div class="value">{{ $defenseRequest->defense_type }} Defense</div>
+                <div class="value"><?php echo e($defenseRequest->defense_type); ?> Defense</div>
 
                 <div class="label">Thesis Title</div>
-                <div class="value" style="font-style: italic;">{{ $defenseRequest->thesis_title }}</div>
+                <div class="value" style="font-style: italic;"><?php echo e($defenseRequest->thesis_title); ?></div>
 
                 <div class="label">Approved By</div>
-                <div class="value">{{ ucfirst($approvedBy) }}</div>
+                <div class="value"><?php echo e(ucfirst($approvedBy)); ?></div>
 
                 <div class="label">Approved On</div>
-                <div class="value">{{ now()->format('F j, Y g:i A') }}</div>
+                <div class="value"><?php echo e(now()->format('F j, Y g:i A')); ?></div>
             </div>
 
-            @if ($comment)
+            <?php if($comment): ?>
                 <div class="comment-box">
-                    <p><strong> <i class="fa-solid fa-comment"></i> {{ ucfirst($approvedBy) }}'s Comments:</strong></p>
-                    <p style="margin: 0; font-style: italic;">{{ $comment }}</p>
+                    <p><strong> <i class="fa-solid fa-comment"></i> <?php echo e(ucfirst($approvedBy)); ?>'s Comments:</strong></p>
+                    <p style="margin: 0; font-style: italic;"><?php echo e($comment); ?></p>
                 </div>
-            @endif
+            <?php endif; ?>
 
             <div class="info-box">
                 <h2>Next Steps</h2>
-                @if ($approvedBy === 'adviser')
+                <?php if($approvedBy === 'adviser'): ?>
                     <ul>
                         <li>Your request will now be forwarded to the Coordinator for final approval.</li>
                         <li>You will receive another notification once the Coordinator reviews your request.</li>
                         <li>Continue monitoring your dashboard for updates.</li>
                     </ul>
-                @else
+                <?php else: ?>
                     <ul>
                         <li>Wait for panel assignment from the Coordinator.</li>
                         <li>You will receive a notification once your defense is scheduled.</li>
                         <li>Begin preparing your defense presentation.</li>
                         <li>Review all required documents and ensure they are complete.</li>
                     </ul>
-                @endif
+                <?php endif; ?>
             </div>
 
             <div class="button-container">
-                <a href="{{ url('/defense-request/' . $defenseRequest->id) }}" class="cta-button">
+                <a href="<?php echo e(url('/defense-request/' . $defenseRequest->id)); ?>" class="cta-button">
                     View Request Details
                 </a>
             </div>
@@ -206,13 +206,19 @@
                         </tr>
                         <tr>
                             <td style="padding: 20px 30px; border-top: 1px solid #e5e7eb;">
-                                @include('emails.partials.footer')
-                            </td>
-                        </tr>
-                    </table>
-                </td>
-            </tr>
-        </table>
+        <div class="footer" style="text-align: center; margin-top: 30px; padding-top: 20px; font-size: 12px; color: #6b7280;">
+            <img src="<?php echo e(asset('gss-uic-logo-v2.png')); ?>" alt="UIC Graduate School Logo" class="logo" style="max-width: 60px; margin-bottom: 10px;">
+            <p>
+                <strong>University of the Immaculate Conception</strong><br>
+                Graduate School Office<br>
+                Father Selga St., Davao City, Philippines 8000
+            </p>
+            <p style="margin-top: 15px;">
+                This is an automated message from the Graduate School System. Please do not
+                reply to this email.
+            </p>
+        </div>
     </div>
 </body>
 </html>
+<?php /**PATH C:\xampp\htdocs\Graduate_School_System\resources\views/emails/defense-approved.blade.php ENDPATH**/ ?>

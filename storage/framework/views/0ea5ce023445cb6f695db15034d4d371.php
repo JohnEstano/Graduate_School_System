@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Defense Request Approved</title>
+    <title>Document Submitted</title>
     <style>
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif,
@@ -47,7 +47,7 @@
             font-size: 32px;
             font-weight: bold;
             margin-top: 0;
-            margin-bottom: 35px;
+            margin-bottom: 50px;
         }
 
         .content {
@@ -55,6 +55,19 @@
         }
 
         .message { font-size: 16px; line-height: 1.8; margin-bottom: 20px; color: #333; }
+
+        .badge {
+            display: inline-block;
+            background-color: #FF4B64;
+            color: #ffffff;
+            padding: 10px 20px;
+            text-align: center;
+            font-weight: bold;
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin: 20px 0;
+        }
 
         .info-box { border: 1px solid #e5e7eb; padding: 20px; margin: 20px 0;
         }
@@ -64,31 +77,21 @@
             font-weight: bold;
             margin-top: 0;
             margin-bottom: 15px;
+            color: #333;
         }
 
         .info-box .label {
             font-weight: bold;
-            color: #374151;
+            color: #666;
+            margin-top: 12px;
+            margin-bottom: 4px;
             font-size: 14px;
-            margin-top: 10px;
         }
 
         .info-box .value {
-            color: #6b7280;
-            font-size: 14px;
-            margin-bottom: 10px;
-        }
-
-        .comment-box {
-            background-color: #f3f4f6;
-            padding: 20px;
-            margin: 20px 0;
-            border-left: 4px solid #FF4B64;
-        }
-
-        .button-container {
-            text-align: center;
-            margin: 30px 0;
+            color: #333;
+            margin-bottom: 8px;
+            font-size: 16px;
         }
 
         .cta-button {
@@ -97,7 +100,6 @@
             color: #ffffff;
             padding: 15px 35px;
             text-decoration: none;
-            border-radius: 0px;
             font-weight: bold;
             font-size: 16px;
             margin-top: 20px;
@@ -125,7 +127,6 @@
         }
     </style>
 </head>
-
 <body>
     <div class="email-wrapper">
         <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #f4f4f4;">
@@ -137,76 +138,59 @@
         <table width="100%" cellpadding="0" cellspacing="0" border="0">
                                     <tr>
                                         <td width="50">
-                                            <img src="{{ asset('gss-uic-logo-v2.png') }}" alt="UIC Graduate School Logo" style="max-width: 50px; height: auto;">
+                                            <img src="<?php echo e(asset('gss-uic-logo-v2.png')); ?>" alt="UIC Graduate School Logo" style="max-width: 50px; height: auto;">
                                         </td>
                                         <td align="right">
                                             <span style="color: #FF4B64; font-size: 14px; font-weight: bold;">Graduate School System</span>
                                         </td>
                                     </tr>
                                 </table>
-        {{-- Testing Disclaimer --}}
-        @include('emails.partials.testing-disclaimer')
+        
+        <?php echo $__env->make('emails.partials.testing-disclaimer', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
 
-        <h1>Defense Request Approved!</h1>
+        <h1>New Document Submitted</h1>
 
         
             <p class="message">
-                <strong>Dear {{ $student->first_name }} {{ $student->last_name }},</strong>
+                <strong>Dear <?php echo e($teacher->first_name); ?> <?php echo e($teacher->last_name); ?>,</strong>
             </p>
             <p class="message">
-                Great news! Your defense request has been <strong>approved by your {{ $approvedBy }}</strong>.
+                A student has submitted a new document for your review.
             </p>
 
             <div class="info-box">
-                <h2>Request Details</h2>
-                <div class="label">Defense Type</div>
-                <div class="value">{{ $defenseRequest->defense_type }} Defense</div>
-
-                <div class="label">Thesis Title</div>
-                <div class="value" style="font-style: italic;">{{ $defenseRequest->thesis_title }}</div>
-
-                <div class="label">Approved By</div>
-                <div class="value">{{ ucfirst($approvedBy) }}</div>
-
-                <div class="label">Approved On</div>
-                <div class="value">{{ now()->format('F j, Y g:i A') }}</div>
+                <h2>Student Information</h2>
+                
+                <div class="label">Student Name</div>
+                <div class="value"><?php echo e($student->first_name); ?> <?php echo e($student->middle_name); ?> <?php echo e($student->last_name); ?></div>
+                
+                <div class="label">Student ID</div>
+                <div class="value"><?php echo e($student->school_id); ?></div>
+                
+                <div class="label">Program</div>
+                <div class="value"><?php echo e($student->program ?? 'Not specified'); ?></div>
+                
+                <div class="label">Document Type</div>
+                <div class="value"><?php echo e($documentType); ?></div>
+                
+                <div class="label">Submitted On</div>
+                <div class="value"><i class="fas fa-calendar-alt"></i> <?php echo e(now()->format('F j, Y g:i A')); ?></div>
             </div>
 
-            @if ($comment)
-                <div class="comment-box">
-                    <p><strong> <i class="fa-solid fa-comment"></i> {{ ucfirst($approvedBy) }}'s Comments:</strong></p>
-                    <p style="margin: 0; font-style: italic;">{{ $comment }}</p>
-                </div>
-            @endif
-
-            <div class="info-box">
-                <h2>Next Steps</h2>
-                @if ($approvedBy === 'adviser')
-                    <ul>
-                        <li>Your request will now be forwarded to the Coordinator for final approval.</li>
-                        <li>You will receive another notification once the Coordinator reviews your request.</li>
-                        <li>Continue monitoring your dashboard for updates.</li>
-                    </ul>
-                @else
-                    <ul>
-                        <li>Wait for panel assignment from the Coordinator.</li>
-                        <li>You will receive a notification once your defense is scheduled.</li>
-                        <li>Begin preparing your defense presentation.</li>
-                        <li>Review all required documents and ensure they are complete.</li>
-                    </ul>
-                @endif
-            </div>
-
-            <div class="button-container">
-                <a href="{{ url('/defense-request/' . $defenseRequest->id) }}" class="cta-button">
-                    View Request Details
+            <div style="text-align: center;">
+                <a href="<?php echo e($documentUrl); ?>" class="cta-button">
+                    </i> Click to View Document
                 </a>
             </div>
+
+            <p class="message" style="font-size: 14px; color: #6b7280; text-align: center; margin-top: 30px;">
+                Please review the document at your earliest convenience. You can access all pending documents in your dashboard.
+            </p>
         </td>
                         </tr>
                         <tr>
                             <td style="padding: 20px 30px; border-top: 1px solid #e5e7eb;">
-                                @include('emails.partials.footer')
+                                <?php echo $__env->make('emails.partials.footer', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
                             </td>
                         </tr>
                     </table>
@@ -216,3 +200,4 @@
     </div>
 </body>
 </html>
+<?php /**PATH C:\xampp\htdocs\Graduate_School_System\resources\views/emails/document-submitted.blade.php ENDPATH**/ ?>

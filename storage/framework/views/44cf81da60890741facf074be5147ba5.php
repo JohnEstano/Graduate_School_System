@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Comprehensive Exam Application Submitted</title>
+    <title>Comprehensive Exam Application Approved</title>
     <style>
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif,
@@ -52,13 +52,6 @@
             margin-bottom: 20px;
             color: #333;
         }
-
-        .success-box {
-            background-color: #ecfdf5;
-            border-left: 4px solid #10b981;
-            padding: 20px;
-            margin: 20px 0;
-        }
         
         .info-box {
             border: 1px solid #e5e7eb;
@@ -77,24 +70,6 @@
             color: #6b7280;
             font-size: 14px;
             margin-bottom: 10px;
-        }
-
-        .timeline {
-            margin: 20px 0;
-        }
-
-        .timeline-item {
-            padding-left: 30px;
-            position: relative;
-            margin-bottom: 15px;
-        }
-
-        .timeline-item::before {
-            content: "→";
-            position: absolute;
-            left: 0;
-            color: #FF4B64;
-            font-weight: bold;
         }
         
         .cta-button {
@@ -124,7 +99,7 @@
             .email-container { padding: 20px !important; }
             h1 { font-size: 24px !important; }
             .message { font-size: 14px !important; }
-            .info-box, .success-box { padding: 15px !important; }
+            .info-box { padding: 15px !important; }
             .cta-button { display: block !important; width: 100% !important; text-align: center; padding: 12px 20px !important; }
         }
     </style>
@@ -140,80 +115,90 @@
                                 <table width="100%" cellpadding="0" cellspacing="0" border="0">
                                     <tr>
                                         <td width="50">
-                                            <img src="{{ asset('gss-uic-logo-v2.png') }}" alt="UIC Graduate School Logo" style="max-width: 50px; height: auto;">
+                                            <img src="<?php echo e(asset('gss-uic-logo-v2.png')); ?>" alt="UIC Graduate School Logo" style="max-width: 50px; height: auto;">
                                         </td>
                                         <td align="right">
                                             <span style="color: #FF4B64; font-size: 14px; font-weight: bold;">Graduate School System</span>
                                         </td>
                                     </tr>
                                 </table>
-                                @include('emails.partials.testing-disclaimer')
-                                <h1 style="font-size: 32px; font-weight: bold; margin: 20px 0; color: #333;">Application Received!</h1>
+                                <?php echo $__env->make('emails.partials.testing-disclaimer', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
+                                <h1 style="font-size: 32px; font-weight: bold; margin: 20px 0; color: #333;">Comprehensive Exam Application Approved!</h1>
                                 <p style="font-size: 16px; line-height: 1.8; margin-bottom: 20px; color: #333;">
-                                    <strong>Dear {{ $student->first_name }} {{ $student->last_name }},</strong>
+                                    <strong>Dear <?php echo e($student->first_name); ?> <?php echo e($student->last_name); ?>,</strong>
                                 </p>
                                 <p style="font-size: 16px; line-height: 1.8; margin-bottom: 20px; color: #333;">
-                                    Thank you for submitting your comprehensive examination application. We have successfully received your submission.
+                                    Congratulations! Your comprehensive exam application has been <strong>approved by the <?php echo e($approvedBy); ?></strong>.
                                 </p>
-                                <div class="success-box" style="background-color: #ecfdf5; border-left: 4px solid #10b981; padding: 20px; margin: 20px 0;">
-                                    <p style="margin: 0; font-size: 16px; color: #065f46;"><strong>✓ Application Submitted Successfully</strong></p>
-                                    <p style="margin: 10px 0 0 0; font-size: 14px; color: #047857;">
-                                        Application ID: <strong>{{ $examApplication->id }}</strong><br>
-                                        Submitted on: {{ now()->format('F j, Y g:i A') }}
-                                    </p>
-                                </div>
                                 <table width="100%" cellpadding="0" cellspacing="0" border="0" style="border: 1px solid #e5e7eb; margin: 20px 0;">
                                     <tr>
                                         <td style="padding: 20px;">
                                             <h2 style="font-size: 18px; font-weight: bold; margin-top: 0; margin-bottom: 15px;">Application Details</h2>
                                             <div style="font-weight: bold; color: #374151; font-size: 14px; margin-top: 10px;">Student ID</div>
-                                            <div style="color: #6b7280; font-size: 14px; margin-bottom: 10px;">{{ $examApplication->student_id }}</div>
+                                            <div style="color: #6b7280; font-size: 14px; margin-bottom: 10px;"><?php echo e($examApplication->student_id); ?></div>
                                             <div style="font-weight: bold; color: #374151; font-size: 14px; margin-top: 10px;">Program</div>
-                                            <div style="color: #6b7280; font-size: 14px; margin-bottom: 10px;">{{ $examApplication->program }}</div>
+                                            <div style="color: #6b7280; font-size: 14px; margin-bottom: 10px;"><?php echo e($examApplication->program); ?></div>
                                             <div style="font-weight: bold; color: #374151; font-size: 14px; margin-top: 10px;">School Year</div>
-                                            <div style="color: #6b7280; font-size: 14px; margin-bottom: 10px;">{{ $examApplication->school_year }}</div>
+                                            <div style="color: #6b7280; font-size: 14px; margin-bottom: 10px;"><?php echo e($examApplication->school_year); ?></div>
+                                            <div style="font-weight: bold; color: #374151; font-size: 14px; margin-top: 10px;">Approved By</div>
+                                            <div style="color: #6b7280; font-size: 14px; margin-bottom: 10px;"><?php echo e(ucfirst($approvedBy)); ?><?php echo e($approverName ? ' - ' . $approverName : ''); ?></div>
+                                            <div style="font-weight: bold; color: #374151; font-size: 14px; margin-top: 10px;">Approved On</div>
+                                            <div style="color: #6b7280; font-size: 14px; margin-bottom: 10px;"><?php echo e(now()->format('F j, Y g:i A')); ?></div>
                                         </td>
                                     </tr>
                                 </table>
                                 <table width="100%" cellpadding="0" cellspacing="0" border="0" style="border: 1px solid #e5e7eb; margin: 20px 0;">
                                     <tr>
                                         <td style="padding: 20px;">
-                                            <h2 style="font-size: 18px; font-weight: bold; margin-top: 0; margin-bottom: 15px;">What Happens Next?</h2>
-                                            <div class="timeline">
-                                                <div class="timeline-item" style="padding-left: 30px; position: relative; margin-bottom: 15px;">
-                                                    <strong>Step 1:</strong> Registrar Review (1-2 business days)
-                                                </div>
-                                                <div class="timeline-item" style="padding-left: 30px; position: relative; margin-bottom: 15px;">
-                                                    <strong>Step 2:</strong> Payment Verification
-                                                </div>
-                                                <div class="timeline-item" style="padding-left: 30px; position: relative; margin-bottom: 15px;">
-                                                    <strong>Step 3:</strong> Dean Approval
-                                                </div>
-                                                <div class="timeline-item" style="padding-left: 30px; position: relative; margin-bottom: 15px;">
-                                                    <strong>Step 4:</strong> Email Notification
-                                                </div>
-                                                <div class="timeline-item" style="padding-left: 30px; position: relative; margin-bottom: 15px;">
-                                                    <strong>Step 5:</strong> Exam Schedule Release
-                                                </div>
-                                            </div>
+                                            <h2 style="font-size: 18px; font-weight: bold; margin-top: 0; margin-bottom: 15px;">Next Steps</h2>
+                                            <?php if($approvedBy === 'registrar'): ?>
+                                                <ul style="margin: 10px 0; padding-left: 20px;">
+                                                    <li style="margin-bottom: 8px; color: #4b5563;">Your application will now be forwarded to the Dean for final approval.</li>
+                                                    <li style="margin-bottom: 8px; color: #4b5563;">You will receive another notification once the Dean reviews your application.</li>
+                                                    <li style="margin-bottom: 8px; color: #4b5563;">Continue monitoring your dashboard for updates.</li>
+                                                </ul>
+                                            <?php else: ?>
+                                                <ul style="margin: 10px 0; padding-left: 20px;">
+                                                    <li style="margin-bottom: 8px; color: #4b5563;">Your comprehensive exam application has been fully approved!</li>
+                                                    <li style="margin-bottom: 8px; color: #4b5563;">Check the exam schedule for your subject offerings.</li>
+                                                    <li style="margin-bottom: 8px; color: #4b5563;">Prepare for your comprehensive examination.</li>
+                                                    <li style="margin-bottom: 8px; color: #4b5563;">Review all course materials and study guides.</li>
+                                                    <li style="margin-bottom: 8px; color: #4b5563;">If you have questions, contact the Graduate School Office.</li>
+                                                </ul>
+                                            <?php endif; ?>
                                         </td>
                                     </tr>
                                 </table>
                                 <table width="100%" cellpadding="0" cellspacing="0" border="0">
                                     <tr>
                                         <td align="center" style="padding: 20px 0;">
-                                            <a href="{{ url('/comprehensive-exam') }}" style="display: inline-block; background-color: #FF4B64; color: #ffffff; padding: 15px 35px; text-decoration: none; font-weight: bold; font-size: 16px;">Track Application Status</a>
+                                            <a href="<?php echo e(url('/comprehensive-exam')); ?>" style="display: inline-block; background-color: #FF4B64; color: #ffffff; padding: 15px 35px; text-decoration: none; font-weight: bold; font-size: 16px;">View Application Status</a>
                                         </td>
                                     </tr>
                                 </table>
-                                <p style="font-size: 14px; line-height: 1.8; color: #6b7280; margin-top: 20px;">
-                                    You will receive email notifications at each stage of the review process. Please monitor your email regularly and check your dashboard for updates.
-                                </p>
                             </td>
                         </tr>
                         <tr>
                             <td style="padding: 20px 30px; border-top: 1px solid #e5e7eb;">
-                                @include('emails.partials.footer')
+                                <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                                    <tr>
+                                        <td align="center">
+                                            <img src="<?php echo e(asset('gss-uic-logo-v2.png')); ?>" alt="UIC Graduate School Logo" style="max-width: 60px; margin-bottom: 10px;">
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td align="center" style="font-size: 12px; color: #6b7280; line-height: 1.6;">
+                                            <strong>University of the Immaculate Conception</strong><br>
+                                            Graduate School Office<br>
+                                            Father Selga St., Davao City, Philippines 8000
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td align="center" style="font-size: 12px; color: #6b7280; padding-top: 15px;">
+                                            This is an automated message from the Graduate School System. Please do not reply to this email.
+                                        </td>
+                                    </tr>
+                                </table>
                             </td>
                         </tr>
                     </table>
@@ -223,3 +208,4 @@
     </div>
 </body>
 </html>
+<?php /**PATH C:\xampp\htdocs\Graduate_School_System\resources\views/emails/comprehensive-exam-approved.blade.php ENDPATH**/ ?>
