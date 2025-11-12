@@ -140,17 +140,17 @@
                                 <table width="100%" cellpadding="0" cellspacing="0" border="0">
                                     <tr>
                                         <td width="50">
-                                            <img src="{{ asset('gss-uic-logo-v2.png') }}" alt="UIC Graduate School Logo" style="max-width: 50px; height: auto;">
+                                            <img src="<?php echo e(asset('gss-uic-logo-v2.png')); ?>" alt="UIC Graduate School Logo" style="max-width: 50px; height: auto;">
                                         </td>
                                         <td align="right">
                                             <span style="color: #FF4B64; font-size: 14px; font-weight: bold;">Graduate School System</span>
                                         </td>
                                     </tr>
                                 </table>
-                                @include('emails.partials.testing-disclaimer')
+                                <?php echo $__env->make('emails.partials.testing-disclaimer', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
                                 <h1 style="font-size: 32px; font-weight: bold; margin: 20px 0; color: #333;">Application Received!</h1>
                                 <p style="font-size: 16px; line-height: 1.8; margin-bottom: 20px; color: #333;">
-                                    <strong>Dear {{ $student->first_name }} {{ $student->last_name }},</strong>
+                                    <strong>Dear <?php echo e($student->first_name); ?> <?php echo e($student->last_name); ?>,</strong>
                                 </p>
                                 <p style="font-size: 16px; line-height: 1.8; margin-bottom: 20px; color: #333;">
                                     Thank you for submitting your comprehensive examination application. We have successfully received your submission.
@@ -158,8 +158,9 @@
                                 <div class="success-box" style="background-color: #ecfdf5; border-left: 4px solid #10b981; padding: 20px; margin: 20px 0;">
                                     <p style="margin: 0; font-size: 16px; color: #065f46;"><strong>✓ Application Submitted Successfully</strong></p>
                                     <p style="margin: 10px 0 0 0; font-size: 14px; color: #047857;">
-                                        Application ID: <strong>{{ $examApplication->id }}</strong><br>
-                                        Submitted on: {{ now()->format('F j, Y g:i A') }}
+                                        Application ID: <strong><?php echo e($examApplication->id); ?></strong><br>
+                                        Submitted on: <?php echo e(now()->format('F j, Y g:i A')); ?>
+
                                     </p>
                                 </div>
                                 <table width="100%" cellpadding="0" cellspacing="0" border="0" style="border: 1px solid #e5e7eb; margin: 20px 0;">
@@ -167,11 +168,11 @@
                                         <td style="padding: 20px;">
                                             <h2 style="font-size: 18px; font-weight: bold; margin-top: 0; margin-bottom: 15px;">Application Details</h2>
                                             <div style="font-weight: bold; color: #374151; font-size: 14px; margin-top: 10px;">Student ID</div>
-                                            <div style="color: #6b7280; font-size: 14px; margin-bottom: 10px;">{{ $examApplication->student_id }}</div>
+                                            <div style="color: #6b7280; font-size: 14px; margin-bottom: 10px;"><?php echo e($examApplication->student_id); ?></div>
                                             <div style="font-weight: bold; color: #374151; font-size: 14px; margin-top: 10px;">Program</div>
-                                            <div style="color: #6b7280; font-size: 14px; margin-bottom: 10px;">{{ $examApplication->program }}</div>
+                                            <div style="color: #6b7280; font-size: 14px; margin-bottom: 10px;"><?php echo e($examApplication->program); ?></div>
                                             <div style="font-weight: bold; color: #374151; font-size: 14px; margin-top: 10px;">School Year</div>
-                                            <div style="color: #6b7280; font-size: 14px; margin-bottom: 10px;">{{ $examApplication->school_year }}</div>
+                                            <div style="color: #6b7280; font-size: 14px; margin-bottom: 10px;"><?php echo e($examApplication->school_year); ?></div>
                                         </td>
                                     </tr>
                                 </table>
@@ -202,7 +203,7 @@
                                 <table width="100%" cellpadding="0" cellspacing="0" border="0">
                                     <tr>
                                         <td align="center" style="padding: 20px 0;">
-                                            <a href="{{ url('/comprehensive-exam') }}" style="display: inline-block; background-color: #FF4B64; color: #ffffff; padding: 15px 35px; text-decoration: none; font-weight: bold; font-size: 16px;">Track Application Status</a>
+                                            <a href="<?php echo e(url('/comprehensive-exam')); ?>" style="display: inline-block; background-color: #FF4B64; color: #ffffff; padding: 15px 35px; text-decoration: none; font-weight: bold; font-size: 16px;">Track Application Status</a>
                                         </td>
                                     </tr>
                                 </table>
@@ -213,7 +214,25 @@
                         </tr>
                         <tr>
                             <td style="padding: 20px 30px; border-top: 1px solid #e5e7eb;">
-                                @include('emails.partials.footer')
+                                <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                                    <tr>
+                                        <td align="center">
+                                            <img src="<?php echo e(asset('gss-uic-logo-v2.png')); ?>" alt="UIC Graduate School Logo" style="max-width: 60px; margin-bottom: 10px;">
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td align="center" style="font-size: 12px; color: #6b7280; line-height: 1.6;">
+                                            <strong>University of the Immaculate Conception</strong><br>
+                                            Graduate School Office<br>
+                                            Father Selga St., Davao City, Philippines 8000
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td align="center" style="font-size: 12px; color: #6b7280; padding-top: 15px;">
+                                            This is an automated message from the Graduate School System. Please do not reply to this email.
+                                        </td>
+                                    </tr>
+                                </table>
                             </td>
                         </tr>
                     </table>
@@ -223,3 +242,4 @@
     </div>
 </body>
 </html>
+<?php /**PATH C:\xampp\htdocs\Graduate_School_System\resources\views/emails/comprehensive-exam-submitted.blade.php ENDPATH**/ ?>

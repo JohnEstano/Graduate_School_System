@@ -182,25 +182,7 @@
                         </tr>
                         <tr>
                             <td style="padding: 20px 30px; border-top: 1px solid #e5e7eb;">
-                                <table width="100%" cellpadding="0" cellspacing="0" border="0">
-                                    <tr>
-                                        <td align="center">
-                                            <img src="{{ asset('gss-uic-logo-v2.png') }}" alt="UIC Graduate School Logo" style="max-width: 60px; margin-bottom: 10px;">
-                                        </td>
-                                    </tr>
-                                    <tr>
-                                        <td align="center" style="font-size: 12px; color: #6b7280; line-height: 1.6;">
-                                            <strong>University of the Immaculate Conception</strong><br>
-                                            Graduate School Office<br>
-                                            Father Selga St., Davao City, Philippines 8000
-                                        </td>
-                                    </tr>
-                                    <tr>
-                                        <td align="center" style="font-size: 12px; color: #6b7280; padding-top: 15px;">
-                                            This is an automated message from the Graduate School System. Please do not reply to this email.
-                                        </td>
-                                    </tr>
-                                </table>
+                                @include('emails.partials.footer')
                             </td>
                         </tr>
                     </table>

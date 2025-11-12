@@ -158,7 +158,7 @@
                                 <table width="100%" cellpadding="0" cellspacing="0" border="0">
                                     <tr>
                                         <td width="50">
-                                            <img src="{{ asset('gss-uic-logo-v2.png') }}" alt="UIC Graduate School Logo" class="logo" style="max-width: 50px; height: auto;">
+                                            <img src="<?php echo e(asset('gss-uic-logo-v2.png')); ?>" alt="UIC Graduate School Logo" class="logo" style="max-width: 50px; height: auto;">
                                         </td>
                                         <td align="right">
                                             <span class="header-title" style="color: #FF4B64; font-size: 14px; font-weight: bold;">Graduate School System</span>
@@ -167,18 +167,18 @@
                                 </table>
 
                                 <!-- Testing Disclaimer -->
-                                @include('emails.partials.testing-disclaimer')
+                                <?php echo $__env->make('emails.partials.testing-disclaimer', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
 
                                 <!-- Main Heading -->
                                 <h1 style="font-size: 32px; font-weight: bold; margin-top: 20px; margin-bottom: 30px; color: #333;">You have been registered as an Adviser!</h1>
 
                                 <!-- Content -->
                                 <p class="message" style="font-size: 16px; line-height: 1.8; margin-bottom: 20px; color: #333;">
-                                    <strong>Dear, {{ $adviserName }}</strong>
+                                    <strong>Dear, <?php echo e($adviserName); ?></strong>
                                 </p>
                                 <p class="message" style="font-size: 16px; line-height: 1.8; margin-bottom: 20px; color: #333;">
                                     We hope this message finds you well. You have been registered as an adviser in
-                                    the <strong>Graduate School System</strong> by <strong>{{ $coordinatorName }}</strong>.
+                                    the <strong>Graduate School System</strong> by <strong><?php echo e($coordinatorName); ?></strong>.
                                 </p>
 
                                 <!-- Get Started Box -->
@@ -220,7 +220,7 @@
                                 <table width="100%" cellpadding="0" cellspacing="0" border="0">
                                     <tr>
                                         <td align="center" style="padding: 20px 0;">
-                                            <a href="{{ config('app.url') }}/login" class="cta-button" style="display: inline-block; background-color: #FF4B64; color: #ffffff; padding: 15px 35px; text-decoration: none; font-weight: bold; font-size: 16px;">
+                                            <a href="<?php echo e(config('app.url')); ?>/login" class="cta-button" style="display: inline-block; background-color: #FF4B64; color: #ffffff; padding: 15px 35px; text-decoration: none; font-weight: bold; font-size: 16px;">
                                                 Log In to Graduate School System
                                             </a>
                                         </td>
@@ -237,7 +237,7 @@
                         <!-- Footer -->
                         <tr>
                             <td style="padding: 20px 30px; border-top: 1px solid #e5e7eb;">
-                                @include('emails.partials.footer')
+                                <?php echo $__env->make('emails.partials.footer', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
                             </td>
                         </tr>
                     </table>
@@ -247,3 +247,4 @@
     </div>
 </body>
 </html>
+<?php /**PATH C:\xampp\htdocs\Graduate_School_System\resources\views/emails/adviser-invitation.blade.php ENDPATH**/ ?>

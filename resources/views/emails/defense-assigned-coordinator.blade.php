@@ -235,16 +235,13 @@
                         </tr>
                         <tr>
                             <td style="padding: 20px 30px; border-top: 1px solid #e5e7eb;">
-        <img src="{{ asset('gss-uic-logo-v2.png') }}" alt="UIC Graduate School Logo" class="logo">
-        <p>
-            <strong>University of the Immaculate Conception</strong><br>
-            Graduate School Office<br>
-            Father Selga St., Davao City, Philippines 8000
-        </p>
-        <p style="margin-top: 15px;">
-            This is an automated message from the Graduate School System. Please do not
-            reply to this email.
-        </p>
+                                @include('emails.partials.footer')
+                            </td>
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+        </table>
     </div>
 </body>
 </html>

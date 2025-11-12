@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Defense Request Approved</title>
+    <title>Comprehensive Exam Application Requires Revision</title>
     <style>
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif,
@@ -44,10 +44,10 @@
         }
 
         h1 {
-            font-size: 32px;
+            font-size: 34px;
             font-weight: bold;
             margin-top: 0;
-            margin-bottom: 35px;
+            margin-bottom: 20px;
         }
 
         .content {
@@ -79,8 +79,18 @@
             margin-bottom: 10px;
         }
 
-        .comment-box {
-            background-color: #f3f4f6;
+        .info-box ul {
+            margin: 10px 0;
+            padding-left: 20px;
+        }
+
+        .info-box ul li {
+            margin-bottom: 8px;
+            color: #4b5563;
+        }
+
+        .notice-box {
+            background-color: #fef2f2;
             padding: 20px;
             margin: 20px 0;
             border-left: 4px solid #FF4B64;
@@ -100,20 +110,23 @@
             border-radius: 0px;
             font-weight: bold;
             font-size: 16px;
-            margin-top: 20px;
         }
 
         .footer {
             text-align: center;
-            margin-top: 30px;
-            padding-top: 20px;
-            font-size: 12px;
-            color: #6b7280;
+            padding: 20px 30px;
+            border-top: 1px solid #e5e7eb;
         }
 
         .footer .logo {
             max-width: 60px;
             margin-bottom: 10px;
+        }
+        
+        .footer-text {
+            font-size: 12px;
+            color: #6b7280;
+            line-height: 1.6;
         }
     
         @media (max-width: 600px) {
@@ -125,7 +138,6 @@
         }
     </style>
 </head>
-
 <body>
     <div class="email-wrapper">
         <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #f4f4f4;">
@@ -137,76 +149,84 @@
         <table width="100%" cellpadding="0" cellspacing="0" border="0">
                                     <tr>
                                         <td width="50">
-                                            <img src="{{ asset('gss-uic-logo-v2.png') }}" alt="UIC Graduate School Logo" style="max-width: 50px; height: auto;">
+                                            <img src="<?php echo e(asset('gss-uic-logo-v2.png')); ?>" alt="UIC Graduate School Logo" style="max-width: 50px; height: auto;">
                                         </td>
                                         <td align="right">
                                             <span style="color: #FF4B64; font-size: 14px; font-weight: bold;">Graduate School System</span>
                                         </td>
                                     </tr>
                                 </table>
-        {{-- Testing Disclaimer --}}
-        @include('emails.partials.testing-disclaimer')
+        
+        <?php echo $__env->make('emails.partials.testing-disclaimer', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
 
-        <h1>Defense Request Approved!</h1>
+        <h1>Application Requires Revision!</h1>
 
         
             <p class="message">
-                <strong>Dear {{ $student->first_name }} {{ $student->last_name }},</strong>
+                <strong>Dear <?php echo e($student->first_name); ?> <?php echo e($student->last_name); ?>,</strong>
             </p>
             <p class="message">
-                Great news! Your defense request has been <strong>approved by your {{ $approvedBy }}</strong>.
+                Your comprehensive exam application has been reviewed by the <strong><?php echo e($rejectedBy); ?></strong> and requires some revisions before it can be approved.
+            </p>
+            <p class="message">
+                <strong>Don't worry!</strong> This is a normal part of the process. Please review the feedback below and make the necessary adjustments.
             </p>
 
             <div class="info-box">
-                <h2>Request Details</h2>
-                <div class="label">Defense Type</div>
-                <div class="value">{{ $defenseRequest->defense_type }} Defense</div>
+                <h2>Application Details</h2>
+                
+                <div class="label">Student ID</div>
+                <div class="value"><?php echo e($examApplication->student_id); ?></div>
 
-                <div class="label">Thesis Title</div>
-                <div class="value" style="font-style: italic;">{{ $defenseRequest->thesis_title }}</div>
+                <div class="label">Program</div>
+                <div class="value"><?php echo e($examApplication->program); ?></div>
 
-                <div class="label">Approved By</div>
-                <div class="value">{{ ucfirst($approvedBy) }}</div>
+                <div class="label">School Year</div>
+                <div class="value"><?php echo e($examApplication->school_year); ?></div>
 
-                <div class="label">Approved On</div>
-                <div class="value">{{ now()->format('F j, Y g:i A') }}</div>
+                <div class="label">Reviewed By</div>
+                <div class="value"><?php echo e(ucfirst($rejectedBy)); ?><?php echo e($rejectorName ? ' - ' . $rejectorName : ''); ?></div>
+
+                <div class="label">Reviewed On</div>
+                <div class="value"><?php echo e(now()->format('F j, Y g:i A')); ?></div>
             </div>
 
-            @if ($comment)
-                <div class="comment-box">
-                    <p><strong> <i class="fa-solid fa-comment"></i> {{ ucfirst($approvedBy) }}'s Comments:</strong></p>
-                    <p style="margin: 0; font-style: italic;">{{ $comment }}</p>
+            <?php if($rejectionReason): ?>
+                <div class="notice-box">
+                    <p><strong><i class="fa-solid fa-circle-info"></i> <?php echo e(ucfirst($rejectedBy)); ?>'s Feedback:</strong></p>
+                    <p style="margin: 10px 0 0 0; font-style: italic; color: #991b1b;"><?php echo e($rejectionReason); ?></p>
                 </div>
-            @endif
+            <?php endif; ?>
 
             <div class="info-box">
-                <h2>Next Steps</h2>
-                @if ($approvedBy === 'adviser')
-                    <ul>
-                        <li>Your request will now be forwarded to the Coordinator for final approval.</li>
-                        <li>You will receive another notification once the Coordinator reviews your request.</li>
-                        <li>Continue monitoring your dashboard for updates.</li>
-                    </ul>
-                @else
-                    <ul>
-                        <li>Wait for panel assignment from the Coordinator.</li>
-                        <li>You will receive a notification once your defense is scheduled.</li>
-                        <li>Begin preparing your defense presentation.</li>
-                        <li>Review all required documents and ensure they are complete.</li>
-                    </ul>
-                @endif
+                <h2>What You Need to Do</h2>
+                <ul>
+                    <li>Carefully review the feedback provided above.</li>
+                    <li>Address all concerns mentioned by the <?php echo e($rejectedBy); ?>.</li>
+                    <li>Ensure all required documents are complete and accurate.</li>
+                    <li>Verify that you meet all eligibility requirements.</li>
+                    <li>Contact the Graduate School Office if you need clarification.</li>
+                    <li>Submit a new application once all issues are resolved.</li>
+                </ul>
             </div>
 
             <div class="button-container">
-                <a href="{{ url('/defense-request/' . $defenseRequest->id) }}" class="cta-button">
-                    View Request Details
+                <a href="<?php echo e(url('/comprehensive-exam')); ?>" class="cta-button">
+                    View Application Status
                 </a>
             </div>
-        </td>
-                        </tr>
                         <tr>
-                            <td style="padding: 20px 30px; border-top: 1px solid #e5e7eb;">
-                                @include('emails.partials.footer')
+                            <td class="footer">
+                                <img src="<?php echo e(asset('gss-uic-logo-v2.png')); ?>" alt="UIC Graduate School Logo" class="logo">
+                                <p class="footer-text">
+                                    <strong>University of the Immaculate Conception</strong><br>
+                                    Graduate School Office<br>
+                                    Father Selga St., Davao City, Philippines 8000
+                                </p>
+                                <p class="footer-text" style="margin-top: 15px;">
+                                    This is an automated message from the Graduate School System. Please do not
+                                    reply to this email.
+                                </p>
                             </td>
                         </tr>
                     </table>
@@ -216,3 +236,4 @@
     </div>
 </body>
 </html>
+<?php /**PATH C:\xampp\htdocs\Graduate_School_System\resources\views/emails/comprehensive-exam-rejected.blade.php ENDPATH**/ ?>

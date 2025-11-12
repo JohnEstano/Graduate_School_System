@@ -191,81 +191,81 @@
         <table width="100%" cellpadding="0" cellspacing="0" border="0">
                                     <tr>
                                         <td width="50">
-                                            <img src="{{ asset('gss-uic-logo-v2.png') }}" alt="UIC Graduate School Logo" style="max-width: 50px; height: auto;">
+                                            <img src="<?php echo e(asset('gss-uic-logo-v2.png')); ?>" alt="UIC Graduate School Logo" style="max-width: 50px; height: auto;">
                                         </td>
                                         <td align="right">
                                             <span style="color: #FF4B64; font-size: 14px; font-weight: bold;">Graduate School System</span>
                                         </td>
                                     </tr>
                                 </table>
-        {{-- Testing Disclaimer --}}
-        @include('emails.partials.testing-disclaimer')
+        
+        <?php echo $__env->make('emails.partials.testing-disclaimer', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
 
         <h1>Defense Panel Invitation!</h1>
 
         
             <p class="message">
-                <strong>Dear Prof. {{ $panelistName }},</strong>
+                <strong>Dear Prof. <?php echo e($panelistName); ?>,</strong>
             </p>
             <p class="message">
                 You are cordially invited to serve on the defense panel for a graduate student at the University of the Immaculate Conception Graduate School. Your expertise and insights would be invaluable to this academic evaluation.
             </p>
 
             <div style="text-align: center;">
-                <span class="role-badge"> <i class="fa-solid fa-user"></i> {{ strtoupper($role) }}</span>
+                <span class="role-badge"> <i class="fa-solid fa-user"></i> <?php echo e(strtoupper($role)); ?></span>
             </div>
 
             <div class="info-box">
                 <h2>Defense Details</h2>
                 
                 <div class="label">Student</div>
-                <div class="value">{{ $studentName }}</div>
+                <div class="value"><?php echo e($studentName); ?></div>
                 
                 <div class="label">Defense Title</div>
-                <div class="value" style="font-style: italic;">{{ $defenseTitle }}</div>
+                <div class="value" style="font-style: italic;"><?php echo e($defenseTitle); ?></div>
                 
                 <div class="label">Adviser</div>
-                <div class="value">{{ $adviserName }}</div>
+                <div class="value"><?php echo e($adviserName); ?></div>
                 
                 <div class="label">Date</div>
-                <div class="value"><i class="fas fa-calendar-alt"></i> {{ \Carbon\Carbon::parse($defenseDate)->format('l, F j, Y') }}</div>
+                <div class="value"><i class="fas fa-calendar-alt"></i> <?php echo e(\Carbon\Carbon::parse($defenseDate)->format('l, F j, Y')); ?></div>
                 
                 <div class="label">Time</div>
-                <div class="value"><i class="fas fa-clock"></i> {{ \Carbon\Carbon::parse($defenseTime)->format('g:i A') }} - {{ \Carbon\Carbon::parse($defenseEndTime)->format('g:i A') }}</div>
+                <div class="value"><i class="fas fa-clock"></i> <?php echo e(\Carbon\Carbon::parse($defenseTime)->format('g:i A')); ?> - <?php echo e(\Carbon\Carbon::parse($defenseEndTime)->format('g:i A')); ?></div>
                 
                 <div class="label">Mode</div>
-                <div class="value">{{ ucfirst($defenseMode) }}</div>
+                <div class="value"><?php echo e(ucfirst($defenseMode)); ?></div>
                 
                 <div class="label">Venue</div>
-                <div class="value"><i class="fas fa-map-marker-alt"></i> {{ $defenseVenue }}</div>
+                <div class="value"><i class="fas fa-map-marker-alt"></i> <?php echo e($defenseVenue); ?></div>
 
-                @if(count($otherPanels) > 0)
+                <?php if(count($otherPanels) > 0): ?>
                 <div class="panel-section">
                     <h3>Other Panel Members</h3>
-                    @foreach($otherPanels as $panel)
+                    <?php $__currentLoopData = $otherPanels; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $panel): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
                         <div class="panel-member">
-                            <div class="panel-member-name">{{ $panel->name }}</div>
-                            <div class="panel-member-role">{{ $panel->role }}</div>
+                            <div class="panel-member-name"><?php echo e($panel->name); ?></div>
+                            <div class="panel-member-role"><?php echo e($panel->role); ?></div>
                         </div>
-                    @endforeach
+                    <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
                 </div>
-                @endif
+                <?php endif; ?>
             </div>
 
             <div class="responsibilities-box">
-                <h3><i class="fa-regular fa-user"></i> Your Role as {{ ucfirst($role) }}</h3>
+                <h3><i class="fa-regular fa-user"></i> Your Role as <?php echo e(ucfirst($role)); ?></h3>
                 <ul>
-                    @if($role === 'chair')
+                    <?php if($role === 'chair'): ?>
                         <li>Preside over the defense proceedings</li>
                         <li>Ensure the defense follows proper academic protocols</li>
                         <li>Facilitate questions and discussions among panel members</li>
                         <li>Lead the panel in deliberations and final evaluation</li>
-                    @else
+                    <?php else: ?>
                         <li>Review the student's thesis/dissertation manuscript</li>
                         <li>Prepare questions and comments for the defense</li>
                         <li>Evaluate the quality and rigor of the research</li>
                         <li>Participate in panel deliberations and provide feedback</li>
-                    @endif
+                    <?php endif; ?>
                     <li>Arrive at least 15 minutes before the scheduled time</li>
                     <li>Submit evaluation forms after the defense</li>
                 </ul>
@@ -281,7 +281,7 @@
                         </tr>
                         <tr>
                             <td style="padding: 20px 30px; border-top: 1px solid #e5e7eb;">
-                                @include('emails.partials.footer')
+                                <?php echo $__env->make('emails.partials.footer', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
                             </td>
                         </tr>
                     </table>
@@ -291,3 +291,4 @@
     </div>
 </body>
 </html>
+<?php /**PATH C:\xampp\htdocs\Graduate_School_System\resources\views/emails/defense-panel-invitation.blade.php ENDPATH**/ ?>
