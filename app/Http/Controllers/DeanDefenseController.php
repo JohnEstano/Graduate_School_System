@@ -83,14 +83,20 @@ class DeanDefenseController extends Controller
         $this->authorizeDean();
 
         $items = DefenseRequest::with(['user', 'adviserUser', 'aaVerification'])
+            ->where(function($query) {
+                // Include requests where coordinator approved with delegation
+                $query->where('coordinator_status', 'Approved')
+                      // OR requests sent to dean without delegation
+                      ->orWhere('coordinator_status', 'Pending Dean Approval');
+            })
             ->whereIn('workflow_state', [
                 'coordinator-approved',
                 'panels-assigned',
                 'scheduled',
                 'dean-review',
-                'dean-approved'
+                'dean-approved',
+                'pending-dean-approval'  // Include requests awaiting dean approval
             ])
-            ->where('coordinator_status', 'Approved')
             ->orderBy('created_at', 'desc')
             ->get()
             ->map(fn($r) => $this->mapDefenseRequestForList($r));

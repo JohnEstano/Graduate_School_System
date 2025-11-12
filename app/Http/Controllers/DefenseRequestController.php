@@ -1943,7 +1943,7 @@ class DefenseRequestController extends Controller
         }
 
         $data = $request->validate([
-            'coordinator_status' => 'required|in:Approved,Rejected,Pending',
+            'coordinator_status' => 'required|in:Approved,Rejected,Pending,Pending Dean Approval',
             'coordinator_user_id' => 'nullable|integer|exists:users,id',
             'send_email' => 'nullable|boolean',
             'coordinator_comments' => 'nullable|string|max:500'
@@ -1974,6 +1974,8 @@ class DefenseRequestController extends Controller
                 $defenseRequest->workflow_state = 'coordinator-approved';
             } elseif ($data['coordinator_status'] === 'Rejected') {
                 $defenseRequest->workflow_state = 'coordinator-rejected';
+            } elseif ($data['coordinator_status'] === 'Pending Dean Approval') {
+                $defenseRequest->workflow_state = 'pending-dean-approval';
             } else {
                 $defenseRequest->workflow_state = 'coordinator-review';
             }
