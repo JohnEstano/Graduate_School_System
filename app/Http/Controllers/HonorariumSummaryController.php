@@ -9,6 +9,7 @@ use Inertia\Inertia;
 use App\Services\HonorariumService;
 use Illuminate\Support\Facades\Log;
 use Barryvdh\DomPDF\Facade\Pdf;
+use App\Models\Adviser;
 
 class HonorariumSummaryController extends Controller
 {
@@ -55,7 +56,7 @@ class HonorariumSummaryController extends Controller
         // If unknown, capitalize words and return as-is (but keep it predictable)
         return ucwords($r);
     }
-   public function index(Request $request)
+   public function index(Request $request): \Inertia\Response
     {
         $records = ProgramRecord::query()
             ->when($request->year, fn($q) => $q->whereYear('date_edited', $request->year))
@@ -70,7 +71,7 @@ class HonorariumSummaryController extends Controller
     }
 
     // This method renders the individual record page (Page 2)
-public function show($programId)
+public function show(string $programId): \Inertia\Response
 {
     // Fetch the program record with panelists and their related data
     // Include defenseRequest to get the total defense amount
@@ -78,22 +79,17 @@ public function show($programId)
         'panelists.students.payments',
         'panelists.students.defenseRequest',
         'panelists.payments'
-    ])->findOrFail($programId);
+    ])->findOrFail((int) $programId);
 
-    // Get all panelist records for this program and filter out Advisers
-    $allPanelistRecords = $record->panelists
-        ->filter(function($panelist) {
-            // Get all roles for this panelist
-            $roles = $panelist->students->pluck('pivot.role')->filter()->map(fn($r) => $this->normalizeRole($r))->filter()->unique()->values()->all();
-            $roleSummary = count($roles) === 1 ? $roles[0] : (count($roles) > 1 ? implode(', ', $roles) : ($this->normalizeRole($panelist->role) ?? 'N/A'));
-            
-            // Exclude if role is 'Adviser'
-            return $roleSummary !== 'Adviser' && !str_contains(strtolower($roleSummary), 'advis');
-        });
+    // Get all panelist records for this program (including Advisers)
+    $allPanelistRecords = $record->panelists;
+
+    // Combine panelist records and adviser records
+    $allRecords = $allPanelistRecords;
 
     // Group panelist records by panelist name (pfirst_name, pmiddle_name, plast_name)
     // This combines multiple defense records for the same panelist
-    $groupedPanelists = $allPanelistRecords->groupBy(function($panelist) {
+    $groupedPanelists = $allRecords->groupBy(function($panelist) {
         return trim($panelist->pfirst_name . '|' . ($panelist->pmiddle_name ?? '') . '|' . $panelist->plast_name);
     })->map(function($panelistGroup) {
         // Take the first record as the base
@@ -244,9 +240,9 @@ public function show($programId)
 
 
 
-public function storePanelist(Request $request, $programId)
+public function storePanelist(Request $request, string $programId): \Illuminate\Http\JsonResponse
 {
-    $program = ProgramRecord::findOrFail($programId);
+    $program = ProgramRecord::findOrFail((int) $programId);
 
     $validated = $request->validate([
         'pfirst_name'   => 'required|string|max:255',
@@ -272,7 +268,7 @@ public function storePanelist(Request $request, $programId)
 
 
 
-public function downloadCSV(ProgramRecord $record)
+    public function downloadCSV(ProgramRecord $record): \Symfony\Component\HttpFoundation\StreamedResponse
     {
         $filename = $record->name . '_payments.csv';
 
@@ -306,7 +302,7 @@ public function downloadCSV(ProgramRecord $record)
         return response()->stream($callback, 200, $headers);
     }
 
-    public function students($programId)
+    public function students(Request $request, string $programId): \Illuminate\Http\JsonResponse
     {
         // Get all students for this program, with their payments
         $students = \App\Models\StudentRecord::with('payments')
@@ -317,7 +313,7 @@ public function downloadCSV(ProgramRecord $record)
     }
 
     // Add this method for the PDF download functionality from your React component
-    public function downloadProgramPdf($programId)
+    public function downloadProgramPdf(string $programId): \Illuminate\Http\Response
     {
         try {
             $record = ProgramRecord::with([
@@ -342,7 +338,7 @@ public function downloadCSV(ProgramRecord $record)
         }
     }
 
-    public function downloadPdfApi(Request $request, $programId)
+    public function downloadPdfApi(Request $request, string $programId): \Illuminate\Http\Response
     {
         try {
             // 1. Load program with relationships
@@ -401,7 +397,7 @@ public function downloadCSV(ProgramRecord $record)
         }
     }
 
-    public function downloadPanelistPdf(Request $request, $panelistId)
+    public function downloadPanelistPdf(Request $request, string $panelistId): \Illuminate\Http\Response
     {
         try {
             // Load panelist with students and payments
@@ -472,7 +468,7 @@ public function downloadCSV(ProgramRecord $record)
     /**
      * Download a CSV for a single panelist including per-assignment role
      */
-    public function downloadPanelistCsv(Request $request, $panelistId)
+    public function downloadPanelistCsv(Request $request, string $panelistId): \Symfony\Component\HttpFoundation\StreamedResponse
     {
         $panelist = \App\Models\PanelistRecord::with(['students.payments', 'program'])->findOrFail($panelistId);
 

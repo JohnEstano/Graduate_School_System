@@ -3,7 +3,6 @@
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
-use Illuminate\Support\Facades\DB;
 
 return new class extends Migration
 {
@@ -12,8 +11,14 @@ return new class extends Migration
      */
     public function up(): void
     {
-        // Laravel doesn't support modifying ENUMs directly, so we need to use raw SQL
-        DB::statement("ALTER TABLE aa_payment_verifications MODIFY COLUMN status ENUM('pending', 'ready_for_finance', 'in_progress', 'paid', 'completed', 'invalid') DEFAULT 'pending'");
+        // For SQLite compatibility, we'll drop and recreate the column
+        Schema::table('aa_payment_verifications', function (Blueprint $table) {
+            $table->dropColumn('status');
+        });
+
+        Schema::table('aa_payment_verifications', function (Blueprint $table) {
+            $table->enum('status', ['pending', 'ready_for_finance', 'in_progress', 'paid', 'completed', 'invalid'])->default('pending')->after('batch_id');
+        });
     }
 
     /**
@@ -21,7 +26,13 @@ return new class extends Migration
      */
     public function down(): void
     {
-        // Remove 'invalid' from the ENUM
-        DB::statement("ALTER TABLE aa_payment_verifications MODIFY COLUMN status ENUM('pending', 'ready_for_finance', 'in_progress', 'paid', 'completed') DEFAULT 'pending'");
+        // For SQLite compatibility, we'll drop and recreate the column
+        Schema::table('aa_payment_verifications', function (Blueprint $table) {
+            $table->dropColumn('status');
+        });
+
+        Schema::table('aa_payment_verifications', function (Blueprint $table) {
+            $table->enum('status', ['pending', 'ready_for_finance', 'in_progress', 'paid', 'completed'])->default('pending')->after('batch_id');
+        });
     }
 };

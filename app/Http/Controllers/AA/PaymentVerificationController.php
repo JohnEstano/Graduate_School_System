@@ -136,7 +136,7 @@ class PaymentVerificationController extends Controller
         // Calculate program level from program name
         $programLevel = \App\Helpers\ProgramLevel::getLevel($defenseRequest->program);
         
-        \Log::info('Creating honorarium records', [
+        Log::info('Creating honorarium records', [
             'defense_id' => $defenseRequest->id,
             'program' => $defenseRequest->program,
             'program_level' => $programLevel,
@@ -150,7 +150,7 @@ class PaymentVerificationController extends Controller
             ->keyBy('type');
         
         if ($paymentRates->isEmpty()) {
-            \Log::error('No payment rates found', [
+            Log::error('No payment rates found', [
                 'program_level' => $programLevel,
                 'defense_type' => $defenseRequest->defense_type,
             ]);
@@ -218,7 +218,7 @@ class PaymentVerificationController extends Controller
             $memberRate = $paymentRates->get($member['role']) ?? $paymentRates->get('Panel Member 1') ?? $paymentRates->get('Panel Member');
             
             if (!$memberRate) {
-                \Log::warning('No Panel Member rate found', [
+                Log::warning('No Panel Member rate found', [
                     'role' => $member['role'],
                     'program' => $defenseRequest->program,
                     'program_level' => $programLevel,
@@ -245,7 +245,7 @@ class PaymentVerificationController extends Controller
             );
         }
         
-        \Log::info('✅ Honorarium records created', [
+        Log::info('✅ Honorarium records created', [
             'defense_request_id' => $defenseRequest->id,
             'adviser_count' => $defenseRequest->defense_adviser ? 1 : 0,
             'panel_chair_count' => $defenseRequest->defense_chairperson ? 1 : 0,
@@ -267,7 +267,7 @@ class PaymentVerificationController extends Controller
             $programLevel = \App\Helpers\ProgramLevel::getLevel($defenseRequest->program);
             $studentName = trim("{$defenseRequest->first_name} {$defenseRequest->middle_name} {$defenseRequest->last_name}");
             
-            \Log::info("🚀 DIRECT CREATE - Starting for Defense #{$defenseRequest->id}");
+            Log::info("🚀 DIRECT CREATE - Starting for Defense #{$defenseRequest->id}");
             
             // 1. GET OR CREATE PROGRAM RECORD
             $programRecord = \App\Models\ProgramRecord::firstOrCreate(
@@ -279,7 +279,7 @@ class PaymentVerificationController extends Controller
                 ['created_at' => now(), 'updated_at' => now()]
             );
             
-            \Log::info("✅ Program Record: #{$programRecord->id} - {$programRecord->program_name}");
+            Log::info("✅ Program Record: #{$programRecord->id} - {$programRecord->program_name}");
             
             // 2. CREATE STUDENT RECORD
             $studentRecord = \App\Models\StudentRecord::updateOrCreate(
@@ -294,13 +294,13 @@ class PaymentVerificationController extends Controller
                 ]
             );
             
-            \Log::info("✅ Student Record: #{$studentRecord->id} - {$studentRecord->student_name}");
+            Log::info("✅ Student Record: #{$studentRecord->id} - {$studentRecord->student_name}");
             
             // 3. GET ALL HONORARIUM PAYMENTS (excluding Adviser)
             $honorariumPayments = \App\Models\HonorariumPayment::where('defense_request_id', $defenseRequest->id)
                 ->get();
             
-            \Log::info("📋 Found {$honorariumPayments->count()} honorarium payments");
+            Log::info("📋 Found {$honorariumPayments->count()} honorarium payments");
             
             // 4. CREATE PANELIST RECORDS + PAYMENT RECORDS + PIVOT
             foreach ($honorariumPayments as $honorarium) {
@@ -309,7 +309,7 @@ class PaymentVerificationController extends Controller
                 
                 // SKIP ADVISERS
                 if (strtolower($role) === 'adviser' || str_contains(strtolower($role), 'advis')) {
-                    \Log::info("⏭️  SKIPPING Adviser: {$panelistName}");
+                    Log::info("⏭️  SKIPPING Adviser: {$panelistName}");
                     continue;
                 }
                 
@@ -323,7 +323,7 @@ class PaymentVerificationController extends Controller
                     ['created_at' => now(), 'updated_at' => now()]
                 );
                 
-                \Log::info("✅ Panelist Record: #{$panelistRecord->id} - {$panelistRecord->panelist_name} ({$role})");
+                Log::info("✅ Panelist Record: #{$panelistRecord->id} - {$panelistRecord->panelist_name} ({$role})");
                 
                 // CREATE PAYMENT RECORD
                 $paymentRecord = \App\Models\PaymentRecord::updateOrCreate(
@@ -340,10 +340,10 @@ class PaymentVerificationController extends Controller
                     ]
                 );
                 
-                \Log::info("✅ Payment Record: #{$paymentRecord->id} - ₱{$paymentRecord->amount}");
+                Log::info("✅ Payment Record: #{$paymentRecord->id} - ₱{$paymentRecord->amount}");
                 
                 // CREATE PIVOT LINK
-                \DB::table('panelist_student_records')->updateOrInsert(
+                DB::table('panelist_student_records')->updateOrInsert(
                     [
                         'panelist_record_id' => $panelistRecord->id,
                         'student_record_id' => $studentRecord->id,
@@ -354,17 +354,17 @@ class PaymentVerificationController extends Controller
                     ]
                 );
                 
-                \Log::info("✅ Pivot Link Created");
+                Log::info("✅ Pivot Link Created");
             }
             
-            \Log::info("🎉 DIRECT CREATE COMPLETE for Defense #{$defenseRequest->id}");
-            \Log::info("📍 Check records at:");
-            \Log::info("   - /honorarium/individual-record/{$programRecord->id}");
-            \Log::info("   - /student-records/program/{$programRecord->id}");
+            Log::info("🎉 DIRECT CREATE COMPLETE for Defense #{$defenseRequest->id}");
+            Log::info("📍 Check records at:");
+            Log::info("   - /honorarium/individual-record/{$programRecord->id}");
+            Log::info("   - /student-records/program/{$programRecord->id}");
             
         } catch (\Exception $e) {
-            \Log::error("❌ DIRECT CREATE FAILED: " . $e->getMessage());
-            \Log::error("Stack trace: " . $e->getTraceAsString());
+            Log::error("❌ DIRECT CREATE FAILED: " . $e->getMessage());
+            Log::error("Stack trace: " . $e->getTraceAsString());
             throw $e;
         }
     }
@@ -474,7 +474,7 @@ class PaymentVerificationController extends Controller
                             $syncService = app(\App\Services\StudentRecordSyncService::class);
                             $syncService->syncDefenseToStudentRecord($defenseRequest);
                         } catch (\Exception $e) {
-                            \Log::error('Bulk AA Workflow: Sync failed', [
+                            Log::error('Bulk AA Workflow: Sync failed', [
                                 'defense_request_id' => $defenseRequestId,
                                 'error' => $e->getMessage()
                             ]);
