@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\View;
 use Inertia\Inertia;
 use App\Models\Notification;
+use Carbon\Carbon;
 
 
 class AppServiceProvider extends ServiceProvider
@@ -57,6 +58,8 @@ class AppServiceProvider extends ServiceProvider
                 ];
             },
         ]);
+
+        Carbon::serializeUsing(fn ($c) => $c->timezone(config('app.timezone'))->toIso8601String()); // e.g., 2025-10-30T14:05:00+08:00
 
     }
 }

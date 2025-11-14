@@ -583,7 +583,7 @@ export default function TableComprePayment({
           </div>
         </DialogContent>
       </Dialog>
-
+      
       {/* Bulk Retrieve dialog */}
       <AlertDialog open={retrieveManyOpen} onOpenChange={setRetrieveManyOpen}>
         <AlertDialogContent>

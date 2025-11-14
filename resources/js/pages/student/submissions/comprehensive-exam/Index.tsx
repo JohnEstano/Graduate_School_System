@@ -6,7 +6,6 @@ import { Button } from '@/components/ui/button';
 import { GraduationCap, Info, RefreshCcw, ShieldCheck, ShieldAlert, CalendarX, Plus } from 'lucide-react';
 import DisplayApplication from './display-applications';
 import CompreExamForm from './compre-exam-form';
-
 import {
   Dialog,
   DialogContent,
@@ -74,6 +73,8 @@ export default function ComprehensiveExamIndex() {
 
   const [showEligDialog, setShowEligDialog] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
+  // Dev simulation toggle
+  const [simulateEligibility, setSimulateEligibility] = useState(true);
 
   const allStudentFlagsNull = (e: Eligibility) =>
     e.gradesComplete === null && e.noOutstandingBalance === null;
@@ -82,6 +83,18 @@ export default function ComprehensiveExamIndex() {
     document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
 
   async function fetchEligibility() {
+    // Skip network when simulation is enabled
+    if (simulateEligibility) {
+      setElig({
+        examOpen: true,
+        gradesComplete: true,
+        noOutstandingBalance: true,
+        loading: false,
+        error: null,
+      });
+      return;
+    }
+
     setElig((e) => ({ ...e, loading: true, error: null }));
 
     try {
@@ -89,7 +102,6 @@ export default function ComprehensiveExamIndex() {
         Accept: 'application/json',
         'X-Requested-With': 'XMLHttpRequest',
       };
-      // CSRF usually not required for GET, but harmless if present in Laravel setups
       const csrf = getCsrf();
       if (csrf) headers['X-CSRF-TOKEN'] = csrf;
 
@@ -104,24 +116,20 @@ export default function ComprehensiveExamIndex() {
         examOpen = !!(j?.open ?? j?.isOpen);
       }
 
-  let gradesComplete: boolean | null = null;
-  let noOutstandingBalance: boolean | null = null;
+      let gradesComplete: boolean | null = null;
+      let noOutstandingBalance: boolean | null = null;
 
       if (studentEligRes.status === 'fulfilled' && studentEligRes.value.ok) {
         const j = await studentEligRes.value.json();
-
-        // Support both array-of-requirements and flat booleans
         if (Array.isArray(j?.requirements)) {
           const reqs = j.requirements as Array<{ name: string; completed?: boolean }>;
-          const find = (name: string) => reqs.find((r) => r.name === name)?.completed ?? null;
-          gradesComplete = find('Complete grades (registrar verified)');
-          noOutstandingBalance = find('No outstanding tuition balance');
+            const find = (name: string) => reqs.find((r) => r.name === name)?.completed ?? null;
+            gradesComplete = find('Complete grades (registrar verified)');
+            noOutstandingBalance = find('No outstanding tuition balance');
         } else {
           gradesComplete = j?.gradesComplete ?? j?.completeGrades ?? null;
           noOutstandingBalance = j?.noOutstandingBalance ?? j?.hasNoOutstandingBalance ?? null;
         }
-
-        // Force booleans where possible
         gradesComplete = gradesComplete === null ? null : !!gradesComplete;
         noOutstandingBalance = noOutstandingBalance === null ? null : !!noOutstandingBalance;
       }
@@ -136,8 +144,7 @@ export default function ComprehensiveExamIndex() {
 
       setElig(nextElig);
 
-      // Bounded retry only if student flags are still null (excluding documentsComplete)
-      if ((gradesComplete === null || noOutstandingBalance === null) && retryCount < 5) {
+      if (!simulateEligibility && (gradesComplete === null || noOutstandingBalance === null) && retryCount < 5) {
         setTimeout(() => {
           setRetryCount((c) => c + 1);
           fetchEligibility();
@@ -156,28 +163,46 @@ export default function ComprehensiveExamIndex() {
     }
   }
 
+  // Initial load
   useEffect(() => {
     fetchEligibility();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const canApply = useMemo(() => {
-    return !!(elig.examOpen && elig.gradesComplete && elig.noOutstandingBalance);
-  }, [elig]);
+  // Apply simulation changes
+  useEffect(() => {
+    if (simulateEligibility) {
+      setElig({
+        examOpen: true,
+        gradesComplete: true,
+        noOutstandingBalance: true,
+        loading: false,
+        error: null,
+      });
+    } else {
+      fetchEligibility();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [simulateEligibility]);
+
+  const canApply = useMemo(
+    () => !!(elig.examOpen && elig.gradesComplete && elig.noOutstandingBalance),
+    [elig]
+  );
 
   const examClosed = elig.examOpen === false;
   const status = application?.final_approval_status?.toLowerCase() ?? null;
   const hasPending = status === 'pending';
   const hasApproved = status === 'approved';
 
-  const blockers = useMemo(() => {
-    const arr: { label: string; ok: boolean | null }[] = [
+  const blockers = useMemo(
+    () => [
       { label: 'Exam window is open', ok: elig.examOpen },
       { label: 'Complete grades (registrar verified)', ok: elig.gradesComplete },
       { label: 'No outstanding tuition balance', ok: elig.noOutstandingBalance },
-    ];
-    return arr;
-  }, [elig]);
+    ],
+    [elig]
+  );
 
   return (
     <AppLayout breadcrumbs={breadcrumbs}>
@@ -247,12 +272,30 @@ export default function ComprehensiveExamIndex() {
                   </Button>
 
                   {/* Subtle sync hint when polling */}
-                  {retryCount > 0 && allStudentFlagsNull(elig) && (
+                  {retryCount > 0 && allStudentFlagsNull(elig) && !simulateEligibility && (
                     <span className="text-[11px] text-zinc-500 dark:text-zinc-400">
                       Syncing eligibility… ({retryCount}/5)
                     </span>
                   )}
                 </div>
+                {elig.error && (
+                  <div
+                    role="alert"
+                    className="mt-1 text-[11px] text-rose-600 dark:text-rose-400 font-medium"
+                  >
+                    {elig.error}
+                  </div>
+                )}
+                <label className="flex items-center gap-1 mt-2 text-[11px] text-zinc-600 dark:text-zinc-400">
+                  <input
+                    type="checkbox"
+                    aria-label="Simulate eligibility"
+                    checked={simulateEligibility}
+                    onChange={(e) => setSimulateEligibility(e.target.checked)}
+                    className="h-3 w-3 accent-rose-600"
+                  />
+                  Dev: Simulate eligibility
+                </label>
               </div>
             </div>
 
@@ -321,7 +364,10 @@ export default function ComprehensiveExamIndex() {
 
           <div className="space-y-2">
             {blockers.map((b, i) => (
-              <div key={i} className="flex items-center justify-between rounded border border-zinc-200 dark:border-zinc-700 px-3 py-2 dark:bg-zinc-800/50">
+              <div
+                key={i}
+                className="flex items-center justify-between rounded border border-zinc-200 dark:border-zinc-700 px-3 py-2 dark:bg-zinc-800/50"
+              >
                 <span className="text-sm dark:text-zinc-300">{b.label}</span>
                 <Badge
                   variant="outline"
@@ -340,7 +386,11 @@ export default function ComprehensiveExamIndex() {
           </div>
 
           <DialogFooter className="mt-2">
-            <Button variant="outline" onClick={() => setShowEligDialog(false)} className="dark:border-zinc-700 dark:hover:bg-zinc-800">
+            <Button
+              variant="outline"
+              onClick={() => setShowEligDialog(false)}
+              className="dark:border-zinc-700 dark:hover:bg-zinc-800"
+            >
               Close
             </Button>
             <Button

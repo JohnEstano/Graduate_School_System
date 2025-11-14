@@ -75,7 +75,7 @@ export default function Index() {
               title={
                 canOpenForm
                   ? 'Submit payment'
-                  : !paymentWindowOpen
+                  : !paymentWindowOpenx
                     ? 'Payment window is currently closed by the system administrator.'
                     : !canSubmit
                       ? 'You can submit payment only after your comprehensive application is approved.'
