@@ -294,7 +294,7 @@ export default function CompreExamForm({ open, onOpenChange, onFinish }: Props) 
             <div>
               <Label className="text-s">First Name</Label>
               <Input
-                className="h-10 text-s text-black disabled:opacity-100 disabled:bg-white disabled:text-black"
+                className="h-10 text-s disabled:opacity-100"
                 value={user.first_name || ''} // changed
                 readOnly
                 disabled
@@ -303,7 +303,7 @@ export default function CompreExamForm({ open, onOpenChange, onFinish }: Props) 
             <div>
               <Label className="text-s">Middle Initial</Label>
               <Input
-                className="h-10 text-s text-black disabled:opacity-100 disabled:bg-white disabled:text-black"
+                className="h-10 text-s disabled:opacity-100"
                 maxLength={3}
                 value={(user.middle_name?.[0] ?? '')} // changed
                 readOnly
@@ -313,7 +313,7 @@ export default function CompreExamForm({ open, onOpenChange, onFinish }: Props) 
             <div>
               <Label className="text-s">Last Name</Label>
               <Input
-                className="h-10 text-s text-black disabled:opacity-100 disabled:bg-white disabled:text-black"
+                className="h-10 text-s disabled:opacity-100"
                 value={user.last_name || ''} // changed
                 readOnly
                 disabled
@@ -322,7 +322,7 @@ export default function CompreExamForm({ open, onOpenChange, onFinish }: Props) 
             <div>
               <Label className="text-s">School Year</Label>
               <select
-                className="h-10 text-s w-full border rounded-md px-3 bg-white focus:outline-none focus:ring-2 focus:ring-rose-300"
+                className="h-10 text-s w-full border border-zinc-300 dark:border-zinc-700 rounded-md px-3 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-rose-300"
                 value={data.schoolYear}
                 onChange={(e) => setData('schoolYear', e.target.value)}
                 aria-invalid={!!errors.schoolYear}
@@ -342,8 +342,7 @@ export default function CompreExamForm({ open, onOpenChange, onFinish }: Props) 
             </div>
             <div>
               <Label className="text-s">Program</Label>
-              <Input   className="h-10 text-s w-105 text-black disabled:opacity-100 disabled:bg-white disabled:text-black"
- value={data.program} readOnly disabled />
+              <Input className="h-10 text-s w-105 disabled:opacity-100" value={data.program} readOnly disabled />
             </div>
           </div>
         </>
@@ -422,7 +421,7 @@ export default function CompreExamForm({ open, onOpenChange, onFinish }: Props) 
             <div className="md:col-span-2">
                 <Label className="text-s">Email</Label>
                 <Input
-                className="h-10 text-s text-black disabled:opacity-100 disabled:bg-white disabled:text-black"
+                className="h-10 text-s disabled:opacity-100"
                 type="email"
                 value={user.email}
                 readOnly
@@ -470,7 +469,7 @@ export default function CompreExamForm({ open, onOpenChange, onFinish }: Props) 
                 return (
                   <div
                     key={idx}
-                    className="group relative border border-gray-200 rounded-lg p-6 bg-white shadow-sm transition-all hover:border-rose-200 hover:shadow-md"
+                    className="group relative border border-zinc-200 dark:border-zinc-700 rounded-lg p-6 bg-white dark:bg-zinc-900 shadow-sm transition-all hover:border-rose-200 dark:hover:border-rose-700 hover:shadow-md"
                   >
                     <div className="absolute -top-3 -left-2 bg-rose-500 text-white text-xs font-semibold px-2 py-1 rounded">
                       Subject {idx + 1}
@@ -478,7 +477,7 @@ export default function CompreExamForm({ open, onOpenChange, onFinish }: Props) 
                     {data.subjects.length > 1 && (
                       <button
                         onClick={() => removeSubjectRow(idx)}
-                        className="absolute -top-2 -right-2 h-6 w-6 rounded-full bg-white border border-gray-200 shadow-sm flex items-center justify-center text-gray-400 hover:bg-rose-50 hover:border-rose-300 hover:text-rose-500 transition-all"
+                        className="absolute -top-2 -right-2 h-6 w-6 rounded-full bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 shadow-sm flex items-center justify-center text-zinc-400 dark:text-zinc-500 hover:bg-rose-50 dark:hover:bg-rose-950 hover:border-rose-300 dark:hover:border-rose-700 hover:text-rose-500 dark:hover:text-rose-400 transition-all"
                         title="Remove Subject"
                         type="button"
                       >
@@ -556,7 +555,7 @@ export default function CompreExamForm({ open, onOpenChange, onFinish }: Props) 
               <Button
                 type="button"
                 onClick={addSubjectRow}
-                className="w-full mt-4 py-6 border-2 border-dashed border-gray-300 bg-gray-50 hover:bg-rose-50 hover:border-rose-300 transition-colors flex items-center justify-center gap-2 text-gray-600 hover:text-rose-600"
+                className="w-full mt-4 py-6 border-2 border-dashed border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 hover:bg-rose-50 dark:hover:bg-rose-950 hover:border-rose-300 dark:hover:border-rose-700 transition-colors flex items-center justify-center gap-2 text-zinc-600 dark:text-zinc-400 hover:text-rose-600 dark:hover:text-rose-400"
                 variant="outline"
               >
                 <Plus className="h-5 w-5" />
@@ -573,33 +572,33 @@ export default function CompreExamForm({ open, onOpenChange, onFinish }: Props) 
         <>
           <div className="w-full pb-5">
             <HeadingSmall title="Step 4: Review Submission" />
-            <div className="rounded-xl border-2 border-rose-400 bg-rose-50 p-8 shadow-lg space-y-6">
+            <div className="rounded-xl border-2 border-rose-400 dark:border-rose-700 bg-rose-50 dark:bg-rose-950/30 p-8 shadow-lg space-y-6">
               <div className="flex flex-col md:flex-row gap-6">
                 <div className="flex-1 space-y-2">
-                  <div className="text-lg font-bold text-rose-700">Personal Information</div>
-                  <div className="text-gray-700">
+                  <div className="text-lg font-bold text-rose-700 dark:text-rose-400">Personal Information</div>
+                  <div className="text-zinc-700 dark:text-zinc-300">
                     <span className="font-semibold">Name:</span>{' '}
                     {`${user.last_name || ''}, ${user.first_name || ''} ${(user.middle_name?.[0] ?? '')}`}
                   </div>
-                  <div className="text-gray-700">
+                  <div className="text-zinc-700 dark:text-zinc-300">
                     <span className="font-semibold">School Year:</span> {data.schoolYear || '--'}
                   </div>
-                  <div className="text-gray-700">
+                  <div className="text-zinc-700 dark:text-zinc-300">
                     <span className="font-semibold">Program:</span> {data.program || '--'}
                   </div>
                 </div>
                 <div className="flex-1 space-y-2">
-                  <div className="text-lg font-bold text-rose-700">Contact Information</div>
-                  <div className="text-gray-700">
+                  <div className="text-lg font-bold text-rose-700 dark:text-rose-400">Contact Information</div>
+                  <div className="text-zinc-700 dark:text-zinc-300">
                     <span className="font-semibold">Office Address:</span> {data.officeAddress || '--'}
                   </div>
-                  <div className="text-gray-700">
+                  <div className="text-zinc-700 dark:text-zinc-300">
                     <span className="font-semibold">Mobile No.:</span> {data.mobileNo || '--'}
                   </div>
-                  <div className="text-gray-700">
+                  <div className="text-zinc-700 dark:text-zinc-300">
                     <span className="font-semibold">Telephone No.:</span> {data.telephoneNo || '--'}
                   </div>
-                  <div className="text-gray-700">
+                  <div className="text-zinc-700 dark:text-zinc-300">
                     <span className="font-semibold">Email:</span> {user.email || '--'}
                   </div>
                 </div>
@@ -608,21 +607,21 @@ export default function CompreExamForm({ open, onOpenChange, onFinish }: Props) 
               <Separator />
 
               <div>
-                <div className="text-lg font-bold text-rose-700 mb-2">Subjects & Schedules</div>
+                <div className="text-lg font-bold text-rose-700 dark:text-rose-400 mb-2">Subjects & Schedules</div>
                 <div className="overflow-x-auto">
-                  <table className="min-w-full border border-rose-300 rounded-lg bg-white">
-                    <thead className="bg-rose-100">
+                  <table className="min-w-full border border-rose-300 dark:border-rose-700 rounded-lg bg-white dark:bg-zinc-900">
+                    <thead className="bg-rose-100 dark:bg-rose-950">
                       <tr>
-                        <th className="px-4 py-2 text-left text-rose-700 font-semibold">#</th>
-                        <th className="px-4 py-2 text-left text-rose-700 font-semibold">Subject</th>
-                        <th className="px-4 py-2 text-left text-rose-700 font-semibold">Date</th>
-                        <th className="px-4 py-2 text-left text-rose-700 font-semibold">Time</th>
+                        <th className="px-4 py-2 text-left text-rose-700 dark:text-rose-400 font-semibold">#</th>
+                        <th className="px-4 py-2 text-left text-rose-700 dark:text-rose-400 font-semibold">Subject</th>
+                        <th className="px-4 py-2 text-left text-rose-700 dark:text-rose-400 font-semibold">Date</th>
+                        <th className="px-4 py-2 text-left text-rose-700 dark:text-rose-400 font-semibold">Time</th>
                       </tr>
                     </thead>
                     <tbody>
                      {data.subjects.filter(s => s.subject && s.date).length === 0 ? (
                        <tr>
-                         <td className="px-4 py-3 text-sm text-gray-600" colSpan={4}>
+                         <td className="px-4 py-3 text-sm text-zinc-600 dark:text-zinc-400" colSpan={4}>
                            No schedules selected yet.
                          </td>
                        </tr>
@@ -630,13 +629,13 @@ export default function CompreExamForm({ open, onOpenChange, onFinish }: Props) 
                        data.subjects
                          .filter(s => s.subject && s.date)
                          .map((subj, idx) => (
-                           <tr key={`${subj.subject}-${idx}`} className="border-t border-rose-200">
-                             <td className="px-4 py-2 text-rose-700 font-bold">{idx + 1}</td>
-                             <td className="px-4 py-2">{subj.subject}</td>
-                             <td className="px-4 py-2">
+                           <tr key={`${subj.subject}-${idx}`} className="border-t border-rose-200 dark:border-rose-800">
+                             <td className="px-4 py-2 text-rose-700 dark:text-rose-400 font-bold">{idx + 1}</td>
+                             <td className="px-4 py-2 dark:text-zinc-300">{subj.subject}</td>
+                             <td className="px-4 py-2 dark:text-zinc-300">
                                {subj.date ? format(new Date(subj.date), 'MMMM d, yyyy') : '--'}
                              </td>
-                             <td className="px-4 py-2">
+                             <td className="px-4 py-2 dark:text-zinc-300">
                                {subj.startTime && subj.endTime
                                  ? `${formatTime12hr(subj.startTime)} - ${formatTime12hr(subj.endTime)}`
                                  : '--'}
@@ -676,7 +675,7 @@ export default function CompreExamForm({ open, onOpenChange, onFinish }: Props) 
                   document.getElementById('compre-application-card')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
                 }, 100);
               }}
-              className="bg-rose-500"
+              className="bg-rose-500 hover:bg-rose-600 dark:bg-rose-600 dark:hover:bg-rose-700"
             >
               Done
             </Button>

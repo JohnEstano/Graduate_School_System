@@ -4,11 +4,12 @@ import AppLayout from '@/layouts/app-layout';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from '@/components/ui/alert-dialog';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Separator } from '@/components/ui/separator';
 import { Toaster, toast } from '@/components/ui/sonner';
 import { format } from 'date-fns';
-import { Search, Check, X, Paperclip as PaperclipIcon } from 'lucide-react';
+import { Search, Check, X, Paperclip as PaperclipIcon, Mail } from 'lucide-react';
 import { UIC_PROGRAMS } from '@/constants/programs';
 import TableRegistrar, { RegistrarRow } from './table-registrar';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
@@ -66,6 +67,9 @@ export default function RegistrarCompreExamIndex() {
   const [retrieving, setRetrieving] = React.useState(false);
   const [audit, setAudit] = React.useState<any[]>([]);
   const [tab, setTab] = React.useState<'checklist'|'audit'>('checklist');
+  // Confirmation dialog state
+  const [confirmOpen, setConfirmOpen] = React.useState(false);
+  const [sendEmail, setSendEmail] = React.useState(true);
   // Eligibility alignment with student criteria
   const [examOpen, setExamOpen] = React.useState<boolean | null>(null);
   const [eligMap, setEligMap] = React.useState<Record<number, { gradesComplete: boolean | null; noOutstandingBalance: boolean | null }>>({});
@@ -334,6 +338,7 @@ export default function RegistrarCompreExamIndex() {
       documents_complete: documentsComplete,
       status: decision,
       reason: (reason || auto) || null,
+      send_email: sendEmail, // Include email preference
     };
     setSubmitting(true);
     fetch(`/registrar/exam-applications/${current.application_id}/decision`, {
@@ -347,7 +352,7 @@ export default function RegistrarCompreExamIndex() {
     })
       .then(async (r) => { if (!r.ok) throw new Error(await r.text()); })
       .then(() => {
-        if (decision === 'approved') toast.success('Application approved (to Dean next).');
+        if (decision === 'approved') toast.success('Application approved (to Dean next).' + (sendEmail ? ' Email sent.' : ''));
         else toast.error('Application rejected', { description: (reason || auto) || undefined });
         // Optimistically append to audit trail for immediate feedback
         setAudit((prev) => [
@@ -361,11 +366,19 @@ export default function RegistrarCompreExamIndex() {
           },
           ...prev,
         ]);
+        setConfirmOpen(false);
         setOpen(false);
         fetchRows();
       })
       .catch(() => toast.error('Failed to save decision'))
       .finally(() => setSubmitting(false));
+  }
+
+  function handleSaveDecision() {
+    if (!decision) return;
+    // Open confirmation dialog
+    setSendEmail(true); // Reset to default
+    setConfirmOpen(true);
   }
 
   // Retrieve a rejected decision back to Pending (like compre payment)
@@ -564,7 +577,7 @@ export default function RegistrarCompreExamIndex() {
                         )}
 
                         <div className="flex justify-end gap-2 pt-3">
-                          <Button onClick={submitDecision} disabled={!decision || submitting}>{submitting ? 'Saving…' : 'Save decision'}</Button>
+                          <Button onClick={handleSaveDecision} disabled={!decision || submitting}>{submitting ? 'Saving…' : 'Save decision'}</Button>
                         </div>
                       </>
                     );
@@ -596,6 +609,57 @@ export default function RegistrarCompreExamIndex() {
             </div>
           </DialogContent>
         </Dialog>
+
+        {/* Confirmation Dialog for Email Notification */}
+        <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>
+                {decision === 'approved' ? 'Approve Application?' : 'Reject Application?'}
+              </AlertDialogTitle>
+              <AlertDialogDescription>
+                {decision === 'approved' 
+                  ? 'This will approve the payment verification and forward to Dean for final approval.'
+                  : 'This will reject the application. The student will be notified.'}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            
+            <div className="py-4">
+              <div className="flex items-start space-x-3 rounded-md border p-4">
+                <Checkbox 
+                  id="send-email" 
+                  checked={sendEmail} 
+                  onCheckedChange={(checked) => setSendEmail(checked === true)}
+                />
+                <div className="flex-1 space-y-1">
+                  <label
+                    htmlFor="send-email"
+                    className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 flex items-center gap-2"
+                  >
+                    <Mail className="h-4 w-4" />
+                    Send email notification to student
+                  </label>
+                  <p className="text-sm text-muted-foreground">
+                    {decision === 'approved'
+                      ? 'Student will receive a payment verification confirmation email.'
+                      : 'Student will receive a payment rejection notice with the reason provided.'}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={submitting}>Cancel</AlertDialogCancel>
+              <AlertDialogAction 
+                onClick={submitDecision}
+                disabled={submitting}
+                className={decision === 'rejected' ? 'bg-destructive hover:bg-destructive/90' : ''}
+              >
+                {submitting ? 'Saving...' : (decision === 'approved' ? 'Approve' : 'Reject')}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </AppLayout>
   );
