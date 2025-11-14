@@ -40,6 +40,7 @@ use Illuminate\Http\Request;
 use App\Models\ExamSubjectOffering;
 use App\Http\Controllers\RegistrarExamApplicationController;
 use App\Http\Controllers\DeanCompreExamController;
+use App\Http\Controllers\DeanDefenseController;
 use App\Http\Controllers\Api\ComprehensiveExamEligibilityController as ApiCompreEligController;
 
 
@@ -90,18 +91,26 @@ Route::get('/test-upload-limits', function () {
 Route::get('/test-email-layouts', function () {
     $emails = [
         'adviser-invitation' => 'Adviser Invitation',
+        'comprehensive-exam-approved' => 'Comprehensive Exam Approved',
+        'comprehensive-exam-payment-approved' => 'Comprehensive Exam Payment Approved',
+        'comprehensive-exam-payment-rejected' => 'Comprehensive Exam Payment Rejected',
+        'comprehensive-exam-rejected' => 'Comprehensive Exam Rejected',
+        'comprehensive-exam-results-posted' => 'Comprehensive Exam Results Posted',
+        'comprehensive-exam-submitted' => 'Comprehensive Exam Submitted',
         'defense-approved' => 'Defense Approved',
+        'defense-assigned-coordinator' => 'Defense Assigned to Coordinator',
+        'defense-panel-invitation' => 'Defense Panel Invitation',
         'defense-rejected' => 'Defense Rejected',
         'defense-scheduled' => 'Defense Scheduled',
-        'defense-scheduled-student' => 'Defense Scheduled (Student)',
         'defense-scheduled-adviser' => 'Defense Scheduled (Adviser)',
-        'defense-panel-invitation' => 'Defense Panel Invitation',
-        'defense-assigned-coordinator' => 'Defense Assigned to Coordinator',
+        'defense-scheduled-student' => 'Defense Scheduled (Student)',
         'defense-submitted' => 'Defense Submitted',
         'document-submitted' => 'Document Submitted',
         'student-accepted-by-adviser' => 'Student Accepted by Adviser',
-        'student-rejected-by-adviser' => 'Student Rejected by Adviser',
         'student-assigned-to-adviser' => 'Student Assigned to Adviser',
+        'student-invitation' => 'Student Invitation',
+        'student-registered-notification' => 'Student Registered Notification',
+        'student-rejected-by-adviser' => 'Student Rejected by Adviser',
         'welcome-mail' => 'Welcome Mail',
     ];
     
@@ -127,6 +136,125 @@ Route::get('/test-email-layout/{template}', function ($template) {
         'adviser-invitation' => [
             'adviserName' => 'Dr. Juan Dela Cruz',
             'coordinatorName' => 'Dr. Maria Santos',
+        ],
+        'comprehensive-exam-approved' => [
+            'student' => (object)[
+                'first_name' => 'John',
+                'middle_name' => 'Michael',
+                'last_name' => 'Doe',
+                'school_id' => '2023-12345',
+            ],
+            'examApplication' => (object)[
+                'student_id' => '2023-12345',
+                'program' => 'Master of Science in Computer Science',
+                'school_year' => '2024-2025',
+                'exam_date' => \Carbon\Carbon::parse('2025-12-15'),
+                'exam_time' => '9:00 AM',
+            ],
+            'approvedBy' => 'Coordinator',
+            'approverName' => 'Dr. Maria Santos',
+        ],
+        'comprehensive-exam-payment-approved' => [
+            'student' => (object)[
+                'first_name' => 'John',
+                'middle_name' => 'Michael',
+                'last_name' => 'Doe',
+                'school_id' => '2023-12345',
+            ],
+            'payment' => (object)[
+                'id' => 1,
+                'or_number' => 'OR-2025-12345',
+                'amount' => 1500.00,
+                'payment_date' => \Carbon\Carbon::parse('2025-11-01'),
+            ],
+            'examApplication' => (object)[
+                'id' => 1,
+                'student_id' => '2023-12345',
+                'program' => 'Master of Science in Computer Science',
+                'school_year' => '2024-2025',
+            ],
+        ],
+        'comprehensive-exam-payment-rejected' => [
+            'student' => (object)[
+                'first_name' => 'John',
+                'middle_name' => 'Michael',
+                'last_name' => 'Doe',
+                'school_id' => '2023-12345',
+            ],
+            'payment' => (object)[
+                'id' => 1,
+                'or_number' => 'OR-2025-12345',
+                'amount' => 1500.00,
+            ],
+            'examApplication' => (object)[
+                'id' => 1,
+                'student_id' => '2023-12345',
+                'program' => 'Master of Science in Computer Science',
+                'school_year' => '2024-2025',
+            ],
+            'rejectionReason' => 'Invalid receipt. Please upload a clear copy of the official receipt.',
+        ],
+        'comprehensive-exam-rejected' => [
+            'student' => (object)[
+                'first_name' => 'John',
+                'middle_name' => 'Michael',
+                'last_name' => 'Doe',
+                'school_id' => '2023-12345',
+            ],
+            'examApplication' => (object)[
+                'id' => 1,
+                'student_id' => '2023-12345',
+                'program' => 'Master of Science in Computer Science',
+                'school_year' => '2024-2025',
+            ],
+            'rejectedBy' => 'Coordinator',
+            'rejectorName' => 'Dr. Maria Santos',
+            'rejectionReason' => 'Incomplete requirements. Please submit all required documents.',
+        ],
+        'comprehensive-exam-results-posted' => [
+            'student' => (object)[
+                'first_name' => 'John',
+                'middle_name' => 'Michael',
+                'last_name' => 'Doe',
+            ],
+            'examResult' => (object)[
+                'exam_date' => \Carbon\Carbon::parse('2025-12-15'),
+                'status' => 'Passed',
+                'overall_score' => 85,
+                'remarks' => 'Congratulations on passing your comprehensive exam!',
+            ],
+            'examApplication' => (object)[
+                'id' => 1,
+                'application_id' => 'EXAM-2024-001',
+                'student_id' => '2023-12345',
+                'program' => 'Master of Science in Computer Science',
+                'school_year' => '2024-2025',
+            ],
+            'subjects' => [
+                ['subject_name' => 'Advanced Algorithms', 'score' => 88],
+                ['subject_name' => 'Machine Learning', 'score' => 85],
+                ['subject_name' => 'Database Systems', 'score' => 82],
+                ['subject_name' => 'Software Engineering', 'score' => 86],
+            ],
+            'resultStatus' => 'passed',
+            'averageScore' => 85,
+        ],
+        'comprehensive-exam-submitted' => [
+            'coordinatorName' => 'Dr. Maria Santos',
+            'student' => (object)[
+                'first_name' => 'John',
+                'middle_name' => 'Michael',
+                'last_name' => 'Doe',
+                'school_id' => '2023-12345',
+                'program' => 'Master of Science in Computer Science',
+            ],
+            'examApplication' => (object)[
+                'id' => 1,
+                'student_id' => '2023-12345',
+                'program' => 'Master of Science in Computer Science',
+                'school_year' => '2024-2025',
+                'submitted_at' => \Carbon\Carbon::parse('2025-11-01 10:30:00'),
+            ],
         ],
         'defense-approved' => [
             'student' => (object)[
@@ -255,19 +383,31 @@ Route::get('/test-email-layout/{template}', function ($template) {
             'adviserEmail' => 'juan.delacruz@uic.edu.ph',
             'adviserProgram' => 'Computer Science Department',
         ],
-        'student-rejected-by-adviser' => [
-            'studentFullName' => 'John Michael Doe',
-            'adviserFullName' => 'Dr. Juan Dela Cruz',
-            'adviserEmail' => 'juan.delacruz@uic.edu.ph',
-            'coordinatorName' => 'Dr. Maria Santos',
-            'coordinatorEmail' => 'maria.santos@uic.edu.ph',
-        ],
         'student-assigned-to-adviser' => [
             'adviserName' => 'Juan Dela Cruz',
             'coordinatorName' => 'Dr. Maria Santos',
             'studentName' => 'John Michael Doe',
             'studentEmail' => 'john.doe@uic.edu.ph',
             'studentProgram' => 'Master of Science in Computer Science',
+        ],
+        'student-invitation' => [
+            'coordinatorName' => 'Dr. Maria Santos',
+        ],
+        'student-registered-notification' => [
+            'adviserName' => 'Dr. Juan Dela Cruz',
+            'coordinatorName' => 'Dr. Maria Santos',
+            'studentName' => 'John Michael Doe',
+            'studentEmail' => 'john.doe@uic.edu.ph',
+            'studentNumber' => '2023-12345',
+            'studentProgram' => 'Master of Science in Computer Science',
+            'actionUrl' => url('/dashboard'),
+        ],
+        'student-rejected-by-adviser' => [
+            'studentFullName' => 'John Michael Doe',
+            'adviserFullName' => 'Dr. Juan Dela Cruz',
+            'adviserEmail' => 'juan.delacruz@uic.edu.ph',
+            'coordinatorName' => 'Dr. Maria Santos',
+            'coordinatorEmail' => 'maria.santos@uic.edu.ph',
         ],
         'welcome-mail' => [
             'name' => 'John Doe',
@@ -316,30 +456,30 @@ Route::get('/test-mail', function () {
 |--------------------------------------------------------------------------
 */
 Route::middleware(['auth', 'verified'])->group(function () {
-    Route::get('/api/coordinator/code', [CoordinatorAdviserController::class, 'getCoordinatorCode']);
+    Route::middleware('role:Coordinator')->get('/api/coordinator/code', [CoordinatorAdviserController::class, 'getCoordinatorCode']);
     Route::post('/api/adviser/register-with-coordinator-code', [\App\Http\Controllers\CoordinatorAdviserController::class, 'registerWithCode']);
-    Route::get('/coordinator/defense-requests/all-defense-requests', [\App\Http\Controllers\DefenseRequestController::class, 'allForCoordinator'])->middleware('auth');
-    
+    Route::middleware('role:Coordinator')->get('/coordinator/defense-requests/all-defense-requests', [\App\Http\Controllers\DefenseRequestController::class, 'allForCoordinator']);
+
     // Removed duplicate routes (lines 314-315)
 
     // Coordinator Adviser Management Routes
-    Route::get('/api/coordinator/advisers', [CoordinatorAdviserController::class, 'index']);
-    Route::get('/api/coordinator/advisers/search', [CoordinatorAdviserController::class, 'search']);
-    Route::put('/api/coordinator/advisers/{id}', [CoordinatorAdviserController::class, 'update']);
-    Route::post('/api/coordinator/advisers', [CoordinatorAdviserController::class, 'store']);
-    Route::post('/api/coordinator/advisers/{id}/send-invitation', [CoordinatorAdviserController::class, 'sendInvitation']);
-    Route::delete('/api/coordinator/advisers/{id}', [CoordinatorAdviserController::class, 'destroy']);
+    Route::middleware('role:Coordinator')->group(function () {
+        Route::get('/api/coordinator/advisers', [CoordinatorAdviserController::class, 'index']);
+        Route::get('/api/coordinator/advisers/search', [CoordinatorAdviserController::class, 'search']);
+        Route::put('/api/coordinator/advisers/{id}', [CoordinatorAdviserController::class, 'update']);
+        Route::post('/api/coordinator/advisers', [CoordinatorAdviserController::class, 'store']);
+        Route::post('/api/coordinator/advisers/{id}/send-invitation', [CoordinatorAdviserController::class, 'sendInvitation']);
+        Route::delete('/api/coordinator/advisers/{id}', [CoordinatorAdviserController::class, 'destroy']);
 
-    // Coordinator manages adviser-student relationships (use CoordinatorAdviserController)
-    Route::get('/api/coordinator/advisers/{adviser}/students', [\App\Http\Controllers\CoordinatorAdviserController::class, 'students']);
-    Route::get('/api/coordinator/advisers/{adviser}/pending-students', [\App\Http\Controllers\CoordinatorAdviserController::class, 'pendingStudents']);
-    Route::post('/api/coordinator/advisers/{adviser}/students', [\App\Http\Controllers\CoordinatorAdviserController::class, 'storeStudent']);
-    Route::delete('/api/coordinator/advisers/{adviser}/students/{student}', [\App\Http\Controllers\CoordinatorAdviserController::class, 'destroyStudent']);
-    Route::get('/api/coordinator/students/search', [CoordinatorAdviserController::class, 'searchStudents']);
-
-
+        // Coordinator manages adviser-student relationships
+        Route::get('/api/coordinator/advisers/{adviser}/students', [\App\Http\Controllers\CoordinatorAdviserController::class, 'students']);
+        Route::get('/api/coordinator/advisers/{adviser}/pending-students', [\App\Http\Controllers\CoordinatorAdviserController::class, 'pendingStudents']);
+        Route::post('/api/coordinator/advisers/{adviser}/students', [\App\Http\Controllers\CoordinatorAdviserController::class, 'storeStudent']);
+        Route::delete('/api/coordinator/advisers/{adviser}/students/{student}', [\App\Http\Controllers\CoordinatorAdviserController::class, 'destroyStudent']);
+        Route::get('/api/coordinator/students/search', [CoordinatorAdviserController::class, 'searchStudents']);
+    });
     //PAYMENTVERIFIATION AA
-    Route::prefix('aa')->group(function () {
+    Route::middleware('role:Administrative Assistant')->prefix('aa')->group(function () {
         Route::get('/payment-verifications', [PaymentVerificationController::class, 'index'])->name('aa.payment-verifications');
         Route::post('/payment-verifications/{id}/status', [PaymentVerificationController::class, 'updateStatus'])->name('aa.payment-verifications.update-status');
         Route::post('/payment-verifications/batch', [PaymentVerificationController::class, 'addToBatch'])->name('aa.payment-verifications.batch');
@@ -348,32 +488,33 @@ Route::middleware(['auth', 'verified'])->group(function () {
     });
 
     // AA Verification Status Update by Defense Request ID (for details page)
-    Route::post('/assistant/aa-verification/{defenseRequestId}/status', [PaymentVerificationController::class, 'updateStatusByDefenseRequest'])
+    Route::middleware('role:Administrative Assistant')->post('/assistant/aa-verification/{defenseRequestId}/status', [PaymentVerificationController::class, 'updateStatusByDefenseRequest'])
         ->name('assistant.aa-verification.update-status');
 
-    // REMOVED: Defense batch routes (controller doesn't exist)
-    // Route::get('/assistant/defense-batches', [\App\Http\Controllers\Assistant\DefenseBatchController::class, 'index']);
-    // Route::post('/assistant/defense-batches', [\App\Http\Controllers\Assistant\DefenseBatchController::class, 'store']);
-    // Route::post('/assistant/defense-batches/{batch}/status', [\App\Http\Controllers\Assistant\DefenseBatchController::class, 'updateStatus']);
-
+    // Payment Trends API for Assistant Dashboard
+    Route::middleware('role:Administrative Assistant')->get('/api/assistant/payment-trends', [\App\Http\Controllers\Api\PaymentTrendsController::class, 'getPaymentTrends'])
+        ->name('api.assistant.payment-trends');
 
     //PAYMENT RATESS ETC.
-    Route::post('/dean/payment-rates', [\App\Http\Controllers\PaymentRateController::class, 'update'])
-        ->name('dean.payment-rates.update');
-    Route::get('/dean/payment-rates', [\App\Http\Controllers\PaymentRateController::class, 'index'])
-        ->name('dean.payment-rates.index');
-    Route::get('/dean/payment-rates/data', [\App\Http\Controllers\PaymentRateController::class, 'data'])
-        ->name('dean.payment-rates.data');
+   
+
+
+    Route::middleware('role:Dean,Administrative Assistant,Coordinator')->group(function () {
+        Route::post('/dean/payment-rates', [\App\Http\Controllers\PaymentRateController::class, 'update'])
+            ->name('dean.payment-rates.update');
+        Route::get('/dean/payment-rates', [\App\Http\Controllers\PaymentRateController::class, 'index'])
+            ->name('dean.payment-rates.index');
+        Route::get('/dean/payment-rates/data', [\App\Http\Controllers\PaymentRateController::class, 'data'])
+            ->name('dean.payment-rates.data');
+    });
 
 
     // Settings: Document Templates (Dean / Coordinator only)
-    Route::get('/settings/documents', function () {
-        abort_unless(in_array(Auth::user()->role, ['Dean', 'Coordinator']), 403);
+    Route::middleware('role:Dean,Coordinator')->get('/settings/documents', function () {
         return Inertia::render('settings/documents/Index');
     })->name('settings.documents');
 
-    Route::get('/settings/documents/{template}/edit', function (\App\Models\DocumentTemplate $template) {
-        abort_unless(in_array(Auth::user()->role, ['Dean', 'Coordinator']), 403);
+    Route::middleware('role:Dean,Coordinator')->get('/settings/documents/{template}/edit', function (\App\Models\DocumentTemplate $template) {
         return Inertia::render('settings/documents/TemplateEditor', [
             'templateId' => $template->id,
             'template' => $template
@@ -458,17 +599,11 @@ Route::get('/honorarium/individual-record/{programId}', [HonorariumSummaryContro
         Route::delete('/{id}', [\App\Http\Controllers\CoordinatorProgramAssignmentController::class, 'destroy'])->name('coordinator-assignments.destroy');
     });
 
-    // Logout
-    Route::post('/logout', function (\Illuminate\Http\Request $r) {
-        Auth::logout();
-        $r->session()->invalidate();
-        $r->session()->regenerateToken();
-        return redirect()->route('login');
-    })->name('logout');
-
     /* Notifications */
     Route::get('/notification', fn() => Inertia::render('notification/Index'))->name('notification.index');
     Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
+    Route::post('/notifications/read-all', [NotificationController::class, 'markAllAsRead'])->name('notifications.read-all');
+    Route::post('/notifications/{notification}/read', [NotificationController::class, 'markAsRead'])->name('notifications.read');
 
     /* Payments */
     Route::get('/payment', [PaymentSubmissionController::class, 'index'])->name('payment.index');
@@ -500,6 +635,20 @@ Route::get('/honorarium/individual-record/{programId}', [HonorariumSummaryContro
     Route::get('/defense-request', [DefenseRequestController::class, 'index'])->name('defense-request.index');
     Route::get('/defense-requests', [DefenseRequestController::class, 'index'])->name('defense-requests.index');
     Route::post('/defense-request', [DefenseRequestController::class, 'store'])->name('defense-request.store');
+
+    /* Public Payment Rates API - accessible to all authenticated users */
+    Route::get('/api/payment-rates', [\App\Http\Controllers\PaymentRateController::class, 'data'])
+        ->name('api.payment-rates.data');
+
+    /* SuperAdmin API Routes */
+    Route::middleware('role:Super Admin')->group(function () {
+        Route::post('/api/superadmin/settings/exam-window', [\App\Http\Controllers\SuperAdminController::class, 'updateExamWindow'])
+            ->name('api.superadmin.settings.exam-window');
+        Route::post('/api/superadmin/settings/payment-window', [\App\Http\Controllers\SuperAdminController::class, 'updatePaymentWindow'])
+            ->name('api.superadmin.settings.payment-window');
+        Route::post('/api/superadmin/settings/eligibility-bypass', [\App\Http\Controllers\SuperAdminController::class, 'updateEligibilityBypass'])
+            ->name('api.superadmin.settings.eligibility-bypass');
+    });
 
     /* Workflow actions */
     Route::post(
@@ -588,7 +737,7 @@ Route::get('/honorarium/individual-record/{programId}', [HonorariumSummaryContro
     Route::post('/comprehensive-exam', [ComprehensiveExamController::class, 'store'])->name('comprehensive-exam.store');
 
     /* Coordinator Comprehensive Exam */
-    Route::middleware(['auth'])->group(function () {
+    Route::middleware(['auth', 'role:Coordinator'])->group(function () {
         // Coordinator Comprehensive Payment route
         Route::get('/coordinator/compre-payment', [CoordinatorComprePaymentController::class, 'index'])
             ->name('coordinator.compre-payment.index');
@@ -608,33 +757,32 @@ Route::get('/honorarium/individual-record/{programId}', [HonorariumSummaryContro
     });
     
     /* Coordinator Comprehensive Exam */
-    Route::get('/coordinator/compre-exam', [CoordinatorCompreExamController::class, 'index'])
-        ->name('coordinator.compre-exam.index');
-    Route::get('/coordinator/compre-payment', [PaymentSubmissionController::class, 'coordinatorIndex'])
-        ->name('coordinator.compre-payment.index');
-    Route::post('/coordinator/compre-payment/{id}/approve', [PaymentSubmissionController::class, 'approve'])
-        ->name('coordinator.compre-payment.approve');
-    Route::post('/coordinator/compre-payment/{id}/reject', [PaymentSubmissionController::class, 'reject'])
-        ->name('coordinator.compre-payment.reject');
-    Route::post('/coordinator/compre-payment/{id}/retrieve', [PaymentSubmissionController::class, 'retrieve'])
-        ->name('coordinator.compre-payment.retrieve');
-    // Override bulk routes to use PaymentSubmissionController versions (placed after earlier definitions)
-    Route::post('/coordinator/compre-payment/bulk-approve', [PaymentSubmissionController::class, 'bulkApprove'])
-        ->name('coordinator.compre-payment.bulk-approve');
-    Route::post('/coordinator/compre-payment/bulk-reject', [PaymentSubmissionController::class, 'bulkReject'])
-        ->name('coordinator.compre-payment.bulk-reject');
-    Route::post('/coordinator/compre-payment/bulk-retrieve', [PaymentSubmissionController::class, 'bulkRetrieve'])
-        ->name('coordinator.compre-payment.bulk-retrieve');
-    // Page (Inertia)
-    Route::get('/coordinator/compre-exam-schedule', [ExamSubjectOfferingController::class, 'page'])
-        ->name('coordinator.compre-exam-schedule.index');
-    // CRUD for offerings (used by the page)
-    Route::post('/coordinator/compre-exam-schedule/offerings', [ExamSubjectOfferingController::class, 'store'])
-        ->name('coordinator.compre-exam-schedule.offerings.store');
-    Route::put('/coordinator/compre-exam-schedule/offerings/{offering}', [ExamSubjectOfferingController::class, 'update'])
-        ->name('coordinator.compre-exam-schedule.offerings.update');
-    Route::delete('/coordinator/compre-exam-schedule/offerings/{offering}', [ExamSubjectOfferingController::class, 'destroy'])
-        ->name('coordinator.compre-exam-schedule.offerings.destroy');
+    Route::middleware(['auth', 'role:Coordinator'])->group(function () {
+        Route::get('/coordinator/compre-exam', [CoordinatorCompreExamController::class, 'index'])
+            ->name('coordinator.compre-exam.index');
+        Route::get('/coordinator/compre-payment', [PaymentSubmissionController::class, 'coordinatorIndex'])
+            ->name('coordinator.compre-payment.index');
+        Route::post('/coordinator/compre-payment/{id}/approve', [PaymentSubmissionController::class, 'approve'])
+            ->name('coordinator.compre-payment.approve');
+        Route::post('/coordinator/compre-payment/{id}/reject', [PaymentSubmissionController::class, 'reject'])
+            ->name('coordinator.compre-payment.reject');
+        Route::post('/coordinator/compre-payment/{id}/retrieve', [PaymentSubmissionController::class, 'retrieve'])
+            ->name('coordinator.compre-payment.retrieve');
+        Route::post('/coordinator/compre-payment/bulk-approve', [PaymentSubmissionController::class, 'bulkApprove'])
+            ->name('coordinator.compre-payment.bulk-approve');
+        Route::post('/coordinator/compre-payment/bulk-reject', [PaymentSubmissionController::class, 'bulkReject'])
+            ->name('coordinator.compre-payment.bulk-reject');
+        Route::post('/coordinator/compre-payment/bulk-retrieve', [PaymentSubmissionController::class, 'bulkRetrieve'])
+            ->name('coordinator.compre-payment.bulk-retrieve');
+        Route::get('/coordinator/compre-exam-schedule', [ExamSubjectOfferingController::class, 'page'])
+            ->name('coordinator.compre-exam-schedule.index');
+        Route::post('/coordinator/compre-exam-schedule/offerings', [ExamSubjectOfferingController::class, 'store'])
+            ->name('coordinator.compre-exam-schedule.offerings.store');
+        Route::put('/coordinator/compre-exam-schedule/offerings/{offering}', [ExamSubjectOfferingController::class, 'update'])
+            ->name('coordinator.compre-exam-schedule.offerings.update');
+        Route::delete('/coordinator/compre-exam-schedule/offerings/{offering}', [ExamSubjectOfferingController::class, 'destroy'])
+            ->name('coordinator.compre-exam-schedule.offerings.destroy');
+    });
 
     // Coordinator: Post Scores workflow
     Route::middleware(['auth'])->group(function () {
@@ -673,7 +821,7 @@ Route::get('/honorarium/individual-record/{programId}', [HonorariumSummaryContro
         //     ->name('api.exam-subject-offerings.index');
     });
 
-    Route::middleware(['auth','verified'])->group(function () {
+    Route::middleware(['auth','verified','role:Registrar'])->group(function () {
         // Registrar Applications page
         Route::get('/registrar/compre-exam', [RegistrarExamApplicationController::class, 'indexPage'])
             ->name('registrar.compre-exam.index');
@@ -691,8 +839,8 @@ Route::get('/honorarium/individual-record/{programId}', [HonorariumSummaryContro
             ->name('api.registrar.exam-applications.reviews');
     });
 
-    Route::middleware(['auth','verified'])->group(function () {
-        // Dean page
+    Route::middleware(['auth','verified','role:Dean'])->group(function () {
+        // Dean Comprehensive Exams
         Route::get('/dean/compre-exam', [DeanCompreExamController::class, 'page'])
             ->name('dean.compre-exam.index');
         // APIs
@@ -708,6 +856,20 @@ Route::get('/honorarium/individual-record/{programId}', [HonorariumSummaryContro
             ->name('dean.exam-applications.bulk-revert');
         Route::get('/api/dean/exam-applications/{application}/reviews', [DeanCompreExamController::class, 'reviews'])
             ->name('api.dean.exam-applications.reviews');
+
+        // Dean Defense Requests - Final Approval with Signature
+        Route::get('/dean/defense-requests', [DeanDefenseController::class, 'index'])
+            ->name('dean.defense-requests.index');
+        Route::get('/dean/defense-requests/{id}/details', [DeanDefenseController::class, 'details'])
+            ->name('dean.defense-requests.details');
+        Route::get('/dean/defense-requests/all-defense-requests', [DeanDefenseController::class, 'allDefenseRequests'])
+            ->name('dean.defense-requests.all');
+        Route::post('/dean/defense-requests/generate-preview', [DeanDefenseController::class, 'generatePreview'])
+            ->name('dean.defense-requests.generate-preview');
+        Route::post('/dean/defense-requests/generate-document', [DeanDefenseController::class, 'generateDocument'])
+            ->name('dean.defense-requests.generate-document');
+        Route::post('/dean/defense-requests/{defenseRequest}/approve', [DeanDefenseController::class, 'approve'])
+            ->name('dean.defense-requests.approve');
     });
 
     /* Honorarium / Reports */
@@ -765,6 +927,10 @@ Route::get('/honorarium/individual-record/{programId}', [HonorariumSummaryContro
         
         Route::get('/panel-members', [CoordinatorDefenseController::class, 'panelMembersAll'])
             ->name('defense.panel-members');
+        
+        // Add the missing panel-members-all route
+        Route::get('/defense/panel-members-all', [CoordinatorDefenseController::class, 'availablePanelMembersJson'])
+            ->name('defense.panel-members-all');
 
         Route::get('/defense-requests/{defenseRequest}/details', [CoordinatorDefenseController::class, 'details'])
             ->name('defense-requests.details'); // <-- FIXED: was 'coordinator.defense-requests.details'
@@ -783,7 +949,7 @@ Route::get('/honorarium/individual-record/{programId}', [HonorariumSummaryContro
     // Add this line if missing
     Route::get('/api/adviser/code', [AdviserStudentController::class, 'getAdviserCode']);
 
-    Route::get('/coordinator/adviser-list', function () {
+    Route::middleware('role:Coordinator')->get('/coordinator/adviser-list', function () {
         return Inertia::render('coordinator/adviser-list/Index');
     })->name('coordinator.adviser-list');
 });
@@ -808,11 +974,148 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/api/signatures', [UserSignatureController::class, 'store']);
     Route::patch('/api/signatures/{signature}/activate', [UserSignatureController::class, 'activate']);
 
+    // Coordinator: Check delegation status
+    Route::get('/api/coordinator/delegation-status', function () {
+        $user = Auth::user();
+        if ($user->role !== 'Coordinator') {
+            return response()->json(['can_sign_on_behalf' => false]);
+        }
+        
+        // Find dean (assuming there's one dean or specific to coordinator's program)
+        $dean = \DB::table('users')->where('role', 'Dean')->first();
+        if (!$dean) {
+            return response()->json(['can_sign_on_behalf' => false]);
+        }
+        
+        $setting = \DB::table('coordinator_delegation_settings')
+            ->where('dean_id', $dean->id)
+            ->where('coordinator_id', $user->id)
+            ->first();
+        
+        return response()->json([
+            'can_sign_on_behalf' => $setting ? (bool)$setting->can_sign_on_behalf : false,
+        ]);
+    });
+
+    // Coordinator: Get dean's signatures (not their own)
+    Route::get('/api/dean-signatures', function () {
+        // Find dean
+        $dean = \DB::table('users')->where('role', 'Dean')->first();
+        if (!$dean) {
+            return response()->json([]);
+        }
+        
+        // Get dean's signatures
+        $signatures = \App\Models\UserSignature::where('user_id', $dean->id)->get();
+        return response()->json($signatures);
+    });
+
     Route::get('/generated-documents/{doc}', [GeneratedDocumentController::class, 'show'])
         ->name('generated-documents.show');
 
     Route::get('/api/exam-subject-offerings', [ExamSubjectOfferingController::class, 'index'])
         ->name('api.exam-subject-offerings.index');
+
+
+    // Coordinators API - for dean dashboard
+    Route::get('/api/coordinators', function () {
+        return User::where('role', 'Coordinator')
+            ->select('id', 'first_name', 'middle_name', 'last_name', 'email')
+            ->get()
+            ->map(function ($user) {
+                // Get students count through coordinated advisers
+                $studentsCount = User::whereIn('id', function($query) use ($user) {
+                    $query->select('student_id')
+                        ->from('adviser_student')
+                        ->whereIn('adviser_id', function($subquery) use ($user) {
+                            $subquery->select('adviser_id')
+                                ->from('adviser_coordinator')
+                                ->where('coordinator_id', $user->id);
+                        })
+                        ->where('status', 'accepted');
+                })->count();
+
+                // Get advisers count
+                $advisersCount = $user->coordinatedAdvisers()->count();
+
+                // Get unique programs from students
+                $programs = User::whereIn('id', function($query) use ($user) {
+                    $query->select('student_id')
+                        ->from('adviser_student')
+                        ->whereIn('adviser_id', function($subquery) use ($user) {
+                            $subquery->select('adviser_id')
+                                ->from('adviser_coordinator')
+                                ->where('coordinator_id', $user->id);
+                        })
+                        ->where('status', 'accepted');
+                })
+                ->whereNotNull('program')
+                ->where('program', '!=', '')
+                ->pluck('program')
+                ->unique()
+                ->values()
+                ->toArray();
+
+                return [
+                    'id' => $user->id,
+                    'name' => trim($user->first_name . ' ' . $user->last_name),
+                    'first_name' => $user->first_name,
+                    'middle_name' => $user->middle_name,
+                    'last_name' => $user->last_name,
+                    'email' => $user->email,
+                    'students_count' => $studentsCount,
+                    'advisers_count' => $advisersCount,
+                    'programs' => $programs,
+                ];
+            });
+    });
+
+    // Administrative Assistants API - for dean dashboard
+    Route::get('/api/assistants', function () {
+        return User::where('role', 'Administrative Assistant')
+            ->select('id', 'first_name', 'middle_name', 'last_name', 'email')
+            ->get()
+            ->map(function ($user) {
+                return [
+                    'id' => $user->id,
+                    'name' => trim($user->first_name . ' ' . $user->last_name),
+                    'first_name' => $user->first_name,
+                    'middle_name' => $user->middle_name,
+                    'last_name' => $user->last_name,
+                    'email' => $user->email,
+                    'students_count' => 0, // Assistants don't have students
+                    'advisers_count' => 0, // Assistants don't have advisers
+                ];
+            });
+    });
+
+    // Coordinator Programs API - Get programs for logged-in coordinator
+    Route::get('/api/coordinator/programs', function () {
+        $user = Auth::user();
+        
+        if ($user->role !== 'Coordinator') {
+            return response()->json([]);
+        }
+
+        // Get unique programs from students assigned to this coordinator
+        $programs = User::whereIn('id', function($query) use ($user) {
+            $query->select('student_id')
+                ->from('adviser_student')
+                ->whereIn('adviser_id', function($subquery) use ($user) {
+                    $subquery->select('adviser_id')
+                        ->from('adviser_coordinator')
+                        ->where('coordinator_id', $user->id);
+                })
+                ->where('status', 'accepted');
+        })
+        ->whereNotNull('program')
+        ->where('program', '!=', '')
+        ->pluck('program')
+        ->unique()
+        ->values();
+
+        return response()->json($programs);
+    });
 });
 
 /*
@@ -839,12 +1142,7 @@ Route::get('/api/faculty-search', function (\Illuminate\Http\Request $request) {
 Route::get('/api/comprehensive-exam/status', [ApiCompreEligController::class, 'checkExamStatus']);
 Route::get('/api/comprehensive-exam/eligibility', [ApiCompreEligController::class, 'checkEligibility']);
 
-Route::get('/api/coordinator/defense-requests', function () {
-    $user = Auth::user();
-    $roles = ['Coordinator', 'Administrative Assistant', 'Dean'];
-    if (!$user || !in_array($user->role, $roles))
-        abort(403);
-
+Route::middleware('role:Coordinator,Administrative Assistant,Dean')->get('/api/coordinator/defense-requests', function () {
     $records = DefenseRequest::query()
         ->whereIn('workflow_state', [
             'adviser-approved',
@@ -919,11 +1217,8 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/api/adviser/pending-students/{student}/reject', [AdviserStudentController::class, 'rejectPending']);
 
 
-    Route::get('/api/coordinator/pending-honorariums', function () {
+    Route::middleware('role:Coordinator')->get('/api/coordinator/pending-honorariums', function () {
         $user = Auth::user();
-        if (!$user || $user->role !== 'Coordinator') {
-            abort(403);
-        }
 
         // Get defense requests assigned to this coordinator that are approved
         $approvedRequestIds = \App\Models\DefenseRequest::where('coordinator_user_id', $user->id)
@@ -947,12 +1242,7 @@ Route::middleware(['auth'])->group(function () {
     });
 
     // Dean pending honorariums (all approved defense requests)
-    Route::get('/api/dean/pending-honorariums', function () {
-        $user = Auth::user();
-        if (!$user || $user->role !== 'Dean') {
-            abort(403);
-        }
-
+    Route::middleware('role:Dean')->get('/api/dean/pending-honorariums', function () {
         // Get ALL approved defense requests
         $approvedRequestIds = \App\Models\DefenseRequest::where('coordinator_status', 'Approved')
             ->pluck('id');
@@ -971,11 +1261,8 @@ Route::middleware(['auth'])->group(function () {
     });
 
     // Assistant pending honorariums (all approved defense requests)
-    Route::get('/api/assistant/pending-honorariums', function () {
+    Route::middleware('role:Administrative Assistant')->get('/api/assistant/pending-honorariums', function () {
         $user = Auth::user();
-        if (!$user || $user->role !== 'Administrative Assistant') {
-            abort(403);
-        }
 
         // Get ALL approved defense requests
         $approvedRequestIds = \App\Models\DefenseRequest::where('coordinator_status', 'Approved')
@@ -1009,7 +1296,7 @@ Route::get('/adviser/defense-requirements/{id}/details', function ($id) {
     if (!$user || !in_array($user->role, ['Adviser', 'Faculty']))
         abort(403);
 
-    $defenseRequest = \App\Models\DefenseRequest::findOrFail($id);
+    $defenseRequest = \App\Models\DefenseRequest::with(['aaVerification'])->findOrFail($id);
 
     // Find the student from defense request
     $student = \App\Models\User::where('school_id', $defenseRequest->school_id)->first();
@@ -1102,12 +1389,7 @@ Route::get('/assistant/all-defense-list', function () {
     return Inertia::render('assistant/all-defense-list/Index');
 })->name('assistant.all-defense-list');
 
-Route::get('/assistant/all-defense-list/data', function () {
-    $user = Auth::user();
-    if (!in_array($user->role, ['Administrative Assistant', 'Dean'])) {
-        abort(403);
-    }
-
+Route::middleware('role:Administrative Assistant,Dean')->get('/assistant/all-defense-list/data', function () {
     // Fetch all approved/completed defense requests for AA
     $defenseRequests = DefenseRequest::query()
         ->with('aaVerification')
@@ -1182,13 +1464,14 @@ Route::get('/assistant/all-defense-list/data', function () {
                 'coordinator' => $coordinator,
                 'aa_verification_status' => optional($r->aaVerification)->status ?? 'pending',
                 'aa_verification_id' => optional($r->aaVerification)->id,
+                'invalid_comment' => optional($r->aaVerification)->invalid_comment,
             ];
         });
 
     return response()->json($defenseRequests);
 })->name('assistant.all-defense-list.data');
 
-Route::get('/coordinator/defense-requests', function () {
+Route::middleware('role:Coordinator')->get('/coordinator/defense-requests', function () {
     $user = Auth::user();
     if (!$user || $user->role !== 'Coordinator') {
         abort(403);

@@ -1,0 +1,197 @@
+import { Button } from '@/components/ui/button';
+import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/table';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Badge } from '@/components/ui/badge';
+import { CheckCircle, XCircle, Clock, DollarSign, Banknote, Hourglass, CircleCheck } from 'lucide-react';
+import { format } from 'date-fns';
+import { router } from '@inertiajs/react';
+
+export type DefenseRequestSummary = {
+  id: number;
+  first_name: string;
+  middle_name: string | null;
+  last_name: string;
+  program: string;
+  thesis_title: string;
+  date_of_defense?: string;
+  scheduled_date?: string | null;
+  defense_type: string;
+  mode_defense?: string;
+  defense_mode?: string;
+  status: 'Pending' | 'In progress' | 'Approved' | 'Rejected' | 'Needs-info';
+  priority: 'Low' | 'Medium' | 'High';
+  last_status_updated_by?: string;
+  last_status_updated_at?: string;
+  workflow_state?: string;
+  adviser?: string;
+  coordinator_status?: 'Pending' | 'Approved' | 'Rejected' | null;
+  dean_status?: 'Pending' | 'Approved' | 'Rejected' | null;
+  aa_status?: 'pending' | 'ready_for_finance' | 'in_progress' | 'paid' | 'completed' | null;
+};
+
+export type TableDefenseRequestsProps = {
+  paged: DefenseRequestSummary[];
+  columns: Record<string, boolean>;
+  toggleSort: () => void;
+  sortDir: 'asc' | 'desc' | null | undefined;
+  onPriorityChange: (id: number, priority: string) => Promise<void>;
+  tabType?: 'pending' | 'rejected' | 'approved';
+  onViewDetails?: (id: number) => void;
+  hideActions?: boolean;
+  hideSelect?: boolean;
+};
+
+function getDeanStatusBadge(status?: 'Pending' | 'Approved' | 'Rejected' | null) {
+  if (status === 'Approved') {
+    return <Badge className="bg-green-100 text-green-700 border-green-200 flex items-center gap-1"><CheckCircle className="h-3 w-3" />Approved</Badge>;
+  }
+  if (status === 'Rejected') {
+    return <Badge className="bg-red-100 text-red-700 border-red-200 flex items-center gap-1"><XCircle className="h-3 w-3" />Rejected</Badge>;
+  }
+  // Default: pending (includes null/undefined and explicit 'Pending')
+  return <Badge className="bg-yellow-100 text-yellow-700 border-yellow-200 flex items-center gap-1"><Clock className="h-3 w-3" />Pending</Badge>;
+}
+
+function getCoordinatorStatusBadge(status?: 'Pending' | 'Approved' | 'Rejected' | null) {
+  if (status === 'Approved') {
+    return <Badge className="bg-green-100 text-green-700 border-green-200 flex items-center gap-1"><CheckCircle className="h-3 w-3" />Approved</Badge>;
+  }
+  if (status === 'Rejected') {
+    return <Badge className="bg-red-100 text-red-700 border-red-200 flex items-center gap-1"><XCircle className="h-3 w-3" />Rejected</Badge>;
+  }
+  // Default: pending (includes null/undefined and explicit 'Pending')
+  return <Badge className="bg-yellow-100 text-yellow-700 border-yellow-200 flex items-center gap-1"><Clock className="h-3 w-3" />Pending</Badge>;
+}
+
+function getAaStatusBadge(status?: 'pending' | 'ready_for_finance' | 'in_progress' | 'paid' | 'completed' | null) {
+  if (status === 'completed') {
+    return <Badge className="bg-green-100 text-green-700 border-green-200 flex items-center gap-1"><CircleCheck className="h-3 w-3" />Completed</Badge>;
+  }
+  if (status === 'paid') {
+    return <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200 flex items-center gap-1"><Banknote className="h-3 w-3" />Paid</Badge>;
+  }
+  if (status === 'ready_for_finance') {
+    return <Badge className="bg-blue-100 text-blue-700 border-blue-200 flex items-center gap-1"><DollarSign className="h-3 w-3" />Ready for Finance</Badge>;
+  }
+  if (status === 'in_progress') {
+    return <Badge className="bg-amber-100 text-amber-700 border-amber-200 flex items-center gap-1"><Hourglass className="h-3 w-3" />In Progress</Badge>;
+  }
+  // Default: pending (includes null/undefined and explicit 'pending')
+  return <Badge className="bg-yellow-100 text-yellow-700 border-yellow-200 flex items-center gap-1"><Clock className="h-3 w-3" />Pending</Badge>;
+}
+
+export default function TableDefenseRequests({
+  paged,
+  columns,
+  toggleSort,
+  sortDir,
+  onPriorityChange,
+  tabType,
+  onViewDetails,
+  hideActions,
+  hideSelect
+}: TableDefenseRequestsProps) {
+  return (
+    <div className="relative w-full">
+      <div className="overflow-x-auto rounded-md border border-border bg-background">
+        <Table className="w-full text-sm table-auto">
+          <TableHeader>
+            <TableRow>
+              {columns.title && <TableHead className="px-3 min-w-[180px]">Thesis Title</TableHead>}
+              {columns.presenter && <TableHead className="px-2 min-w-[120px]">Presenter</TableHead>}
+              {columns.adviser && <TableHead className="px-2 min-w-[120px]">Adviser</TableHead>}
+              {columns.program && <TableHead className="px-2 min-w-[100px]">Program</TableHead>}
+              {/* Coordinator Status */}
+              {columns.status && <TableHead className="px-2 min-w-[100px] text-center">Coordinator</TableHead>}
+              {/* Dean Status */}
+              <TableHead className="px-2 min-w-[100px] text-center">Dean</TableHead>
+              {/* AA Status */}
+              <TableHead className="px-2 min-w-[100px] text-center">AA Status</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {paged.map(r => {
+              const handleRowClick = (e: React.MouseEvent) => {
+                const tag = (e.target as HTMLElement).tagName;
+                if (
+                  tag === 'BUTTON' ||
+                  tag === 'INPUT' ||
+                  tag === 'SELECT' ||
+                  (e.target as HTMLElement).closest('.action-btn') ||
+                  (e.target as HTMLElement).closest('.priority-dropdown')
+                ) {
+                  return;
+                }
+                if (onViewDetails) onViewDetails(r.id);
+                else router.visit(`/dean/defense-requests/${r.id}/details`);
+              };
+
+              return (
+                <TableRow
+                  key={r.id}
+                  className="hover:bg-muted/40 cursor-pointer"
+                  onClick={handleRowClick}
+                >
+                  {columns.title && (
+                    <TableCell className="px-3 py-2 font-medium truncate leading-tight align-middle" title={r.thesis_title}>
+                      <Badge variant="outline" className="mr-2">
+                        {r.defense_type || '—'}
+                      </Badge>
+                      {r.thesis_title}
+                    </TableCell>
+                  )}
+                  {columns.presenter && (
+                    <TableCell className="px-2 py-2 text-xs text-muted-foreground whitespace-nowrap align-middle" title={`${r.first_name} ${r.middle_name ? r.middle_name + ' ' : ''}${r.last_name}`}>
+                      {r.first_name} {r.middle_name ? r.middle_name[0] + '. ' : ''}{r.last_name}
+                    </TableCell>
+                  )}
+                  {columns.adviser && (
+                    <TableCell className="px-2 py-2 text-xs text-muted-foreground whitespace-nowrap align-middle">
+                      {r.adviser && r.adviser.trim() !== '' ? r.adviser : '—'}
+                    </TableCell>
+                  )}
+                  {columns.program && (
+                    <TableCell className="px-2 py-2 text-xs text-muted-foreground whitespace-nowrap align-middle">
+                      {r.program || '—'}
+                    </TableCell>
+                  )}
+                  {/* Coordinator Status */}
+                  {columns.status && (
+                    <TableCell className="px-2 py-2 text-xs whitespace-nowrap text-center align-middle">
+                      {getCoordinatorStatusBadge(r.coordinator_status)}
+                    </TableCell>
+                  )}
+                  {/* Dean Status */}
+                  <TableCell className="px-2 py-2 text-xs whitespace-nowrap text-center align-middle">
+                    {getDeanStatusBadge(r.dean_status)}
+                  </TableCell>
+                  {/* AA Status */}
+                  <TableCell className="px-2 py-2 text-xs whitespace-nowrap text-center align-middle">
+                    {getAaStatusBadge(r.aa_status)}
+                  </TableCell>
+                </TableRow>
+              );
+            })}
+            {paged.length === 0 && (
+              <TableRow>
+                <TableCell
+                  colSpan={
+                    (columns.title ? 1 : 0) +
+                    (columns.presenter ? 1 : 0) +
+                    (columns.adviser ? 1 : 0) +
+                    (columns.program ? 1 : 0) +
+                    (columns.status ? 1 : 0) +
+                    2 // Dean Status + AA Status
+                  }
+                  className="text-center py-10 text-muted-foreground"
+                >
+                  No requests found.
+                </TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
+      </div>
+    </div>
+  );
+}

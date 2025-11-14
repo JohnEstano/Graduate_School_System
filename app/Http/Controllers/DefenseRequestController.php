@@ -43,6 +43,17 @@ class DefenseRequestController extends Controller
             // Coordinator view: show queue of adviser-approved onward
             $query = DefenseRequest::query();
 
+            // FILTER: Only show requests that have been approved by adviser (not 'submitted' or 'adviser-review')
+            $query->whereIn('workflow_state', [
+                'adviser-approved',
+                'coordinator-review',
+                'coordinator-approved',
+                'coordinator-rejected',
+                'panels-assigned',
+                'scheduled',
+                'completed'
+            ]);
+
             // --- AA filter ---
             if ($user->role === 'Administrative Assistant') {
                 $query->where('coordinator_status', 'Approved');
@@ -214,7 +225,7 @@ class DefenseRequestController extends Controller
 
         foreach (['advisersEndorsement','recEndorsement','proofOfPayment'] as $f) {
             if ($request->hasFile($f)) {
-                $data[$f] = $request->file($f)->store('defense-attachments');
+                $data[$f] = $request->file($f)->store('defense-attachments', 'public');
             }
         }
 
@@ -247,6 +258,10 @@ class DefenseRequestController extends Controller
                     'to_state'=>'submitted'
                 ]]
             ]);
+
+            // Calculate and set the expected amount based on payment rates
+            $defenseRequest->calculateAndSetAmount();
+            $defenseRequest->save();
 
             // Find adviser using flexible name matching
             Log::info('Defense Request: Looking for adviser', [
@@ -988,7 +1003,7 @@ class DefenseRequestController extends Controller
             if ($status === 'Rejected') {
                 Log::info('Sending rejection email to student');
                 if ($student && $student->email) {
-                    Mail::to($student->email)->send(new DefenseRequestRejected(
+                    Mail::to($student->email)->queue(new DefenseRequestRejected(
                         $defenseRequest,
                         $student,
                         'coordinator',
@@ -1117,7 +1132,7 @@ class DefenseRequestController extends Controller
                     $changes = ['schedule' => $scheduleChanged, 'panels' => $panelsChanged];
                 }
                 
-                Mail::to($student->email)->send(new DefenseScheduled(
+                Mail::to($student->email)->queue(new DefenseScheduled(
                     $defenseRequest,
                     $student,
                     $changes
@@ -1141,7 +1156,7 @@ class DefenseRequestController extends Controller
                     $changes = ['schedule' => $scheduleChanged, 'panels' => $panelsChanged];
                 }
                 
-                Mail::to($adviser->email)->send(new DefenseScheduled(
+                Mail::to($adviser->email)->queue(new DefenseScheduled(
                     $defenseRequest,
                     $adviser,
                     $changes
@@ -1173,7 +1188,7 @@ class DefenseRequestController extends Controller
                         'email' => $member->email,
                         'changes' => $changes
                     ]);
-                    Mail::to($member->email)->send(new DefenseScheduled(
+                    Mail::to($member->email)->queue(new DefenseScheduled(
                         $defenseRequest,
                         $member,
                         $changes
@@ -1467,8 +1482,18 @@ class DefenseRequestController extends Controller
                 'id','thesis_title','defense_type','status','workflow_state',
                 'program','school_id','first_name','last_name',
                 'scheduled_date','scheduled_time','scheduled_end_time',
-                'defense_mode','defense_venue'
+                'defense_mode','defense_venue',
+                'defense_adviser','defense_chairperson',
+                'defense_panelist1','defense_panelist2','defense_panelist3','defense_panelist4'
             ])->map(function($r){
+                // Build panel members array from individual fields
+                $panelMembers = array_filter([
+                    $r->defense_panelist1,
+                    $r->defense_panelist2,
+                    $r->defense_panelist3,
+                    $r->defense_panelist4,
+                ]);
+                
                 return [
                     'id'              => $r->id,
                     'thesis_title'    => $r->thesis_title,
@@ -1484,6 +1509,10 @@ class DefenseRequestController extends Controller
                     'end_time'        => $r->scheduled_end_time,
                     'defense_mode'    => $r->defense_mode,
                     'defense_venue'   => $r->defense_venue,
+                    // Panel information
+                    'adviser'         => $r->defense_adviser,
+                    'panel_chair'     => $r->defense_chairperson,
+                    'panel_members'   => $panelMembers,
                 ];
             })->values();
 
@@ -1727,12 +1756,18 @@ class DefenseRequestController extends Controller
             $data = $request->validate([
                 'adviser_status' => 'required|in:Pending,Approved,Rejected',
                 'coordinator_user_id' => 'nullable|integer|exists:users,id',
+                'adviser_comments' => 'nullable|string|max:500',
             ]);
             
             \Log::info('updateAdviserStatus: Validation passed', ['data' => $data]);
 
         $fromState = $defenseRequest->workflow_state;
         $defenseRequest->adviser_status = $data['adviser_status'];
+        
+        // Store rejection reason if provided
+        if (isset($data['adviser_comments'])) {
+            $defenseRequest->adviser_comments = $data['adviser_comments'];
+        }
 
         // Update workflow_state based on status
         if ($data['adviser_status'] === 'Approved') {
@@ -1754,7 +1789,7 @@ class DefenseRequestController extends Controller
 
         // Add workflow entry
         $hist = $defenseRequest->workflow_history ?? [];
-        $hist[] = [
+        $historyEntry = [
             'action' => 'adviser-status-updated',
             'adviser_status' => $data['adviser_status'],
             'timestamp' => now()->toISOString(),
@@ -1763,6 +1798,13 @@ class DefenseRequestController extends Controller
             'from_state' => $fromState,
             'to_state' => $defenseRequest->workflow_state
         ];
+        
+        // Add rejection reason to workflow history if rejecting
+        if ($data['adviser_status'] === 'Rejected' && isset($data['adviser_comments'])) {
+            $historyEntry['comment'] = $data['adviser_comments'];
+        }
+        
+        $hist[] = $historyEntry;
         $defenseRequest->workflow_history = $hist;
 
         // --- FIX: Use coordinator_user_id from request if present ---
@@ -1815,9 +1857,25 @@ class DefenseRequestController extends Controller
                 
                 // Send email to coordinator
                 if ($coordinator && $coordinator->email) {
-                    \Log::info('updateAdviserStatus: Sending email to coordinator', ['email' => $coordinator->email]);
-                    Mail::to($coordinator->email)->send(new DefenseRequestAssignedToCoordinator($defenseRequest));
-                    \Log::info('updateAdviserStatus: Coordinator email sent');
+                    try {
+                        \Log::info('updateAdviserStatus: Sending email to coordinator', [
+                            'email' => $coordinator->email,
+                            'coordinator_id' => $coordinator->id,
+                            'coordinator_name' => $coordinator->first_name . ' ' . $coordinator->last_name,
+                            'defense_request_id' => $defenseRequest->id
+                        ]);
+                        
+                        Mail::to($coordinator->email)->queue(new DefenseRequestAssignedToCoordinator($defenseRequest));
+                        
+                        \Log::info('updateAdviserStatus: Coordinator email queued/sent successfully');
+                    } catch (\Exception $mailError) {
+                        \Log::error('updateAdviserStatus: Failed to send coordinator email', [
+                            'error' => $mailError->getMessage(),
+                            'trace' => $mailError->getTraceAsString(),
+                            'coordinator_email' => $coordinator->email
+                        ]);
+                        // Don't fail the entire request if email fails
+                    }
                 }
             }
             
@@ -1885,11 +1943,14 @@ class DefenseRequestController extends Controller
         }
 
         $data = $request->validate([
-            'coordinator_status' => 'required|in:Approved,Rejected,Pending',
-            'coordinator_user_id' => 'nullable|integer|exists:users,id'
+            'coordinator_status' => 'required|in:Approved,Rejected,Pending,Pending Dean Approval',
+            'coordinator_user_id' => 'nullable|integer|exists:users,id',
+            'send_email' => 'nullable|boolean',
+            'coordinator_comments' => 'nullable|string|max:500'
         ]);
 
         $previousStatus = $defenseRequest->coordinator_status;
+        $sendEmail = $data['send_email'] ?? false;
         
         DB::beginTransaction();
         try {
@@ -1897,6 +1958,11 @@ class DefenseRequestController extends Controller
             $defenseRequest->coordinator_status = $data['coordinator_status'];
             $defenseRequest->last_status_updated_at = now();
             $defenseRequest->last_status_updated_by = $user->id;
+            
+            // Store rejection reason if provided
+            if (isset($data['coordinator_comments'])) {
+                $defenseRequest->coordinator_comments = $data['coordinator_comments'];
+            }
             
             // Update coordinator if provided
             if (isset($data['coordinator_user_id'])) {
@@ -1908,6 +1974,8 @@ class DefenseRequestController extends Controller
                 $defenseRequest->workflow_state = 'coordinator-approved';
             } elseif ($data['coordinator_status'] === 'Rejected') {
                 $defenseRequest->workflow_state = 'coordinator-rejected';
+            } elseif ($data['coordinator_status'] === 'Pending Dean Approval') {
+                $defenseRequest->workflow_state = 'pending-dean-approval';
             } else {
                 $defenseRequest->workflow_state = 'coordinator-review';
             }
@@ -1916,7 +1984,7 @@ class DefenseRequestController extends Controller
 
             // Log workflow history
             $history = $defenseRequest->workflow_history ?? [];
-            $history[] = [
+            $historyEntry = [
                 'event_type' => 'coordinator-status-update',
                 'from_state' => $previousStatus,
                 'to_state' => $data['coordinator_status'],
@@ -1925,10 +1993,22 @@ class DefenseRequestController extends Controller
                 'user_id' => $user->id,
                 'description' => "Coordinator updated status to {$data['coordinator_status']}"
             ];
+            
+            // Add rejection reason to workflow history if rejecting
+            if ($data['coordinator_status'] === 'Rejected' && isset($data['coordinator_comments'])) {
+                $historyEntry['comment'] = $data['coordinator_comments'];
+            }
+            
+            $history[] = $historyEntry;
             $defenseRequest->workflow_history = $history;
             $defenseRequest->save();
 
             DB::commit();
+
+            // Send email notifications if requested (only for approve/reject)
+            if ($sendEmail && ($data['coordinator_status'] === 'Approved' || $data['coordinator_status'] === 'Rejected')) {
+                $this->sendApprovalNotifications($defenseRequest, $data['coordinator_status']);
+            }
 
             return response()->json([
                 'ok' => true,
@@ -1965,7 +2045,8 @@ class DefenseRequestController extends Controller
             'panels-assigned',
             'scheduled',
             'completed',
-            'coordinator-rejected'
+            'coordinator-rejected',
+            'pending-panels'  // <-- ADDED: Requests waiting for panel assignment
         ]);
 
         if ($user->role === 'Administrative Assistant') {
@@ -2238,6 +2319,7 @@ class DefenseRequestController extends Controller
                 // ✅ ADD AA VERIFICATION STATUS
                 'aa_verification_status' => optional($defenseRequest->aaVerification)->status ?? 'pending',
                 'aa_verification_id' => optional($defenseRequest->aaVerification)->id,
+                'invalid_comment' => optional($defenseRequest->aaVerification)->invalid_comment,
                 'attachments' => [
                     'advisers_endorsement' => $defenseRequest->advisers_endorsement,
                     'rec_endorsement' => $defenseRequest->rec_endorsement,
@@ -2385,5 +2467,131 @@ class DefenseRequestController extends Controller
                 'error' => 'Failed to mark as completed: ' . $e->getMessage()
             ], 500);
         }
+    }
+
+    /**
+     * Download defense attachment file
+     * Allows authenticated users to download defense-related documents
+     * WITH PROPER AUTHORIZATION CHECKS TO PREVENT UNAUTHORIZED ACCESS
+     */
+    public function downloadAttachment($filename)
+    {
+        $user = Auth::user();
+        
+        if (!$user) {
+            abort(403, 'Unauthorized access');
+        }
+
+        // Sanitize filename to prevent directory traversal
+        $filename = basename($filename);
+        
+        // Try multiple possible storage locations
+        $possiblePaths = [
+            'defense-attachments/' . $filename,
+            'defense_requirements/' . $filename,
+            'defense_documents/' . $filename,
+        ];
+        
+        $path = null;
+        foreach ($possiblePaths as $testPath) {
+            if (Storage::disk('public')->exists($testPath)) {
+                $path = $testPath;
+                break;
+            }
+        }
+        
+        // If not found in public disk, check default disk (for legacy files)
+        if (!$path) {
+            foreach (['defense-attachments/' . $filename] as $testPath) {
+                if (Storage::disk('local')->exists($testPath)) {
+                    $path = $testPath;
+                    $disk = 'local';
+                    break;
+                }
+            }
+        } else {
+            $disk = 'public';
+        }
+        
+        if (!$path) {
+            abort(404, 'File not found in storage');
+        }
+
+        // SECURITY: Find which defense request this file belongs to
+        $defenseRequest = DefenseRequest::where(function ($query) use ($path, $filename) {
+            $query->where('advisers_endorsement', 'LIKE', '%' . $filename)
+                  ->orWhere('rec_endorsement', 'LIKE', '%' . $filename)
+                  ->orWhere('proof_of_payment', 'LIKE', '%' . $filename)
+                  ->orWhere('manuscript_proposal', 'LIKE', '%' . $filename)
+                  ->orWhere('similarity_index', 'LIKE', '%' . $filename)
+                  ->orWhere('avisee_adviser_attachment', 'LIKE', '%' . $filename)
+                  ->orWhere('ai_detection_certificate', 'LIKE', '%' . $filename)
+                  ->orWhere('endorsement_form', 'LIKE', '%' . $filename);
+        })->first();
+
+        if (!$defenseRequest) {
+            abort(404, 'File not found or not associated with any defense request');
+        }
+
+        // AUTHORIZATION: Check if user has permission to access this file
+        $hasAccess = false;
+
+        // 1. Student who submitted the request
+        if ($user->id === $defenseRequest->submitted_by) {
+            $hasAccess = true;
+        }
+
+        // 2. Adviser assigned to this defense
+        if ($user->id === $defenseRequest->adviser_user_id) {
+            $hasAccess = true;
+        }
+
+        // 3. Coordinator assigned to this defense
+        if ($user->id === $defenseRequest->coordinator_user_id) {
+            $hasAccess = true;
+        }
+
+        // 4. Panelists assigned to this defense
+        $panelistUserIds = [];
+        foreach (['defense_chairperson', 'defense_panelist1', 'defense_panelist2', 'defense_panelist3', 'defense_panelist4'] as $field) {
+            $value = $defenseRequest->$field;
+            if ($value && is_numeric($value)) {
+                // It's a Panelist ID - get the associated user
+                $panelist = \App\Models\Panelist::find($value);
+                if ($panelist && $panelist->user_id) {
+                    $panelistUserIds[] = $panelist->user_id;
+                }
+            }
+        }
+        if (in_array($user->id, $panelistUserIds)) {
+            $hasAccess = true;
+        }
+
+        // 5. Administrative Assistant or Dean (can access all files)
+        if (in_array($user->role, ['Administrative Assistant', 'Dean'])) {
+            $hasAccess = true;
+        }
+
+        // 6. Coordinator role (any coordinator can access approved requests)
+        if ($user->role === 'Coordinator' && in_array($defenseRequest->workflow_state, [
+            'coordinator-approved', 'panels-assigned', 'scheduled', 'completed'
+        ])) {
+            $hasAccess = true;
+        }
+
+        if (!$hasAccess) {
+            abort(403, 'You do not have permission to access this file');
+        }
+
+        // Get the full file path
+        $filePath = Storage::disk($disk)->path($path);
+        
+        // Determine MIME type
+        $mimeType = mime_content_type($filePath) ?: 'application/octet-stream';
+        
+        // Return file download response
+        return response()->download($filePath, $filename, [
+            'Content-Type' => $mimeType,
+        ]);
     }
 }

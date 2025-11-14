@@ -8,15 +8,11 @@ type Props = {
 
 const STUDENT_ACTIONS = [
     {
-        label: "Academic Records",
-        href: "/academic-records",
-        icon: <BookOpen className="size-5 text-zinc-800 dark:text-zinc-100 font-extrabold" size={20} />,
-    },
-    {
-        label: "Payments",
-        href: "/payments",
+        label: "Defense Requirements",
+        href: "/defense-requirements",
         icon: <Receipt className="size-5 text-zinc-800 dark:text-zinc-100 font-extrabold" size={20} />,
     },
+    
     {
         label: "Settings",
         href: "/settings",

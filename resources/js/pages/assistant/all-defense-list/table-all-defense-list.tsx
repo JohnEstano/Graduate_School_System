@@ -1,7 +1,7 @@
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/table';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
-import { CircleCheck, Clock, ArrowRight, Banknote, Hourglass } from 'lucide-react';
+import { CircleCheck, Clock, ArrowRight, Banknote, Hourglass, AlertTriangle } from 'lucide-react';
 import { router } from '@inertiajs/react';
 import { getProgramAbbreviation } from '@/utils/program-abbreviations';
 
@@ -30,7 +30,8 @@ export type DefenseRequestSummary = {
   amount?: number | null;
   reference_no?: string | null;
   coordinator?: string | null;
-  aa_verification_status?: 'pending' | 'ready_for_finance' | 'in_progress' | 'paid' | 'completed';
+  aa_verification_status?: 'pending' | 'ready_for_finance' | 'in_progress' | 'paid' | 'completed' | 'invalid';
+  invalid_comment?: string | null;
 };
 
 export type TableAllDefenseListProps = {
@@ -56,7 +57,7 @@ export type TableAllDefenseListProps = {
   totalCount?: number;
 };
 
-function getAaStatusBadge(status?: 'pending' | 'ready_for_finance' | 'in_progress' | 'paid' | 'completed') {
+function getAaStatusBadge(status?: 'pending' | 'ready_for_finance' | 'in_progress' | 'paid' | 'completed' | 'invalid') {
   if (status === 'completed') {
     return <Badge className="bg-green-100 text-green-700 border-green-200 flex items-center gap-1"><CircleCheck className="h-3 w-3" />Completed</Badge>;
   }
@@ -69,15 +70,19 @@ function getAaStatusBadge(status?: 'pending' | 'ready_for_finance' | 'in_progres
   if (status === 'in_progress') {
     return <Badge className="bg-amber-100 text-amber-700 border-amber-200 flex items-center gap-1"><Hourglass className="h-3 w-3" />In Progress</Badge>;
   }
+  if (status === 'invalid') {
+    return <Badge className="bg-red-100 text-red-700 border-red-200 flex items-center gap-1"><AlertTriangle className="h-3 w-3" />Invalid</Badge>;
+  }
   return <Badge className="bg-yellow-100 text-yellow-700 border-yellow-200 flex items-center gap-1"><Clock className="h-3 w-3" />Pending</Badge>;
 }
 
 // Helper to get status color for the indicator dot
-function getStatusDotColor(status?: 'pending' | 'ready_for_finance' | 'in_progress' | 'paid' | 'completed') {
+function getStatusDotColor(status?: 'pending' | 'ready_for_finance' | 'in_progress' | 'paid' | 'completed' | 'invalid') {
   if (status === 'completed') return 'bg-green-500';
   if (status === 'paid') return 'bg-emerald-500';
   if (status === 'ready_for_finance') return 'bg-blue-500';
   if (status === 'in_progress') return 'bg-amber-500';
+  if (status === 'invalid') return 'bg-red-500';
   return 'bg-yellow-500'; // pending
 }
 

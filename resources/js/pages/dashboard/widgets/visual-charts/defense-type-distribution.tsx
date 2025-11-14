@@ -28,17 +28,17 @@ const chartConfig = {
   },
   proposal: {
     label: "Proposal",
-    color: "#3b82f6",
+    color: "#e11d48",
     icon: FileText,
   },
   prefinal: {
     label: "Prefinal",
-    color: "#f59e0b",
+    color: "#fb7185",
     icon: FileCheck,
   },
   final: {
     label: "Final",
-    color: "#10b981",
+    color: "#fda4af",
     icon: Award,
   },
 } satisfies ChartConfig

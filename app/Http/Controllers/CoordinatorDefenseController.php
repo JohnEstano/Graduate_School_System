@@ -619,7 +619,7 @@ class CoordinatorDefenseController extends Controller
         $student = $defenseRequest->user;
         try {
             if ($student && $student->email) {
-                Mail::to($student->email)->send(new \App\Mail\DefenseScheduledStudent($defenseRequest));
+                Mail::to($student->email)->queue(new \App\Mail\DefenseScheduledStudent($defenseRequest));
                 $emailsSent[] = "Student: {$student->email}";
                 Log::info('Defense notification sent to student', [
                     'defense_request_id' => $defenseRequest->id,
@@ -639,7 +639,7 @@ class CoordinatorDefenseController extends Controller
         $adviser = $defenseRequest->adviserUser;
         try {
             if ($adviser && $adviser->email) {
-                Mail::to($adviser->email)->send(new \App\Mail\DefenseScheduledAdviser($defenseRequest));
+                Mail::to($adviser->email)->queue(new \App\Mail\DefenseScheduledAdviser($defenseRequest));
                 $emailsSent[] = "Adviser: {$adviser->email}";
                 Log::info('Defense notification sent to adviser', [
                     'defense_request_id' => $defenseRequest->id,
@@ -662,7 +662,7 @@ class CoordinatorDefenseController extends Controller
                 $email = $panel->email ?? null;
                 if ($email) {
                     $role = (isset($panel->pivot) && isset($panel->pivot->role)) ? $panel->pivot->role : 'Panel Member';
-                    Mail::to($email)->send(new \App\Mail\DefensePanelInvitation(
+                    Mail::to($email)->queue(new \App\Mail\DefensePanelInvitation(
                         $defenseRequest, 
                         $panel, 
                         $role
@@ -866,7 +866,26 @@ class CoordinatorDefenseController extends Controller
             'defense_panelist4' => 'nullable|string|max:255',
         ]);
 
+        \Log::info('🔵 assignPanelsJson called', [
+            'defense_request_id' => $defenseRequest->id,
+            'incoming_data' => $data,
+            'before_update' => [
+                'defense_chairperson' => $defenseRequest->defense_chairperson,
+                'defense_panelist1' => $defenseRequest->defense_panelist1,
+                'defense_panelist2' => $defenseRequest->defense_panelist2,
+            ]
+        ]);
+
         $defenseRequest->update($data);
+
+        \Log::info('✅ Panels saved', [
+            'defense_request_id' => $defenseRequest->id,
+            'after_update' => [
+                'defense_chairperson' => $defenseRequest->defense_chairperson,
+                'defense_panelist1' => $defenseRequest->defense_panelist1,
+                'defense_panelist2' => $defenseRequest->defense_panelist2,
+            ]
+        ]);
 
         return response()->json(['ok' => true, 'request' => $defenseRequest]);
     }
@@ -901,6 +920,15 @@ class CoordinatorDefenseController extends Controller
 
         try {
             DB::beginTransaction();
+
+            \Log::info('🔵 scheduleDefenseJson called', [
+                'defense_request_id' => $defenseRequest->id,
+                'incoming_data' => $data,
+                'before_update' => [
+                    'scheduled_date' => $defenseRequest->scheduled_date,
+                    'scheduled_time' => $defenseRequest->scheduled_time,
+                ]
+            ]);
 
             $origState = $defenseRequest->workflow_state;
             
@@ -948,6 +976,14 @@ class CoordinatorDefenseController extends Controller
             $defenseRequest->last_status_updated_at = now();
             $defenseRequest->last_status_updated_by = Auth::id();
             $defenseRequest->save();
+
+            \Log::info('✅ Schedule saved', [
+                'defense_request_id' => $defenseRequest->id,
+                'after_save' => [
+                    'scheduled_date' => $defenseRequest->scheduled_date,
+                    'scheduled_time' => $defenseRequest->scheduled_time,
+                ]
+            ]);
 
             DB::commit();
             
@@ -1086,7 +1122,7 @@ class CoordinatorDefenseController extends Controller
         $defenseRequest = \App\Models\DefenseRequest::findOrFail($id);
 
         // Only load real relationships (NOT 'panelists')
-        $defenseRequest->load(['user', 'adviserUser']);
+        $defenseRequest->load(['user', 'adviserUser', 'aaVerification']);
 
         // Compose panelists list manually
         $panelistFields = [
@@ -1170,6 +1206,10 @@ class CoordinatorDefenseController extends Controller
                     'name' => optional(\App\Models\User::find($defenseRequest->coordinator_user_id))->name,
                     'email' => optional(\App\Models\User::find($defenseRequest->coordinator_user_id))->email,
                 ] : null,
+                // ✅ ADD AA VERIFICATION DATA
+                'aa_verification_status' => optional($defenseRequest->aaVerification)->status ?? 'pending',
+                'aa_verification_id' => optional($defenseRequest->aaVerification)->id,
+                'invalid_comment' => optional($defenseRequest->aaVerification)->invalid_comment,
             ],
             'userRole' => $user->role,
         ]);

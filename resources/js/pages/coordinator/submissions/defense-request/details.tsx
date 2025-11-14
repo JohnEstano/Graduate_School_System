@@ -27,7 +27,12 @@ import {
   CircleArrowLeft,
   Signature,
   User,
-  X  // ADD THIS
+  X,
+  AlertTriangle,
+  Banknote,
+  DollarSign,
+  Hourglass,
+  ArrowRight
 } from 'lucide-react';
 import { useRef } from 'react';
 
@@ -99,6 +104,9 @@ export type DefenseRequestFull = {
   scheduled_end_time?: string;
   defense_mode?: string;
   defense_venue?: string;
+  aa_verification_status?: 'pending' | 'ready_for_finance' | 'in_progress' | 'paid' | 'completed' | 'invalid';
+  aa_verification_id?: number | null;
+  invalid_comment?: string | null;
   scheduling_notes?: string;
   advisers_endorsement?: string;
   rec_endorsement?: string;
@@ -114,9 +122,12 @@ export type DefenseRequestFull = {
   last_status_updated_at?: string;
   workflow_history?: any[];
   adviser_status?: string;
+  adviser_comments?: string;
   coordinator_status?: string;
+  coordinator_comments?: string;
   program_level?: string; // "Masteral" | "Doctorate" from server
   submitted_at?: string;
+  amount?: number;
   coordinator?: {
     id: number;
     name: string;
@@ -336,6 +347,7 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
     action: null,
     sendEmail: false,
   });
+  const [rejectionReason, setRejectionReason] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
   // Panel members simple load
@@ -394,8 +406,11 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
         const r = await fetch('/dean/payment-rates/data', { headers: { Accept: 'application/json' } });
         const json = await r.json();
         const arr = Array.isArray(json?.rates) ? json.rates : (Array.isArray(json) ? json : []);
+        console.log('📊 Coordinator - Payment Rates Loaded:', arr.length, 'rates');
+        console.log('📊 Sample rates:', arr.slice(0, 3));
         if (alive) setPaymentRates(arr as any);
       } catch (e) {
+        console.error('❌ Failed to load payment rates:', e);
         if (alive) setPaymentRates([]);
       }
     })();
@@ -433,26 +448,22 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
     userRole
   );
 
-  // Options for assignment comboboxes: exclude adviser-type entries
+  // Options for assignment comboboxes: only exclude the actual thesis adviser
   const panelOptionsForAssignment = useMemo(() => {
     const adviserName = (request.defense_adviser || '').toLowerCase().trim();
-    const adviserEmail = (request.coordinator?.email || '').toLowerCase().trim();
 
     return panelMembers.filter(pm => {
-      const t = (pm.type || '').toLowerCase();
       const name = (pm.name || '').toLowerCase();
-      const email = (pm.email || '').toLowerCase();
 
-      // exclude adviser/advisor types (covers both spellings) - case-insensitive
-      if (t.includes('advis')) return false;
+      // ONLY exclude if this panel member's name matches the actual thesis/dissertation adviser
+      if (adviserName && name && (name === adviserName || name.includes(adviserName) || adviserName.includes(name))) {
+        return false;
+      }
 
-      // Exclude if this panel member appears to be the request's adviser by name or email
-      if (adviserName && name && (name === adviserName || name.includes(adviserName) || adviserName.includes(name))) return false;
-      if (adviserEmail && email && email === adviserEmail) return false;
-
+      // Include everyone else from the panelists table
       return true;
     });
-  }, [panelMembers]);
+  }, [panelMembers, request.defense_adviser]);
 
   // Helper to always get a fresh CSRF token
   async function getFreshCsrfToken(): Promise<string> {
@@ -529,6 +540,10 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
   async function savePanels() {
     const toastId = toast.loading('Saving panel assignments...');
     setSavingPanels(true);
+    
+    console.log('🔵 savePanels - Request ID:', request.id);
+    console.log('🔵 savePanels - Panel data being sent:', JSON.stringify(panels, null, 2));
+    
     try {
       const res = await fetchWithCsrfRetry(
         `/coordinator/defense-requests/${request.id}/panels`,
@@ -541,6 +556,8 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
           body: JSON.stringify(panels)
         }
       );
+      
+      console.log('🔵 savePanels - Response status:', res.status);
 
       const contentType = res.headers.get('content-type') || '';
       let data: any = {};
@@ -556,6 +573,7 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
       }
 
       if (res.ok && data.ok) {
+        console.log('✅ savePanels - Response data:', JSON.stringify(data.request, null, 2));
         setRequest(r => ({ ...r, ...data.request }));
         toast.success('Panels saved', {
           id: toastId,
@@ -568,6 +586,7 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
           ].filter(Boolean).join(', ')
         });
       } else {
+        console.error('❌ savePanels - Error response:', data);
         toast.error(data.error || `Failed (${res.status})`, { id: toastId });
       }
     } catch {
@@ -602,6 +621,10 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
     }
     const toastId = toast.loading('Saving schedule...');
     setSavingSchedule(true);
+    
+    console.log('🔵 saveSchedule - Request ID:', request.id);
+    console.log('🔵 saveSchedule - Schedule data being sent:', JSON.stringify(schedule, null, 2));
+    
     try {
       const res = await fetchWithCsrfRetry(
         `/coordinator/defense-requests/${request.id}/schedule`,
@@ -614,6 +637,8 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
           body: JSON.stringify(schedule)
         }
       );
+      
+      console.log('🔵 saveSchedule - Response status:', res.status);
 
       const contentType = res.headers.get('content-type') || '';
       let data: any = {};
@@ -629,6 +654,7 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
       }
 
       if (res.ok && data.request) {
+        console.log('✅ saveSchedule - Response data:', JSON.stringify(data.request, null, 2));
         setRequest(r => ({ ...r, ...data.request }));
         toast.success('Schedule saved', {
           id: toastId,
@@ -639,6 +665,7 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
           }`
         });
       } else {
+        console.error('❌ saveSchedule - Error response:', data);
         toast.error(data.error || `Failed (${res.status})`, { id: toastId });
       }
     } catch (err: any) {
@@ -698,8 +725,14 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
     }
     
     console.log('✅ Validation passed. Opening approval dialog...');
-    console.log('📋 Panels data to be saved:', panels);
-    console.log('� Schedule data to be saved:', schedule);
+    console.log('📋 Panels data to be saved:', JSON.stringify(panels, null, 2));
+    console.log('📅 Schedule data to be saved:', JSON.stringify(schedule, null, 2));
+    console.log('🔍 Current request data from server:', {
+      defense_chairperson: request.defense_chairperson,
+      defense_panelist1: request.defense_panelist1,
+      scheduled_date: request.scheduled_date,
+      scheduled_time: request.scheduled_time
+    });
     
     // Open the approval dialog - panels and schedule will be saved on final approval
     setApproveDialogOpen(true);
@@ -748,18 +781,24 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
         console.log('✅ Panels and schedule saved successfully before approval');
       }
 
-      // STEP 2: Now approve/reject/retrieve
-      const res = await fetchWithCsrfRetry(`/defense-requests/${request.id}/status`, {
+      // STEP 2: Now approve/reject/retrieve via coordinator-status endpoint
+      const payload: any = { 
+        coordinator_status: action === 'approve' ? 'Approved' : action === 'reject' ? 'Rejected' : 'Pending',
+        send_email: sendEmail
+      };
+      
+      // Add rejection reason if rejecting
+      if (action === 'reject' && rejectionReason.trim()) {
+        payload.coordinator_comments = rejectionReason.trim();
+      }
+
+      const res = await fetchWithCsrfRetry(`/coordinator/defense-requirements/${request.id}/coordinator-status`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
           Accept: 'application/json'
         },
-        body: JSON.stringify({ 
-          decision: action === 'approve' ? 'approve' : action === 'reject' ? 'reject' : 'retrieve',
-          comment: null,
-          send_email: sendEmail
-        }),
+        body: JSON.stringify(payload),
       });
       
       let data: any = {};
@@ -791,6 +830,11 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
           });
         }
         toast.success(`Defense request ${action === 'approve' ? 'approved' : action === 'reject' ? 'rejected' : 'retrieved'} successfully`);
+        setConfirm({ open: false, action: null, sendEmail: false });
+        setRejectionReason(''); // Clear reason after submission
+        
+        // Reload to show updated data
+        setTimeout(() => window.location.reload(), 500);
       } else {
         if (data.missing_fields) {
           toast.error('Missing required fields: ' + data.missing_fields.join(', '));
@@ -806,7 +850,6 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
       }
     } finally {
       setIsLoading(false);
-      setConfirm({ open: false, action: null, sendEmail: false });
     }
   }
 
@@ -893,7 +936,7 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
     { label: 'Proof of Payment', url: resolveFileUrl(request.attachments?.proof_of_payment || request.proof_of_payment) },
     { label: 'Manuscript', url: resolveFileUrl(request.attachments?.manuscript_proposal || request.manuscript_proposal) },
     { label: 'Similarity Form', url: resolveFileUrl(request.attachments?.similarity_index || request.similarity_index) },
-    { label: 'Avisee-Adviser File', url: resolveFileUrl(request.attachments?.avisee_adviser_attachment || request.avisee_adviser_attachment) },
+    { label: 'Advisee-Adviser File', url: resolveFileUrl(request.attachments?.avisee_adviser_attachment || request.avisee_adviser_attachment) },
     { label: 'AI Declaration Form', url: resolveFileUrl(request.attachments?.ai_detection_certificate || request.ai_detection_certificate) },
     { label: 'Endorsement Form', url: resolveFileUrl(request.attachments?.endorsement_form || request.endorsement_form) },
   ];
@@ -965,6 +1008,16 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
       icon: <UserCheck className="h-5 w-5" />,
     },
     {
+      key: 'adviser-rejected',
+      label: 'Rejected by Adviser',
+      icon: <XCircle className="h-5 w-5" />,
+    },
+    {
+      key: 'adviser-retrieved',
+      label: 'Retrieved by Adviser',
+      icon: <CircleArrowLeft className="h-5 w-5" />,
+    },
+    {
       key: 'panels-assigned',
       label: 'Panels Assigned',
       icon: <UsersIcon className="h-5 w-5" />,
@@ -980,25 +1033,68 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
       icon: <Signature className="h-5 w-5" />, 
     },
     {
-      key: 'rejected',
+      key: 'coordinator-rejected',
       label: 'Rejected by Coordinator',
       icon: <XCircle className="h-5 w-5" />,
     },
     {
-      key: 'retrieved',
-      label: 'Retrieved',
+      key: 'coordinator-retrieved',
+      label: 'Retrieved by Coordinator',
       icon: <CircleArrowLeft className="h-5 w-5" />,
+    },
+    {
+      key: 'payment-ready',
+      label: 'Payment Ready for Finance',
+      icon: <ArrowRight className="h-5 w-5" />,
+    },
+    {
+      key: 'payment-in-progress',
+      label: 'Payment In Progress',
+      icon: <Hourglass className="h-5 w-5" />,
+    },
+    {
+      key: 'payment-paid',
+      label: 'Payment Paid',
+      icon: <Banknote className="h-5 w-5" />,
+    },
+    {
+      key: 'payment-invalid',
+      label: 'Payment Invalid',
+      icon: <AlertTriangle className="h-5 w-5" />,
     },
   ];
 
   // Update this function:
-  function getStepForEvent(event: string) {
+  function getStepForEvent(event: string, toState?: string) {
     event = (event || '').toLowerCase();
+    const state = (toState || '').toLowerCase();
+    
     if (event.includes('submit')) return 'submitted';
-    if (event.includes('adviser')) return 'adviser-approved';
+    
+    // Handle adviser actions based on to_state
+    if (event.includes('adviser')) {
+      if (state.includes('reject')) return 'adviser-rejected';
+      if (state.includes('retrieved') || state.includes('pending')) return 'adviser-retrieved';
+      if (state.includes('approved') || state.includes('endorsed')) return 'adviser-approved';
+      return 'adviser-approved'; // default for adviser actions
+    }
+    
+    // Handle coordinator actions based on to_state
+    if (event.includes('coordinator')) {
+      if (state.includes('reject')) return 'coordinator-rejected';
+      if (state.includes('retrieved') || state.includes('pending')) return 'coordinator-retrieved';
+      if (state.includes('approved')) return 'coordinator-approved';
+      return 'coordinator-approved'; // default for coordinator actions
+    }
+    
+    // Handle payment-related events
+    if (event.includes('payment ready') || event.includes('ready for finance')) return 'payment-ready';
+    if (event.includes('payment in progress') || event.includes('in progress')) return 'payment-in-progress';
+    if (event.includes('payment paid') || event.includes('paid')) return 'payment-paid';
+    if (event.includes('payment invalid') || event.includes('invalid')) return 'payment-invalid';
+    
     if (event.includes('rejected')) return 'rejected';
     if (event.includes('retrieved')) return 'retrieved';
-    if (event.includes('coordinator')) return 'coordinator-approved';
     if (event.includes('panel')) return 'panels-assigned';
     if (event.includes('schedule')) return 'scheduled'; 
     return '';
@@ -1246,6 +1342,70 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
                         {request.defense_type ?? '—'}
                       </Badge>
                     </div>
+
+                    {/* Reference No. */}
+                    <div>
+                      <div className="text-xs text-muted-foreground mb-1">Reference No.</div>
+                      <div className="font-medium text-sm">{request.reference_no || '—'}</div>
+                    </div>
+
+                    {/* Amount */}
+                    <div>
+                      <div className="text-xs text-muted-foreground mb-1">Amount</div>
+                      <div className="font-medium text-sm">
+                        {request.amount ? `₱${Number(request.amount).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '—'}
+                      </div>
+                    </div>
+
+                    {/* AA Verification Status */}
+                    <div>
+                      <div className="text-xs text-muted-foreground mb-1">AA Payment Status</div>
+                      <Badge
+                        variant="secondary"
+                        className={cn(
+                          "text-xs font-semibold px-2 py-1 h-fit flex items-center gap-1.5 w-fit",
+                          request.aa_verification_status === 'completed'
+                            ? 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300'
+                            : request.aa_verification_status === 'paid'
+                            ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300'
+                            : request.aa_verification_status === 'ready_for_finance'
+                            ? 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300'
+                            : request.aa_verification_status === 'in_progress'
+                            ? 'bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300'
+                            : request.aa_verification_status === 'invalid'
+                            ? 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300'
+                            : 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300'
+                        )}
+                      >
+                        {request.aa_verification_status === 'completed' && <CheckCircle className="h-3 w-3" />}
+                        {request.aa_verification_status === 'paid' && <Banknote className="h-3 w-3" />}
+                        {request.aa_verification_status === 'ready_for_finance' && <DollarSign className="h-3 w-3" />}
+                        {request.aa_verification_status === 'in_progress' && <Hourglass className="h-3 w-3" />}
+                        {request.aa_verification_status === 'invalid' && <AlertTriangle className="h-3 w-3" />}
+                        {!request.aa_verification_status && <Clock className="h-3 w-3" />}
+                        {request.aa_verification_status === 'completed'
+                          ? 'Completed'
+                          : request.aa_verification_status === 'paid'
+                          ? 'Paid'
+                          : request.aa_verification_status === 'ready_for_finance'
+                          ? 'Ready for Finance'
+                          : request.aa_verification_status === 'in_progress'
+                          ? 'In Progress'
+                          : request.aa_verification_status === 'invalid'
+                          ? 'Invalid'
+                          : 'Pending'}
+                      </Badge>
+                    </div>
+
+                    {/* Invalid Comment Display */}
+                    {request.invalid_comment && (
+                      <div className="md:col-span-2">
+                        <div className="p-3 bg-red-50 border border-red-200 rounded-md">
+                          <p className="text-xs text-muted-foreground mb-1">Invalid Reason</p>
+                          <p className="text-sm text-red-800">{request.invalid_comment}</p>
+                        </div>
+                      </div>
+                    )}
 
                     {/* Submitted At */}
                     <div>
@@ -1544,6 +1704,12 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
                                   : ""
                               }));
                             }}
+                            disabled={(date) => {
+                              // Disable dates before today
+                              const today = new Date();
+                              today.setHours(0, 0, 0, 0);
+                              return date < today;
+                            }}
                             initialFocus
                           />
                         </PopoverContent>
@@ -1625,14 +1791,16 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
               <div className="flex flex-col gap-0 relative">
                 {Array.isArray(request.workflow_history) && request.workflow_history.length > 0 ? (
                   request.workflow_history.map((item: any, idx: number) => {
-                    const { event, created, userName } = resolveHistoryFields(item);
-                    const stepKey = getStepForEvent(event);
+                    const { event, created, userName, to } = resolveHistoryFields(item);
+                    const stepKey = getStepForEvent(event, to);
                     const step = workflowSteps.find(s => s.key === stepKey) || {
                       label: event.charAt(0).toUpperCase() + event.slice(1),
                       icon: <Clock className="h-5 w-5 text-gray-500" />,
                     };
                     const isLast = Array.isArray(request.workflow_history) && idx === request.workflow_history.length - 1;
-                    const iconBoxColor = 'bg-gray-100 text-gray-500';
+                    const isInvalid = event.toLowerCase().includes('invalid');
+                    const iconBoxColor = isInvalid ? 'bg-red-100 text-red-600' : 'bg-gray-100 text-gray-500';
+                    const comment = item.comment || item.rejection_reason || '';
                     return (
                       <div key={idx} className="flex items-start gap-3 relative">
                         <div className="flex flex-col items-center">
@@ -1643,7 +1811,7 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
                             <div className="h-8 border-l-2 border-dotted border-gray-300 dark:border-zinc-700 mx-auto"></div>
                           )}
                         </div>
-                        <div className="pb-4">
+                        <div className="pb-4 flex-1">
                           <div className="font-semibold text-xs">{step.label}</div>
                           <div className="text-[11px] text-muted-foreground">
                             {userName && <span>{userName}</span>}
@@ -1654,6 +1822,15 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
                               </span>
                             )}
                           </div>
+                          {comment && (
+                            <div className={`mt-2 p-2 rounded text-[11px] ${
+                              isInvalid 
+                                ? 'bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 text-red-900 dark:text-red-100'
+                                : 'bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 text-amber-900 dark:text-amber-100'
+                            }`}>
+                              {comment}
+                            </div>
+                          )}
                         </div>
                       </div>
                     );
@@ -1685,27 +1862,32 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
       />
 
       {/* Confirmation Dialog for Approve/Reject/Retrieve */}
-      <Dialog open={confirm.open} onOpenChange={o => { if (!o) setConfirm({ open: false, action: null, sendEmail: false }); }}>
+      <Dialog open={confirm.open} onOpenChange={o => { 
+        if (!o) {
+          setConfirm({ open: false, action: null, sendEmail: false });
+          setRejectionReason(''); // Clear reason when closing
+        }
+      }}>
         <DialogContent>
           <DialogTitle>Confirm Action</DialogTitle>
           <DialogDescription>
             {confirm.action === 'approve'
               ? 'Please review before approving.'
               : confirm.action === 'reject'
-              ? 'Are you sure you want to reject this defense request?'
+              ? 'Please provide a reason for rejecting this defense request.'
               : 'Apply this status change?'}
           </DialogDescription>
           <div className="mt-3 text-sm space-y-3">
-            <p>
-              Set request to{' '}
-              <span className="font-semibold">
-                {confirm.action === 'approve'
-                  ? 'Approved'
-                  : confirm.action === 'reject'
-                  ? 'Rejected'
-                  : 'Pending'}
-              </span>?
-            </p>
+            {confirm.action !== 'reject' && (
+              <p>
+                Set request to{' '}
+                <span className="font-semibold">
+                  {confirm.action === 'approve'
+                    ? 'Approved'
+                    : 'Pending'}
+                </span>?
+              </p>
+            )}
             {confirm.action === 'approve' && (
               <div className="flex flex-col items-center gap-3 rounded-md border bg-muted/40 p-5">
                 <div className="rounded-full bg-primary/10 p-4">
@@ -1717,58 +1899,72 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
                 </p>
               </div>
             )}
+            
+            {confirm.action === 'reject' && (
+              <div className="space-y-2">
+                <Label htmlFor="rejectionReason" className="text-sm font-medium">
+                  Rejection Reason <span className="text-red-500">*</span>
+                </Label>
+                <textarea
+                  id="rejectionReason"
+                  value={rejectionReason}
+                  onChange={(e) => setRejectionReason(e.target.value)}
+                  placeholder="Explain why this defense request is being rejected..."
+                  className="w-full min-h-[120px] p-3 text-sm border rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-primary"
+                  maxLength={500}
+                />
+                <p className="text-xs text-muted-foreground">
+                  {rejectionReason.length}/500 characters
+                </p>
+              </div>
+            )}
           </div>
           
-          {/* Action buttons - Only show for approve/reject actions */}
-          {(confirm.action === 'approve' || confirm.action === 'reject') ? (
-            <div className="flex flex-col gap-2 mt-4">
-              <p className="text-sm text-muted-foreground mb-2">
-                Would you like to send email notifications to all parties?
-              </p>
-              <div className="flex gap-2">
-                <Button 
-                  variant="ghost" 
-                  className="flex-1"
-                  onClick={() => setConfirm({ open: false, action: null, sendEmail: false })}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  variant="outline"
-                  className="flex-1"
-                  onClick={() => {
-                    if (confirm.action) {
-                      handleStatusChange(confirm.action, false); // Pass sendEmail=false directly
-                    }
-                  }}
-                  disabled={isLoading}
-                >
-                  Skip Email
-                </Button>
-                <Button
-                  className="flex-1"
-                  onClick={() => {
-                    if (confirm.action) {
-                      handleStatusChange(confirm.action, true); // Pass sendEmail=true directly
-                    }
-                  }}
-                  disabled={isLoading}
-                >
-                  Send Emails
-                </Button>
-              </div>
+          {/* Action buttons */}
+          {confirm.action === 'reject' ? (
+            <div className="flex justify-end gap-2 mt-4">
+              <Button 
+                variant="ghost" 
+                onClick={() => {
+                  setConfirm({ open: false, action: null, sendEmail: false });
+                  setRejectionReason('');
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={() => handleStatusChange('reject', false)}
+                disabled={isLoading || !rejectionReason.trim()}
+                variant="destructive"
+              >
+                {isLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Processing...
+                  </>
+                ) : (
+                  'Reject Request'
+                )}
+              </Button>
             </div>
-          ) : (
+          ) : confirm.action === 'retrieve' ? (
             <div className="flex justify-end gap-2 mt-4">
               <Button variant="ghost" onClick={() => setConfirm({ open: false, action: null, sendEmail: false })}>Cancel</Button>
               <Button
-                onClick={() => confirm.action && handleStatusChange(confirm.action, false)}
+                onClick={() => handleStatusChange('retrieve', false)}
                 disabled={isLoading}
               >
-                Confirm
+                {isLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Processing...
+                  </>
+                ) : (
+                  'Confirm Retrieve'
+                )}
               </Button>
             </div>
-          )}
+          ) : null}
         </DialogContent>
       </Dialog>
     </AppLayout>

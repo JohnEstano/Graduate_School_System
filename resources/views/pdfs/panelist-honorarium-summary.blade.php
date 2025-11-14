@@ -321,7 +321,6 @@
 
       <div class="panelist-info">
         <p><strong>Panelist Name:</strong> {{ $panelist_name }}</p>
-        <p><strong>Role:</strong> {{ $role }}</p>
       </div>
 
       <div class="payments-section">
@@ -352,7 +351,7 @@
             </tr>
             @endforeach
             <tr class="total-row">
-              <td colspan="5" style="text-align: right;"><strong>TOTAL HONORARIUM:</strong></td>
+              <td colspan="6" style="text-align: right;"><strong>TOTAL HONORARIUM:</strong></td>
               <td class="amount-cell"><strong>{{ number_format($total_honorarium, 2) }}</strong></td>
             </tr>
           </tbody>

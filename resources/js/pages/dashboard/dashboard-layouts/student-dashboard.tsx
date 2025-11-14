@@ -289,7 +289,7 @@ export default function StudentDashboard() {
 
 
                     {/* Metrics Cards - Optimized for Mobile */}
-                    <div className="w-full max-w-screen-xl mx-0 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 px-4 md:px-7 mb-4 md:mb-6 justify-start">
+                    <div className="w-full grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 px-4 md:px-7 mb-4 md:mb-6">
                         {metrics.map((metric, idx) => (
                             <Card
                                 key={idx}
@@ -318,8 +318,8 @@ export default function StudentDashboard() {
 
                     {/* Widgets Body - Mobile Responsive */}
                     <div className="flex flex-col gap-4 md:gap-6 bg-gray-100 dark:bg-muted mx-2 md:mx-4 rounded-lg md:rounded-xl mt-2 mb-2 px-3 md:px-5 py-4 md:py-8">
-                        <div className="w-full mb-2 flex flex-col lg:flex-row gap-4">
-                            {/* Schedules first */}
+                        {/* Weekly Schedule - Full Width */}
+                        <div className="w-full mb-2">
                             <WeeklyDefenseSchedulesWidget
                                 weekDays={weekDays}
                                 selectedDay={selectedDay}
@@ -329,7 +329,9 @@ export default function StudentDashboard() {
                                 loading={loading}
                                 studentId={user?.id}
                             />
-                            {/* Defense Status Widget beside the schedule widget on desktop, below on mobile */}
+                        </div>
+                        {/* Defense Status Widget - Full Width */}
+                        <div className="w-full">
                             <DefenseStatusWidget
                                 recentRequests={approvedDefenses as any}
                                 loading={loading}

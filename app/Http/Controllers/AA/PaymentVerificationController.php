@@ -28,8 +28,9 @@ class PaymentVerificationController extends Controller
     public function updateStatus(Request $request, $id)
     {
         $request->validate([
-            'status' => 'required|in:pending,ready_for_finance,in_progress,paid,completed',
+            'status' => 'required|in:pending,ready_for_finance,in_progress,paid,completed,invalid',
             'remarks' => 'nullable|string',
+            'invalid_comment' => 'required_if:status,invalid|string|max:1000',
         ]);
 
         $verification = AaPaymentVerification::findOrFail($id);
@@ -41,6 +42,12 @@ class PaymentVerificationController extends Controller
 
         $verification->status = $request->input('status');
         $verification->remarks = $request->input('remarks');
+        
+        // Store invalid comment if status is invalid
+        if ($request->input('status') === 'invalid') {
+            $verification->invalid_comment = $request->input('invalid_comment');
+        }
+        
         $verification->save();
 
         return response()->json(['success' => true, 'status' => $verification->status]);
@@ -50,8 +57,9 @@ class PaymentVerificationController extends Controller
     public function updateStatusByDefenseRequest(Request $request, $defenseRequestId)
     {
         $request->validate([
-            'status' => 'required|in:pending,ready_for_finance,in_progress,paid,completed',
+            'status' => 'required|in:pending,ready_for_finance,in_progress,paid,completed,invalid',
             'remarks' => 'nullable|string',
+            'invalid_comment' => 'required_if:status,invalid|string|max:1000',
         ]);
 
         $defenseRequest = DefenseRequest::findOrFail($defenseRequestId);
@@ -70,8 +78,42 @@ class PaymentVerificationController extends Controller
         // Update status
         $verification->status = $request->input('status');
         $verification->remarks = $request->input('remarks');
+        
+        // Store invalid comment if status is invalid
+        if ($request->input('status') === 'invalid') {
+            $verification->invalid_comment = $request->input('invalid_comment');
+        }
+        
         $verification->assigned_to = Auth::id(); // Ensure current user is assigned
         $verification->save();
+
+        // Add workflow history entry
+        $hist = $defenseRequest->workflow_history ?? [];
+        $statusLabel = match($request->input('status')) {
+            'ready_for_finance' => 'Payment Ready for Finance',
+            'in_progress' => 'Payment In Progress',
+            'paid' => 'Payment Paid',
+            'completed' => 'Payment Completed',
+            'invalid' => 'Payment Invalid',
+            default => 'Payment Status Updated'
+        };
+        
+        $eventData = [
+            'event_type' => $statusLabel,
+            'user_name' => Auth::user()->name,
+            'user_id' => Auth::id(),
+            'created_at' => now()->toDateTimeString(),
+            'status' => $request->input('status'),
+        ];
+        
+        // Add invalid comment to workflow history if present
+        if ($request->input('status') === 'invalid' && $request->input('invalid_comment')) {
+            $eventData['comment'] = $request->input('invalid_comment');
+        }
+        
+        $hist[] = $eventData;
+        $defenseRequest->workflow_history = $hist;
+        $defenseRequest->save();
 
         // ✅ CRITICAL: When status becomes 'ready_for_finance', create ALL records DIRECTLY
         if ($request->input('status') === 'ready_for_finance' && $oldStatus !== 'ready_for_finance') {
@@ -94,7 +136,7 @@ class PaymentVerificationController extends Controller
         // Calculate program level from program name
         $programLevel = \App\Helpers\ProgramLevel::getLevel($defenseRequest->program);
         
-        \Log::info('Creating honorarium records', [
+        Log::info('Creating honorarium records', [
             'defense_id' => $defenseRequest->id,
             'program' => $defenseRequest->program,
             'program_level' => $programLevel,
@@ -108,7 +150,7 @@ class PaymentVerificationController extends Controller
             ->keyBy('type');
         
         if ($paymentRates->isEmpty()) {
-            \Log::error('No payment rates found', [
+            Log::error('No payment rates found', [
                 'program_level' => $programLevel,
                 'defense_type' => $defenseRequest->defense_type,
             ]);
@@ -176,7 +218,7 @@ class PaymentVerificationController extends Controller
             $memberRate = $paymentRates->get($member['role']) ?? $paymentRates->get('Panel Member 1') ?? $paymentRates->get('Panel Member');
             
             if (!$memberRate) {
-                \Log::warning('No Panel Member rate found', [
+                Log::warning('No Panel Member rate found', [
                     'role' => $member['role'],
                     'program' => $defenseRequest->program,
                     'program_level' => $programLevel,
@@ -203,7 +245,7 @@ class PaymentVerificationController extends Controller
             );
         }
         
-        \Log::info('✅ Honorarium records created', [
+        Log::info('✅ Honorarium records created', [
             'defense_request_id' => $defenseRequest->id,
             'adviser_count' => $defenseRequest->defense_adviser ? 1 : 0,
             'panel_chair_count' => $defenseRequest->defense_chairperson ? 1 : 0,
@@ -225,7 +267,7 @@ class PaymentVerificationController extends Controller
             $programLevel = \App\Helpers\ProgramLevel::getLevel($defenseRequest->program);
             $studentName = trim("{$defenseRequest->first_name} {$defenseRequest->middle_name} {$defenseRequest->last_name}");
             
-            \Log::info("🚀 DIRECT CREATE - Starting for Defense #{$defenseRequest->id}");
+            Log::info("🚀 DIRECT CREATE - Starting for Defense #{$defenseRequest->id}");
             
             // 1. GET OR CREATE PROGRAM RECORD
             $programRecord = \App\Models\ProgramRecord::firstOrCreate(
@@ -237,7 +279,7 @@ class PaymentVerificationController extends Controller
                 ['created_at' => now(), 'updated_at' => now()]
             );
             
-            \Log::info("✅ Program Record: #{$programRecord->id} - {$programRecord->program_name}");
+            Log::info("✅ Program Record: #{$programRecord->id} - {$programRecord->program_name}");
             
             // 2. CREATE STUDENT RECORD
             $studentRecord = \App\Models\StudentRecord::updateOrCreate(
@@ -252,13 +294,13 @@ class PaymentVerificationController extends Controller
                 ]
             );
             
-            \Log::info("✅ Student Record: #{$studentRecord->id} - {$studentRecord->student_name}");
+            Log::info("✅ Student Record: #{$studentRecord->id} - {$studentRecord->student_name}");
             
             // 3. GET ALL HONORARIUM PAYMENTS (excluding Adviser)
             $honorariumPayments = \App\Models\HonorariumPayment::where('defense_request_id', $defenseRequest->id)
                 ->get();
             
-            \Log::info("📋 Found {$honorariumPayments->count()} honorarium payments");
+            Log::info("📋 Found {$honorariumPayments->count()} honorarium payments");
             
             // 4. CREATE PANELIST RECORDS + PAYMENT RECORDS + PIVOT
             foreach ($honorariumPayments as $honorarium) {
@@ -267,7 +309,7 @@ class PaymentVerificationController extends Controller
                 
                 // SKIP ADVISERS
                 if (strtolower($role) === 'adviser' || str_contains(strtolower($role), 'advis')) {
-                    \Log::info("⏭️  SKIPPING Adviser: {$panelistName}");
+                    Log::info("⏭️  SKIPPING Adviser: {$panelistName}");
                     continue;
                 }
                 
@@ -281,7 +323,7 @@ class PaymentVerificationController extends Controller
                     ['created_at' => now(), 'updated_at' => now()]
                 );
                 
-                \Log::info("✅ Panelist Record: #{$panelistRecord->id} - {$panelistRecord->panelist_name} ({$role})");
+                Log::info("✅ Panelist Record: #{$panelistRecord->id} - {$panelistRecord->panelist_name} ({$role})");
                 
                 // CREATE PAYMENT RECORD
                 $paymentRecord = \App\Models\PaymentRecord::updateOrCreate(
@@ -298,10 +340,10 @@ class PaymentVerificationController extends Controller
                     ]
                 );
                 
-                \Log::info("✅ Payment Record: #{$paymentRecord->id} - ₱{$paymentRecord->amount}");
+                Log::info("✅ Payment Record: #{$paymentRecord->id} - ₱{$paymentRecord->amount}");
                 
                 // CREATE PIVOT LINK
-                \DB::table('panelist_student_records')->updateOrInsert(
+                DB::table('panelist_student_records')->updateOrInsert(
                     [
                         'panelist_record_id' => $panelistRecord->id,
                         'student_record_id' => $studentRecord->id,
@@ -312,17 +354,17 @@ class PaymentVerificationController extends Controller
                     ]
                 );
                 
-                \Log::info("✅ Pivot Link Created");
+                Log::info("✅ Pivot Link Created");
             }
             
-            \Log::info("🎉 DIRECT CREATE COMPLETE for Defense #{$defenseRequest->id}");
-            \Log::info("📍 Check records at:");
-            \Log::info("   - /honorarium/individual-record/{$programRecord->id}");
-            \Log::info("   - /student-records/program/{$programRecord->id}");
+            Log::info("🎉 DIRECT CREATE COMPLETE for Defense #{$defenseRequest->id}");
+            Log::info("📍 Check records at:");
+            Log::info("   - /honorarium/individual-record/{$programRecord->id}");
+            Log::info("   - /student-records/program/{$programRecord->id}");
             
         } catch (\Exception $e) {
-            \Log::error("❌ DIRECT CREATE FAILED: " . $e->getMessage());
-            \Log::error("Stack trace: " . $e->getTraceAsString());
+            Log::error("❌ DIRECT CREATE FAILED: " . $e->getMessage());
+            Log::error("Stack trace: " . $e->getTraceAsString());
             throw $e;
         }
     }
@@ -366,7 +408,8 @@ class PaymentVerificationController extends Controller
             'defense_request_ids.*' => 'integer|exists:defense_requests,id',
             'verification_ids' => 'sometimes|array',
             'verification_ids.*' => 'integer|exists:aa_payment_verifications,id',
-            'status' => 'required|in:pending,ready_for_finance,in_progress,paid,completed',
+            'status' => 'required|in:pending,ready_for_finance,in_progress,paid,completed,invalid',
+            'invalid_comment' => 'required_if:status,invalid|string|max:1000',
         ]);
 
         $updated = 0;
@@ -385,19 +428,53 @@ class PaymentVerificationController extends Controller
                 $oldStatus = $verification->status;
                 $verification->status = $request->status;
                 $verification->assigned_to = Auth::id();
+                
+                // Store invalid comment if status is invalid
+                if ($request->status === 'invalid') {
+                    $verification->invalid_comment = $request->input('invalid_comment');
+                }
+                
                 $verification->save();
 
-                // If changing to ready_for_finance, create honorarium records
-                if ($request->status === 'ready_for_finance' && $oldStatus !== 'ready_for_finance') {
-                    $defenseRequest = DefenseRequest::find($defenseRequestId);
-                    if ($defenseRequest) {
+                // Add workflow history entry
+                $defenseRequest = DefenseRequest::find($defenseRequestId);
+                if ($defenseRequest) {
+                    $hist = $defenseRequest->workflow_history ?? [];
+                    $statusLabel = match($request->status) {
+                        'ready_for_finance' => 'Payment Ready for Finance',
+                        'in_progress' => 'Payment In Progress',
+                        'paid' => 'Payment Paid',
+                        'completed' => 'Payment Completed',
+                        'invalid' => 'Payment Invalid',
+                        default => 'Payment Status Updated'
+                    };
+                    
+                    $eventData = [
+                        'event_type' => $statusLabel,
+                        'user_name' => Auth::user()->name,
+                        'user_id' => Auth::id(),
+                        'created_at' => now()->toDateTimeString(),
+                        'status' => $request->status,
+                    ];
+                    
+                    // Add invalid comment to workflow history if present
+                    if ($request->status === 'invalid' && $request->input('invalid_comment')) {
+                        $eventData['comment'] = $request->input('invalid_comment');
+                    }
+                    
+                    $hist[] = $eventData;
+                    $defenseRequest->workflow_history = $hist;
+                    $defenseRequest->save();
+
+                    // If changing to ready_for_finance, create honorarium records
+                    if ($request->status === 'ready_for_finance' && $oldStatus !== 'ready_for_finance') {
                         $this->createHonorariumRecords($defenseRequest);
                         
                         try {
                             $syncService = app(\App\Services\StudentRecordSyncService::class);
                             $syncService->syncDefenseToStudentRecord($defenseRequest);
                         } catch (\Exception $e) {
-                            \Log::error('Bulk AA Workflow: Sync failed', [
+                            Log::error('Bulk AA Workflow: Sync failed', [
                                 'defense_request_id' => $defenseRequestId,
                                 'error' => $e->getMessage()
                             ]);

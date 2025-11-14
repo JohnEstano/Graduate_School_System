@@ -20,6 +20,12 @@ import {
   Signature,
   ArrowRightLeft,
   Info,
+  Loader2,
+  AlertTriangle,
+  Banknote,
+  DollarSign,
+  Hourglass,
+  ArrowRight,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -28,6 +34,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
 import { cn } from '@/lib/utils';
 import EndorsementDialog from './endorsement-dialog';
@@ -44,11 +51,11 @@ type DefenseRequestFull = {
   priority?: 'Low' | 'Medium' | 'High';
   workflow_state?: string;
   defense_adviser?: string;
-  defense_chairperson?: string; // ADD THIS
-  defense_panelist1?: string; // ADD THIS
-  defense_panelist2?: string; // ADD THIS
-  defense_panelist3?: string; // ADD THIS
-  defense_panelist4?: string; // ADD THIS
+  defense_chairperson?: string;
+  defense_panelist1?: string;
+  defense_panelist2?: string;
+  defense_panelist3?: string;
+  defense_panelist4?: string;
   advisers_endorsement?: string;
   rec_endorsement?: string;
   proof_of_payment?: string;
@@ -63,13 +70,20 @@ type DefenseRequestFull = {
   ai_detection_certificate?: string;
   endorsement_form?: string;
   adviser_status?: string;
+  adviser_comments?: string;
   coordinator_status?: string;
+  coordinator_comments?: string;
   defense_venue?: string;
   defense_mode?: string;
   scheduling_notes?: string;
   scheduled_time?: string;
   scheduled_date?: string;
   scheduled_end_time?: string;
+  amount?: number;
+  program_level?: string;
+  aa_verification_status?: 'pending' | 'ready_for_finance' | 'in_progress' | 'paid' | 'completed' | 'invalid';
+  aa_verification_id?: number | null;
+  invalid_comment?: string | null;
 };
 
 interface PageProps {
@@ -87,7 +101,11 @@ type WorkflowStepKey =
   | 'coordinator-rejected'
   | 'coordinator-retrieved'
   | 'panels-assigned'
-  | 'scheduled';
+  | 'scheduled'
+  | 'payment-ready'
+  | 'payment-in-progress'
+  | 'payment-paid'
+  | 'payment-invalid';
 
 type WorkflowStep = {
   key: WorkflowStepKey;
@@ -141,6 +159,7 @@ export default function DetailsRequirementsPage(rawProps: any) {
     open: false,
     action: null,
   });
+  const [rejectionReason, setRejectionReason] = useState('');
   const [endorsementDialogOpen, setEndorsementDialogOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -181,6 +200,13 @@ export default function DetailsRequirementsPage(rawProps: any) {
     else if (action === 'retrieve') newAdviserStatus = 'Pending';
 
     try {
+      const payload: any = { adviser_status: newAdviserStatus };
+      
+      // Add rejection reason if rejecting
+      if (action === 'reject' && rejectionReason.trim()) {
+        payload.adviser_comments = rejectionReason.trim();
+      }
+
       const response = await fetch(`/adviser/defense-requirements/${request.id}/adviser-status`, {
         method: 'PATCH',
         headers: {
@@ -189,7 +215,7 @@ export default function DetailsRequirementsPage(rawProps: any) {
           'Accept': 'application/json',
         },
         credentials: 'include',
-        body: JSON.stringify({ adviser_status: newAdviserStatus }),
+        body: JSON.stringify(payload),
       });
 
       if (!response.ok) {
@@ -203,6 +229,7 @@ export default function DetailsRequirementsPage(rawProps: any) {
       setRequest(prev => ({
         ...prev,
         adviser_status: data.adviser_status || newAdviserStatus,
+        adviser_comments: data.adviser_comments || prev.adviser_comments,
         workflow_state: data.workflow_state || prev.workflow_state,
         workflow_history: data.workflow_history || prev.workflow_history,
         last_status_updated_by: data.last_status_updated_by || prev.last_status_updated_by,
@@ -210,6 +237,7 @@ export default function DetailsRequirementsPage(rawProps: any) {
       }));
 
       setConfirm({ open: false, action: null });
+      setRejectionReason(''); // Clear reason after submission
       
       toast.success(`Status updated to ${newAdviserStatus}!`);
     } catch (err) {
@@ -257,7 +285,7 @@ export default function DetailsRequirementsPage(rawProps: any) {
     { label: 'Reference No.', url: request.reference_no }, // Not a file, keep as is
     { label: 'Manuscript', url: resolveFileUrl(request.manuscript_proposal) },
     { label: 'Similarity Form', url: resolveFileUrl(request.similarity_index) },
-    { label: 'Avisee-Adviser File', url: resolveFileUrl(request.avisee_adviser_attachment) },
+    { label: 'Advisee-Adviser File', url: resolveFileUrl(request.avisee_adviser_attachment) },
   ];
 
   // --- FINAL CONSISTENT WORKFLOW STEPS AND MAPPING ---
@@ -307,21 +335,60 @@ export default function DetailsRequirementsPage(rawProps: any) {
       label: 'Scheduled',
       icon: <Clock className="h-5 w-5" />,
     },
+    {
+      key: 'payment-ready',
+      label: 'Payment Ready for Finance',
+      icon: <ArrowRight className="h-5 w-5" />,
+    },
+    {
+      key: 'payment-in-progress',
+      label: 'Payment In Progress',
+      icon: <Hourglass className="h-5 w-5" />,
+    },
+    {
+      key: 'payment-paid',
+      label: 'Payment Paid',
+      icon: <Banknote className="h-5 w-5" />,
+    },
+    {
+      key: 'payment-invalid',
+      label: 'Payment Invalid',
+      icon: <AlertTriangle className="h-5 w-5" />,
+    },
   ];
 
   // Map event/to_state to workflow step key
-  function getStepForEvent(event: string): WorkflowStepKey | 'adviser-pending' | '' {
+  function getStepForEvent(event: string, toState?: string): WorkflowStepKey | 'adviser-pending' | '' {
     event = (event || '').toLowerCase();
+    const state = (toState || '').toLowerCase();
+    
     if (event === 'submitted') return 'submitted';
-    if (event === 'adviser-approved') return 'adviser-approved';
-    if (event === 'adviser-rejected') return 'adviser-rejected';
-    if (event === 'adviser-retrieved') return 'adviser-retrieved';
+    
+    // Handle adviser actions based on to_state
+    if (event.includes('adviser')) {
+      if (state.includes('reject')) return 'adviser-rejected';
+      if (state.includes('retrieved') || state.includes('pending')) return 'adviser-retrieved';
+      if (state.includes('approved') || state.includes('endorsed')) return 'adviser-approved';
+      return 'adviser-approved'; // default for adviser actions
+    }
+    
+    // Handle coordinator actions based on to_state
+    if (event.includes('coordinator')) {
+      if (state.includes('reject')) return 'coordinator-rejected';
+      if (state.includes('retrieved') || state.includes('pending')) return 'coordinator-retrieved';
+      if (state.includes('approved')) return 'coordinator-approved';
+      return 'coordinator-approved'; // default for coordinator actions
+    }
+    
+    // Handle payment-related events
+    if (event.includes('payment ready') || event.includes('ready for finance')) return 'payment-ready';
+    if (event.includes('payment in progress') || event.includes('in progress')) return 'payment-in-progress';
+    if (event.includes('payment paid') || event.includes('paid')) return 'payment-paid';
+    if (event.includes('payment invalid') || event.includes('invalid')) return 'payment-invalid';
+    
     if (event === 'adviser-review' || event === 'pending') return 'adviser-pending';
-    if (event === 'coordinator-approved') return 'coordinator-approved';
-    if (event === 'coordinator-rejected') return 'coordinator-rejected';
-    if (event === 'coordinator-retrieved') return 'coordinator-retrieved';
-    if (event === 'panels-assigned') return 'panels-assigned';
-    if (event === 'scheduled') return 'scheduled';
+    if (event.includes('panels')) return 'panels-assigned';
+    if (event.includes('schedule')) return 'scheduled';
     return '';
   }
 
@@ -603,6 +670,70 @@ export default function DetailsRequirementsPage(rawProps: any) {
                         {request.defense_type ?? '—'}
                       </Badge>
                     </div>
+
+                    {/* Reference No. */}
+                    <div>
+                      <div className="text-xs text-muted-foreground mb-1">Reference No.</div>
+                      <div className="font-medium text-sm">{request.reference_no || '—'}</div>
+                    </div>
+
+                    {/* Amount */}
+                    <div>
+                      <div className="text-xs text-muted-foreground mb-1">Amount</div>
+                      <div className="font-medium text-sm">
+                        {request.amount ? `₱${Number(request.amount).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '—'}
+                      </div>
+                    </div>
+
+                    {/* AA Verification Status */}
+                    <div>
+                      <div className="text-xs text-muted-foreground mb-1">AA Payment Status</div>
+                      <Badge
+                        variant="secondary"
+                        className={cn(
+                          "text-xs font-semibold px-2 py-1 h-fit flex items-center gap-1.5 w-fit",
+                          request.aa_verification_status === 'completed'
+                            ? 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300'
+                            : request.aa_verification_status === 'paid'
+                            ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300'
+                            : request.aa_verification_status === 'ready_for_finance'
+                            ? 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300'
+                            : request.aa_verification_status === 'in_progress'
+                            ? 'bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300'
+                            : request.aa_verification_status === 'invalid'
+                            ? 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300'
+                            : 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300'
+                        )}
+                      >
+                        {request.aa_verification_status === 'completed' && <CheckCircle className="h-3 w-3" />}
+                        {request.aa_verification_status === 'paid' && <Banknote className="h-3 w-3" />}
+                        {request.aa_verification_status === 'ready_for_finance' && <DollarSign className="h-3 w-3" />}
+                        {request.aa_verification_status === 'in_progress' && <Hourglass className="h-3 w-3" />}
+                        {request.aa_verification_status === 'invalid' && <AlertTriangle className="h-3 w-3" />}
+                        {!request.aa_verification_status && <Clock className="h-3 w-3" />}
+                        {request.aa_verification_status === 'completed'
+                          ? 'Completed'
+                          : request.aa_verification_status === 'paid'
+                          ? 'Paid'
+                          : request.aa_verification_status === 'ready_for_finance'
+                          ? 'Ready for Finance'
+                          : request.aa_verification_status === 'in_progress'
+                          ? 'In Progress'
+                          : request.aa_verification_status === 'invalid'
+                          ? 'Invalid'
+                          : 'Pending'}
+                      </Badge>
+                    </div>
+
+                    {/* Invalid Comment Display */}
+                    {request.invalid_comment && (
+                      <div className="md:col-span-2">
+                        <div className="p-3 bg-red-50 border border-red-200 rounded-md">
+                          <p className="text-xs text-muted-foreground mb-1">Invalid Reason</p>
+                          <p className="text-sm text-red-800">{request.invalid_comment}</p>
+                        </div>
+                      </div>
+                    )}
 
                     <div>
                       <div className="text-xs text-muted-foreground mb-1">Submitted At</div>
@@ -908,19 +1039,22 @@ export default function DetailsRequirementsPage(rawProps: any) {
                   request.workflow_history.map((item: any, idx: number) => {
                     // Map "adviser-status-updated" to the actual workflow step
                     let event = item.action;
+                    let toState = item.to_state;
                     if (event === "adviser-status-updated" && item.to_state) {
                       event = item.to_state;
                     }
                     if (event === "adviser-review" || event === "pending") {
                       event = "adviser-review";
                     }
-                    const stepKey = getStepForEvent(event);
+                    const stepKey = getStepForEvent(event, toState);
                     const step = workflowSteps.find(s => s.key === stepKey) || {
                       label: event.charAt(0).toUpperCase() + event.slice(1),
                       icon: <Clock className="h-5 w-5 text-gray-500" />,
                     };
                     const isLast = idx === ((request.workflow_history ?? []).length - 1);
-                    const iconBoxColor = 'bg-gray-100 text-gray-500';
+                    const isInvalid = event.toLowerCase().includes('invalid');
+                    const iconBoxColor = isInvalid ? 'bg-red-100 text-red-600' : 'bg-gray-100 text-gray-500';
+                    const comment = item.comment || item.rejection_reason || '';
                     return (
                       <div key={idx} className="flex items-start gap-3 relative">
                         <div className="flex flex-col items-center">
@@ -931,7 +1065,7 @@ export default function DetailsRequirementsPage(rawProps: any) {
                             <div className="h-8 border-l-2 border-dotted border-gray-300 dark:border-zinc-700 mx-auto"></div>
                           )}
                         </div>
-                        <div className="pb-4">
+                        <div className="pb-4 flex-1">
                           <div className="font-semibold text-xs">{step.label}</div>
                           <div className="text-[11px] text-muted-foreground">
                             {item.user_name && <span>{item.user_name}</span>}
@@ -943,8 +1077,14 @@ export default function DetailsRequirementsPage(rawProps: any) {
                             )}
                           </div>
 
-                          {item.comment && (
-                            <div className="text-xs text-muted-foreground mt-1">{item.comment}</div>
+                          {comment && (
+                            <div className={`mt-2 p-2 rounded text-[11px] ${
+                              isInvalid 
+                                ? 'bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 text-red-900 dark:text-red-100'
+                                : 'bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 text-amber-900 dark:text-amber-100'
+                            }`}>
+                             {comment}
+                            </div>
                           )}
                         </div>
                       </div>
@@ -962,27 +1102,62 @@ export default function DetailsRequirementsPage(rawProps: any) {
       </div>
 
       {/* Confirmation Dialog for Reject/Retrieve */}
-      <Dialog open={confirm.open} onOpenChange={o => { if (!o) setConfirm({ open: false, action: null }); }}>
-        <DialogContent>
+      <Dialog open={confirm.open} onOpenChange={o => { 
+        if (!o) {
+          setConfirm({ open: false, action: null });
+          setRejectionReason(''); // Clear reason when closing
+        }
+      }}>
+        <DialogContent className="max-w-md">
           <DialogTitle>Confirm Action</DialogTitle>
           <DialogDescription>
-            Apply this status change?
+            {confirm.action === 'reject' 
+              ? 'Please provide a reason for rejecting this defense request.' 
+              : 'Are you sure you want to retrieve this request back to pending status?'}
           </DialogDescription>
-          <div className="mt-3 text-sm space-y-3">
-            <p>
-              Set request to{' '}
-              <span className="font-semibold">
-                {confirm.action === 'reject' ? 'Rejected' : 'Pending'}
-              </span>?
-            </p>
-          </div>
+          
+          {confirm.action === 'reject' && (
+            <div className="mt-4 space-y-2">
+              <Label htmlFor="rejectionReason" className="text-sm font-medium">
+                Rejection Reason <span className="text-red-500">*</span>
+              </Label>
+              <textarea
+                id="rejectionReason"
+                value={rejectionReason}
+                onChange={(e) => setRejectionReason(e.target.value)}
+                placeholder="Explain why this defense request is being rejected..."
+                className="w-full min-h-[120px] p-3 text-sm border rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-primary"
+                maxLength={500}
+              />
+              <p className="text-xs text-muted-foreground">
+                {rejectionReason.length}/500 characters
+              </p>
+            </div>
+          )}
+          
           <div className="flex justify-end gap-2 mt-4">
-            <Button variant="ghost" onClick={() => setConfirm({ open: false, action: null })}>Cancel</Button>
+            <Button 
+              variant="ghost" 
+              onClick={() => {
+                setConfirm({ open: false, action: null });
+                setRejectionReason('');
+              }}
+            >
+              Cancel
+            </Button>
             <Button
               onClick={() => confirm.action && handleStatusChange(confirm.action)}
-              disabled={isLoading}
+              disabled={isLoading || (confirm.action === 'reject' && !rejectionReason.trim())}
+              variant={confirm.action === 'reject' ? 'destructive' : 'default'}
             >
-              Confirm
+              {isLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Processing...
+                </>
+              ) : (
+                confirm.action === 'reject' ? 'Reject Request' : 'Confirm Retrieve'
+              )}
             </Button>
           </div>
         </DialogContent>

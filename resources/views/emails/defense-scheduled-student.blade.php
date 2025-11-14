@@ -4,30 +4,33 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Defense Scheduled</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <style>
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif,
                 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol';
             line-height: 1.6;
             color: #333;
-            max-width: 600px;
-            margin: 0 auto;
-            padding: 20px;
+            margin: 0;
+            padding: 0;
             background-color: #f4f4f4;
         }
 
-        .container {
+        .email-wrapper {
+            width: 100%;
+            background-color: #f4f4f4;
+            padding: 20px 0;
+        }
+
+        .email-container {
+            max-width: 600px;
+            margin: 0 auto;
             background-color: #ffffff;
             padding: 30px;
         }
 
-        .header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-bottom: 20px;
-        }
+        
+
+        
 
         .logo {
             max-width: 50px;
@@ -51,17 +54,9 @@
             margin-bottom: 30px;
         }
 
-        .message {
-            font-size: 16px;
-            line-height: 1.8;
-            margin-bottom: 20px;
-        }
+        .message { font-size: 16px; line-height: 1.8; margin-bottom: 20px; color: #333; }
 
-        .info-box {
-            border: 1px solid #e5e7eb;
-            padding: 20px;
-            margin-top: 20px;
-            border-radius: 8px;
+        .info-box { border: 1px solid #e5e7eb; padding: 20px; margin: 20px 0;
         }
 
         .info-box h2 {
@@ -160,7 +155,8 @@
 
         .footer .logo {
             max-width: 60px;
-            margin-bottom: 10px;
+            margin: 0 auto 10px auto;
+            display: block;
         }
 
         .mode-badge {
@@ -173,18 +169,40 @@
             background-color: #e5e7eb;
             color: #374151;
         }
+    
+        @media (max-width: 600px) {
+            .email-container { padding: 20px !important; }
+            h1 { font-size: 24px !important; }
+            .message { font-size: 14px !important; }
+            .info-box, .notice-box, .schedule-box { padding: 15px !important; }
+            .cta-button { display: block !important; width: 100% !important; text-align: center; padding: 12px 20px !important; }
+        }
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="header">
-            <img src="{{ asset('gss-uic-logo-v2.png') }}" alt="UIC Graduate School Logo" class="logo">
-            <span class="header-title">Graduate School System</span>
-        </div>
+    <div class="email-wrapper">
+        <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #f4f4f4;">
+            <tr>
+                <td align="center" style="padding: 20px 0;">
+                    <table class="email-container" width="600" cellpadding="0" cellspacing="0" border="0" style="background-color: #ffffff; max-width: 600px;">
+                        <tr>
+                            <td style="padding: 30px;">
+        <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                                    <tr>
+                                        <td width="50">
+                                            <img src="{{ asset('gss-uic-logo-v2.png') }}" alt="UIC Graduate School Logo" style="max-width: 50px; height: auto;">
+                                        </td>
+                                        <td align="right">
+                                            <span style="color: #FF4B64; font-size: 14px; font-weight: bold;">Graduate School System</span>
+                                        </td>
+                                    </tr>
+                                </table>
+        {{-- Testing Disclaimer --}}
+        @include('emails.partials.testing-disclaimer')
 
         <h1>Your Defense Has Been Scheduled!</h1>
 
-        <div class="content">
+        
             <p class="message">
                 <strong>Dear {{ $defenseRequest->first_name }} {{ $defenseRequest->last_name }},</strong>
             </p>
@@ -265,20 +283,36 @@
             <p class="message" style="font-size: 14px; color: #6b7280;">
                 If you have any questions or concerns about your defense, please contact the Graduate School office or your adviser immediately. We wish you the best of luck with your defense presentation!
             </p>
-        </div>
-    </div>
-
-    <div class="footer">
-        <img src="{{ asset('gss-uic-logo-v2.png') }}" alt="UIC Graduate School Logo" class="logo">
-        <p>
-            <strong>University of the Immaculate Conception</strong><br>
-            Graduate School Office<br>
-            Father Selga St., Davao City, Philippines 8000
-        </p>
-        <p style="margin-top: 15px;">
-            This is an automated message from the Graduate School System. Please do not
-            reply to this email.
-        </p>
+        </td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 20px 30px; border-top: 1px solid #e5e7eb;">
+                                <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                                    <tr>
+                                        <td align="center">
+                                            <img src="{{ asset('gss-uic-logo-v2.png') }}" alt="UIC Graduate School Logo" style="max-width: 60px; margin-bottom: 10px;">
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td align="center" style="font-size: 14px; color: #333; line-height: 1.6;">
+                                            <strong>University of the Immaculate Conception</strong><br>
+                                            Graduate School Office<br>
+                                            Father Selga St., Davao City, Philippines 8000
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td align="center" style="font-size: 12px; color: #333; padding-top: 15px;">
+                                            This is an automated message from the Graduate School System.<br>
+                                            Please do not reply to this email.
+                                        </td>
+                                    </tr>
+                                </table>
+                            </td>
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+        </table>
     </div>
 </body>
 </html>

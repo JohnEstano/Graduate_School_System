@@ -4,7 +4,7 @@ import { NavUser } from '@/components/nav-user';
 import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '@/components/ui/sidebar';
 import { MainNavItem, type NavItem } from '@/types';
 import { Link, usePage } from '@inertiajs/react';
-import { CalendarFold, Calendar, CreditCard, DollarSign, FileText, GraduationCap, LayoutGrid, MessageSquareText, ScrollText, SquareUserRound, Users, Box, LibraryBig, Send, BadgeDollarSign } from 'lucide-react';
+import { CalendarFold, Calendar, CreditCard, DollarSign, FileText, GraduationCap, LayoutGrid, MessageSquareText, ScrollText, SquareUserRound, Users, Box, LibraryBig, Send, BadgeDollarSign, CircleDollarSign } from 'lucide-react';
 import AppLogo from './app-logo';
 import { useEffect, useState } from "react";
 
@@ -39,11 +39,7 @@ const studentNavItems: MainNavItem[] = [
         //href: '/student/documents',
        // icon: FileText,
   //  },
-    {
-        title: 'Academic Records',
-        href: '/academic-records',
-        icon: LibraryBig,
-    },
+   
     {
         title: 'Payments',
         href: '/payment',
@@ -92,18 +88,10 @@ const registrarNavItems: MainNavItem[] = [
 const assistantNavItems: MainNavItem[] = [
     { title: 'Dashboard', href: '/dashboard', icon: LayoutGrid },
     { title: 'Defense Requests', href: '/assistant/all-defense-list', icon: Send }, 
-    {
-        title: 'Applications',
-        href: '/defense',
-        icon: FileText,
-        subItems: [
-            { title: 'Comprehensive Exams', href: '/coordinator/compre-exam' },
-            { title: 'Payment Receipt', href: '/coordinator/compre-payment' },
-        ],
-    },
+    { title: 'Comprehensive Exams', href: '/dean/compre-exam', icon: ScrollText },
     { title: 'Honorarium', href: '/honorarium', icon: DollarSign },
     { title: 'Student Records', href: '/student-records', icon: Users },
-    { title: 'Payment Rates', href: '/dean/payment-rates', icon: DollarSign },
+    { title: 'Payment Rates', href: '/dean/payment-rates', icon: CircleDollarSign },
     { title: 'Schedules', href: '/schedules', icon: CalendarFold },
 ];
 
@@ -114,10 +102,11 @@ const facultyNavItems: MainNavItem[] = [
 
 const deanNavItems: MainNavItem[] = [
     { title: 'Dashboard', href: '/dashboard', icon: LayoutGrid },
-    { title: 'Defense Requests', href: '/dean/defense-requests', icon: FileText },
+    { title: 'Defense Requests', href: '/dean/defense-requests', icon: GraduationCap },
     { title: 'Comprehensive Exams', href: '/dean/compre-exam', icon: ScrollText },
     { title: 'Schedules', href: '/schedules', icon: CalendarFold },
-    { title: 'Payment Rates', href: '/dean/payment-rates', icon: DollarSign },
+    { title: 'Student Records', href: '/student-records', icon: Users },
+    { title: 'Payment Rates', href: '/dean/payment-rates', icon: CircleDollarSign },
     { title: 'Honorarium', href: '/honorarium', icon: DollarSign },
 ];
 

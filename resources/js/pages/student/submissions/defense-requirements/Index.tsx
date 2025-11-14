@@ -720,7 +720,7 @@ export default function DefenseRequestIndex() {
                                                                                 style={{ textDecoration: 'none' }}
                                                                             >
                                                                                 <Paperclip className="w-3.5 h-3.5" />
-                                                                                <span className="truncate max-w-[160px]">Avisee–Adviser • {req.avisee_adviser_attachment.split('/').pop()}</span>
+                                                                                <span className="truncate max-w-[160px]">Advisee–Adviser • {req.avisee_adviser_attachment.split('/').pop()}</span>
                                                                             </a>
                                                                         )}
                                                                         {!req.manuscript_proposal && !req.similarity_index && !req.rec_endorsement && !req.proof_of_payment && !req.avisee_adviser_attachment && (

@@ -98,6 +98,18 @@ class DeanCompreExamController extends Controller
 
         // Shape to UI
         $rows->getCollection()->transform(function ($r) {
+            // Format created_at to Asia/Manila timezone
+            $createdAt = null;
+            if ($r->created_at) {
+                try {
+                    $createdAt = \Carbon\Carbon::parse($r->created_at)
+                        ->setTimezone('Asia/Manila')
+                        ->toIso8601String();
+                } catch (\Exception $e) {
+                    $createdAt = $r->created_at;
+                }
+            }
+
             return [
                 'application_id'        => (int)$r->application_id,
                 'first_name'            => (string)($r->first_name ?? ''),
@@ -107,7 +119,7 @@ class DeanCompreExamController extends Controller
                 'school_id'             => $r->school_id,
                 'program'               => $r->program,
                 'school_year'           => $r->school_year,
-                'created_at'            => $r->created_at,
+                'created_at'            => $createdAt,
                 'subjects_count'        => 0,
                 'registrar_status'      => $r->registrar_status,
                 'final_approval_status' => $r->final_approval_status ?? 'pending',
@@ -150,7 +162,7 @@ class DeanCompreExamController extends Controller
                     $reviewerName = $request->user()->first_name . ' ' . $request->user()->last_name;
 
                     if ($validated['status'] === 'approved') {
-                        Mail::to($student->email)->send(
+                        Mail::to($student->email)->queue(
                             new ComprehensiveExamApproved(
                                 $application,
                                 $student,
@@ -164,7 +176,7 @@ class DeanCompreExamController extends Controller
                             'approved_by' => 'dean'
                         ]);
                     } else {
-                        Mail::to($student->email)->send(
+                        Mail::to($student->email)->queue(
                             new ComprehensiveExamRejected(
                                 $application,
                                 $student,
@@ -245,7 +257,7 @@ class DeanCompreExamController extends Controller
 
                     if ($student && $student->email) {
                         if ($status === 'approved') {
-                            Mail::to($student->email)->send(
+                            Mail::to($student->email)->queue(
                                 new ComprehensiveExamApproved(
                                     $application,
                                     $student,
@@ -254,7 +266,7 @@ class DeanCompreExamController extends Controller
                                 )
                             );
                         } else {
-                            Mail::to($student->email)->send(
+                            Mail::to($student->email)->queue(
                                 new ComprehensiveExamRejected(
                                     $application,
                                     $student,

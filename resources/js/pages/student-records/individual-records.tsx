@@ -123,8 +123,7 @@ export default function IndividualRecord({ record, onClose }: IndividualRecordPr
                       </div>
 
                       <div>
-                        <p className="text-sm text-gray-500">Gender</p>
-                        <p className="font-medium">{record.gender || '-'}</p>
+                     
                         <p className="text-sm text-gray-500 mt-4">School Year</p>
                         <p className="font-medium">{record.school_year || '-'}</p>
                         <p className="text-sm text-gray-500 mt-4">Student ID</p>
@@ -132,10 +131,7 @@ export default function IndividualRecord({ record, onClose }: IndividualRecordPr
                       </div>
 
                       <div>
-                        <p className="text-sm text-gray-500">Birthdate</p>
-                        <p className="font-medium">
-                          {record.birthdate ? new Date(record.birthdate).toLocaleDateString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit' }) : '-'}
-                        </p>
+                      
                       </div>
                     </div>
                   </div>

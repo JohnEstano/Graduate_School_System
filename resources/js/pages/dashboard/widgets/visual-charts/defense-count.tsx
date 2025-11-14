@@ -6,7 +6,7 @@ import { AreaChart, Area, ResponsiveContainer, XAxis, YAxis, CartesianGrid, Tool
 import { useEffect, useState } from "react";
 
 export default function DefenseCountLineChart() {
-	const [period, setPeriod] = useState("month");
+	const [period, setPeriod] = useState("week");
 	const [chartData, setChartData] = useState<any[]>([]);
 	const [loading, setLoading] = useState(true);
 	const [totalDefenses, setTotalDefenses] = useState(0);

@@ -7,6 +7,8 @@ use App\Models\ExamRegistrarReview;
 use App\Models\User;
 use App\Mail\ComprehensiveExamApproved;
 use App\Mail\ComprehensiveExamRejected;
+use App\Mail\ComprehensiveExamPaymentApproved;
+use App\Mail\ComprehensiveExamPaymentRejected;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\DB;
@@ -73,9 +75,21 @@ class RegistrarExamApplicationController extends Controller
         $perPage = $validated['per_page'] ?? 20;
 
         // FIX: define $rows before transforming
-        $rows = $q->paginate($perPage);
+        $all = $q->paginate($perPage);
 
-        $rows->getCollection()->transform(function ($r) {
+        $rows = $all->map(function ($r) {
+            // Format created_at to Asia/Manila timezone
+            $createdAt = null;
+            if ($r->created_at) {
+                try {
+                    $createdAt = \Carbon\Carbon::parse($r->created_at)
+                        ->setTimezone('Asia/Manila')
+                        ->toIso8601String();
+                } catch (\Exception $e) {
+                    $createdAt = $r->created_at;
+                }
+            }
+
             return [
                 'application_id'   => $r->application_id,
                 'first_name'       => $r->first_name ?? '',
@@ -85,7 +99,7 @@ class RegistrarExamApplicationController extends Controller
                 'school_id'        => (string)($r->school_id ?? $r->student_id ?? ''),
                 'program'          => $r->program,
                 'school_year'      => $r->school_year,
-                'created_at'       => $r->created_at,
+                'created_at'       => $createdAt,
                 'registrar_status' => $r->registrar_status ?? 'pending',
                 'registrar_reason' => $r->registrar_reason ?? null,
                 'subjects_count'   => (int)($r->subjects_count ?? 0),
@@ -109,6 +123,7 @@ class RegistrarExamApplicationController extends Controller
             'grades_complete'         => ['required','boolean'], // from API at submit time
             'status'                  => ['required','in:approved,rejected'],
             'reason'                  => ['nullable','string','max:2000'],
+            'send_email'              => ['nullable','boolean'], // Optional: whether to send email notification
         ]);
 
         $documentsComplete = ($data['doc_photo_clear'] ?? false)
@@ -139,58 +154,65 @@ class RegistrarExamApplicationController extends Controller
         $application->approved_by          = $data['status'] === 'approved' ? 'Registrar' : null;
         $application->save();
 
-        // Send email notification to student
-        try {
-            // Find student by school_id (try both school_id and student_number)
-            $student = User::where('school_id', $application->student_id)
-                ->orWhere('student_number', $application->student_id)
-                ->first();
+        // Send email notification to student (only if send_email is true)
+        $sendEmail = $data['send_email'] ?? true; // Default to true for backward compatibility
+        
+        if ($sendEmail) {
+            try {
+                // Find student by school_id (try both school_id and student_number)
+                $student = User::where('school_id', $application->student_id)
+                    ->orWhere('student_number', $application->student_id)
+                    ->first();
 
-            if ($student && $student->email) {
-                $reviewerName = $request->user()->first_name . ' ' . $request->user()->last_name;
+                if ($student && $student->email) {
+                    $reviewerName = $request->user()->first_name . ' ' . $request->user()->last_name;
 
-                if ($data['status'] === 'approved') {
-                    Mail::to($student->email)->send(
-                        new ComprehensiveExamApproved(
-                            $application,
-                            $student,
-                            'registrar',
-                            $reviewerName
-                        )
-                    );
-                    Log::info('Comprehensive exam approval email sent', [
-                        'application_id' => $application->application_id,
-                        'student_email' => $student->email,
-                        'approved_by' => 'registrar'
-                    ]);
+                    if ($data['status'] === 'approved') {
+                        Mail::to($student->email)->queue(
+                            new ComprehensiveExamPaymentApproved(
+                                $application,
+                                $student,
+                                $reviewerName
+                            )
+                        );
+                        Log::info('Comprehensive exam payment approved email sent', [
+                            'application_id' => $application->application_id,
+                            'student_email' => $student->email,
+                            'verified_by' => 'registrar'
+                        ]);
+                    } else {
+                        Mail::to($student->email)->queue(
+                            new ComprehensiveExamPaymentRejected(
+                                $application,
+                                $student,
+                                $data['reason'] ?? 'Please review your payment documents.',
+                                $reviewerName
+                            )
+                        );
+                        Log::info('Comprehensive exam payment rejected email sent', [
+                            'application_id' => $application->application_id,
+                            'student_email' => $student->email,
+                            'rejected_by' => 'registrar'
+                        ]);
+                    }
                 } else {
-                    Mail::to($student->email)->send(
-                        new ComprehensiveExamRejected(
-                            $application,
-                            $student,
-                            'registrar',
-                            $data['reason'] ?? 'Please review your application and requirements.',
-                            $reviewerName
-                        )
-                    );
-                    Log::info('Comprehensive exam rejection email sent', [
+                    Log::warning('Student not found or has no email for comprehensive exam notification', [
                         'application_id' => $application->application_id,
-                        'student_email' => $student->email,
-                        'rejected_by' => 'registrar'
+                        'student_id' => $application->student_id
                     ]);
                 }
-            } else {
-                Log::warning('Student not found or has no email for comprehensive exam notification', [
+            } catch (\Exception $e) {
+                Log::error('Failed to send comprehensive exam email notification', [
                     'application_id' => $application->application_id,
-                    'student_id' => $application->student_id
+                    'error' => $e->getMessage()
                 ]);
+                // Don't fail the request if email fails
             }
-        } catch (\Exception $e) {
-            Log::error('Failed to send comprehensive exam email notification', [
+        } else {
+            Log::info('Email notification skipped by registrar', [
                 'application_id' => $application->application_id,
-                'error' => $e->getMessage()
+                'status' => $data['status']
             ]);
-            // Don't fail the request if email fails
         }
 
         // TODO: If approved, enqueue to Dean's queue. For now, we just return success.

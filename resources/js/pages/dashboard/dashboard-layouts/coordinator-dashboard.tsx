@@ -13,7 +13,7 @@ import type { DefenseRequest } from '@/types';
 import { Users, CalendarDays, ClipboardList, BadgeDollarSign } from 'lucide-react';
 import { Skeleton } from "@/components/ui/skeleton";
 import DefenseCountLineChart from '../widgets/visual-charts/defense-count';
-import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area"; // Make sure ScrollBar is imported
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { CoordinatorMostActivePrograms } from '../widgets/visual-charts/coordinator-most-active-programs';
 import { CoordinatorAdviserStudentRatio } from '../widgets/visual-charts/coordinator-adviser-student-ratio';
@@ -241,7 +241,7 @@ export default function CoordinatorDashboard() {
         {
             title: "Assigned Programs",
             value: assignedProgramsCount,
-            description: "Programs you coordinate",
+            description: "Total number of assigned programs",
             icon: <ClipboardList className="size-5 text-violet-500" />,
             iconTheme: "bg-violet-100 text-violet-600 dark:bg-violet-900 dark:text-violet-300",
         },
@@ -340,13 +340,13 @@ export default function CoordinatorDashboard() {
                                                     {metric.description}
                                                 </span>
                                             </div>
-                                        </Card>
+                                        </Card>     
                                     ))}
                                 </div>
 
                                 {/* Widgets Body - Mobile Responsive */}
                                 <div className="flex flex-col gap-4 md:gap-6 bg-gray-100 dark:bg-muted rounded-lg md:rounded-xl mt-2 mb-2 px-3 md:px-4 py-4 md:py-8 w-full">
-                                    <div className="w-full mb-2 flex flex-col lg:flex-row gap-4">
+                                    <div className="w-full mb-2 flex flex-col gap-4">
                                         <WeeklyDefenseSchedulesWidget
                                             weekDays={weekDays}
                                             selectedDay={selectedDay}
@@ -364,20 +364,16 @@ export default function CoordinatorDashboard() {
                             <TabsContent value="analytics" className="w-full">
                                 {/* Row Layout for Analytics */}
                                 <div className="flex flex-col gap-4 md:gap-6 mb-4 md:mb-6">
-                                    {/* Row 1: Defense Count (with dropdown) */}
+                                    {/* Row 1: Total Defenses Line Chart - Full Width */}
                                     <div className="w-full">
                                         <DefenseCountLineChart />
                                     </div>
                                     
-                                    {/* Row 2: Defense Type Distribution + Defense Mode Breakdown */}
-                                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
-                                        <DefenseTypeDistribution />
-                                        <DefenseModeBreakdown />
-                                    </div>
-                                    
-                                    {/* Row 3: Most Active Programs and Adviser-Student Ratio */}
+                                    {/* Row 2: Bar Chart + Three Radial Charts Grid */}
                                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
                                         <CoordinatorMostActivePrograms />
+                                        <DefenseTypeDistribution />
+                                        <DefenseModeBreakdown />
                                         <CoordinatorAdviserStudentRatio />
                                     </div>
                                 </div>

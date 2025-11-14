@@ -116,7 +116,7 @@ function AdviserSearchInput({ value, onChange }: AdviserSearchInputProps) {
             />
             {open && (
                 <div
-                    className="absolute z-10 mt-1 w-full bg-white border border-gray-200 rounded shadow"
+                    className="absolute z-10 mt-1 w-full bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-700 rounded shadow"
                     style={{ maxHeight: 200, overflowY: "auto" }}
                 >
                     {loading && (
@@ -215,14 +215,23 @@ export default function SubmitDefenseRequirements({ onFinish, open, onOpenChange
 
     // Fetch payment rates on mount
     useEffect(() => {
-        fetch('/dean/payment-rates/data')
-            .then(res => res.json())
+        fetch('/api/payment-rates')
+            .then(res => {
+                if (!res.ok) {
+                    throw new Error(`HTTP error! status: ${res.status}`);
+                }
+                return res.json();
+            })
             .then(data => {
+                console.log('Payment rates fetched successfully:', data);
                 if (data.rates) {
                     setPaymentRates(data.rates);
                 }
             })
-            .catch(err => console.error('Failed to fetch payment rates:', err));
+            .catch(err => {
+                console.error('Failed to fetch payment rates:', err);
+                console.error('Make sure you are logged in and the route /api/payment-rates is accessible');
+            });
     }, []);
 
     // Auto-calculate payment amount when defense type or program changes
@@ -514,7 +523,7 @@ export default function SubmitDefenseRequirements({ onFinish, open, onOpenChange
                                     className={`rounded-md px-4 py-2 text-xs font-medium cursor-pointer border
                                         ${data.defense_type === option.value
                                             ? "bg-rose-500 text-white border-rose-500"
-                                            : "bg-white text-zinc-700 border-zinc-200"
+                                            : "bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-700"
                                         }`}
                                     aria-pressed={data.defense_type === option.value}
                                 >
@@ -623,7 +632,7 @@ export default function SubmitDefenseRequirements({ onFinish, open, onOpenChange
                             {data.defense_type === 'Proposal' && (
                                 <div>
                                     <Label className="text-xs">
-                                        Avisee-Adviser Attachment <span className="text-rose-500">*</span>
+                                        Advisee-Adviser Attachment <span className="text-rose-500">*</span>
                                     </Label>
                                     <div className="flex items-center gap-2">
                                         <Input
@@ -781,7 +790,7 @@ export default function SubmitDefenseRequirements({ onFinish, open, onOpenChange
                                 </div>
                                 {data.defense_type === 'Proposal' && (
                                     <div>
-                                        <span className="font-medium">Avisee-Adviser Attachment:</span> {data.avisee_adviser_attachment?.name || <span className="text-muted-foreground">—</span>}
+                                        <span className="font-medium">Advisee-Adviser Attachment:</span> {data.avisee_adviser_attachment?.name || <span className="text-muted-foreground">—</span>}
                                     </div>
                                 )}
                             </div>
