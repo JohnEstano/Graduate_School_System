@@ -124,7 +124,28 @@ class RegistrarExamApplicationController extends Controller
             'status'                  => ['required','in:approved,rejected'],
             'reason'                  => ['nullable','string','max:2000'],
             'send_email'              => ['nullable','boolean'], // Optional: whether to send email notification
+            'allow_incomplete_grades' => ['nullable','boolean'], // Configuration: allow approval with incomplete grades
         ]);
+
+        // Validate that approval requires all required documents to be checked
+        if ($data['status'] === 'approved') {
+            $requiredDocsComplete = ($data['doc_photo_clear'] ?? false)
+                && ($data['doc_transcript'] ?? false)
+                && ($data['doc_psa_birth'] ?? false)
+                && ($data['doc_honorable_dismissal'] ?? false);
+            
+            if (!$requiredDocsComplete) {
+                return back()->withErrors(['message' => 'Cannot approve: All required documents must be verified.']);
+            }
+            
+            // Check grades completeness with configuration option
+            $gradesComplete = $data['grades_complete'] ?? false;
+            $allowIncompleteGrades = $data['allow_incomplete_grades'] ?? false;
+            
+            if (!$gradesComplete && !$allowIncompleteGrades) {
+                return back()->withErrors(['message' => 'Cannot approve: Grades must be complete.']);
+            }
+        }
 
         $documentsComplete = ($data['doc_photo_clear'] ?? false)
             && ($data['doc_transcript'] ?? false)

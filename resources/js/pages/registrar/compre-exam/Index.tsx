@@ -2,6 +2,7 @@ import React from 'react';
 import { Head } from '@inertiajs/react';
 import AppLayout from '@/layouts/app-layout';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from '@/components/ui/alert-dialog';
@@ -54,6 +55,9 @@ function toRow(r: any): Row {
 }
 
 export default function RegistrarCompreExamIndex() {
+  // Configuration: Set to true to allow approval with incomplete grades (simulation mode)
+  const ALLOW_INCOMPLETE_GRADES = true;
+
   const [rows, setRows] = React.useState<Row[]>([]);
   const [loading, setLoading] = React.useState(false);
   const [q, setQ] = React.useState('');
@@ -67,6 +71,7 @@ export default function RegistrarCompreExamIndex() {
   const [retrieving, setRetrieving] = React.useState(false);
   const [audit, setAudit] = React.useState<any[]>([]);
   const [tab, setTab] = React.useState<'checklist'|'audit'>('checklist');
+  const [quickCheckAll, setQuickCheckAll] = React.useState(false);
   // Confirmation dialog state
   const [confirmOpen, setConfirmOpen] = React.useState(false);
   const [sendEmail, setSendEmail] = React.useState(true);
@@ -168,7 +173,7 @@ export default function RegistrarCompreExamIndex() {
     const s = q.trim().toLowerCase();
     if (!s) return rows;
     return rows.filter((r) =>
-      [r.first_name, r.middle_name || '', r.last_name, r.program, r.school_year]
+      [r.first_name, r.middle_name || '', r.last_name, r.program, r.school_year, r.school_id || '']
         .join(' ')
         .toLowerCase()
         .includes(s),
@@ -236,6 +241,19 @@ export default function RegistrarCompreExamIndex() {
   // Bulk actions from table
   const handleBulkAction = (ids: number[], action: 'approve'|'reject', reasonArg?: string) => {
     if (ids.length === 0) return;
+    
+    // Warn for bulk approvals - they should review individually
+    if (action === 'approve') {
+      const confirmed = window.confirm(
+        `⚠️ Bulk approval assumes all ${ids.length} applications have:\n` +
+        '• Complete required documents\n' +
+        '• Complete grades\n\n' +
+        'Applications missing requirements will fail server validation.\n\n' +
+        'Continue with bulk approval?'
+      );
+      if (!confirmed) return;
+    }
+    
     // naive sequential calls; can be optimized/batched server-side later
     const doOne = (id: number) => fetch(`/registrar/exam-applications/${id}/decision`, {
       method: 'POST',
@@ -245,26 +263,53 @@ export default function RegistrarCompreExamIndex() {
       },
       credentials: 'same-origin',
       body: JSON.stringify({
-        // For bulk operations, record completeness flags and overall aggregate booleans for audit trail
-        doc_photo_clear: true, doc_transcript: true, doc_psa_birth: true, doc_honorable_dismissal: true,
-        doc_prof_exam: false, doc_marriage_cert: false,
-        grades_complete: true,
-        documents_complete: true,
-        status: action,
+        // For bulk operations, assume completeness (server should validate)
+        doc_photo_clear: action === 'approve', 
+        doc_transcript: action === 'approve', 
+        doc_psa_birth: action === 'approve', 
+        doc_honorable_dismissal: action === 'approve',
+        doc_prof_exam: false, 
+        doc_marriage_cert: false,
+        // When allow_incomplete_grades is true, we can approve even if grades aren't complete
+        // Set to false to let the configuration flag handle it
+        grades_complete: false,
+        documents_complete: action === 'approve',
+        status: action === 'approve' ? 'approved' : 'rejected',
         reason: action === 'reject' ? (reasonArg && reasonArg.trim() ? reasonArg.trim() : 'Bulk review: incomplete requirements.') : null,
+        allow_incomplete_grades: ALLOW_INCOMPLETE_GRADES,
       }),
-    }).then(r => { if (!r.ok) throw new Error(String(r.status)); });
+    }).then(async (r) => { 
+      if (!r.ok) {
+        const errorText = await r.text();
+        throw new Error(`${r.status}: ${errorText}`);
+      }
+      return r;
+    });
 
     (async () => {
+      let successCount = 0;
+      let failedCount = 0;
       try {
         for (const id of ids) { // sequential to keep server happy
           // eslint-disable-next-line no-await-in-loop
-          await doOne(id);
+          try {
+            await doOne(id);
+            successCount++;
+          } catch (err) {
+            failedCount++;
+            console.error(`Failed to ${action} application ${id}:`, err);
+          }
         }
-        toast.success(`${action === 'approve' ? 'Approved' : 'Rejected'} ${ids.length} application(s).`);
+        if (successCount > 0) {
+          toast.success(`${action === 'approve' ? 'Approved' : 'Rejected'} ${successCount} application(s).`);
+        }
+        if (failedCount > 0) {
+          toast.error(`Failed to ${action} ${failedCount} application(s). Check console for details.`);
+        }
         fetchRows();
-      } catch {
+      } catch (err) {
         toast.error('Bulk action failed');
+        console.error('Bulk action error:', err);
       }
     })();
   };
@@ -275,6 +320,7 @@ export default function RegistrarCompreExamIndex() {
     setDoc({ photo: false, tor: false, psa: false, hd: false, prof: false, marriage: false });
     setDecision(null);
     setReason('');
+    setQuickCheckAll(false);
     setGradesComplete(!!cur.latest_review?.grades_complete);
     setTab('checklist');
     setOpen(true);
@@ -296,6 +342,13 @@ export default function RegistrarCompreExamIndex() {
         created_at: a.created_at ?? a.createdAt ?? a.timestamp ?? new Date().toISOString(),
         grades_complete: a.grades_complete ?? a.grade_complete ?? a.grades ?? false,
         documents_complete: a.documents_complete ?? a.docs_complete ?? a.documents ?? false,
+        // Document checkboxes
+        doc_photo_clear: a.doc_photo_clear ?? false,
+        doc_transcript: a.doc_transcript ?? false,
+        doc_psa_birth: a.doc_psa_birth ?? false,
+        doc_honorable_dismissal: a.doc_honorable_dismissal ?? false,
+        doc_prof_exam: a.doc_prof_exam ?? false,
+        doc_marriage_cert: a.doc_marriage_cert ?? false,
       }));
     };
     const apiUrl = `/api/registrar/exam-applications/${cur.application_id}/reviews`;
@@ -308,7 +361,23 @@ export default function RegistrarCompreExamIndex() {
         if (alt.ok) return alt.json();
         throw new Error('audit fetch failed');
       })
-      .then((data) => setAudit(normalizeAudit(data)))
+      .then((data) => {
+        const normalized = normalizeAudit(data);
+        setAudit(normalized);
+        // If there's a latest review, populate the checkboxes
+        if (normalized.length > 0 && (cur.registrar_status === 'approved' || cur.registrar_status === 'rejected')) {
+          const latest = normalized[0]; // Most recent review
+          setDoc({
+            photo: latest.doc_photo_clear ?? false,
+            tor: latest.doc_transcript ?? false,
+            psa: latest.doc_psa_birth ?? false,
+            hd: latest.doc_honorable_dismissal ?? false,
+            prof: latest.doc_prof_exam ?? false,
+            marriage: latest.doc_marriage_cert ?? false,
+          });
+          setGradesComplete(latest.grades_complete ?? false);
+        }
+      })
       .catch(() => setAudit([]));
   }
 
@@ -322,6 +391,17 @@ export default function RegistrarCompreExamIndex() {
     if (!gradesComplete) missing.push('complete grades');
     return missing.length ? `Incomplete requirements: ${missing.join(', ')}.` : 'Does not meet requirements.';
   }, [doc.photo, doc.tor, doc.psa, doc.hd, gradesComplete]);
+
+  // Quick check all required documents
+  const handleQuickCheckAll = React.useCallback((checked: boolean) => {
+    if (current?.registrar_status === 'approved' || current?.registrar_status === 'rejected') return;
+    setQuickCheckAll(checked);
+    if (checked) {
+      setDoc({ photo: true, tor: true, psa: true, hd: true, prof: false, marriage: false });
+    } else {
+      setDoc({ photo: false, tor: false, psa: false, hd: false, prof: false, marriage: false });
+    }
+  }, [current?.registrar_status]);
 
   function submitDecision() {
     if (!current || !decision) return;
@@ -339,6 +419,7 @@ export default function RegistrarCompreExamIndex() {
       status: decision,
       reason: (reason || auto) || null,
       send_email: sendEmail, // Include email preference
+      allow_incomplete_grades: ALLOW_INCOMPLETE_GRADES,
     };
     setSubmitting(true);
     fetch(`/registrar/exam-applications/${current.application_id}/decision`, {
@@ -376,6 +457,20 @@ export default function RegistrarCompreExamIndex() {
 
   function handleSaveDecision() {
     if (!decision) return;
+    
+    // Validate required documents for approval
+    if (decision === 'approved') {
+      const requiredDocsComplete = doc.photo && doc.tor && doc.psa && doc.hd;
+      if (!requiredDocsComplete) {
+        toast.error('Cannot approve', { description: 'All required documents must be checked.' });
+        return;
+      }
+      if (!gradesComplete && !ALLOW_INCOMPLETE_GRADES) {
+        toast.error('Cannot approve', { description: 'Grades must be complete.' });
+        return;
+      }
+    }
+    
     // Open confirmation dialog
     setSendEmail(true); // Reset to default
     setConfirmOpen(true);
@@ -498,16 +593,33 @@ export default function RegistrarCompreExamIndex() {
 
         {/* Review Dialog with Audit Trail tab */}
         <Dialog open={open} onOpenChange={(o) => setOpen(o)}>
-          <DialogContent className="sm:max-w-2xl">
+          <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>Registrar Review</DialogTitle>
-              <DialogDescription>Check documents and decide. Grades completeness auto-fetched.</DialogDescription>
+              <DialogTitle className="text-xl">Registrar Review</DialogTitle>
+              <DialogDescription>Verify documents and make a decision. Use quick actions for faster processing.</DialogDescription>
             </DialogHeader>
 
-            <div className="space-y-3">
-              <div className="text-sm">
-                <div className="font-medium">{current ? `${current.last_name}, ${current.first_name}` : ''}</div>
-                <div className="text-muted-foreground">{current ? `${current.program} • ${current.school_year}` : ''}</div>
+            <div className="space-y-4">
+              {/* Student Info Card */}
+              <div className="rounded-lg border bg-muted/30 p-4">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <div className="font-semibold text-lg">{current ? `${current.last_name}, ${current.first_name}` : ''}</div>
+                    <div className="text-sm text-muted-foreground mt-1">
+                      {current?.program} • {current?.school_year}
+                      {current?.school_id && <span className="ml-2">• ID: {current.school_id}</span>}
+                    </div>
+                  </div>
+                  {current?.registrar_status && (
+                    <div className={`px-3 py-1 rounded-full text-xs font-medium ${
+                      current.registrar_status === 'approved' ? 'bg-green-100 text-green-700' :
+                      current.registrar_status === 'rejected' ? 'bg-rose-100 text-rose-700' :
+                      'bg-amber-100 text-amber-700'
+                    }`}>
+                      {current.registrar_status.toUpperCase()}
+                    </div>
+                  )}
+                </div>
               </div>
 
               <Tabs value={tab} onValueChange={(v) => setTab(v as any)} className="w-full">
@@ -516,46 +628,125 @@ export default function RegistrarCompreExamIndex() {
                   <TabsTrigger value="audit">Audit Trail</TabsTrigger>
                 </TabsList>
 
-                <TabsContent value="checklist">
-                  <Separator className="my-3" />
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    {(() => {
-                      const decided = (current?.registrar_status === 'approved' || current?.registrar_status === 'rejected');
-                      const itemCls = 'flex items-center gap-2 text-sm';
-                      return (
-                        <>
-                          <label className={itemCls}><Checkbox checked={doc.photo} onCheckedChange={(v) => !decided && setDoc(s => ({ ...s, photo: !!v }))} disabled={decided} /> Clear whole body picture</label>
-                          <label className={itemCls}><Checkbox checked={doc.tor} onCheckedChange={(v) => !decided && setDoc(s => ({ ...s, tor: !!v }))} disabled={decided} /> Transcript of record</label>
-                          <label className={itemCls}><Checkbox checked={doc.psa} onCheckedChange={(v) => !decided && setDoc(s => ({ ...s, psa: !!v }))} disabled={decided} /> PSA birth certificate</label>
-                          <label className={itemCls}><Checkbox checked={doc.hd} onCheckedChange={(v) => !decided && setDoc(s => ({ ...s, hd: !!v }))} disabled={decided} /> Honorable dismissal</label>
-                          <label className={itemCls}><Checkbox checked={doc.prof} onCheckedChange={(v) => !decided && setDoc(s => ({ ...s, prof: !!v }))} disabled={decided} /> Passed professional exam (optional)</label>
-                          <label className={itemCls}><Checkbox checked={doc.marriage} onCheckedChange={(v) => !decided && setDoc(s => ({ ...s, marriage: !!v }))} disabled={decided} /> Marriage certificate (optional)</label>
-                        </>
-                      );
-                    })()}
-                  </div>
+                <TabsContent value="checklist" className="space-y-4">
+                  {(() => {
+                    const decided = (current?.registrar_status === 'approved' || current?.registrar_status === 'rejected');
+                    const allRequiredChecked = doc.photo && doc.tor && doc.psa && doc.hd;
+                    
+                    return (
+                      <>
+                        {/* Quick Actions */}
+                        {!decided && (
+                          <div className="rounded-lg border border-blue-200 bg-blue-50 p-3">
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-2">
+                                <Checkbox 
+                                  id="quick-check-all"
+                                  checked={quickCheckAll}
+                                  onCheckedChange={handleQuickCheckAll}
+                                />
+                                <label htmlFor="quick-check-all" className="text-sm font-medium text-blue-900 cursor-pointer">
+                                  ⚡ Quick: Check all required documents
+                                </label>
+                              </div>
+                              <div className="text-xs text-blue-700">
+                                {allRequiredChecked ? '✓ All required checked' : `${[doc.photo, doc.tor, doc.psa, doc.hd].filter(Boolean).length}/4 checked`}
+                              </div>
+                            </div>
+                            <p className="text-xs text-blue-700 mt-2">Toggle to automatically check/uncheck all required documents at once.</p>
+                          </div>
+                        )}
 
-                  <div className="text-sm mt-2">Grades complete: <span className={gradesComplete ? 'text-green-700' : 'text-rose-700'}>{gradesComplete ? 'Yes' : 'No'}</span></div>
+                        {/* Required Documents */}
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between">
+                            <h3 className="text-sm font-semibold text-foreground">Required Documents</h3>
+                            <span className="text-xs text-muted-foreground">{decided ? 'Final' : 'Click to verify'}</span>
+                          </div>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-2 p-3 rounded-lg border bg-card">
+                            <label className="flex items-center gap-2 text-sm p-2 rounded hover:bg-muted/50 cursor-pointer">
+                              <Checkbox checked={doc.photo} onCheckedChange={(v) => !decided && setDoc(s => ({ ...s, photo: !!v }))} disabled={decided} />
+                              <span className={doc.photo ? 'font-medium' : ''}>Clear whole body picture</span>
+                            </label>
+                            <label className="flex items-center gap-2 text-sm p-2 rounded hover:bg-muted/50 cursor-pointer">
+                              <Checkbox checked={doc.tor} onCheckedChange={(v) => !decided && setDoc(s => ({ ...s, tor: !!v }))} disabled={decided} />
+                              <span className={doc.tor ? 'font-medium' : ''}>Transcript of record</span>
+                            </label>
+                            <label className="flex items-center gap-2 text-sm p-2 rounded hover:bg-muted/50 cursor-pointer">
+                              <Checkbox checked={doc.psa} onCheckedChange={(v) => !decided && setDoc(s => ({ ...s, psa: !!v }))} disabled={decided} />
+                              <span className={doc.psa ? 'font-medium' : ''}>PSA birth certificate</span>
+                            </label>
+                            <label className="flex items-center gap-2 text-sm p-2 rounded hover:bg-muted/50 cursor-pointer">
+                              <Checkbox checked={doc.hd} onCheckedChange={(v) => !decided && setDoc(s => ({ ...s, hd: !!v }))} disabled={decided} />
+                              <span className={doc.hd ? 'font-medium' : ''}>Honorable dismissal</span>
+                            </label>
+                          </div>
+                        </div>
 
-                  <Separator className="my-3" />
+                        {/* Optional Documents */}
+                        <div className="space-y-2">
+                          <h3 className="text-sm font-semibold text-foreground">Optional Documents</h3>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-2 p-3 rounded-lg border bg-card">
+                            <label className="flex items-center gap-2 text-sm p-2 rounded hover:bg-muted/50 cursor-pointer">
+                              <Checkbox checked={doc.prof} onCheckedChange={(v) => !decided && setDoc(s => ({ ...s, prof: !!v }))} disabled={decided} />
+                              <span className={doc.prof ? 'font-medium' : 'text-muted-foreground'}>Professional exam</span>
+                            </label>
+                            <label className="flex items-center gap-2 text-sm p-2 rounded hover:bg-muted/50 cursor-pointer">
+                              <Checkbox checked={doc.marriage} onCheckedChange={(v) => !decided && setDoc(s => ({ ...s, marriage: !!v }))} disabled={decided} />
+                              <span className={doc.marriage ? 'font-medium' : 'text-muted-foreground'}>Marriage certificate</span>
+                            </label>
+                          </div>
+                        </div>
+
+                        {/* Grades Status */}
+                        <div className="rounded-lg border p-3 bg-card">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm font-medium">Grades Complete:</span>
+                              <span className={`font-semibold ${gradesComplete ? 'text-green-600' : 'text-rose-600'}`}>
+                                {gradesComplete ? '✓ Yes' : '✗ No'}
+                              </span>
+                            </div>
+                            {!gradesComplete && ALLOW_INCOMPLETE_GRADES && (
+                              <span className="text-xs px-2 py-1 rounded-full bg-amber-100 text-amber-700 font-medium">
+                                Override enabled
+                              </span>
+                            )}
+                          </div>
+                          {!gradesComplete && ALLOW_INCOMPLETE_GRADES && (
+                            <p className="text-xs text-amber-600 mt-2">
+                              ⚠️ Simulation mode: Approval allowed despite incomplete grades
+                            </p>
+                          )}
+                        </div>
+                      </>
+                    );
+                  })()}
+
+                  <Separator />
 
                   {(() => {
                     const decided = (current?.registrar_status === 'approved' || current?.registrar_status === 'rejected');
                     if (decided) {
                       return (
-                        <div className="flex flex-col gap-2">
-                          <div className="text-sm">
-                            Status: <span className={current?.registrar_status === 'approved' ? 'text-green-700' : 'text-rose-700'}>
+                        <div className="rounded-lg border p-4 bg-card space-y-3">
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-medium">Decision:</span>
+                            <span className={`px-3 py-1 rounded-full text-sm font-semibold ${
+                              current?.registrar_status === 'approved' ? 'bg-green-100 text-green-700' : 'bg-rose-100 text-rose-700'
+                            }`}>
                               {current?.registrar_status?.[0]?.toUpperCase()}{current?.registrar_status?.slice(1)}
                             </span>
                           </div>
                           {current?.registrar_reason && (
-                            <div className="text-sm">Reason: {current.registrar_reason}</div>
+                            <div className="text-sm bg-muted/50 p-3 rounded">
+                              <span className="font-medium">Reason:</span> {current.registrar_reason}
+                            </div>
                           )}
                           {current?.registrar_status === 'rejected' && (
-                            <div className="flex justify-end gap-2 pt-3">
-                              <Button variant="outline" onClick={retrieveDecision} disabled={retrieving}>
-                                {retrieving ? 'Retrieving…' : 'Retrieve (back to Pending)'}
+                            <div className="flex justify-end pt-2">
+                              <Button variant="outline" onClick={retrieveDecision} disabled={retrieving} className="gap-2">
+                                {retrieving ? 'Retrieving…' : '↺ Retrieve (back to Pending)'}
                               </Button>
                             </div>
                           )}
@@ -563,44 +754,159 @@ export default function RegistrarCompreExamIndex() {
                       );
                     }
                     return (
-                      <>
-                        <div className="flex items-center gap-2">
-                          <Button variant={decision === 'approved' ? 'default' : 'outline'} onClick={() => setDecision('approved')}><Check className="h-4 w-4 mr-1" /> Approve</Button>
-                          <Button variant={decision === 'rejected' ? 'destructive' : 'outline'} onClick={() => setDecision('rejected')}><X className="h-4 w-4 mr-1" /> Reject</Button>
+                      <div className="space-y-4">
+                        <div className="space-y-3">
+                          <h3 className="text-sm font-semibold">Make Decision</h3>
+                          <div className="flex items-center gap-3">
+                            <Button 
+                              variant={decision === 'approved' ? 'default' : 'outline'} 
+                              onClick={() => setDecision('approved')}
+                              className={decision === 'approved' ? 'bg-green-600 hover:bg-green-700' : ''}
+                              size="lg"
+                            >
+                              <Check className="h-5 w-5 mr-2" /> Approve
+                            </Button>
+                            <Button 
+                              variant={decision === 'rejected' ? 'destructive' : 'outline'} 
+                              onClick={() => setDecision('rejected')}
+                              size="lg"
+                            >
+                              <X className="h-5 w-5 mr-2" /> Reject
+                            </Button>
+                          </div>
+                          
+                          {/* Validation warnings */}
+                          {decision === 'approved' && (!doc.photo || !doc.tor || !doc.psa || !doc.hd) && (
+                            <div className="rounded-lg bg-rose-50 border border-rose-200 p-3 text-sm text-rose-700">
+                              <strong>⚠️ Cannot approve:</strong> All required documents must be verified.
+                            </div>
+                          )}
+                          {decision === 'approved' && !gradesComplete && !ALLOW_INCOMPLETE_GRADES && (
+                            <div className="rounded-lg bg-rose-50 border border-rose-200 p-3 text-sm text-rose-700">
+                              <strong>⚠️ Cannot approve:</strong> Grades must be complete.
+                            </div>
+                          )}
                         </div>
 
                         {decision === 'rejected' && (
-                          <div className="space-y-1 mt-2">
-                            <Input value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Reason for rejection…" />
-                            {!reason && <div className="text-xs text-muted-foreground">Tip: leave empty to auto-fill based on missing requirements.</div>}
+                          <div className="space-y-2">
+                            <label className="text-sm font-medium">Rejection Reason</label>
+                            <Textarea 
+                              value={reason} 
+                              onChange={(e) => setReason(e.target.value)} 
+                              placeholder="Enter reason for rejection…"
+                              className="min-h-[80px]"
+                            />
+                            {!reason && (
+                              <p className="text-xs text-muted-foreground">
+                                💡 Tip: Leave empty to auto-generate reason based on missing requirements.
+                              </p>
+                            )}
                           </div>
                         )}
 
-                        <div className="flex justify-end gap-2 pt-3">
-                          <Button onClick={handleSaveDecision} disabled={!decision || submitting}>{submitting ? 'Saving…' : 'Save decision'}</Button>
+                        <div className="flex justify-end gap-3 pt-2">
+                          <Button 
+                            variant="outline" 
+                            onClick={() => setOpen(false)}
+                          >
+                            Cancel
+                          </Button>
+                          <Button 
+                            onClick={handleSaveDecision} 
+                            disabled={
+                              !decision || 
+                              submitting || 
+                              (decision === 'approved' && (
+                                !doc.photo || !doc.tor || !doc.psa || !doc.hd || 
+                                (!gradesComplete && !ALLOW_INCOMPLETE_GRADES)
+                              ))
+                            }
+                            className={decision === 'approved' ? 'bg-green-600 hover:bg-green-700' : decision === 'rejected' ? 'bg-destructive hover:bg-destructive/90' : ''}
+                            size="lg"
+                          >
+                            {submitting ? 'Saving…' : `✓ Save ${decision || 'decision'}`}
+                          </Button>
                         </div>
-                      </>
+                      </div>
                     );
                   })()}
                 </TabsContent>
 
-                <TabsContent value="audit">
-                  <Separator className="my-3" />
-                  <div className="space-y-2 max-h-[300px] overflow-y-auto">
-                    {audit.length === 0 && <div className="text-sm text-muted-foreground">No audit entries.</div>}
+                <TabsContent value="audit" className="space-y-3">
+                  <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2">
+                    {audit.length === 0 && (
+                      <div className="text-center py-12 text-muted-foreground">
+                        <p className="text-sm">No audit entries yet.</p>
+                      </div>
+                    )}
                     {audit.map((a) => (
-                      <div key={a.id} className="rounded-md border p-2">
-                        <div className="text-sm">
-                          <strong className={a.status === 'approved' ? 'text-green-700' : a.status === 'rejected' ? 'text-rose-700' : ''}>
-                            {a.status[0].toUpperCase() + a.status.slice(1)}
-                          </strong>
-                          {' • '}
-                          {new Date(a.created_at).toLocaleString()}
+                      <div key={a.id} className="rounded-lg border bg-card p-4 hover:shadow-sm transition-shadow">
+                        <div className="flex items-start justify-between mb-2">
+                          <div className="flex items-center gap-2">
+                            <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
+                              a.status === 'approved' ? 'bg-green-100 text-green-700' : 
+                              a.status === 'rejected' ? 'bg-rose-100 text-rose-700' : 
+                              'bg-amber-100 text-amber-700'
+                            }`}>
+                              {a.status[0].toUpperCase() + a.status.slice(1)}
+                            </span>
+                          </div>
+                          <span className="text-xs text-muted-foreground">
+                            {new Date(a.created_at).toLocaleString()}
+                          </span>
                         </div>
-                        <div className="text-xs text-muted-foreground">
-                          Grades: {a.grades_complete ? '✅' : '❌'} • Docs: {a.documents_complete ? '✅' : '❌'}
+                        
+                        {/* Document details */}
+                        <div className="mt-3 space-y-2">
+                          <div className="text-xs font-medium text-muted-foreground">Required Documents:</div>
+                          <div className="grid grid-cols-2 gap-2 text-xs">
+                            <span className={a.doc_photo_clear ? 'text-green-600' : 'text-rose-600'}>
+                              {a.doc_photo_clear ? '✅' : '❌'} Photo
+                            </span>
+                            <span className={a.doc_transcript ? 'text-green-600' : 'text-rose-600'}>
+                              {a.doc_transcript ? '✅' : '❌'} Transcript
+                            </span>
+                            <span className={a.doc_psa_birth ? 'text-green-600' : 'text-rose-600'}>
+                              {a.doc_psa_birth ? '✅' : '❌'} PSA Birth Cert
+                            </span>
+                            <span className={a.doc_honorable_dismissal ? 'text-green-600' : 'text-rose-600'}>
+                              {a.doc_honorable_dismissal ? '✅' : '❌'} Hon. Dismissal
+                            </span>
+                          </div>
+                          {(a.doc_prof_exam || a.doc_marriage_cert) && (
+                            <>
+                              <div className="text-xs font-medium text-muted-foreground mt-2">Optional Documents:</div>
+                              <div className="grid grid-cols-2 gap-2 text-xs">
+                                {a.doc_prof_exam && (
+                                  <span className="text-green-600">✅ Professional Exam</span>
+                                )}
+                                {a.doc_marriage_cert && (
+                                  <span className="text-green-600">✅ Marriage Cert</span>
+                                )}
+                              </div>
+                            </>
+                          )}
+                          <div className="flex items-center gap-3 text-xs pt-2 border-t">
+                            <span className={`flex items-center gap-1 ${
+                              a.grades_complete ? 'text-green-600' : 'text-rose-600'
+                            }`}>
+                              {a.grades_complete ? '✅' : '❌'} Grades Complete
+                            </span>
+                            <span className={`flex items-center gap-1 ${
+                              a.documents_complete ? 'text-green-600' : 'text-rose-600'
+                            }`}>
+                              {a.documents_complete ? '✅' : '❌'} All Docs Complete
+                            </span>
+                          </div>
                         </div>
-                        {a.reason && <div className="text-sm mt-1">Reason: {a.reason}</div>}
+                        
+                        {a.reason && (
+                          <div className="mt-3 text-sm bg-muted/50 p-2 rounded">
+                            <span className="font-medium text-xs text-muted-foreground">Reason:</span>
+                            <p className="mt-1">{a.reason}</p>
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>

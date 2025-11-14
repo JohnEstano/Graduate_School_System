@@ -199,16 +199,22 @@ export default function TableRegistrar({ rows, programs, onVisibleCountChange, o
   const doApproveMany = () => {
     if (!onBulkAction || selectedPendingIds.length === 0) return;
     onBulkAction(selectedPendingIds, 'approve');
-    setSelected(new Set());
-    setApproveManyOpen(false);
+    // Defer state cleanup to allow parent to process
+    setTimeout(() => {
+      setSelected(new Set());
+      setApproveManyOpen(false);
+    }, 100);
   };
   const doRejectMany = () => {
     const reason = rejectManyReason.trim();
     if (!onBulkAction || selectedPendingIds.length === 0 || reason.length < 3) return;
     onBulkAction(selectedPendingIds, 'reject', reason);
-    setSelected(new Set());
-    setRejectManyOpen(false);
-    setRejectManyReason('');
+    // Defer state cleanup to allow parent to process
+    setTimeout(() => {
+      setSelected(new Set());
+      setRejectManyOpen(false);
+      setRejectManyReason('');
+    }, 100);
   };
   // Retrieve flow is not included for registrar at this time
 
