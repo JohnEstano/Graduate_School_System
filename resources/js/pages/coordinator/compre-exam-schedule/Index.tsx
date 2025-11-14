@@ -148,6 +148,9 @@ const SUBJECT_PRESETS: Record<string, { code?: string; name: string }[]> = {
 
 /* ======================= Page ======================= */
 
+// Set this to true to enable semester-based school years (First Sem 2025-2026, Second Sem 2025-2026, Summer 2025-2026...)
+const USE_SEMESTER_MODE = false;
+
 export default function CoordinatorCompreExamScheduleIndex() {
   const { props } = usePage<PageProps>();
 
@@ -160,7 +163,19 @@ export default function CoordinatorCompreExamScheduleIndex() {
   const displayPrograms = useMemo(() => ['All', ...programs], [programs]);
 
   const defaultSY = getDefaultSY();
-  const syOptions = props.schoolYears?.length ? props.schoolYears : getSYOptions(4, defaultSY);
+  const syOptions = useMemo(() => {
+    // Always use the mode setting, ignore backend schoolYears when semester mode is enabled
+    const options = USE_SEMESTER_MODE ? getSemesterOptions(4, defaultSY) : getSYOptions(4, defaultSY);
+    console.log('Semester mode enabled:', USE_SEMESTER_MODE);
+    console.log('Generated options:', options);
+    return options;
+  }, [defaultSY]);
+
+  // Get default value based on mode
+  const getDefaultSchoolYear = () => {
+    const options = USE_SEMESTER_MODE ? getSemesterOptions(4, defaultSY) : getSYOptions(4, defaultSY);
+    return options[0] || (USE_SEMESTER_MODE ? `First Sem ${defaultSY}` : defaultSY);
+  };
 
   // Search state must come before any effect that uses `dq`
   const [q, setQ] = useState('');
@@ -197,9 +212,14 @@ export default function CoordinatorCompreExamScheduleIndex() {
     }
   }, [programOptions]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const [schoolYear, setSchoolYear] = useState<string>(
-    syOptions.includes(defaultSY) ? defaultSY : (syOptions[0] || defaultSY)
-  );
+  const [schoolYear, setSchoolYear] = useState<string>('');
+
+  // Initialize schoolYear after syOptions is ready
+  useEffect(() => {
+    if (!schoolYear && syOptions.length > 0) {
+      setSchoolYear(syOptions[0]);
+    }
+  }, [syOptions]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // --- data
   const [rows, setRows] = useState<Offering[]>([]);
@@ -209,7 +229,7 @@ export default function CoordinatorCompreExamScheduleIndex() {
   function resetFilters() {
     // Program -> All, SY -> current default, Status -> All, Search -> empty
     setProgram('All');
-    setSchoolYear(defaultSY);
+    setSchoolYear(syOptions[0] || defaultSY);
     setStatusFilter('all');
     setQ('');
   }
@@ -619,7 +639,9 @@ export default function CoordinatorCompreExamScheduleIndex() {
     const sy = String((form.school_year ?? '') || schoolYear).trim();
     const name = String(form.subject_name ?? '').trim();
     const proctorName = String(form.proctor ?? '').trim();
-    const syOk = /^\d{4}-\d{4}$/.test(sy);
+    // Validate school year format - either "YYYY-YYYY" or "Semester YYYY-YYYY"
+    const syOk = /^\d{4}-\d{4}$/.test(sy) || /^(First Sem|Second Sem|Summer) \d{4}-\d{4}$/.test(sy);
+    console.log('Validation - School Year:', sy, 'Valid:', syOk);
     // time ordering: if both provided, end must be after start
     const st = toHHmm(form.start_time || '');
     const et = toHHmm(form.end_time || '');
@@ -637,7 +659,9 @@ export default function CoordinatorCompreExamScheduleIndex() {
       return d < today;
     })();
     // Duplicate and venue conflicts block save
-    return !!(prog && syOk && name && proctorName) && !invalidTime && !invalidDate && !duplicateConflict && !venueConflict;
+    const valid = !!(prog && syOk && name && proctorName) && !invalidTime && !invalidDate && !duplicateConflict && !venueConflict;
+    console.log('Form valid:', valid, {prog, syOk, name, proctorName, invalidTime, invalidDate, duplicateConflict, venueConflict});
+    return valid;
     }, [form.program, form.school_year, form.subject_name, form.start_time, form.end_time, form.exam_date, form.proctor, program, schoolYear, duplicateConflict, venueConflict]);
 
   // Helper to apply a suggestion
@@ -773,10 +797,12 @@ export default function CoordinatorCompreExamScheduleIndex() {
               </Select>
             </div>
 
-            <div className="w-40">
+            <div className="w-56">
               <Label className="text-xs text-muted-foreground">School Year</Label>
               <Select value={schoolYear} onValueChange={setSchoolYear}>
-                <SelectTrigger className="h-9 mt-1"><SelectValue placeholder="YYYY-YYYY" /></SelectTrigger>
+                <SelectTrigger className="h-9 mt-1">
+                  <SelectValue placeholder={USE_SEMESTER_MODE ? "Semester YYYY-YYYY" : "YYYY-YYYY"} />
+                </SelectTrigger>
                 <SelectContent>
                   {syOptions.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
                 </SelectContent>
@@ -1205,6 +1231,23 @@ function getSYOptions(nYears: number, anchorSY = getDefaultSY()): string[] {
   for (let i = 0; i < nYears; i++) {
     const f = from - i;
     out.push(`${f}-${f + 1}`);
+  }
+  return out;
+}
+
+function getSemesterOptions(nYears: number, anchorSY = getDefaultSY()): string[] {
+  // Generate semester-based options (First Sem, Second Sem, Summer) for multiple years
+  const [fromStr] = anchorSY.split('-');
+  const from = Number(fromStr) || new Date().getFullYear();
+  const out: string[] = [];
+  const semesters = ['First Sem', 'Second Sem', 'Summer'];
+  
+  for (let i = 0; i < nYears; i++) {
+    const f = from - i;
+    const academicYear = `${f}-${f + 1}`;
+    semesters.forEach(sem => {
+      out.push(`${sem} ${academicYear}`);
+    });
   }
   return out;
 }
