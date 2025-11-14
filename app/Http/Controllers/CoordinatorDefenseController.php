@@ -191,6 +191,9 @@ class CoordinatorDefenseController extends Controller
 
     public function scheduleDefense(Request $request, DefenseRequest $defenseRequest)
     {
+        // Remove the coordinator approval requirement - scheduling happens BEFORE approval
+        // Coordinators can schedule at any time during their review process
+        
         // Check if this is an update (defense already has a schedule) or new schedule
         $isUpdate = !empty($defenseRequest->scheduled_date);
         
@@ -204,6 +207,7 @@ class CoordinatorDefenseController extends Controller
             'defense_mode' => 'required|in:face-to-face,online',
             'defense_venue' => 'required|string|max:255',
             'scheduling_notes' => 'nullable|string|max:1000',
+            'send_email' => 'nullable|boolean', // ISSUE #6: Email confirmation parameter
         ]);
         
         // Validate that end time is after start time manually
@@ -282,7 +286,10 @@ class CoordinatorDefenseController extends Controller
             $scheduleDate = Carbon::parse($validated['scheduled_date'])->format('M d, Y');
             $timeRange = Carbon::parse($validated['scheduled_time'])->format('g:i A')
                 .' - '.Carbon::parse($validated['scheduled_end_time'])->format('g:i A');
-            $this->createSchedulingNotifications($defenseRequest,$scheduleDate,$timeRange,$validated);
+            
+            // ISSUE #6 & #7: Pass send_email flag to notification method
+            $sendEmails = $validated['send_email'] ?? false;
+            $this->createSchedulingNotifications($defenseRequest,$scheduleDate,$timeRange,$validated, $sendEmails);
 
             return back()->with([
                 'success'=>"Defense scheduled for {$scheduleDate} ({$timeRange})",
@@ -385,7 +392,7 @@ class CoordinatorDefenseController extends Controller
         ]);
     }
 
-    private function createSchedulingNotifications(DefenseRequest $defenseRequest, string $scheduleDate, string $timeRange, array $validated)
+    private function createSchedulingNotifications(DefenseRequest $defenseRequest, string $scheduleDate, string $timeRange, array $validated, bool $sendEmails = false)
     {
         if ($defenseRequest->submitted_by) {
             Notification::create([
@@ -396,11 +403,13 @@ class CoordinatorDefenseController extends Controller
                 'link' => '/defense-requirements',
             ]);
             
-            // Send email notification to student
-            $student = User::find($defenseRequest->submitted_by);
-            if ($student && $student->email) {
-                Mail::to($student->email)
-                    ->queue(new DefenseScheduled($defenseRequest, $student));
+            // ISSUE #6 & #7: Send email notification to student only if requested
+            if ($sendEmails) {
+                $student = User::find($defenseRequest->submitted_by);
+                if ($student && $student->email) {
+                    Mail::to($student->email)
+                        ->queue(new DefenseScheduled($defenseRequest, $student));
+                }
             }
         }
 
@@ -432,6 +441,12 @@ class CoordinatorDefenseController extends Controller
                     'message'=>"Assigned to {$defenseRequest->first_name} {$defenseRequest->last_name}'s defense: {$scheduleDate} {$timeRange} at {$validated['defense_venue']}",
                     'link'=>'/defense-requests',
                 ]);
+                
+                // ISSUE #7: Send email to panel members if requested
+                if ($sendEmails && $panelUser->email) {
+                    Mail::to($panelUser->email)
+                        ->queue(new DefenseScheduled($defenseRequest, $panelUser));
+                }
             }
         }
 
@@ -443,6 +458,15 @@ class CoordinatorDefenseController extends Controller
                 'message'=>"Defense for {$defenseRequest->first_name} {$defenseRequest->last_name}: {$scheduleDate} {$timeRange}.",
                 'link'=>'/defense-requests',
             ]);
+            
+            // ISSUE #7: Send email to adviser if requested
+            if ($sendEmails) {
+                $adviser = User::find($defenseRequest->adviser_user_id);
+                if ($adviser && $adviser->email) {
+                    Mail::to($adviser->email)
+                        ->queue(new DefenseScheduled($defenseRequest, $adviser));
+                }
+            }
         }
     }
 
@@ -542,7 +566,7 @@ class CoordinatorDefenseController extends Controller
         }
         
         // Check if panels are assigned
-        $panels = $defenseRequest->panelists()->get();
+        $panels = collect($defenseRequest->panelists); // use accessor (not a relation)
         if ($panels->isEmpty()) {
             $missingFields[] = 'Panel Members (at least one panel member must be assigned)';
         }
@@ -595,7 +619,7 @@ class CoordinatorDefenseController extends Controller
         $student = $defenseRequest->user;
         try {
             if ($student && $student->email) {
-                Mail::to($student->email)->send(new \App\Mail\DefenseScheduledStudent($defenseRequest));
+                Mail::to($student->email)->queue(new \App\Mail\DefenseScheduledStudent($defenseRequest));
                 $emailsSent[] = "Student: {$student->email}";
                 Log::info('Defense notification sent to student', [
                     'defense_request_id' => $defenseRequest->id,
@@ -615,7 +639,7 @@ class CoordinatorDefenseController extends Controller
         $adviser = $defenseRequest->adviserUser;
         try {
             if ($adviser && $adviser->email) {
-                Mail::to($adviser->email)->send(new \App\Mail\DefenseScheduledAdviser($defenseRequest));
+                Mail::to($adviser->email)->queue(new \App\Mail\DefenseScheduledAdviser($defenseRequest));
                 $emailsSent[] = "Adviser: {$adviser->email}";
                 Log::info('Defense notification sent to adviser', [
                     'defense_request_id' => $defenseRequest->id,
@@ -632,20 +656,21 @@ class CoordinatorDefenseController extends Controller
         }
 
         // 3. Send emails to panel members
-        $panels = $defenseRequest->panelists()->get();
+        $panels = collect($defenseRequest->panelists); // use accessor (not ->panelists()->get())
         foreach ($panels as $panel) {
             try {
-                if ($panel->email) {
-                    $role = isset($panel->pivot->role) ? $panel->pivot->role : 'Panel Member';
-                    Mail::to($panel->email)->send(new \App\Mail\DefensePanelInvitation(
+                $email = $panel->email ?? null;
+                if ($email) {
+                    $role = (isset($panel->pivot) && isset($panel->pivot->role)) ? $panel->pivot->role : 'Panel Member';
+                    Mail::to($email)->queue(new \App\Mail\DefensePanelInvitation(
                         $defenseRequest, 
                         $panel, 
                         $role
                     ));
-                    $emailsSent[] = "Panel ({$role}): {$panel->email}";
+                    $emailsSent[] = "Panel ({$role}): {$email}";
                     Log::info('Defense panel invitation sent', [
                         'defense_request_id' => $defenseRequest->id,
-                        'panel_email' => $panel->email,
+                        'panel_email' => $email,
                         'role' => $role
                     ]);
                 }
@@ -841,7 +866,26 @@ class CoordinatorDefenseController extends Controller
             'defense_panelist4' => 'nullable|string|max:255',
         ]);
 
+        \Log::info('🔵 assignPanelsJson called', [
+            'defense_request_id' => $defenseRequest->id,
+            'incoming_data' => $data,
+            'before_update' => [
+                'defense_chairperson' => $defenseRequest->defense_chairperson,
+                'defense_panelist1' => $defenseRequest->defense_panelist1,
+                'defense_panelist2' => $defenseRequest->defense_panelist2,
+            ]
+        ]);
+
         $defenseRequest->update($data);
+
+        \Log::info('✅ Panels saved', [
+            'defense_request_id' => $defenseRequest->id,
+            'after_update' => [
+                'defense_chairperson' => $defenseRequest->defense_chairperson,
+                'defense_panelist1' => $defenseRequest->defense_panelist1,
+                'defense_panelist2' => $defenseRequest->defense_panelist2,
+            ]
+        ]);
 
         return response()->json(['ok' => true, 'request' => $defenseRequest]);
     }
@@ -862,7 +906,8 @@ class CoordinatorDefenseController extends Controller
             'scheduled_end_time'  => 'required|date_format:H:i',
             'defense_mode'        => 'required|in:face-to-face,online',
             'defense_venue'       => 'required|string|max:255',
-            'scheduling_notes'    => 'nullable|string|max:1000'
+            'scheduling_notes'    => 'nullable|string|max:1000',
+            'send_email'          => 'nullable|boolean', // ISSUE #6: Email confirmation parameter
         ]);
         
         // Validate that end time is after start time manually
@@ -876,15 +921,32 @@ class CoordinatorDefenseController extends Controller
         try {
             DB::beginTransaction();
 
+            \Log::info('🔵 scheduleDefenseJson called', [
+                'defense_request_id' => $defenseRequest->id,
+                'incoming_data' => $data,
+                'before_update' => [
+                    'scheduled_date' => $defenseRequest->scheduled_date,
+                    'scheduled_time' => $defenseRequest->scheduled_time,
+                ]
+            ]);
+
             $origState = $defenseRequest->workflow_state;
-            // Allow scheduling from coordinator-review, coordinator-approved, panels-assigned, or scheduled
+            
+            // Remove the coordinator approval requirement - scheduling happens BEFORE approval
+            // Coordinators can schedule at any time during their review process
+            
+            // Allow scheduling from adviser-approved (endorsed), coordinator-review, coordinator-approved, panels-assigned, or scheduled
             if (!in_array($origState, [
-                'coordinator-review', 'coordinator-approved', 'panels-assigned', 'scheduled'
+                'adviser-approved', 'coordinator-review', 'coordinator-approved', 'panels-assigned', 'scheduled'
             ])) {
                 return response()->json([
-                    'error'=>"Cannot schedule from state '{$origState}'"
+                    'error'=>"Cannot schedule from state '{$origState}'. Defense must be endorsed by adviser first."
                 ],422);
             }
+
+            // Extract send_email before assigning to model (it's not a database column)
+            $sendEmails = $data['send_email'] ?? false;
+            unset($data['send_email']); // Remove from data array before mass assignment
 
             foreach ($data as $k=>$v) {
                 $defenseRequest->{$k} = $v;
@@ -915,7 +977,22 @@ class CoordinatorDefenseController extends Controller
             $defenseRequest->last_status_updated_by = Auth::id();
             $defenseRequest->save();
 
+            \Log::info('✅ Schedule saved', [
+                'defense_request_id' => $defenseRequest->id,
+                'after_save' => [
+                    'scheduled_date' => $defenseRequest->scheduled_date,
+                    'scheduled_time' => $defenseRequest->scheduled_time,
+                ]
+            ]);
+
             DB::commit();
+            
+            // ISSUE #6 & #7: Send notifications and optionally emails
+            $scheduleDate = Carbon::parse($data['scheduled_date'])->format('M d, Y');
+            $timeRange = Carbon::parse($data['scheduled_time'])->format('g:i A')
+                .' - '.Carbon::parse($data['scheduled_end_time'])->format('g:i A');
+            // Note: $sendEmails was already extracted above before mass assignment
+            $this->createSchedulingNotifications($defenseRequest, $scheduleDate, $timeRange, $data, $sendEmails);
 
             return response()->json([
                 'ok'=>true,
@@ -1033,5 +1110,108 @@ class CoordinatorDefenseController extends Controller
             ]);
             return response()->json(['error' => 'Failed to update status.'], 500);
         }
+    }
+
+    public function details($id)
+    {
+        $user = Auth::user();
+        if (!$user || !in_array($user->role, ['Coordinator', 'Administrative Assistant', 'Dean'])) {
+            abort(403);
+        }
+
+        $defenseRequest = \App\Models\DefenseRequest::findOrFail($id);
+
+        // Only load real relationships (NOT 'panelists')
+        $defenseRequest->load(['user', 'adviserUser', 'aaVerification']);
+
+        // Compose panelists list manually
+        $panelistFields = [
+            $defenseRequest->defense_chairperson,
+            $defenseRequest->defense_panelist1,
+            $defenseRequest->defense_panelist2,
+            $defenseRequest->defense_panelist3,
+            $defenseRequest->defense_panelist4,
+        ];
+        
+        $panelists = collect($panelistFields)
+            ->filter()
+            ->map(function ($panelistIdOrName) {
+                if (is_numeric($panelistIdOrName)) {
+                    $p = \App\Models\Panelist::find($panelistIdOrName);
+                    if ($p) {
+                        return ['id' => $p->id, 'name' => $p->name, 'email' => $p->email ?? ''];
+                    }
+                }
+                // Try to find by name
+                $p = \App\Models\Panelist::where('name', $panelistIdOrName)->first();
+                if ($p) {
+                    return ['id' => $p->id, 'name' => $p->name, 'email' => $p->email ?? ''];
+                }
+                return ['id' => null, 'name' => $panelistIdOrName, 'email' => ''];
+            })->values()->all();
+
+        // Return as Inertia page
+        return \Inertia\Inertia::render('coordinator/submissions/defense-request/details', [
+            'defenseRequest' => [
+                'id' => $defenseRequest->id,
+                'first_name' => $defenseRequest->first_name,
+                'middle_name' => $defenseRequest->middle_name,
+                'last_name' => $defenseRequest->last_name,
+                'school_id' => $defenseRequest->school_id,
+                'program' => $defenseRequest->program,
+                'thesis_title' => $defenseRequest->thesis_title,
+                'defense_type' => $defenseRequest->defense_type,
+                'status' => $defenseRequest->status,
+                'priority' => $defenseRequest->priority,
+                'workflow_state' => $defenseRequest->workflow_state,
+                'scheduled_date' => $defenseRequest->scheduled_date?->format('Y-m-d'),
+                'scheduled_time' => $defenseRequest->scheduled_time,
+                'scheduled_end_time' => $defenseRequest->scheduled_end_time,
+                'defense_mode' => $defenseRequest->defense_mode,
+                'defense_venue' => $defenseRequest->defense_venue,
+                'scheduling_notes' => $defenseRequest->scheduling_notes,
+                'adviser' => $defenseRequest->defense_adviser,
+                'submitted_at' => $defenseRequest->adviser_reviewed_at
+                    ? (is_object($defenseRequest->adviser_reviewed_at)
+                        ? $defenseRequest->adviser_reviewed_at->format('Y-m-d H:i:s')
+                        : date('Y-m-d H:i:s', strtotime($defenseRequest->adviser_reviewed_at)))
+                    : null,
+                'panelists' => $panelists,
+                'defense_adviser' => $defenseRequest->defense_adviser,
+                'defense_chairperson' => $defenseRequest->defense_chairperson,
+                'defense_panelist1' => $defenseRequest->defense_panelist1,
+                'defense_panelist2' => $defenseRequest->defense_panelist2,
+                'defense_panelist3' => $defenseRequest->defense_panelist3,
+                'defense_panelist4' => $defenseRequest->defense_panelist4,
+                'amount' => $defenseRequest->amount,
+                'reference_no' => $defenseRequest->reference_no,
+                'coordinator_status' => $defenseRequest->coordinator_status,
+                'adviser_status' => $defenseRequest->adviser_status,
+                'attachments' => [
+                    'advisers_endorsement' => $defenseRequest->advisers_endorsement,
+                    'rec_endorsement' => $defenseRequest->rec_endorsement,
+                    'proof_of_payment' => $defenseRequest->proof_of_payment,
+                    'manuscript_proposal' => $defenseRequest->manuscript_proposal,
+                    'similarity_index' => $defenseRequest->similarity_index,
+                    'avisee_adviser_attachment' => $defenseRequest->avisee_adviser_attachment,
+                    'ai_detection_certificate' => $defenseRequest->ai_detection_certificate,
+                    'endorsement_form' => $defenseRequest->endorsement_form,
+                ],
+                'last_status_updated_by' => $defenseRequest->last_status_updated_by,
+                'last_status_updated_at' => $defenseRequest->last_status_updated_at,
+                'workflow_history' => $defenseRequest->workflow_history ?? [],
+                'program_level' => \App\Helpers\ProgramLevel::getLevel($defenseRequest->program),
+                'coordinator' => $defenseRequest->coordinator_user_id ? [
+                    'id' => $defenseRequest->coordinator_user_id,
+                    'name' => optional(\App\Models\User::find($defenseRequest->coordinator_user_id))->name,
+                    'email' => optional(\App\Models\User::find($defenseRequest->coordinator_user_id))->email,
+                ] : null,
+                // ✅ ADD AA VERIFICATION DATA
+                'aa_verification_status' => optional($defenseRequest->aaVerification)->status ?? 'pending',
+                'aa_verification_id' => optional($defenseRequest->aaVerification)->id,
+                'invalid_comment' => optional($defenseRequest->aaVerification)->invalid_comment,
+            ],
+            'userRole' => $user->role,
+        ]);
     }
 }

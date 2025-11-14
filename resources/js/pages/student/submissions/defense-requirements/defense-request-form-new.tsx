@@ -289,7 +289,7 @@ export default function DefenseRequestForm() {
                             </Button>
                         </div>
                         {showAdviserDropdown && adviserCandidates.length > 0 && (
-                            <div className="mt-1 max-h-40 w-full overflow-auto rounded border bg-white p-1 text-sm shadow">
+                            <div className="mt-1 max-h-40 w-full overflow-auto rounded border bg-white dark:bg-zinc-900 dark:border-zinc-700 p-1 text-sm shadow">
                                 {adviserCandidates.map(name => (
                                     <button
                                         type="button"
@@ -317,6 +317,9 @@ export default function DefenseRequestForm() {
             content: (
                 <>
                     <HeadingSmall title="Step 3: Required Attachments" />
+                    <p className="mb-4 text-sm text-gray-600">
+                        Please upload the required documents below. <strong>PDF files only</strong> are accepted for all attachments.
+                    </p>
                     {([
                         ['advisersEndorsement', "Adviser's Endorsement", advisersRef],
                         ['recEndorsement', 'REC Endorsement', recRef],
@@ -447,7 +450,7 @@ export default function DefenseRequestForm() {
                 )}
 
                 {submitting && (
-                    <div className="absolute inset-0 bg-white/60 backdrop-blur-sm flex items-center justify-center pointer-events-none">
+                    <div className="absolute inset-0 bg-white/60 dark:bg-zinc-900/60 backdrop-blur-sm flex items-center justify-center pointer-events-none">
                         <div className="animate-spin h-8 w-8 rounded-full border-2 border-rose-500 border-t-transparent" />
                     </div>
                 )}

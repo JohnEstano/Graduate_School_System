@@ -6,176 +6,244 @@
     <title>Graduate School System Invitation</title>
     <style>
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif,
+                'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol';
             line-height: 1.6;
             color: #333;
-            max-width: 600px;
-            margin: 0 auto;
-            padding: 20px;
+            margin: 0;
+            padding: 0;
             background-color: #f4f4f4;
         }
-        .container {
+
+        .email-wrapper {
+            width: 100%;
+            background-color: #f4f4f4;
+            padding: 20px 0;
+        }
+
+        .email-container {
+            max-width: 600px;
+            margin: 0 auto;
             background-color: #ffffff;
-            border-radius: 8px;
             padding: 30px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
-        .header {
-            text-align: center;
-            border-bottom: 3px solid #dc2626;
-            padding-bottom: 20px;
-            margin-bottom: 30px;
-        }
+
         .logo {
-            max-width: 80px;
+            max-width: 50px;
             height: auto;
-            margin-bottom: 10px;
         }
-        h1 {
-            color: #dc2626;
-            font-size: 24px;
-            margin: 10px 0;
-        }
-        .subtitle {
-            color: #666;
+
+        .header-title {
+            color: #FF4B64;
             font-size: 14px;
+            font-weight: bold;
         }
-        .content {
+
+        h1 {
+            font-size: 32px;
+            font-weight: bold;
+            margin-top: 0;
             margin-bottom: 30px;
-        }
-        .greeting {
-            font-size: 18px;
             color: #333;
-            margin-bottom: 15px;
         }
+
         .message {
             font-size: 16px;
             line-height: 1.8;
             margin-bottom: 20px;
+            color: #333;
         }
-        .highlight-box {
-            background-color: #fef2f2;
-            border-left: 4px solid #dc2626;
-            padding: 15px;
+
+        .notice-box {
+            background-color: #f3f4f6;
+            padding: 20px;
             margin: 20px 0;
         }
-        .credentials {
+
+        .notice-icon {
+            font-size: 20px;
+            color: #FF4B64;
+        }
+
+        .get-started-box {
+            border: 1px solid #e5e7eb;
+            padding: 20px;
+            margin: 20px 0;
+        }
+
+        .get-started-box h2 {
+            font-size: 18px;
             font-weight: bold;
-            color: #dc2626;
+            margin-top: 0;
+            margin-bottom: 15px;
         }
-        .button-container {
-            text-align: center;
-            margin: 30px 0;
+
+        .get-started-box ol {
+            padding-left: 20px;
+            margin: 0;
         }
+
+        .get-started-box li {
+            margin-bottom: 10px;
+        }
+
         .cta-button {
             display: inline-block;
-            background-color: #dc2626;
-            color: #ffffff;
-            padding: 12px 30px;
+            background-color: #FF4B64;
+            color: #ffffff !important;
+            padding: 15px 35px;
             text-decoration: none;
-            border-radius: 5px;
             font-weight: bold;
             font-size: 16px;
-        }
-        .cta-button:hover {
-            background-color: #b91c1c;
-        }
-        .footer {
-            text-align: center;
-            margin-top: 30px;
-            padding-top: 20px;
-            border-top: 1px solid #e5e5e5;
-            font-size: 14px;
-            color: #666;
-        }
-        .instructions {
-            background-color: #f9fafb;
-            padding: 15px;
-            border-radius: 5px;
             margin: 20px 0;
         }
-        .instructions ol {
-            margin: 10px 0;
-            padding-left: 20px;
+
+        .footer-text {
+            text-align: center;
+            font-size: 12px;
+            color: #6b7280;
+            line-height: 1.6;
         }
-        .instructions li {
-            margin: 8px 0;
+
+        .footer-logo {
+            max-width: 60px;
+            margin-bottom: 10px;
+        }
+
+        /* Mobile responsiveness */
+        @media (max-width: 600px) {
+            .email-container {
+                padding: 20px !important;
+            }
+
+            h1 {
+                font-size: 24px !important;
+            }
+
+            .message {
+                font-size: 14px !important;
+            }
+
+            .notice-box {
+                padding: 15px !important;
+            }
+
+            .get-started-box {
+                padding: 15px !important;
+            }
+
+            .get-started-box h2 {
+                font-size: 16px !important;
+            }
+
+            .cta-button {
+                display: block !important;
+                width: 100% !important;
+                text-align: center;
+                padding: 12px 20px !important;
+            }
         }
     </style>
 </head>
+
 <body>
-    <div class="container">
-        <div class="header">
-            <img src="{{ asset('grad_logo.png') }}" alt="Graduate School Logo" class="logo">
-            <h1>Graduate School System</h1>
-            <p class="subtitle">University of the Immaculate Conception</p>
-        </div>
+    <div class="email-wrapper">
+        <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #f4f4f4;">
+            <tr>
+                <td align="center" style="padding: 20px 0;">
+                    <table class="email-container" width="600" cellpadding="0" cellspacing="0" border="0" style="background-color: #ffffff; max-width: 600px;">
+                        <tr>
+                            <td style="padding: 30px;">
+                                <!-- Header -->
+                                <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                                    <tr>
+                                        <td width="50">
+                                            <img src="{{ asset('gss-uic-logo-v2.png') }}" alt="UIC Graduate School Logo" class="logo" style="max-width: 50px; height: auto;">
+                                        </td>
+                                        <td align="right">
+                                            <span class="header-title" style="color: #FF4B64; font-size: 14px; font-weight: bold;">Graduate School System</span>
+                                        </td>
+                                    </tr>
+                                </table>
 
-        <div class="content">
-            <p class="greeting">Dear {{ $adviserName }},</p>
+                                <!-- Testing Disclaimer -->
+                                @include('emails.partials.testing-disclaimer')
 
-            <p class="message">
-                We hope this message finds you well. You have been registered as an adviser in the 
-                <strong>Graduate School System</strong> by <strong>{{ $coordinatorName }}</strong>.
-            </p>
+                                <!-- Main Heading -->
+                                <h1 style="font-size: 32px; font-weight: bold; margin-top: 20px; margin-bottom: 30px; color: #333;">You have been registered as an Adviser!</h1>
 
-            <div class="highlight-box">
-                <p style="margin: 0;">
-                    <strong>📢 Important Notice:</strong> To activate your account and access the system, 
-                    please log in using your <span class="credentials">my.uic.edu.ph</span> credentials.
-                </p>
-            </div>
+                                <!-- Content -->
+                                <p class="message" style="font-size: 16px; line-height: 1.8; margin-bottom: 20px; color: #333;">
+                                    <strong>Dear, {{ $adviserName }}</strong>
+                                </p>
+                                <p class="message" style="font-size: 16px; line-height: 1.8; margin-bottom: 20px; color: #333;">
+                                    We hope this message finds you well. You have been registered as an adviser in
+                                    the <strong>Graduate School System</strong> by <strong>{{ $coordinatorName }}</strong>.
+                                </p>
 
-            <p class="message">
-                The Graduate School System is designed to streamline thesis defense management, 
-                student advising, and academic coordination. Once you log in, you will be able to:
-            </p>
+                                <!-- Get Started Box -->
+                                <table width="100%" cellpadding="0" cellspacing="0" border="0" class="get-started-box" style="border: 1px solid #e5e7eb; margin: 20px 0;">
+                                    <tr>
+                                        <td style="padding: 20px;">
+                                            <h2 style="font-size: 18px; font-weight: bold; margin-top: 0; margin-bottom: 15px;">To Get Started:</h2>
+                                            <ol style="padding-left: 20px; margin: 0;">
+                                                <li style="margin-bottom: 10px;">Click the button below to access the login page</li>
+                                                <li style="margin-bottom: 10px;">Enter your <strong>my.uic.edu.ph</strong> username and password</li>
+                                                <li style="margin-bottom: 10px;">Your account will be automatically activated upon successful login</li>
+                                            </ol>
+                                        </td>
+                                    </tr>
+                                </table>
 
-            <div class="instructions">
-                <ul>
-                    <li>✓ View and manage your advisees</li>
-                    <li>✓ Review defense requirement submissions</li>
-                    <li>✓ Track student progress and milestones</li>
-                    <li>✓ Communicate with coordinators and students</li>
-                    <li>✓ Access important documents and schedules</li>
-                </ul>
-            </div>
+                                <!-- Notice Box -->
+                                <table width="100%" cellpadding="0" cellspacing="0" border="0" class="notice-box" style="background-color: #f3f4f6; margin: 20px 0;">
+                                    <tr>
+                                        <td style="padding: 20px;">
+                                            <table cellpadding="0" cellspacing="0" border="0">
+                                                <tr>
+                                                    <td valign="top" style="padding-right: 15px;">
+                                                        <span class="notice-icon" style="font-size: 20px; color: #FF4B64;">❗</span>
+                                                    </td>
+                                                    <td>
+                                                        <p style="margin: 0; font-size: 16px; line-height: 1.8;">
+                                                            <strong>Important Notice:</strong> To activate your account and access the system, please
+                                                            log in using your <strong>my.uic.edu.ph</strong> credentials.
+                                                        </p>
+                                                    </td>
+                                                </tr>
+                                            </table>
+                                        </td>
+                                    </tr>
+                                </table>
 
-            <p class="message">
-                <strong>To get started:</strong>
-            </p>
+                                <!-- Button -->
+                                <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                                    <tr>
+                                        <td align="center" style="padding: 20px 0;">
+                                            <a href="{{ config('app.url') }}/login" class="cta-button" style="display: inline-block; background-color: #FF4B64; color: #ffffff; padding: 15px 35px; text-decoration: none; font-weight: bold; font-size: 16px;">
+                                                Log In to Graduate School System
+                                            </a>
+                                        </td>
+                                    </tr>
+                                </table>
 
-            <div class="instructions">
-                <ol>
-                    <li>Click the button below to access the login page</li>
-                    <li>Enter your <strong>my.uic.edu.ph</strong> email and password</li>
-                    <li>Your account will be automatically activated upon successful login</li>
-                </ol>
-            </div>
+                                <p class="message" style="font-size: 14px; line-height: 1.8; color: #6b7280;">
+                                    If you encounter any issues or have questions about the system, please don't hesitate
+                                    to contact the Graduate School office or your program coordinator.
+                                </p>
+                            </td>
+                        </tr>
 
-            <div class="button-container">
-                <a href="{{ config('app.url') }}/login" class="cta-button">
-                    Log In to Graduate School System
-                </a>
-            </div>
-
-            <p class="message" style="font-size: 14px; color: #666;">
-                If you encounter any issues or have questions about the system, please don't hesitate 
-                to contact the Graduate School office or your program coordinator.
-            </p>
-        </div>
-
-        <div class="footer">
-            <p>
-                <strong>University of the Immaculate Conception</strong><br>
-                Graduate School Office<br>
-                Father Selga St., Davao City, Philippines 8000
-            </p>
-            <p style="font-size: 12px; color: #999; margin-top: 15px;">
-                This is an automated message from the Graduate School System. 
-                Please do not reply to this email.
-            </p>
-        </div>
+                        <!-- Footer -->
+                        <tr>
+                            <td style="padding: 20px 30px; border-top: 1px solid #e5e7eb;">
+                                @include('emails.partials.footer')
+                            </td>
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+        </table>
     </div>
 </body>
 </html>

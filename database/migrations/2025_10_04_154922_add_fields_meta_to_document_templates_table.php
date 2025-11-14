@@ -12,7 +12,10 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('document_templates', function (Blueprint $table) {
-            $table->json('fields_meta')->nullable()->after('fields');
+            // Only add the column if it doesn't already exist
+            if (!Schema::hasColumn('document_templates', 'fields_meta')) {
+                $table->json('fields_meta')->nullable()->after('fields');
+            }
         });
     }
 
@@ -22,7 +25,9 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('document_templates', function (Blueprint $table) {
-            $table->dropColumn('fields_meta');
+            if (Schema::hasColumn('document_templates', 'fields_meta')) {
+                $table->dropColumn('fields_meta');
+            }
         });
     }
 };

@@ -1,13 +1,9 @@
-import { Button } from '@/components/ui/button';
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/table';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
-import { Eye, Check, X, AlertCircle, CheckCircle, CircleCheck } from 'lucide-react'; // <-- Add CircleCheck
+import { CircleCheck, Clock, ArrowRight, Banknote, Hourglass, AlertTriangle } from 'lucide-react';
 import { router } from '@inertiajs/react';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { getProgramAbbreviation } from '@/utils/program-abbreviations';
-import { useState } from 'react';
-import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 
 export type DefenseRequestSummary = {
   id: number;
@@ -34,7 +30,8 @@ export type DefenseRequestSummary = {
   amount?: number | null;
   reference_no?: string | null;
   coordinator?: string | null;
-  aa_verification_status?: 'pending' | 'verified' | 'rejected';
+  aa_verification_status?: 'pending' | 'ready_for_finance' | 'in_progress' | 'paid' | 'completed' | 'invalid';
+  invalid_comment?: string | null;
 };
 
 export type TableAllDefenseListProps = {
@@ -60,14 +57,33 @@ export type TableAllDefenseListProps = {
   totalCount?: number;
 };
 
-function getAaStatusBadge(status?: 'pending' | 'verified' | 'rejected') {
-  if (status === 'verified') {
-    return <Badge className="bg-green-100 text-green-700 border-green-200">Verified</Badge>;
+function getAaStatusBadge(status?: 'pending' | 'ready_for_finance' | 'in_progress' | 'paid' | 'completed' | 'invalid') {
+  if (status === 'completed') {
+    return <Badge className="bg-green-100 text-green-700 border-green-200 flex items-center gap-1"><CircleCheck className="h-3 w-3" />Completed</Badge>;
   }
-  if (status === 'rejected') {
-    return <Badge className="bg-red-100 text-red-700 border-red-200">Rejected</Badge>;
+  if (status === 'paid') {
+    return <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200 flex items-center gap-1"><Banknote className="h-3 w-3" />Paid</Badge>;
   }
-  return <Badge className="bg-yellow-100 text-yellow-700 border-yellow-200">Pending</Badge>;
+  if (status === 'ready_for_finance') {
+    return <Badge className="bg-blue-100 text-blue-700 border-blue-200 flex items-center gap-1"><ArrowRight className="h-3 w-3" />Ready for Finance</Badge>;
+  }
+  if (status === 'in_progress') {
+    return <Badge className="bg-amber-100 text-amber-700 border-amber-200 flex items-center gap-1"><Hourglass className="h-3 w-3" />In Progress</Badge>;
+  }
+  if (status === 'invalid') {
+    return <Badge className="bg-red-100 text-red-700 border-red-200 flex items-center gap-1"><AlertTriangle className="h-3 w-3" />Invalid</Badge>;
+  }
+  return <Badge className="bg-yellow-100 text-yellow-700 border-yellow-200 flex items-center gap-1"><Clock className="h-3 w-3" />Pending</Badge>;
+}
+
+// Helper to get status color for the indicator dot
+function getStatusDotColor(status?: 'pending' | 'ready_for_finance' | 'in_progress' | 'paid' | 'completed' | 'invalid') {
+  if (status === 'completed') return 'bg-green-500';
+  if (status === 'paid') return 'bg-emerald-500';
+  if (status === 'ready_for_finance') return 'bg-blue-500';
+  if (status === 'in_progress') return 'bg-amber-500';
+  if (status === 'invalid') return 'bg-red-500';
+  return 'bg-yellow-500'; // pending
 }
 
 export default function TableAllDefenseList({
@@ -92,14 +108,6 @@ export default function TableAllDefenseList({
   sidebarWidth = 260,
   totalCount,
 }: TableAllDefenseListProps) {
-  const [confirmDialog, setConfirmDialog] = useState<{
-    open: boolean;
-    ids: number[];
-    action: 'verified' | 'rejected' | null;
-  }>({ open: false, ids: [], action: null });
-
-  const [isLoading, setIsLoading] = useState(false);
-
   return (
     <div className="w-full box-border overflow-x-auto max-w-full border border-zinc-200 rounded-md bg-background transition-all duration-200">
       <div className="min-w-full">
@@ -125,19 +133,10 @@ export default function TableAllDefenseList({
               {columns.program && <TableHead className="px-2 min-w-[100px]">Program</TableHead>}
               {columns.coordinator && <TableHead className="px-2 min-w-[140px]">Program Coordinator</TableHead>}
               {columns.scheduled_date && <TableHead className="px-2 min-w-[120px]">Scheduled Date</TableHead>}
-              {columns.expected_amount && <TableHead className="px-2 min-w-[120px]">Expected Amount</TableHead>}
-              {columns.amount_paid && <TableHead className="px-2 min-w-[120px]">Amount Paid</TableHead>}
+              {columns.amount_paid && <TableHead className="px-2 min-w-[120px]">Amount</TableHead>}
               {columns.reference_no && <TableHead className="px-2 min-w-[120px]">Reference/OR No.</TableHead>}
               {columns.priority && <TableHead className="px-2 min-w-[80px]">Priority</TableHead>}
               {columns.status && <TableHead className="px-2 min-w-[100px] text-center">AA Status</TableHead>}
-              {columns.actions && (
-                <TableHead
-                  className="px-2 min-w-[80px] text-center sticky right-0 z-20 bg-background"
-                  style={{ boxShadow: '-2px 0 4px -2px rgba(0,0,0,0.04)' }}
-                >
-                  Actions
-                </TableHead>
-              )}
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -182,13 +181,17 @@ export default function TableAllDefenseList({
                     </TableCell>
                   )}
                   {columns.title && (
-                    <TableCell className="px-3 py-2 font-medium truncate leading-tight align-middle flex items-center gap-2" title={r.thesis_title}>
-                      <Badge variant="outline" className="shrink-0">{r.defense_type || '—'}</Badge>
-                      <span className="truncate">
-                        {(r.thesis_title && r.thesis_title.length > 32)
-                          ? r.thesis_title.slice(0, 32) + '…'
-                          : r.thesis_title}
-                      </span>
+                    <TableCell className="px-3 py-2 font-medium truncate leading-tight align-middle" title={r.thesis_title}>
+                      <div className="flex items-center gap-2">
+                        {/* Status indicator dot */}
+                        <div className={`w-2 h-2 rounded-full flex-shrink-0 ${getStatusDotColor(r.aa_verification_status)}`} />
+                        <Badge variant="outline" className="flex-shrink-0">{r.defense_type || '—'}</Badge>
+                        <span className="truncate">
+                          {(r.thesis_title && r.thesis_title.length > 32)
+                            ? r.thesis_title.slice(0, 32) + '…'
+                            : r.thesis_title}
+                        </span>
+                      </div>
                     </TableCell>
                   )}
                   {columns.presenter && (
@@ -205,13 +208,13 @@ export default function TableAllDefenseList({
                     <TableCell className="px-2 py-2 text-xs text-muted-foreground whitespace-nowrap align-middle">
                       {r.submitted_at
                         ? (() => {
-                            try {
-                              const d = new Date(r.submitted_at);
-                              return d.toLocaleString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
-                            } catch {
-                              return r.submitted_at;
-                            }
-                          })()
+                          try {
+                            const d = new Date(r.submitted_at);
+                            return d.toLocaleString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+                          } catch {
+                            return r.submitted_at;
+                          }
+                        })()
                         : '—'}
                     </TableCell>
                   )}
@@ -229,13 +232,6 @@ export default function TableAllDefenseList({
                     <TableCell className="px-2 py-2 text-xs text-muted-foreground whitespace-nowrap align-middle">
                       {r.scheduled_date
                         ? new Date(r.scheduled_date).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
-                        : '—'}
-                    </TableCell>
-                  )}
-                  {columns.expected_amount && (
-                    <TableCell className="px-2 py-2 text-xs text-muted-foreground whitespace-nowrap align-middle">
-                      {r.expected_rate != null
-                        ? `₱${Number(r.expected_rate).toLocaleString(undefined, { minimumFractionDigits: 2 })}`
                         : '—'}
                     </TableCell>
                   )}
@@ -261,40 +257,6 @@ export default function TableAllDefenseList({
                       {getAaStatusBadge(r.aa_verification_status)}
                     </TableCell>
                   )}
-                  {columns.actions && (
-                    <TableCell
-                      className="px-2 py-2 text-xs text-center align-middle sticky right-0 z-10 bg-background"
-                      style={{ boxShadow: '-2px 0 4px -2px rgba(0,0,0,0.04)' }}
-                    >
-                      {/* Approve button with CircleCheck icon */}
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="ml-1 action-btn"
-                        onClick={e => {
-                          e.stopPropagation();
-                          if (r.aa_verification_id)
-                            setConfirmDialog({ open: true, ids: [r.aa_verification_id], action: 'verified' });
-                        }}
-                        disabled={r.aa_verification_status === 'verified'}
-                      >
-                        <CircleCheck className="h-4 w-4 text-emerald-600" />
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="ml-1 action-btn"
-                        onClick={e => {
-                          e.stopPropagation();
-                          if (r.aa_verification_id)
-                            setConfirmDialog({ open: true, ids: [r.aa_verification_id], action: 'rejected' });
-                        }}
-                        disabled={r.aa_verification_status === 'rejected'}
-                      >
-                        <X className="h-4 w-4 text-red-600" />
-                      </Button>
-                    </TableCell>
-                  )}
                 </TableRow>
               );
             })}
@@ -311,64 +273,6 @@ export default function TableAllDefenseList({
           </TableBody>
         </Table>
       </div>
-      {/* Centralized Confirm Dialog */}
-      <Dialog open={confirmDialog.open} onOpenChange={open => setConfirmDialog(d => ({ ...d, open }))}>
-        <DialogContent>
-          <DialogTitle>Confirm Status Change</DialogTitle>
-          <DialogDescription>
-            {confirmDialog.ids.length > 1
-              ? `Are you sure you want to set ${confirmDialog.ids.length} requests to ${confirmDialog.action}?`
-              : `Are you sure you want to set this request to ${confirmDialog.action}?`}
-          </DialogDescription>
-          <div className="flex justify-end gap-2 mt-4">
-            <Button variant="ghost" onClick={() => setConfirmDialog({ open: false, ids: [], action: null })}>Cancel</Button>
-            <Button
-              disabled={isLoading}
-              onClick={async () => {
-                setIsLoading(true);
-                let res;
-                if (confirmDialog.ids.length === 1) {
-                  res = await fetch(`/aa/payment-verifications/${confirmDialog.ids[0]}/status`, {
-                    method: 'POST',
-                    headers: {
-                      'Content-Type': 'application/json',
-                      'X-CSRF-TOKEN': (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content || '',
-                    },
-                    body: JSON.stringify({ status: confirmDialog.action }),
-                  });
-                } else {
-                  res = await fetch(`/aa/payment-verifications/bulk-update`, {
-                    method: 'POST',
-                    headers: {
-                      'Content-Type': 'application/json',
-                      'X-CSRF-TOKEN': (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content || '',
-                    },
-                    body: JSON.stringify({
-                      verification_ids: confirmDialog.ids,
-                      status: confirmDialog.action,
-                    }),
-                  });
-                }
-                setIsLoading(false);
-                setConfirmDialog({ open: false, ids: [], action: null });
-                if (res.ok && setPaged) {
-                  setPaged(prev =>
-                    prev.map(row =>
-                      confirmDialog.ids.includes(row.aa_verification_id ?? -1)
-                        ? { ...row, aa_verification_status: confirmDialog.action } as DefenseRequestSummary
-                        : row
-                    )
-                  );
-                } else {
-                  alert('Failed to update status. Please try again.');
-                }
-              }}
-            >
-              Confirm
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

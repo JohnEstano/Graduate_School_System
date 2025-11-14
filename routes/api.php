@@ -8,6 +8,7 @@ use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\Api\StudentSearchController;
 use App\Http\Controllers\Api\ComprehensiveExamEligibilityController;
 use App\Http\Controllers\DocumentTemplateController;
+use App\Models\User;
 
 // Authenticated API routes
 Route::middleware('auth:sanctum')->group(function () {
@@ -23,12 +24,16 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::patch('panelists/bulk-status', [PanelistController::class, 'bulkUpdateStatus'])->name('api.panelists.bulk-status');
 
     // Defense Requests API
+    // Specific routes first (before generic patterns)
+    Route::get('defense-requests/count', [DefenseRequestController::class, 'count']);
+    Route::get('defense-requests/{defenseRequest}', [DefenseRequestController::class, 'apiShow']);
     Route::patch('defense-requests/{defenseRequest}/status', [DefenseRequestController::class, 'updateStatus']);
     Route::patch('defense-requests/{defenseRequest}/priority', [DefenseRequestController::class, 'updatePriority']);
+    Route::patch('defense-requests/{defenseRequest}/adviser-status', [DefenseRequestController::class, 'updateAdviserStatus']);
+    Route::post('defense-requests/{defenseRequest}/upload-documents', [DefenseRequestController::class, 'uploadDocuments']);
+    Route::post('defense-requests/{defenseRequest}/upload-endorsement', [DefenseRequestController::class, 'uploadDocuments']);
     Route::patch('defense-requests/bulk-status', [DefenseRequestController::class, 'bulkUpdateStatus']);
     Route::patch('defense-requests/bulk-priority', [DefenseRequestController::class, 'bulkUpdatePriority']);
-    // Lightweight pending count (polled by sidebar) – keep cheap & cache at controller level if needed
-    Route::get('defense-requests/count', [DefenseRequestController::class, 'count']);
 
     // Notifications API
     // Route::get('notifications', [NotificationController::class, 'index']);
@@ -37,6 +42,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Student search API
     Route::get('students/search', [StudentSearchController::class, 'search']);
+    
     // Document Templates API
     Route::get('/document-templates', [DocumentTemplateController::class,'index']);
     Route::get('/document-templates/{template}', [DocumentTemplateController::class,'show']);

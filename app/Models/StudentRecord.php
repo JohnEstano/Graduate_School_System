@@ -15,6 +15,7 @@ class StudentRecord extends Model
         'last_name',
         'gender',
         'program',
+        'program_record_id',  // ✅ Added
         'school_year',
         'student_id',
         'course_section',
@@ -22,11 +23,41 @@ class StudentRecord extends Model
         'academic_status',
         'or_number',
         'payment_date',
+        'defense_date',     
+        'defense_type',
+        'defense_request_id',
     ];
 
-    // Example payments relationship
+    protected $casts = [
+        'birthdate' => 'date',
+        'payment_date' => 'date',
+        'defense_date' => 'date',
+    ];
+
+    public function defenseRequest()
+    {
+        return $this->belongsTo(DefenseRequest::class);
+    }
+
+    public function program()
+    {
+        return $this->belongsTo(ProgramRecord::class, 'program_record_id');
+    }
+
     public function payments()
     {
-        return $this->hasMany(PaymentRecord::class);
+        return $this->hasMany(PaymentRecord::class, 'student_record_id');
+    }
+
+    public function panelists()
+    {
+        return $this->belongsToMany(
+            PanelistRecord::class, 
+            'panelist_student_records', 
+            'student_id', 
+            'panelist_id'
+        )
+        ->withPivot('role')
+        ->withTimestamps();
     }
 }

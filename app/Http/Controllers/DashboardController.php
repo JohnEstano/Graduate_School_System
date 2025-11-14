@@ -21,6 +21,12 @@ class DashboardController extends Controller
             abort(401);
         }
 
+        // Redirect Registrar to their comprehensive exam page
+        $roleName = is_object($user->role) ? $user->role->name : $user->role;
+        if ($roleName === 'Registrar') {
+            return redirect()->route('registrar.compre-exam.index');
+        }
+
         // DATA SCRAPING REMOVED FROM LOGIN FLOW
         // Data will be scraped on-demand when user visits comprehensive exam page
         // This prevents 2-minute login delays
@@ -218,6 +224,12 @@ class DashboardController extends Controller
             $props['coordinators'] = $this->getCoordinators();
             $props['stats'] = $this->getSuperAdminStats();
             $props['coordinatorAssignments'] = $this->getCoordinatorAssignments();
+            
+            // Add exam settings
+            $props['examSettings'] = [
+                'exam_window_open' => \App\Models\SystemSetting::get('exam_window_open', true),
+                'payment_window_open' => \App\Models\SystemSetting::get('payment_window_open', true)
+            ];
         }
 
         return Inertia::render('dashboard/Index', $props);

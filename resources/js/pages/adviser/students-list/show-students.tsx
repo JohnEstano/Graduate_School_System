@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Check, Users, Trash } from "lucide-react";
+import { Check, Users, Trash, Mail, X, Loader2 } from "lucide-react";
 import {
   Dialog,
   DialogTrigger,
@@ -18,20 +18,24 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { toast, Toaster } from "sonner";
 
 type Student = {
-  id: number;
+  id: number | string; // Can be number or "pending_X" for unregistered
   student_number: string | null;
   first_name: string | null;
   middle_name: string | null;
   last_name: string | null;
   email: string | null;
   program: string | null;
-  coordinator_name?: string | null; // <-- Add this line
+  coordinator_name?: string | null;
+  is_registered?: boolean; // Whether student is registered in system
+  invitation_sent?: boolean; // For unregistered students
 };
 
 function getInitials(student: Student | any) {
@@ -51,6 +55,12 @@ export default function ShowStudents() {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [studentToRemove, setStudentToRemove] = useState<Student | null>(null);
 
+  // Accept/Reject email confirmation dialogs
+  const [acceptEmailConfirmOpen, setAcceptEmailConfirmOpen] = useState(false);
+  const [rejectEmailConfirmOpen, setRejectEmailConfirmOpen] = useState(false);
+  const [pendingAction, setPendingAction] = useState<Student | null>(null);
+  const [isProcessing, setIsProcessing] = useState(false);
+
   useEffect(() => {
     loadAccepted();
     fetchPending();
@@ -61,6 +71,7 @@ export default function ShowStudents() {
     setLoading(true);
     try {
       const res = await axios.get("/api/adviser/students");
+      console.log('Loaded accepted students:', res.data);
       setStudents(res.data || []);
     } catch (err) {
       console.error("Failed to load students", err);
@@ -82,21 +93,83 @@ export default function ShowStudents() {
   };
 
   const acceptPending = async (s: Student) => {
+    // Don't allow accepting unregistered students
+    if (s.is_registered === false) {
+      toast.error('Cannot accept unregistered student', {
+        description: 'This student has not registered in the system yet. They will be automatically assigned when they log in.',
+        duration: 5000,
+      });
+      return;
+    }
+    
+    setPendingAction(s);
+    setAcceptEmailConfirmOpen(true);
+  };
+
+  const handleConfirmAccept = async (sendEmail: boolean) => {
+    if (!pendingAction) return;
+    
+    setIsProcessing(true);
     try {
-      await axios.post(`/api/adviser/pending-students/${s.id}/accept`);
+      await axios.post(`/api/adviser/pending-students/${pendingAction.id}/accept`, {
+        send_email: sendEmail,
+      });
       await loadAccepted();
       await fetchPending();
+      setAcceptEmailConfirmOpen(false);
+      setPendingAction(null);
+      
+      if (sendEmail) {
+        toast.success('Student accepted and email sent!');
+      } else {
+        toast.success('Student accepted (no email sent)');
+      }
     } catch (err) {
       console.error(err);
+      toast.error('Failed to accept student');
+      setAcceptEmailConfirmOpen(false);
+    } finally {
+      setIsProcessing(false);
     }
   };
 
   const rejectPending = async (s: Student) => {
+    // Don't allow rejecting unregistered students
+    if (s.is_registered === false) {
+      toast.error('Cannot reject unregistered student', {
+        description: 'This student has not registered in the system yet. Please contact the coordinator to remove this assignment.',
+        duration: 5000,
+      });
+      return;
+    }
+    
+    setPendingAction(s);
+    setRejectEmailConfirmOpen(true);
+  };
+
+  const handleConfirmReject = async (sendEmail: boolean) => {
+    if (!pendingAction) return;
+    
+    setIsProcessing(true);
     try {
-      await axios.post(`/api/adviser/pending-students/${s.id}/reject`);
+      await axios.post(`/api/adviser/pending-students/${pendingAction.id}/reject`, {
+        send_email: sendEmail,
+      });
       await fetchPending();
+      setRejectEmailConfirmOpen(false);
+      setPendingAction(null);
+      
+      if (sendEmail) {
+        toast.success('Student rejected and email sent');
+      } else {
+        toast.success('Student rejected (no email sent)');
+      }
     } catch (err) {
       console.error(err);
+      toast.error('Failed to reject student');
+      setRejectEmailConfirmOpen(false);
+    } finally {
+      setIsProcessing(false);
     }
   };
 
@@ -145,42 +218,64 @@ export default function ShowStudents() {
       );
     }
 
-    return rows.map((s) => (
-      <TableRow key={s.id} className="dark:hover:bg-zinc-700">
-        <TableCell className="flex items-center gap-3 dark:text-zinc-200">
-          <Avatar className="h-8 w-8">
-            <AvatarFallback>{getInitials(s)}</AvatarFallback>
-          </Avatar>
-          <span>{s.first_name || ""} {s.middle_name ? s.middle_name[0] + "." : ""} {s.last_name || ""}</span>
-        </TableCell>
-        <TableCell className="dark:text-zinc-200">{s.student_number || "N/A"}</TableCell>
-        <TableCell className="dark:text-zinc-200">{s.email || "N/A"}</TableCell>
-        <TableCell className="dark:text-zinc-200">{s.program || "N/A"}</TableCell>
-        <TableCell className="dark:text-zinc-200">{s.coordinator_name || "N/A"}</TableCell>
-        {isPending && (
-          <TableCell className="flex gap-2 justify-center">
-            <Button
-              variant="outline"
-              size="icon"
-              title="Accept"
-              onClick={() => acceptPending(s)}
-              className="text-green-600 border-green-300 hover:bg-green-50 hover:text-green-700"
-            >
-              <Check className="w-4 h-4" />
-            </Button>
-            <Button
-              variant="outline"
-              size="icon"
-              title="Reject"
-              onClick={() => rejectPending(s)}
-              className="text-rose-600 border-rose-300 hover:bg-rose-50 hover:text-rose-700"
-            >
-              <Trash className="w-4 h-4" />
-            </Button>
+    return rows.map((s) => {
+      const isUnregistered = s.is_registered === false;
+      
+      return (
+        <TableRow key={s.id} className="dark:hover:bg-zinc-700">
+          <TableCell className="flex items-center gap-3 dark:text-zinc-200">
+            <Avatar className="h-8 w-8">
+              <AvatarFallback className={isUnregistered ? "bg-amber-100 text-amber-700" : ""}>
+                {getInitials(s)}
+              </AvatarFallback>
+            </Avatar>
+            <div className="flex flex-col">
+              <span>{s.first_name || ""} {s.middle_name ? s.middle_name[0] + "." : ""} {s.last_name || ""}</span>
+              {isUnregistered && (
+                <span className="text-xs text-amber-600 dark:text-amber-400 flex items-center gap-1">
+                  <Mail className="w-3 h-3" />
+                  Not registered yet
+                </span>
+              )}
+            </div>
           </TableCell>
-        )}
-      </TableRow>
-    ));
+          <TableCell className="dark:text-zinc-200">{s.student_number || "N/A"}</TableCell>
+          <TableCell className="dark:text-zinc-200">{s.email || "N/A"}</TableCell>
+          <TableCell className="dark:text-zinc-200">{s.program || "N/A"}</TableCell>
+          <TableCell className="dark:text-zinc-200">{s.coordinator_name || "N/A"}</TableCell>
+          {isPending && (
+            <TableCell className="flex gap-2 justify-center">
+              <Button
+                variant="outline"
+                size="icon"
+                title={isUnregistered ? "Student must register first" : "Accept"}
+                onClick={() => acceptPending(s)}
+                disabled={isUnregistered}
+                className={isUnregistered 
+                  ? "text-gray-400 border-gray-300 cursor-not-allowed opacity-50" 
+                  : "text-green-600 border-green-300 hover:bg-green-50 hover:text-green-700"
+                }
+              >
+                <Check className="w-4 h-4" />
+              </Button>
+              <Button
+                variant="outline"
+                size="icon"
+                title={isUnregistered ? "Student must register first" : "Reject"}
+                onClick={() => rejectPending(s)}
+                disabled={isUnregistered}
+                className={isUnregistered 
+                  ? "text-gray-400 border-gray-300 cursor-not-allowed opacity-50" 
+                  : "text-rose-600 border-rose-300 hover:bg-rose-50 hover:text-rose-700"
+                }
+              >
+                <Trash className="w-4 h-4" />
+              </Button>
+            </TableCell>
+          )}
+        </TableRow>
+      );
+    });
   }
 
   return (
@@ -274,6 +369,112 @@ export default function ShowStudents() {
           </div>
         </TabsContent>
       </Tabs>
+
+      {/* Accept Student Email Confirmation Dialog */}
+      <Dialog open={acceptEmailConfirmOpen} onOpenChange={setAcceptEmailConfirmOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Mail className="h-5 w-5 text-green-500" />
+              Send Acceptance Email?
+            </DialogTitle>
+            <DialogDescription className="pt-2 space-y-2">
+              <p>You are accepting:</p>
+              <div className="bg-zinc-100 dark:bg-zinc-800 p-3 rounded-md space-y-1">
+                <p className="font-semibold text-zinc-900 dark:text-zinc-100">
+                  {pendingAction?.first_name} {pendingAction?.last_name}
+                </p>
+                <p className="text-sm text-zinc-600 dark:text-zinc-400">
+                  {pendingAction?.email}
+                </p>
+              </div>
+              <p className="text-sm text-zinc-600 dark:text-zinc-400">
+                Would you like to send an acceptance email notification to the student?
+              </p>
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button
+              variant="outline"
+              onClick={() => handleConfirmAccept(false)}
+              disabled={isProcessing}
+            >
+              Skip Email
+            </Button>
+            <Button
+              onClick={() => handleConfirmAccept(true)}
+              disabled={isProcessing}
+              className="bg-green-600 hover:bg-green-700"
+            >
+              {isProcessing ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Processing...
+                </>
+              ) : (
+                <>
+                  <Mail className="mr-2 h-4 w-4" />
+                  Send Email
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Reject Student Email Confirmation Dialog */}
+      <Dialog open={rejectEmailConfirmOpen} onOpenChange={setRejectEmailConfirmOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Mail className="h-5 w-5 text-red-500" />
+              Send Rejection Email?
+            </DialogTitle>
+            <DialogDescription className="pt-2 space-y-2">
+              <p>You are rejecting:</p>
+              <div className="bg-zinc-100 dark:bg-zinc-800 p-3 rounded-md space-y-1">
+                <p className="font-semibold text-zinc-900 dark:text-zinc-100">
+                  {pendingAction?.first_name} {pendingAction?.last_name}
+                </p>
+                <p className="text-sm text-zinc-600 dark:text-zinc-400">
+                  {pendingAction?.email}
+                </p>
+              </div>
+              <p className="text-sm text-zinc-600 dark:text-zinc-400">
+                Would you like to send a rejection email notification to the student?
+              </p>
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button
+              variant="outline"
+              onClick={() => handleConfirmReject(false)}
+              disabled={isProcessing}
+            >
+              Skip Email
+            </Button>
+            <Button
+              onClick={() => handleConfirmReject(true)}
+              disabled={isProcessing}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              {isProcessing ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Processing...
+                </>
+              ) : (
+                <>
+                  <Mail className="mr-2 h-4 w-4" />
+                  Send Email
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Toaster richColors position="bottom-right" />
     </div>
   );
 }

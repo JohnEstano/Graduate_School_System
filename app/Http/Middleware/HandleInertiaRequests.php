@@ -68,6 +68,7 @@ class HandleInertiaRequests extends Middleware
             'auth' => ['user' => $sharedUser],
             'user' => $sharedUser, // legacy
             'first_login' => $request->session()->pull('first_login', false), // Get and remove the flag
+            'csrf_token' => csrf_token(), // Share CSRF token with every Inertia response
         ]);
     }
 }

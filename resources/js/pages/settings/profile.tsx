@@ -7,7 +7,7 @@ import SettingsLayout from '@/layouts/settings/layout';
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { Info } from "lucide-react";
 import { useState } from "react";
-import axios from "axios";
+import axios from "@/lib/axios";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 
@@ -37,6 +37,14 @@ function getFullName(user: any) {
 export default function Profile({ mustVerifyEmail, status }: { mustVerifyEmail: boolean; status?: string }) {
     const { auth } = usePage<SharedData>().props;
     const user = auth.user;
+
+    // Role-based settings visibility logic
+    // Student: hide general and esignature
+    // Coordinator/Dean: show document templates for esignatures
+    // AA: hide document templates, esignatures, and general
+    const showGeneral = !["Student", "AA"].includes(user.role);
+    const showEsignature = !["Student", "AA"].includes(user.role);
+    const showDocumentTemplates = ["Coordinator", "Dean"].includes(user.role);
 
     type Adviser = { name: string; email: string };
     const adviser: Adviser | null = Array.isArray(user.advisers) ? user.advisers[0] ?? null : null;
@@ -105,6 +113,12 @@ export default function Profile({ mustVerifyEmail, status }: { mustVerifyEmail: 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Profile settings" />
+            {/*
+                Example usage for settings navigation:
+                {showGeneral && <GeneralSettings ... />}
+                {showEsignature && <EsignatureSettings ... />}
+                {showDocumentTemplates && <DocumentTemplatesSettings ... />}
+            */}
             <SettingsLayout>
                 <div className="space-y-6">
                     <Alert className="bg-rose-50 dark:bg-rose-950 border-rose-200 dark:border-rose-900 text-rose-900 dark:text-rose-100 flex items-start gap-3 px-6 py-5 rounded-xl">
@@ -172,11 +186,7 @@ export default function Profile({ mustVerifyEmail, status }: { mustVerifyEmail: 
                         )}
                         {(user.role === "Adviser" || user.role === "Faculty") && (
                             <>
-                                <div>
-                                    <div className="text-xs text-muted-foreground mb-1">Adviser Code</div>
-                                    <div className=" font-medium text-base">{adviserCode ? String(adviserCode) : "—"}</div>
-                                    <div className="text-xs text-muted-foreground mt-1">Share this code with your students so they can register you as their adviser.</div>
-                                </div>
+                               
                                 <div>
                                     <div className="text-xs text-muted-foreground mb-1">Coordinator</div>
                                     {coordinator ? (

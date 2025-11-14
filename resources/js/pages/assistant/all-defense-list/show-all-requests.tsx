@@ -24,11 +24,27 @@ import {
   Signature,
   Filter,
   MoreHorizontal,
-  Send, // <-- Add this import
+  Send,
+  ArrowRight,
+  Hourglass,
+  Banknote,
+  CircleCheck,
+  AlertTriangle,
 } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import TableAllDefenseList from './table-all-defense-list';
-import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogTitle, DialogDescription, DialogFooter, DialogHeader } from '@/components/ui/dialog';
+import { Textarea } from '@/components/ui/textarea';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Calendar as DatePicker } from '@/components/ui/calendar';
@@ -44,6 +60,7 @@ import {
   DropdownMenuCheckboxItem,
 } from '@/components/ui/dropdown-menu';
 import type { DefenseRequestSummary } from './table-all-defense-list';
+import { postWithCsrf, patchWithCsrf, fetchWithCsrf } from '@/utils/csrf';
 
 interface ShowAllRequestsProps {
   defenseRequests?: DefenseRequestSummary[];
@@ -85,11 +102,28 @@ function ShowAllRequestsInner({ defenseRequests: initial, onStatusChange }: Show
   const [singleConfirm, setSingleConfirm] = useState<{ open: boolean, id: number | null, action: 'approve' | 'reject' | 'retrieve' | null }>({
     open: false, id: null, action: null
   });
+  
+  // Bulk status update confirmation dialog
+  const [bulkStatusDialog, setBulkStatusDialog] = useState<{
+    open: boolean;
+    status: 'ready_for_finance' | 'in_progress' | 'paid' | 'completed' | 'invalid' | null;
+    title: string;
+    description: string;
+  }>({
+    open: false,
+    status: null,
+    title: '',
+    description: '',
+  });
 
-  function getCsrfToken(): string {
-    const el = document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement | null;
-    return el?.content || '';
-  }
+  // Invalid comment dialog state for bulk operations
+  const [bulkInvalidCommentDialog, setBulkInvalidCommentDialog] = useState<{
+    open: boolean;
+    comment: string;
+  }>({
+    open: false,
+    comment: '',
+  });
 
   // --- FINAL FIX: Only use expected_rate and amount ---
   const normalizeRequests = (list: DefenseRequestSummary[]) =>
@@ -122,7 +156,7 @@ function ShowAllRequestsInner({ defenseRequests: initial, onStatusChange }: Show
   }, []);
 
   const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string[]>([]);
+  const [statusFilter, setStatusFilter] = useState<string[]>([]); // AA Status filter
   const [typeFilter, setTypeFilter] = useState<string[]>([]);
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
   const [sortDir, setSortDir] = useState<'asc' | 'desc' | null>(null);
@@ -137,7 +171,6 @@ function ShowAllRequestsInner({ defenseRequests: initial, onStatusChange }: Show
     adviser: true,
     submitted_at: true,
     program: true,
-    expected_amount: true,
     amount_paid: true,
     reference_no: true,
     coordinator: true,
@@ -146,7 +179,8 @@ function ShowAllRequestsInner({ defenseRequests: initial, onStatusChange }: Show
     date: true,
     mode: true,
     type: false,
-    priority: false
+    priority: false,
+    status: true,
   });
 
   // Helper to get columns per tab
@@ -213,7 +247,7 @@ function ShowAllRequestsInner({ defenseRequests: initial, onStatusChange }: Show
     if (!initial) fetchDefenseRequests();
   }, [fetchDefenseRequests, initial]);
 
-  // Filtered and sorted requests (all in one)
+    // Filtered and sorted requests (all in one)
   const filtered = useMemo(() => {
     let result = defenseRequests;
     if (search) {
@@ -222,11 +256,11 @@ function ShowAllRequestsInner({ defenseRequests: initial, onStatusChange }: Show
         (`${r.first_name} ${r.last_name} ${r.thesis_title}`).toLowerCase().includes(q)
       );
     }
-    // This will match the three statuses above
+    // Filter by AA verification status
     if (statusFilter.length)
       result = result.filter(r =>
         statusFilter.some(f =>
-          (r.aa_verification_status || '').trim().toLowerCase() === f.trim().toLowerCase()
+          (r.aa_verification_status || 'pending').trim().toLowerCase() === f.trim().toLowerCase()
         )
       );
     if (typeFilter.length)
@@ -307,15 +341,7 @@ function ShowAllRequestsInner({ defenseRequests: initial, onStatusChange }: Show
 
   const bulkUpdateStatus = async (status: string) => {
     try {
-      const res = await fetch('/defense-requests/bulk-status', {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-CSRF-TOKEN': getCsrfToken(),
-          Accept: 'application/json'
-        },
-        body: JSON.stringify({ ids: selected, status })
-      });
+      const res = await patchWithCsrf('/defense-requests/bulk-status', { ids: selected, status });
       const data = await res.json();
       if (res.ok && data.updated_ids) {
         setDefenseRequests(prev =>
@@ -335,11 +361,10 @@ function ShowAllRequestsInner({ defenseRequests: initial, onStatusChange }: Show
 
   const handleBulkDelete = async () => {
     try {
-      const res = await fetch('/defense-requests/bulk-remove', {
+      const res = await fetchWithCsrf('/defense-requests/bulk-remove', {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
-          'X-CSRF-TOKEN': getCsrfToken(),
           Accept: 'application/json'
         },
         body: JSON.stringify({ ids: selected })
@@ -380,23 +405,16 @@ function ShowAllRequestsInner({ defenseRequests: initial, onStatusChange }: Show
         : 'pending';
 
       // POST to the correct endpoint for AA payment verification
-      const res = await fetch('/aa/payment-verifications/bulk-update', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-CSRF-TOKEN': getCsrfToken(),
-        },
-        body: JSON.stringify({
-          verification_ids: verificationIds,
-          status,
-        }),
+      const res = await postWithCsrf('/aa/payment-verifications/bulk-update', {
+        verification_ids: verificationIds,
+        status,
       });
 
       if (res.ok) {
         setDefenseRequests(prev =>
           prev.map(r =>
             verificationIds.includes(r.aa_verification_id ?? -1)
-              ? { ...r, aa_verification_status: status }
+              ? ({ ...r, aa_verification_status: status } as DefenseRequestSummary)
               : r
           )
         );
@@ -416,15 +434,7 @@ function ShowAllRequestsInner({ defenseRequests: initial, onStatusChange }: Show
 
   const onPriorityChange = async (id: number, priority: string) => {
     try {
-      const res = await fetch(`/defense-requests/${id}/priority`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-CSRF-TOKEN': getCsrfToken(),
-          Accept: 'application/json'
-        },
-        body: JSON.stringify({ priority })
-      });
+      const res = await patchWithCsrf(`/defense-requests/${id}/priority`, { priority });
       if (res.ok) {
         setDefenseRequests(prev => prev.map(r => (r.id === id ? { ...r, priority: priority as any } : r)));
         toast.success('Priority updated');
@@ -473,15 +483,7 @@ function ShowAllRequestsInner({ defenseRequests: initial, onStatusChange }: Show
 
   const updateOneStatus = useCallback(async (id: number, status: DefenseRequestSummary['status']) => {
     try {
-      const res = await fetch(`/defense-requests/${id}/status`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-CSRF-TOKEN': getCsrfToken(),
-          Accept: 'application/json'
-        },
-        body: JSON.stringify({ status })
-      });
+      const res = await patchWithCsrf(`/defense-requests/${id}/status`, { status });
       if (res.ok) {
         setDefenseRequests(prev => prev.map(r => r.id === id ? { ...r, status } : r));
         onStatusChange?.(id, status);
@@ -511,64 +513,183 @@ function ShowAllRequestsInner({ defenseRequests: initial, onStatusChange }: Show
     setSingleConfirm({ open: false, id: null, action: null });
   }
 
-  async function handleBulkStatusChange(newStatus: 'pending' | 'verified' | 'rejected') {
-    if (selected.length === 0) return;
-    setIsLoading(true);
-    try {
-      // Map selected defense request IDs to their aa_verification_id
-      const verificationIds = defenseRequests
-        .filter(r => selected.includes(r.id))
-        .map(r => r.aa_verification_id)
-        .filter((id): id is number => !!id);
+  // Open bulk status confirmation dialog
+  function openBulkStatusDialog(newStatus: 'ready_for_finance' | 'in_progress' | 'paid' | 'completed' | 'invalid') {
+    if (selected.length === 0) {
+      toast.error('No requests selected');
+      return;
+    }
+    
+    // Special handling for invalid status - open comment dialog instead
+    if (newStatus === 'invalid') {
+      setBulkInvalidCommentDialog({ open: true, comment: '' });
+      return;
+    }
+    
+    const statusLabels = {
+      ready_for_finance: 'Ready for Finance',
+      in_progress: 'In Progress',
+      paid: 'Paid',
+      completed: 'Completed',
+      invalid: 'Invalid'
+    };
+    
+    const descriptions = {
+      ready_for_finance: `Mark ${selected.length} defense request${selected.length !== 1 ? 's' : ''} as Ready for Finance?\n\nThis will create honorarium payment records, sync to student and panelist records, and make records visible in Honorarium page.`,
+      in_progress: `Mark ${selected.length} defense request${selected.length !== 1 ? 's' : ''} as In Progress?\n\nThis indicates the payment processing has started.`,
+      paid: `Mark ${selected.length} defense request${selected.length !== 1 ? 's' : ''} as Paid?\n\nThis confirms that all honorarium payments have been processed.`,
+      completed: `Mark ${selected.length} defense request${selected.length !== 1 ? 's' : ''} as Completed?\n\nThis action will finalize the defense and AA payment status.`,
+      invalid: `Mark ${selected.length} defense request${selected.length !== 1 ? 's' : ''} as Invalid?\n\nThis will mark the payment as invalid.`
+    };
+    
+    setBulkStatusDialog({
+      open: true,
+      status: newStatus,
+      title: `Update to ${statusLabels[newStatus]}?`,
+      description: descriptions[newStatus],
+    });
+  }
 
-      const res = await fetch('/aa/payment-verifications/bulk-update', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-CSRF-TOKEN': getCsrfToken(),
-        },
-        body: JSON.stringify({
-          verification_ids: verificationIds,
-          status: confirmAction === 'approve' ? 'verified' : 'rejected',
-        }),
+  async function handleBulkStatusChange() {
+    if (!bulkStatusDialog.status || selected.length === 0) {
+      setBulkStatusDialog({ open: false, status: null, title: '', description: '' });
+      return;
+    }
+    
+    const newStatus = bulkStatusDialog.status;
+    setBulkStatusDialog({ open: false, status: null, title: '', description: '' });
+    
+    setIsLoading(true);
+    
+    const statusLabels = {
+      ready_for_finance: 'Ready for Finance',
+      in_progress: 'In Progress',
+      paid: 'Paid',
+      completed: 'Completed',
+      invalid: 'Invalid'
+    };
+    
+    const toastId = toast.loading(`Updating ${selected.length} request${selected.length !== 1 ? 's' : ''}...`);
+    
+    try {
+      const res = await postWithCsrf('/aa/payment-verifications/bulk-update', {
+        defense_request_ids: selected,
+        status: newStatus,
       });
 
-      if (res.ok) {
+      const data = await res.json();
+
+      if (res.ok && data.success) {
+        // Update local state for all selected items
         setDefenseRequests(prev =>
           prev.map(r =>
-            verificationIds.includes(r.aa_verification_id ?? -1)
-              ? { ...r, aa_verification_status: confirmAction === 'approve' ? 'verified' : 'rejected' }
+            selected.includes(r.id)
+              ? { ...r, aa_verification_status: newStatus }
               : r
           )
         );
+        
+        // Clear selection
         setSelected([]);
-        toast.success('Bulk status updated');
+        
+        // Success message
+        const message = newStatus === 'ready_for_finance' 
+          ? `${data.updated_count || selected.length} request${(data.updated_count || selected.length) !== 1 ? 's' : ''} updated to ${statusLabels[newStatus]}. Honorarium & student records created.`
+          : `${data.updated_count || selected.length} request${(data.updated_count || selected.length) !== 1 ? 's' : ''} updated to ${statusLabels[newStatus]}`;
+        
+        toast.success(message, { 
+          id: toastId,
+          duration: 4000 
+        });
+        
       } else {
-        toast.error('Bulk update failed');
+        toast.error(data.error || 'Failed to update status', { id: toastId });
       }
-    } catch {
-      toast.error('Bulk update error');
+    } catch (error) {
+      console.error('Bulk update error:', error);
+      toast.error('Failed to update status', { id: toastId });
     } finally {
       setIsLoading(false);
-      setConfirmDialogOpen(false);
-      setConfirmAction(null);
+    }
+  }
+
+  // Handle bulk invalid with comment
+  async function handleBulkInvalidWithComment() {
+    const comment = bulkInvalidCommentDialog.comment.trim();
+    if (!comment) {
+      toast.error('Please provide a reason for marking as invalid');
+      return;
+    }
+    
+    if (selected.length === 0) {
+      toast.error('No requests selected');
+      setBulkInvalidCommentDialog({ open: false, comment: '' });
+      return;
+    }
+    
+    setBulkInvalidCommentDialog({ open: false, comment: '' });
+    setIsLoading(true);
+    
+    const toastId = toast.loading(`Marking ${selected.length} request${selected.length !== 1 ? 's' : ''} as invalid...`);
+    
+    try {
+      const res = await postWithCsrf('/aa/payment-verifications/bulk-update', {
+        defense_request_ids: selected,
+        status: 'invalid',
+        invalid_comment: comment,
+      });
+
+      const data = await res.json();
+
+      if (res.ok && data.success) {
+        // Update local state for all selected items
+        setDefenseRequests(prev =>
+          prev.map(r =>
+            selected.includes(r.id)
+              ? { ...r, aa_verification_status: 'invalid', invalid_comment: comment }
+              : r
+          )
+        );
+        
+        // Clear selection
+        setSelected([]);
+        
+        toast.success(`${data.updated_count || selected.length} request${(data.updated_count || selected.length) !== 1 ? 's' : ''} marked as invalid`, { 
+          id: toastId,
+          duration: 4000 
+        });
+        
+      } else {
+        toast.error(data.error || 'Failed to mark as invalid', { id: toastId });
+      }
+    } catch (error) {
+      console.error('Bulk invalid error:', error);
+      toast.error('Failed to mark as invalid', { id: toastId });
+    } finally {
+      setIsLoading(false);
     }
   }
 
   const handleBulkMarkCompleted = async () => {
-    if (selected.length === 0) return;
+    if (selected.length === 0) {
+      toast.error('No requests selected');
+      return;
+    }
+    
+    if (!confirm(`⚠️ Mark ${selected.length} defense(s) as completed?\n\nThis will finalize both the defense and AA payment status.`)) {
+      console.log('❌ User cancelled bulk mark completed');
+      return;
+    }
+    
     setIsLoading(true);
+    const toastId = toast.loading(`Marking ${selected.length} defense(s) as completed...`);
+    
     try {
-      const res = await fetch('/defense-requests/bulk-status', {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-CSRF-TOKEN': getCsrfToken(),
-          Accept: 'application/json'
-        },
-        body: JSON.stringify({ ids: selected, status: 'Completed' })
-      });
+      const res = await patchWithCsrf('/defense-requests/bulk-status', { ids: selected, status: 'Completed' });
       const data = await res.json();
+      
+      console.log('📥 Bulk mark completed response:', data);
+      
       if (res.ok && data.updated_ids) {
         setDefenseRequests(prev =>
           prev.map(r =>
@@ -576,12 +697,16 @@ function ShowAllRequestsInner({ defenseRequests: initial, onStatusChange }: Show
           )
         );
         setSelected([]);
-        toast.success('Marked as Completed');
+        toast.success(`✅ ${selected.length} defense(s) marked as completed!`, { 
+          id: toastId,
+          duration: 4000 
+        });
       } else {
-        toast.error(data?.error || 'Bulk update failed');
+        toast.error(data?.error || 'Bulk update failed', { id: toastId });
       }
-    } catch {
-      toast.error('Bulk update error');
+    } catch (error) {
+      console.error('❌ Bulk mark completed error:', error);
+      toast.error('Bulk update error', { id: toastId });
     } finally {
       setIsLoading(false);
     }
@@ -716,7 +841,7 @@ function ShowAllRequestsInner({ defenseRequests: initial, onStatusChange }: Show
                 className="max-w-xs text-sm h-8"
                 disabled={isLoading}
               />
-              {/* Status filter */}
+              {/* AA Status filter */}
               <Popover>
                 <PopoverTrigger asChild>
                   <Button
@@ -724,7 +849,7 @@ function ShowAllRequestsInner({ defenseRequests: initial, onStatusChange }: Show
                     className="h-8 px-3 rounded-md border-dashed text-xs flex items-center gap-1"
                   >
                     <CirclePlus className="h-4 w-4 mr-1" />
-                    Status
+                    AA Status
                     {statusFilter.length > 0 && (
                       <span className="ml-1 px-2 py-0.5 rounded-full text-xs bg-muted">
                         {statusFilter.length > 1 ? `${statusFilter.length} selected` : statusFilter[0]}
@@ -733,8 +858,8 @@ function ShowAllRequestsInner({ defenseRequests: initial, onStatusChange }: Show
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-44 p-1" side="bottom" align="start">
-                  {/* Only show Pending, Verified, Rejected */}
-                  {['Pending', 'Verified', 'Rejected'].map(s => (
+                  {/* AA Status options */}
+                  {['pending', 'ready_for_finance', 'in_progress', 'paid', 'completed'].map(s => (
                     <div
                       key={s}
                       onClick={() =>
@@ -745,7 +870,7 @@ function ShowAllRequestsInner({ defenseRequests: initial, onStatusChange }: Show
                       className="flex items-center gap-2 p-2 rounded hover:bg-muted cursor-pointer"
                     >
                       <Checkbox checked={statusFilter.includes(s)} />
-                      <span className="text-sm">{s}</span>
+                      <span className="text-sm capitalize">{s.replace(/_/g, ' ')}</span>
                     </div>
                   ))}
                   <Button size="sm" variant="ghost" className="w-full mt-2" onClick={() => setStatusFilter([])}>
@@ -835,16 +960,8 @@ function ShowAllRequestsInner({ defenseRequests: initial, onStatusChange }: Show
           </div>
         </div>
 
-        {/* SHADCN Tabs for Masteral/Doctorate */}
-        <div className="mb-2">
-          <Tabs value={programTab} onValueChange={v => setProgramTab(v as any)}>
-            <TabsList>
-              <TabsTrigger value="All">All</TabsTrigger>
-              <TabsTrigger value="Masteral">Masteral</TabsTrigger>
-              <TabsTrigger value="Doctorate">Doctorate</TabsTrigger>
-            </TabsList>
-          </Tabs>
-        </div>
+     
+       
 
         {/* Table and bulk bar */}
         {selected.length > 0 && (
@@ -855,32 +972,55 @@ function ShowAllRequestsInner({ defenseRequests: initial, onStatusChange }: Show
                 variant="ghost"
                 size="sm"
                 className="px-3 py-1 h-7 w-auto text-xs flex items-center gap-1"
-                onClick={() => { setConfirmAction('approve'); setConfirmDialogOpen(true); }}
+                onClick={() => openBulkStatusDialog('ready_for_finance')}
                 disabled={isLoading}
               >
-                <CheckCircle size={13} className="text-green-600" />
-                Bulk Approve
+                <ArrowRight size={13} className="text-blue-600" />
+                Ready for Finance
               </Button>
               <Button
                 variant="ghost"
                 size="sm"
                 className="px-3 py-1 h-7 w-auto text-xs flex items-center gap-1"
-                onClick={() => { setConfirmAction('reject'); setConfirmDialogOpen(true); }}
+                onClick={() => openBulkStatusDialog('in_progress')}
                 disabled={isLoading}
               >
-                <X size={13} className="text-red-600" />
-                Bulk Reject
+                <Hourglass size={13} className="text-amber-600" />
+                In Progress
               </Button>
               <Button
                 variant="ghost"
                 size="sm"
                 className="px-3 py-1 h-7 w-auto text-xs flex items-center gap-1"
-                onClick={handleBulkMarkCompleted}
+                onClick={() => openBulkStatusDialog('paid')}
                 disabled={isLoading}
               >
-                <CheckCircle size={13} className="text-green-600" />
-                Mark as Completed
+                <Banknote size={13} className="text-emerald-600" />
+                Paid
               </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="px-3 py-1 h-7 w-auto text-xs flex items-center gap-1"
+                onClick={() => openBulkStatusDialog('invalid')}
+                disabled={isLoading}
+              >
+                <AlertTriangle size={13} className="text-red-600" />
+                Invalid
+              </Button>
+              {/* Hidden but functional - Mark as Completed */}
+              {false && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="px-3 py-1 h-7 w-auto text-xs flex items-center gap-1"
+                  onClick={() => openBulkStatusDialog('completed')}
+                  disabled={isLoading}
+                >
+                  <CircleCheck size={13} className="text-green-600" />
+                  Mark as Completed
+                </Button>
+              )}
               <Button
                 variant="ghost"
                 size="sm"
@@ -1143,6 +1283,61 @@ function ShowAllRequestsInner({ defenseRequests: initial, onStatusChange }: Show
               <Button variant="destructive" onClick={async () => { await handleBulkDelete(); setConfirmBulkDelete(false); }}>Delete</Button>
             </div>
           </div>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Bulk Status Update AlertDialog */}
+      <AlertDialog open={bulkStatusDialog.open} onOpenChange={(open) => !open && setBulkStatusDialog({ open: false, status: null, title: '', description: '' })}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{bulkStatusDialog.title}</AlertDialogTitle>
+            <AlertDialogDescription className="whitespace-pre-line">
+              {bulkStatusDialog.description}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isLoading}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleBulkStatusChange} disabled={isLoading}>
+              Confirm
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Bulk Invalid Comment Dialog */}
+      <Dialog open={bulkInvalidCommentDialog.open} onOpenChange={(open) => setBulkInvalidCommentDialog({ ...bulkInvalidCommentDialog, open })}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Mark {selected.length} Payment{selected.length !== 1 ? 's' : ''} as Invalid</DialogTitle>
+            <DialogDescription>
+              Please provide a reason for marking {selected.length === 1 ? 'this payment' : 'these payments'} as invalid. This will be recorded in the workflow history.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <Textarea
+              placeholder="Enter reason for marking as invalid..."
+              value={bulkInvalidCommentDialog.comment}
+              onChange={(e) => setBulkInvalidCommentDialog({ ...bulkInvalidCommentDialog, comment: e.target.value })}
+              rows={4}
+              className="resize-none"
+            />
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setBulkInvalidCommentDialog({ open: false, comment: '' })}
+              disabled={isLoading}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleBulkInvalidWithComment}
+              disabled={isLoading || !bulkInvalidCommentDialog.comment.trim()}
+              variant="destructive"
+            >
+              Mark as Invalid
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </>

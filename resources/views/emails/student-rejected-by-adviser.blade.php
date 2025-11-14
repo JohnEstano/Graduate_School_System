@@ -4,225 +4,244 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Adviser Assignment Update</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
         body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif,
+                'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol';
+            line-height: 1.6;
+            color: #333;
             margin: 0;
             padding: 0;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-            background-color: #f5f5f5;
-            line-height: 1.6;
+            background-color: #f4f4f4;
         }
+
+        .email-wrapper {
+            width: 100%;
+            background-color: #f4f4f4;
+            padding: 20px 0;
+        }
+
         .email-container {
             max-width: 600px;
             margin: 0 auto;
             background-color: #ffffff;
+            padding: 30px;
         }
-        .header {
-            background: linear-gradient(135deg, #991B1B 0%, #7F1D1D 100%);
-            padding: 40px 30px;
-            text-align: center;
-        }
+
+        
+
+        
+
         .logo {
-            width: 80px;
-            height: 80px;
-            margin: 0 auto 20px;
+            max-width: 50px;
+            height: auto;
         }
-        .header h1 {
-            color: #ffffff;
-            margin: 0;
-            font-size: 28px;
-            font-weight: 600;
+
+        .header-title {
+            color: #FF4B64;
+            font-size: 14px;
+            font-weight: bold;
         }
-        .header p {
-            color: #FEE2E2;
-            margin: 10px 0 0 0;
-            font-size: 16px;
+
+        h1 {
+            font-size: 32px;
+            font-weight: bold;
+            margin-top: 0;
+            margin-bottom: 50px;
         }
+
         .content {
-            padding: 40px 30px;
+            margin-bottom: 30px;
         }
-        .greeting {
-            font-size: 18px;
-            color: #374151;
-            margin-bottom: 20px;
-        }
+
+        .message { font-size: 16px; line-height: 1.8; margin-bottom: 20px; color: #333; }
+
         .status-badge {
-            background: linear-gradient(135deg, #F59E0B 0%, #F59E0B 100%);
-            color: white;
-            padding: 20px;
-            border-radius: 12px;
+            display: inline-block;
+            background-color: #FF4B64;
+            color: #ffffff;
+            padding: 10px 20px;
             text-align: center;
-            font-size: 20px;
-            font-weight: 600;
-            margin: 25px 0;
-            box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);
-        }
-        .message {
-            color: #6B7280;
-            font-size: 15px;
-            line-height: 1.7;
-            margin-bottom: 25px;
-        }
-        .adviser-info-box {
-            background: #FEF2F2;
-            border-left: 4px solid #991B1B;
-            padding: 20px;
-            margin: 25px 0;
-            border-radius: 8px;
-        }
-        .adviser-info-box .label {
-            font-weight: 600;
-            color: #991B1B;
-            font-size: 12px;
+            font-weight: bold;
+            font-size: 14px;
             text-transform: uppercase;
-            letter-spacing: 0.5px;
-            margin-bottom: 8px;
+            letter-spacing: 1px;
+            margin: 20px 0;
         }
-        .adviser-info-box .value {
-            color: #1F2937;
-            font-size: 16px;
-            margin-bottom: 12px;
-            font-weight: 500;
+
+        .info-box {
+            border: 1px solid #e5e7eb;
+            padding: 20px;
+            margin: 20px 0;
         }
-        .adviser-info-box .value:last-child {
-            margin-bottom: 0;
-        }
-        .next-steps {
-            background: #FEF3C7;
-            border: 2px solid #F59E0B;
-            border-radius: 12px;
-            padding: 25px;
-            margin: 25px 0;
-        }
-        .next-steps h3 {
-            color: #92400E;
-            margin: 0 0 15px 0;
+
+        .info-box h2 {
             font-size: 18px;
-            font-weight: 600;
+            font-weight: bold;
+            margin-top: 0;
+            margin-bottom: 15px;
+            color: #333;
         }
-        .next-steps ul {
+
+        .info-box .label {
+            font-weight: bold;
+            color: #666;
+            margin-top: 12px;
+            margin-bottom: 4px;
+            font-size: 14px;
+        }
+
+        .info-box .value {
+            color: #333;
+            margin-bottom: 8px;
+            font-size: 16px;
+        }
+
+        .next-steps-box {
+            background-color: #f3f4f6;
+            padding: 20px;
+            margin: 20px 0;
+        }
+
+        .next-steps-box h3 {
+            font-size: 16px;
+            font-weight: bold;
+            margin-top: 0;
+            margin-bottom: 15px;
+            color: #333;
+        }
+
+        .next-steps-box ul {
             margin: 0;
             padding-left: 20px;
-            color: #374151;
         }
-        .next-steps li {
-            margin-bottom: 10px;
-            line-height: 1.6;
+
+        .next-steps-box li {
+            margin-bottom: 8px;
+            color: #333;
         }
-        .next-steps li:last-child {
-            margin-bottom: 0;
-        }
-        .coordinator-box {
-            background: #FFFBEB;
-            border: 1px solid #F59E0B;
-            border-radius: 8px;
-            padding: 20px;
-            margin: 25px 0;
-        }
-        .coordinator-box .title {
-            color: #92400E;
-            font-weight: 600;
-            font-size: 14px;
-            margin-bottom: 10px;
-            display: flex;
-            align-items: center;
-        }
-        .coordinator-box .title::before {
-            content: "📧";
-            margin-right: 8px;
-            font-size: 18px;
-        }
-        .coordinator-box .details {
-            color: #78350F;
-            font-size: 14px;
-            line-height: 1.6;
-        }
-        .footer {
-            background: #F9FAFB;
-            padding: 30px;
-            text-align: center;
-            border-top: 1px solid #E5E7EB;
-        }
-        .footer p {
-            color: #6B7280;
-            font-size: 13px;
-            margin: 5px 0;
-        }
-        .footer .uic-brand {
-            color: #991B1B;
-            font-weight: 600;
-            font-size: 14px;
-            margin-top: 10px;
-        }
-        .divider {
-            height: 1px;
-            background: linear-gradient(to right, transparent, #E5E7EB, transparent);
-            margin: 25px 0;
-        }
+
         .important-notice {
-            background: #FEE2E2;
-            border-left: 4px solid #DC2626;
+            background-color: #FEE2E2;
+            border: 1px solid #DC2626;
             padding: 20px;
-            margin: 25px 0;
-            border-radius: 8px;
+            margin: 20px 0;
         }
+
         .important-notice .title {
+            font-weight: bold;
             color: #991B1B;
-            font-weight: 600;
-            font-size: 15px;
             margin-bottom: 10px;
+            font-size: 15px;
         }
+
         .important-notice .content {
             color: #7F1D1D;
             font-size: 14px;
-            line-height: 1.6;
+        }
+
+        .coordinator-box {
+            background-color: #FFFBEB;
+            border: 1px solid #F59E0B;
+            padding: 20px;
+            margin: 20px 0;
+        }
+
+        .coordinator-box .title {
+            font-weight: bold;
+            color: #92400E;
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+
+        .coordinator-box .details {
+            color: #78350F;
+            font-size: 14px;
+        }
+
+        .footer {
+            text-align: center;
+            padding: 20px 30px;
+            border-top: 1px solid #e5e7eb;
+            font-size: 12px;
+            color: #6b7280;
+        }
+
+        .footer-text {
+            font-size: 12px;
+            color: #6b7280;
+            margin: 0;
+        }
+
+        .footer .logo {
+            max-width: 60px;
+            margin-bottom: 10px;
+        }
+    
+        @media (max-width: 600px) {
+            .email-container { padding: 20px !important; }
+            h1 { font-size: 24px !important; }
+            .message { font-size: 14px !important; }
+            .info-box, .notice-box, .schedule-box { padding: 15px !important; }
+            .cta-button { display: block !important; width: 100% !important; text-align: center; padding: 12px 20px !important; }
         }
     </style>
 </head>
 <body>
-    <div class="email-container">
-        <!-- Header -->
-        <div class="header">
-            <img src="{{ asset('grad_logo.png') }}" alt="UIC Graduate School Logo" class="logo">
-            <h1>Adviser Assignment Update</h1>
-            <p>Graduate School System</p>
-        </div>
+    <div class="email-wrapper">
+        <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #f4f4f4;">
+            <tr>
+                <td align="center" style="padding: 20px 0;">
+                    <table class="email-container" width="600" cellpadding="0" cellspacing="0" border="0" style="background-color: #ffffff; max-width: 600px;">
+                        <tr>
+                            <td style="padding: 30px;">
+        <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                                    <tr>
+                                        <td width="50">
+                                            <img src="{{ asset('gss-uic-logo-v2.png') }}" alt="UIC Graduate School Logo" style="max-width: 50px; height: auto;">
+                                        </td>
+                                        <td align="right">
+                                            <span style="color: #FF4B64; font-size: 14px; font-weight: bold;">Graduate School System</span>
+                                        </td>
+                                    </tr>
+                                </table>
+        {{-- Testing Disclaimer --}}
+        @include('emails.partials.testing-disclaimer')
 
-        <!-- Content -->
-        <div class="content">
-            <div class="greeting">
-                Dear <strong>{{ $studentFullName }}</strong>,
+        <h1>Adviser Assignment Update</h1>
+
+        
+            <p class="message">
+                <strong>Dear {{ $studentFullName }},</strong>
+            </p>
+            <p class="message">
+                We regret to inform you that <strong>{{ $adviserFullName }}</strong> was unable to accept the adviser assignment for your graduate program at this time.
+            </p>
+
+            <div style="text-align: center;">
+                <span class="status-badge"><i class="fas fa-exclamation-triangle"></i> Assignment Not Accepted</span>
             </div>
 
-            <div class="status-badge">
-                ⚠️ Adviser Assignment Not Accepted
-            </div>
+            <p class="message">
+                This decision does not reflect on your academic qualifications or potential. Faculty members may decline assignments due to current workload capacity, scheduling conflicts, research focus alignment, or other professional commitments.
+            </p>
 
-            <div class="message">
-                <p>We regret to inform you that <strong>{{ $adviserFullName }}</strong> was unable to accept the adviser assignment for your graduate program at this time.</p>
+            <div class="info-box">
+                <h2>Assignment Details</h2>
                 
-                <p>This decision does not reflect on your academic qualifications or potential. Faculty members may decline assignments due to current workload capacity, scheduling conflicts, research focus alignment, or other professional commitments.</p>
+                <div class="label"><i class="fas fa-user"></i> Adviser</div>
+                <div class="value">{{ $adviserFullName }}</div>
+                
+                <div class="label"><i class="fas fa-envelope"></i> Email</div>
+                <div class="value">{{ $adviserEmail }}</div>
+                
+                <div class="label"><i class="fas fa-info-circle"></i> Status</div>
+                <div class="value">Assignment Not Accepted</div>
             </div>
 
-            <div class="divider"></div>
-
-            <!-- Rejected Adviser Information -->
-            <div class="adviser-info-box">
-                <div class="label">Assignment Details</div>
-                <div class="value">
-                    <strong>👤 Adviser:</strong> {{ $adviserFullName }}
-                </div>
-                <div class="value">
-                    <strong>📧 Email:</strong> {{ $adviserEmail }}
-                </div>
-                <div class="value">
-                    <strong>📅 Status:</strong> Assignment Not Accepted
-                </div>
-            </div>
-
-            <!-- Next Steps -->
-            <div class="next-steps">
-                <h3>📋 What Happens Next?</h3>
+            <div class="next-steps-box">
+                <h3><i class="fas fa-list-check"></i> What Happens Next?</h3>
                 <ul>
                     <li><strong>Contact Your Coordinator:</strong> Reach out to {{ $coordinatorName }} who will assist you in finding an alternative adviser.</li>
                     <li><strong>Reassignment Process:</strong> Your coordinator will work with you to identify another suitable adviser who can guide your academic work.</li>
@@ -231,21 +250,15 @@
                 </ul>
             </div>
 
-            <!-- Important Notice -->
             <div class="important-notice">
-                <div class="title">
-                    Important: Action Required
-                </div>
-                <div class="content">
+                <div class="title"><i class="fas fa-circle-exclamation"></i> Important: Action Required</div>
+                
                     Please contact your coordinator <strong>{{ $coordinatorName }}</strong> as soon as possible to discuss alternative adviser options. Having an assigned adviser is essential for progressing with your thesis/dissertation work.
                 </div>
             </div>
 
-            <!-- Coordinator Contact Box -->
             <div class="coordinator-box">
-                <div class="title">
-                    Contact Your Coordinator
-                </div>
+                <div class="title"><i class="fas fa-address-card"></i> Contact Your Coordinator</div>
                 <div class="details">
                     <strong>Name:</strong> {{ $coordinatorName }}<br>
                     <strong>Email:</strong> {{ $coordinatorEmail }}<br>
@@ -255,25 +268,33 @@
                 </div>
             </div>
 
-            <div class="divider"></div>
-
-            <div class="message">
-                <p>If you have any questions or concerns about this process, please don't hesitate to contact the Graduate School Office or your program coordinator.</p>
-                
-                <p>We appreciate your understanding and are committed to supporting your academic success.</p>
-            </div>
-        </div>
-
-        <!-- Footer -->
-        <div class="footer">
-            <p class="uic-brand">University of the Immaculate Conception</p>
-            <p>Graduate School</p>
-            <p>Father Selga St., Davao City, Philippines 8000</p>
-            <p style="margin-top: 15px; color: #9CA3AF;">
-                This is an automated message from the UIC Graduate School System.<br>
-                Please do not reply directly to this email.
+            <p class="message" style="font-size: 14px; color: #6b7280;">
+                If you have any questions or concerns about this process, please don't hesitate to contact the Graduate School Office or your program coordinator.
             </p>
-        </div>
+            
+            <p class="message" style="font-size: 14px; color: #6b7280;">
+                We appreciate your understanding and are committed to supporting your academic success.
+            </p>
+        </td>
+                        </tr>
+                        <tr>
+                            <td class="footer">
+                                <img src="{{ asset('gss-uic-logo-v2.png') }}" alt="UIC Graduate School Logo" class="logo">
+                                <p class="footer-text">
+                                    <strong>University of the Immaculate Conception</strong><br>
+                                    Graduate School Office<br>
+                                    Father Selga St., Davao City, Philippines 8000
+                                </p>
+                                <p class="footer-text" style="margin-top: 15px;">
+                                    This is an automated message from the Graduate School System. Please do not
+                                    reply to this email.
+                                </p>
+                            </td>
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+        </table>
     </div>
 </body>
 </html>

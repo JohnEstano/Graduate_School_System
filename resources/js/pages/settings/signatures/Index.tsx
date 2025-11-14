@@ -198,6 +198,9 @@ export default function SignaturesIndex() {
                             ref={sigPad}
                             penColor="black"
                             backgroundColor="rgba(0,0,0,0)"
+                            minWidth={2}
+                            maxWidth={4}
+                            velocityFilterWeight={0.7}
                             canvasProps={{
                               width: 690,
                               height: 300,

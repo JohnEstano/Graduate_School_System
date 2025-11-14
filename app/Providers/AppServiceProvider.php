@@ -3,10 +3,17 @@
 namespace App\Providers;
 
 use Illuminate\Support\ServiceProvider;
+use App\Models\DefenseRequest;
+use App\Models\AaPaymentVerification;
+use App\Observers\DefenseRequestObserver;
+use App\Observers\AaPaymentVerificationObserver;
+
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\View;
 use Inertia\Inertia;
 use App\Models\Notification;
+use Carbon\Carbon;
+
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -23,6 +30,11 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+
+        // Register observers
+        DefenseRequest::observe(DefenseRequestObserver::class);
+        AaPaymentVerification::observe(AaPaymentVerificationObserver::class);
+
         Inertia::share([
             'notifications' => function () {
                 if (Auth::check()) {
@@ -46,5 +58,8 @@ class AppServiceProvider extends ServiceProvider
                 ];
             },
         ]);
+
+        Carbon::serializeUsing(fn ($c) => $c->timezone(config('app.timezone'))->toIso8601String()); // e.g., 2025-10-30T14:05:00+08:00
+
     }
 }

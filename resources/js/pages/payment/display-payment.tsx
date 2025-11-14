@@ -47,11 +47,17 @@ function statusBadge(status?: string) {
   }
 }
 
-// Parse "YYYY-MM-DD HH:mm:ss" as UTC; fall back to local if ISO is provided
+// Parse server dates without forcing UTC.
+// - If ISO already has Z or +hh:mm, trust it.
+// - If "YYYY-MM-DD HH:mm:ss", treat as local (no Z).
 function parseServerDate(dt?: string | null) {
   if (!dt) return null;
-  if (/T.+(Z|[+-]\d{2}:\d{2})$/.test(dt)) return new Date(dt);
-  return new Date(dt.replace(' ', 'T') + 'Z');
+  if (/T.+(Z|[+-]\d{2}:\d{2})$/.test(dt)) return new Date(dt);          // ISO with zone
+  if (/^\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}$/.test(dt)) {              // MySQL-style
+    return new Date(dt.replace(' ', 'T'));                               // local time
+  }
+  if (/^\d{4}-\d{2}-\d{2}$/.test(dt)) return new Date(`${dt}T00:00:00`); // date only
+  return new Date(dt);                                                   // fallback
 }
 
 export default function DisplayPayment({ payment, student }: Props) {

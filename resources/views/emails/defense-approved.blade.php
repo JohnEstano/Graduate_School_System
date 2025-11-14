@@ -6,263 +6,213 @@
     <title>Defense Request Approved</title>
     <style>
         body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif,
+                'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol';
+            line-height: 1.6;
+            color: #333;
             margin: 0;
             padding: 0;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-            background-color: #f5f5f5;
-            line-height: 1.6;
+            background-color: #f4f4f4;
         }
+
+        .email-wrapper {
+            width: 100%;
+            background-color: #f4f4f4;
+            padding: 20px 0;
+        }
+
         .email-container {
             max-width: 600px;
             margin: 0 auto;
             background-color: #ffffff;
-        }
-        .header {
-            background: linear-gradient(135deg, #991B1B 0%, #7F1D1D 100%);
-            padding: 40px 30px;
-            text-align: center;
-        }
-        .logo {
-            width: 80px;
-            height: 80px;
-            margin: 0 auto 20px;
-        }
-        .header h1 {
-            color: #ffffff;
-            margin: 0;
-            font-size: 28px;
-            font-weight: 600;
-        }
-        .header p {
-            color: #FEE2E2;
-            margin: 10px 0 0 0;
-            font-size: 16px;
-        }
-        .content {
-            padding: 40px 30px;
-        }
-        .greeting {
-            font-size: 18px;
-            color: #374151;
-            margin-bottom: 20px;
-        }
-        .message {
-            color: #6B7280;
-            font-size: 15px;
-            line-height: 1.7;
-            margin-bottom: 25px;
-        }
-        .success-badge {
-            background: linear-gradient(135deg, #10b981 0%, #34d399 100%);
-            color: white;
-            padding: 20px;
-            border-radius: 12px;
-            text-align: center;
-            font-size: 20px;
-            font-weight: 600;
-            margin: 25px 0;
-            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
-        }
-        .info-box {
-            background: #FEF2F2;
-            border-left: 4px solid #991B1B;
-            padding: 20px;
-            margin: 25px 0;
-            border-radius: 8px;
-        }
-        .info-box .label {
-            font-weight: 600;
-            color: #991B1B;
-            font-size: 12px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            margin-bottom: 8px;
-        }
-        .info-box .value {
-            color: #1F2937;
-            font-size: 16px;
-            margin-bottom: 12px;
-            font-weight: 500;
-        }
-        .info-box .value:last-child {
-            margin-bottom: 0;
-        }
-        .comment-box {
-            background: #F0F9FF;
-            border-left: 3px solid #3B82F6;
-            padding: 15px 20px;
-            margin: 25px 0;
-            border-radius: 8px;
-        }
-        .comment-box .label {
-            font-size: 12px;
-            color: #1E40AF;
-            font-weight: 600;
-            text-transform: uppercase;
-            margin-bottom: 8px;
-        }
-        .comment-box .text {
-            color: #374151;
-            font-style: italic;
-        }
-        .action-button {
-            display: inline-block;
-            padding: 16px 32px;
-            background: linear-gradient(135deg, #991B1B 0%, #7F1D1D 100%);
-            color: white;
-            text-decoration: none;
-            border-radius: 8px;
-            font-weight: 600;
-            margin: 25px 0;
-            text-align: center;
-            box-shadow: 0 4px 12px rgba(153, 27, 27, 0.3);
-            transition: transform 0.2s;
-        }
-        .action-button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 16px rgba(153, 27, 27, 0.4);
-        }
-        .footer {
-            background: #F9FAFB;
             padding: 30px;
-            text-align: center;
-            border-top: 1px solid #E5E7EB;
         }
-        .footer p {
-            color: #6B7280;
-            font-size: 13px;
-            margin: 5px 0;
+
+        
+
+        
+
+        .logo {
+            max-width: 50px;
+            height: auto;
         }
-        .footer .uic-brand {
-            color: #991B1B;
-            font-weight: 600;
+
+        .header-title {
+            color: #FF4B64;
+            font-size: 14px;
+            font-weight: bold;
+        }
+
+        h1 {
+            font-size: 32px;
+            font-weight: bold;
+            margin-top: 0;
+            margin-bottom: 35px;
+        }
+
+        .content {
+            margin-bottom: 30px;
+        }
+
+        .message { font-size: 16px; line-height: 1.8; margin-bottom: 20px; color: #333; }
+
+        .info-box { border: 1px solid #e5e7eb; padding: 20px; margin: 20px 0;
+        }
+
+        .info-box h2 {
+            font-size: 18px;
+            font-weight: bold;
+            margin-top: 0;
+            margin-bottom: 15px;
+        }
+
+        .info-box .label {
+            font-weight: bold;
+            color: #374151;
             font-size: 14px;
             margin-top: 10px;
         }
-        .next-steps {
-            background: #F0F9FF;
-            border: 2px solid #3B82F6;
-            border-radius: 12px;
-            padding: 25px;
-            margin: 25px 0;
-        }
-        .next-steps h3 {
-            color: #1E40AF;
-            margin: 0 0 15px 0;
-            font-size: 18px;
-            font-weight: 600;
-        }
-        .next-steps ul {
-            margin: 0;
-            padding-left: 20px;
-            color: #374151;
-        }
-        .next-steps li {
+
+        .info-box .value {
+            color: #6b7280;
+            font-size: 14px;
             margin-bottom: 10px;
-            line-height: 1.6;
         }
-        .next-steps li:last-child {
-            margin-bottom: 0;
+
+        .comment-box {
+            background-color: #f3f4f6;
+            padding: 20px;
+            margin: 20px 0;
+            border-left: 4px solid #FF4B64;
         }
-        .divider {
-            height: 1px;
-            background: linear-gradient(to right, transparent, #E5E7EB, transparent);
-            margin: 25px 0;
+
+        .button-container {
+            text-align: center;
+            margin: 30px 0;
+        }
+
+        .cta-button {
+            display: inline-block;
+            background-color: #FF4B64;
+            color: #ffffff;
+            padding: 15px 35px;
+            text-decoration: none;
+            border-radius: 0px;
+            font-weight: bold;
+            font-size: 16px;
+            margin-top: 20px;
+        }
+
+        .footer {
+            text-align: center;
+            margin-top: 30px;
+            padding-top: 20px;
+            font-size: 12px;
+            color: #6b7280;
+        }
+
+        .footer .logo {
+            max-width: 60px;
+            margin-bottom: 10px;
+        }
+    
+        @media (max-width: 600px) {
+            .email-container { padding: 20px !important; }
+            h1 { font-size: 24px !important; }
+            .message { font-size: 14px !important; }
+            .info-box, .notice-box, .schedule-box { padding: 15px !important; }
+            .cta-button { display: block !important; width: 100% !important; text-align: center; padding: 12px 20px !important; }
         }
     </style>
 </head>
+
 <body>
-    <div class="email-container">
-        <!-- Header -->
-        <div class="header">
-            <img src="{{ asset('grad_logo.png') }}" alt="UIC Graduate School Logo" class="logo">
-            <h1>✅ Defense Request Approved</h1>
-            <p>Graduate School System</p>
-        </div>
+    <div class="email-wrapper">
+        <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #f4f4f4;">
+            <tr>
+                <td align="center" style="padding: 20px 0;">
+                    <table class="email-container" width="600" cellpadding="0" cellspacing="0" border="0" style="background-color: #ffffff; max-width: 600px;">
+                        <tr>
+                            <td style="padding: 30px;">
+        <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                                    <tr>
+                                        <td width="50">
+                                            <img src="{{ asset('gss-uic-logo-v2.png') }}" alt="UIC Graduate School Logo" style="max-width: 50px; height: auto;">
+                                        </td>
+                                        <td align="right">
+                                            <span style="color: #FF4B64; font-size: 14px; font-weight: bold;">Graduate School System</span>
+                                        </td>
+                                    </tr>
+                                </table>
+        {{-- Testing Disclaimer --}}
+        @include('emails.partials.testing-disclaimer')
+
+        <h1>Defense Request Approved!</h1>
+
         
-        <!-- Content -->
-        <div class="content">
-            <div class="greeting">
-                Dear <strong>{{ $student->first_name }} {{ $student->last_name }}</strong>,
-            </div>
-            
-            <div class="success-badge">
-                🎉 Your {{ $defenseRequest->defense_type }} Defense Request Has Been Approved!
-            </div>
-            
-            <div class="message">
-                <p>Great news! Your defense request has been <strong>approved by your {{ $approvedBy }}</strong>.</p>
-            </div>
-            
-            <div class="divider"></div>
-            
+            <p class="message">
+                <strong>Dear {{ $student->first_name }} {{ $student->last_name }},</strong>
+            </p>
+            <p class="message">
+                Great news! Your defense request has been <strong>approved by your {{ $approvedBy }}</strong>.
+            </p>
+
             <div class="info-box">
+                <h2>Request Details</h2>
                 <div class="label">Defense Type</div>
                 <div class="value">{{ $defenseRequest->defense_type }} Defense</div>
-                
+
                 <div class="label">Thesis Title</div>
                 <div class="value" style="font-style: italic;">{{ $defenseRequest->thesis_title }}</div>
-                
+
                 <div class="label">Approved By</div>
                 <div class="value">{{ ucfirst($approvedBy) }}</div>
-                
+
                 <div class="label">Approved On</div>
                 <div class="value">{{ now()->format('F j, Y g:i A') }}</div>
             </div>
-            
-            @if($comment)
-            <div class="comment-box">
-                <div class="label">{{ ucfirst($approvedBy) }}'s Comments</div>
-                <div class="text">{{ $comment }}</div>
-            </div>
+
+            @if ($comment)
+                <div class="comment-box">
+                    <p><strong> <i class="fa-solid fa-comment"></i> {{ ucfirst($approvedBy) }}'s Comments:</strong></p>
+                    <p style="margin: 0; font-style: italic;">{{ $comment }}</p>
+                </div>
             @endif
-            
-            @if($approvedBy === 'adviser')
-            <div class="next-steps">
-                <h3>📌 Next Steps:</h3>
-                <ul>
-                    <li>Your request will now be forwarded to the Coordinator for final approval</li>
-                    <li>You will receive another notification once the Coordinator reviews your request</li>
-                    <li>Continue monitoring your dashboard for updates</li>
-                </ul>
+
+            <div class="info-box">
+                <h2>Next Steps</h2>
+                @if ($approvedBy === 'adviser')
+                    <ul>
+                        <li>Your request will now be forwarded to the Coordinator for final approval.</li>
+                        <li>You will receive another notification once the Coordinator reviews your request.</li>
+                        <li>Continue monitoring your dashboard for updates.</li>
+                    </ul>
+                @else
+                    <ul>
+                        <li>Wait for panel assignment from the Coordinator.</li>
+                        <li>You will receive a notification once your defense is scheduled.</li>
+                        <li>Begin preparing your defense presentation.</li>
+                        <li>Review all required documents and ensure they are complete.</li>
+                    </ul>
+                @endif
             </div>
-            @else
-            <div class="next-steps">
-                <h3>📌 Next Steps:</h3>
-                <ul>
-                    <li>Wait for panel assignment from the Coordinator</li>
-                    <li>You will receive a notification once your defense is scheduled</li>
-                    <li>Begin preparing your defense presentation</li>
-                    <li>Review all required documents and ensure they are complete</li>
-                </ul>
-            </div>
-            @endif
-            
-            <div class="divider"></div>
-            
-            <!-- Action Button -->
-            <div style="text-align: center;">
-                <a href="{{ url('/defense-request/' . $defenseRequest->id) }}" class="action-button">
-                    📋 View Request Details
+
+            <div class="button-container">
+                <a href="{{ url('/defense-request/' . $defenseRequest->id) }}" class="cta-button">
+                    View Request Details
                 </a>
             </div>
-            
-            <div class="message" style="margin-top: 30px; text-align: center;">
-                <p style="font-size: 14px;">
-                    <em>You can track the status of your defense request anytime through your dashboard.</em>
-                </p>
-            </div>
-        </div>
-        
-        <!-- Footer -->
-        <div class="footer">
-            <p class="uic-brand">University of the Immaculate Conception</p>
-            <p>Graduate School System</p>
-            <p style="margin-top: 15px; font-size: 12px;">
-                This is an automated notification from the UIC Graduate School System.<br>
-                Please do not reply to this email.
-            </p>
-        </div>
+        </td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 20px 30px; border-top: 1px solid #e5e7eb;">
+                                @include('emails.partials.footer')
+                            </td>
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+        </table>
     </div>
 </body>
 </html>

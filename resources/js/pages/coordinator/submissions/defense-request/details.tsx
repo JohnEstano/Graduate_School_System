@@ -1,11 +1,13 @@
-'use client';
+﻿'use client';
 
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
 import { useEffect, useState, useMemo } from 'react';
 import { Head, router } from '@inertiajs/react';
 import { format } from 'date-fns';
+import dayjs from 'dayjs';
 import { toast, Toaster } from 'sonner';
+import { fetchWithCsrf, postWithCsrf, patchWithCsrf } from '@/utils/csrf';
 import {
   ArrowLeft,
   Calendar,
@@ -24,7 +26,13 @@ import {
   XCircle,
   CircleArrowLeft,
   Signature,
-  User
+  User,
+  X,
+  AlertTriangle,
+  Banknote,
+  DollarSign,
+  Hourglass,
+  ArrowRight
 } from 'lucide-react';
 import { useRef } from 'react';
 
@@ -33,6 +41,8 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
 import {
   Command,
   CommandEmpty,
@@ -61,6 +71,7 @@ import {
 // add: ShadCN table + program level util
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
 import { findPanelMember, getMemberReceivableByProgramLevel, getMemberReceivable } from '@/utils/payment-rates';
+import CoordinatorApproveDialog from './coordinator-approve-dialog';
 
 type PanelMemberOption = {
   id: string;
@@ -93,6 +104,9 @@ export type DefenseRequestFull = {
   scheduled_end_time?: string;
   defense_mode?: string;
   defense_venue?: string;
+  aa_verification_status?: 'pending' | 'ready_for_finance' | 'in_progress' | 'paid' | 'completed' | 'invalid';
+  aa_verification_id?: number | null;
+  invalid_comment?: string | null;
   scheduling_notes?: string;
   advisers_endorsement?: string;
   rec_endorsement?: string;
@@ -108,8 +122,27 @@ export type DefenseRequestFull = {
   last_status_updated_at?: string;
   workflow_history?: any[];
   adviser_status?: string;
+  adviser_comments?: string;
   coordinator_status?: string;
+  coordinator_comments?: string;
   program_level?: string; // "Masteral" | "Doctorate" from server
+  submitted_at?: string;
+  amount?: number;
+  coordinator?: {
+    id: number;
+    name: string;
+    email: string;
+  } | null;
+  attachments?: {
+    advisers_endorsement?: string;
+    rec_endorsement?: string;
+    proof_of_payment?: string;
+    manuscript_proposal?: string;
+    similarity_index?: string;
+    avisee_adviser_attachment?: string;
+    ai_detection_certificate?: string;
+    endorsement_form?: string;
+  };
 };
 
 // add: local type for payment rate to avoid cross-file type conflicts
@@ -169,12 +202,25 @@ function PanelMemberCombobox({
             className="w-full h-9 px-3 flex items-center justify-between rounded-md border bg-background text-sm text-left focus:outline-none focus:ring-2 focus:ring-primary/40 hover:bg-accent disabled:opacity-50"
             disabled={disabled}
           >
-            <span
-              className={`truncate ${!value ? 'text-muted-foreground' : ''}`}
-            >
+            <span className={`truncate flex-1 ${!value ? 'text-muted-foreground' : ''}`}>
               {value || `Select ${label}`}
             </span>
-            <ChevronsUpDown size={14} className="opacity-50" />
+            <div className="flex items-center gap-1 ml-2">
+              {/* X button - only show when there's a value and not disabled */}
+              {value && !disabled && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onChange('');
+                  }}
+                  className="h-5 w-5 rounded-sm hover:bg-muted flex items-center justify-center transition-colors"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              )}
+              <ChevronsUpDown size={14} className="opacity-50" />
+            </div>
           </button>
         </PopoverTrigger>
         <PopoverContent
@@ -257,7 +303,7 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
   // Build breadcrumbs, use thesis title (truncated) instead of id
   const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Dashboard', href: '/dashboard' },
-    { title: 'Defense Requests', href: '/defense-request' }
+    { title: 'Defense Requests', href: '/coordinator/defense-requests' }
   ];
   if (requestProp?.id) {
     const thesisForCrumb =
@@ -281,7 +327,7 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
           </p>
           <Button
             variant="outline"
-            onClick={() => router.visit('/defense-request')}
+            onClick={() => router.visit('/coordinator/defense-requests')}
           >
             Back to list
           </Button>
@@ -292,11 +338,16 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
 
   const [request, setRequest] = useState<DefenseRequestFull>(requestProp);
 
+  // Coordinator Approve Dialog state
+  const [approveDialogOpen, setApproveDialogOpen] = useState(false);
+
   // Confirmation dialog state for approve/reject/retrieve
-  const [confirm, setConfirm] = useState<{ open: boolean; action: 'approve' | 'reject' | 'retrieve' | null }>({
+  const [confirm, setConfirm] = useState<{ open: boolean; action: 'approve' | 'reject' | 'retrieve' | null; sendEmail: boolean }>({
     open: false,
     action: null,
+    sendEmail: false,
   });
+  const [rejectionReason, setRejectionReason] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
   // Panel members simple load
@@ -355,8 +406,11 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
         const r = await fetch('/dean/payment-rates/data', { headers: { Accept: 'application/json' } });
         const json = await r.json();
         const arr = Array.isArray(json?.rates) ? json.rates : (Array.isArray(json) ? json : []);
+        console.log('📊 Coordinator - Payment Rates Loaded:', arr.length, 'rates');
+        console.log('📊 Sample rates:', arr.slice(0, 3));
         if (alive) setPaymentRates(arr as any);
       } catch (e) {
+        console.error('❌ Failed to load payment rates:', e);
         if (alive) setPaymentRates([]);
       }
     })();
@@ -394,42 +448,102 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
     userRole
   );
 
+  // Options for assignment comboboxes: only exclude the actual thesis adviser
+  const panelOptionsForAssignment = useMemo(() => {
+    const adviserName = (request.defense_adviser || '').toLowerCase().trim();
+
+    return panelMembers.filter(pm => {
+      const name = (pm.name || '').toLowerCase();
+
+      // ONLY exclude if this panel member's name matches the actual thesis/dissertation adviser
+      if (adviserName && name && (name === adviserName || name.includes(adviserName) || adviserName.includes(name))) {
+        return false;
+      }
+
+      // Include everyone else from the panelists table
+      return true;
+    });
+  }, [panelMembers, request.defense_adviser]);
+
   // Helper to always get a fresh CSRF token
   async function getFreshCsrfToken(): Promise<string> {
     try {
-      await fetch('/sanctum/csrf-cookie', { credentials: 'same-origin' });
+      // First, refresh the CSRF cookie
+      await fetch('/sanctum/csrf-cookie', { 
+        credentials: 'same-origin',
+        headers: {
+          'Accept': 'application/json'
+        }
+      });
+      
+      // Then get the token from the meta tag
       const token = (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content || '';
+      
+      if (!token) {
+        console.error('⚠️ CSRF token not found in meta tag');
+      }
+      
       return token;
-    } catch {
+    } catch (err) {
+      console.error('❌ Failed to refresh CSRF token:', err);
       return '';
     }
   }
 
   // Robust fetch with CSRF retry and refresh
-  async function fetchWithCsrfRetry(url: string, options: RequestInit, retry = true) {
+  async function fetchWithCsrfRetry(url: string, options: RequestInit, retry = true): Promise<Response> {
     if (!options.headers) options.headers = {};
-    (options.headers as Record<string, string>)['X-CSRF-TOKEN'] = await getFreshCsrfToken();
+    
+    // Get fresh CSRF token
+    const token = await getFreshCsrfToken();
+    (options.headers as Record<string, string>)['X-CSRF-TOKEN'] = token;
+    
+    console.log('🔑 Making request to:', url, 'with CSRF token:', token ? '✓' : '✗');
+    
     let res: Response;
     try {
-      res = await fetch(url, options);
+      res = await fetch(url, {
+        ...options,
+        credentials: 'same-origin', // Important for CSRF
+      });
+      
+      console.log('📥 Response status:', res.status, res.statusText);
     } catch (err) {
+      console.error('❌ Network error:', err);
       throw new Error('network');
     }
+    
+    // Handle CSRF token mismatch (419 error)
     if (res.status === 419 && retry) {
-      // CSRF error, try to refresh token and retry once
-      (options.headers as Record<string, string>)['X-CSRF-TOKEN'] = await getFreshCsrfToken();
+      console.warn('⚠️ CSRF token mismatch (419), retrying with fresh token...');
+      
+      // Get a completely fresh token
+      const freshToken = await getFreshCsrfToken();
+      (options.headers as Record<string, string>)['X-CSRF-TOKEN'] = freshToken;
+      
       try {
-        res = await fetch(url, options);
+        res = await fetch(url, {
+          ...options,
+          credentials: 'same-origin',
+        });
+        
+        console.log('📥 Retry response status:', res.status, res.statusText);
       } catch (err) {
+        console.error('❌ Retry network error:', err);
         throw new Error('network');
       }
     }
+    
     return res;
   }
 
   async function savePanels() {
     const toastId = toast.loading('Saving panel assignments...');
     setSavingPanels(true);
+    
+    console.log('🔵 savePanels - Request ID:', request.id);
+    console.log('🔵 savePanels - Panel data being sent:', JSON.stringify(panels, null, 2));
+    
     try {
       const res = await fetchWithCsrfRetry(
         `/coordinator/defense-requests/${request.id}/panels`,
@@ -442,6 +556,8 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
           body: JSON.stringify(panels)
         }
       );
+      
+      console.log('🔵 savePanels - Response status:', res.status);
 
       const contentType = res.headers.get('content-type') || '';
       let data: any = {};
@@ -457,6 +573,7 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
       }
 
       if (res.ok && data.ok) {
+        console.log('✅ savePanels - Response data:', JSON.stringify(data.request, null, 2));
         setRequest(r => ({ ...r, ...data.request }));
         toast.success('Panels saved', {
           id: toastId,
@@ -469,6 +586,7 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
           ].filter(Boolean).join(', ')
         });
       } else {
+        console.error('❌ savePanels - Error response:', data);
         toast.error(data.error || `Failed (${res.status})`, { id: toastId });
       }
     } catch {
@@ -503,9 +621,13 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
     }
     const toastId = toast.loading('Saving schedule...');
     setSavingSchedule(true);
+    
+    console.log('🔵 saveSchedule - Request ID:', request.id);
+    console.log('🔵 saveSchedule - Schedule data being sent:', JSON.stringify(schedule, null, 2));
+    
     try {
       const res = await fetchWithCsrfRetry(
-        `/coordinator/defense-requests/${request.id}/schedule-json`,
+        `/coordinator/defense-requests/${request.id}/schedule`,
         {
           method: 'POST',
           headers: {
@@ -515,6 +637,8 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
           body: JSON.stringify(schedule)
         }
       );
+      
+      console.log('🔵 saveSchedule - Response status:', res.status);
 
       const contentType = res.headers.get('content-type') || '';
       let data: any = {};
@@ -530,6 +654,7 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
       }
 
       if (res.ok && data.request) {
+        console.log('✅ saveSchedule - Response data:', JSON.stringify(data.request, null, 2));
         setRequest(r => ({ ...r, ...data.request }));
         toast.success('Schedule saved', {
           id: toastId,
@@ -540,6 +665,7 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
           }`
         });
       } else {
+        console.error('❌ saveSchedule - Error response:', data);
         toast.error(data.error || `Failed (${res.status})`, { id: toastId });
       }
     } catch (err: any) {
@@ -553,46 +679,168 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
     }
   }
 
+  // Validate and open approval dialog (panels/schedule will be saved on final approval)
+  function handleOpenApprovalDialog() {
+    if (!request.id) return;
+
+    // Validate that panels and schedule are filled before opening dialog
+    const requiredPanels = [
+      panels.defense_chairperson,
+      panels.defense_panelist1,
+      panels.defense_panelist2
+    ];
+
+    const allPanelsFilled = requiredPanels.every(p => p && p.trim());
+    
+    if (!allPanelsFilled) {
+      toast.error('Please assign at least Chairperson and 2 Panelists before approving');
+      return;
+    }
+
+    const requiredSchedule = [
+      schedule.scheduled_date,
+      schedule.scheduled_time,
+      schedule.scheduled_end_time,
+      schedule.defense_mode,
+      schedule.defense_venue
+    ];
+
+    const allScheduleFilled = requiredSchedule.every(s => s && s.trim());
+    
+    if (!allScheduleFilled) {
+      toast.error('Please fill in all schedule information before approving');
+      return;
+    }
+
+    // Validate time logic: start < end
+    if (schedule.scheduled_time && schedule.scheduled_end_time) {
+      const [sh, sm] = schedule.scheduled_time.split(':').map(Number);
+      const [eh, em] = schedule.scheduled_end_time.split(':').map(Number);
+      const start = sh * 60 + sm;
+      const end = eh * 60 + em;
+      if (end <= start) {
+        toast.error('End time must be after start time');
+        return;
+      }
+    }
+    
+    console.log('✅ Validation passed. Opening approval dialog...');
+    console.log('📋 Panels data to be saved:', JSON.stringify(panels, null, 2));
+    console.log('📅 Schedule data to be saved:', JSON.stringify(schedule, null, 2));
+    console.log('🔍 Current request data from server:', {
+      defense_chairperson: request.defense_chairperson,
+      defense_panelist1: request.defense_panelist1,
+      scheduled_date: request.scheduled_date,
+      scheduled_time: request.scheduled_time
+    });
+    
+    // Open the approval dialog - panels and schedule will be saved on final approval
+    setApproveDialogOpen(true);
+  }
+
   // --- Approve/Reject/Retrieve logic (robust, uses fetchWithCsrfRetry) ---
-  async function handleStatusChange(action: 'approve' | 'reject' | 'retrieve') {
+  async function handleStatusChange(action: 'approve' | 'reject' | 'retrieve', sendEmail: boolean = false) {
     if (!request.id) return;
     setIsLoading(true);
 
-    let newStatus: 'Pending' | 'Approved' | 'Rejected' = 'Pending';
-    if (action === 'approve') newStatus = 'Approved';
-    else if (action === 'reject') newStatus = 'Rejected';
-    else if (action === 'retrieve') newStatus = 'Pending';
-
     try {
-      const res = await fetchWithCsrfRetry(`/defense-requests/${request.id}/status`, {
+      // STEP 1: If approving, save panels and schedule FIRST
+      if (action === 'approve') {
+        // Save panels
+        const panelsRes = await fetchWithCsrfRetry(`/coordinator/defense-requests/${request.id}/panels`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Accept: 'application/json'
+          },
+          body: JSON.stringify(panels)
+        });
+
+        if (!panelsRes.ok) {
+          const panelsError = await panelsRes.json().catch(() => ({ error: 'Failed to save panels' }));
+          toast.error(panelsError.error || 'Failed to save panel assignments');
+          return;
+        }
+
+        // Save schedule
+        const scheduleRes = await fetchWithCsrfRetry(`/coordinator/defense-requests/${request.id}/schedule`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Accept: 'application/json'
+          },
+          body: JSON.stringify(schedule)
+        });
+
+        if (!scheduleRes.ok) {
+          const scheduleError = await scheduleRes.json().catch(() => ({ error: 'Failed to save schedule' }));
+          toast.error(scheduleError.error || 'Failed to save schedule information');
+          return;
+        }
+
+        console.log('✅ Panels and schedule saved successfully before approval');
+      }
+
+      // STEP 2: Now approve/reject/retrieve via coordinator-status endpoint
+      const payload: any = { 
+        coordinator_status: action === 'approve' ? 'Approved' : action === 'reject' ? 'Rejected' : 'Pending',
+        send_email: sendEmail
+      };
+      
+      // Add rejection reason if rejecting
+      if (action === 'reject' && rejectionReason.trim()) {
+        payload.coordinator_comments = rejectionReason.trim();
+      }
+
+      const res = await fetchWithCsrfRetry(`/coordinator/defense-requirements/${request.id}/coordinator-status`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
           Accept: 'application/json'
         },
-        body: JSON.stringify({ status: newStatus }),
+        body: JSON.stringify(payload),
       });
+      
       let data: any = {};
       try {
         data = await res.json();
       } catch {
         data = { error: 'Invalid response from server.' };
       }
-      if (res.ok) {
+
+      console.log('updateStatus response:', { ok: res.ok, status: res.status, data });
+      
+      if (res.ok && data.ok) {
         if (data.request) {
           setRequest(data.request);
-        } else {
-          setRequest(r => ({
-            ...r,
-            coordinator_status: newStatus,
-            workflow_state: data.workflow_state || r.workflow_state,
-            workflow_history: data.workflow_history || r.workflow_history,
-            status: data.status || r.status,
-          }));
+          setPanels({
+            defense_chairperson: data.request.defense_chairperson || '',
+            defense_panelist1: data.request.defense_panelist1 || '',
+            defense_panelist2: data.request.defense_panelist2 || '',
+            defense_panelist3: data.request.defense_panelist3 || '',
+            defense_panelist4: data.request.defense_panelist4 || '',
+          });
+          setSchedule({
+            scheduled_date: data.request.scheduled_date || '',
+            scheduled_time: data.request.scheduled_time || '',
+            scheduled_end_time: data.request.scheduled_end_time || '',
+            defense_mode: data.request.defense_mode || '',
+            defense_venue: data.request.defense_venue || '',
+            scheduling_notes: data.request.scheduling_notes || '',
+          });
         }
-        toast.success(`Coordinator status set to ${newStatus}`);
+        toast.success(`Defense request ${action === 'approve' ? 'approved' : action === 'reject' ? 'rejected' : 'retrieved'} successfully`);
+        setConfirm({ open: false, action: null, sendEmail: false });
+        setRejectionReason(''); // Clear reason after submission
+        
+        // Reload to show updated data
+        setTimeout(() => window.location.reload(), 500);
       } else {
-        toast.error(data?.error || `Failed to update status (${res.status})`);
+        if (data.missing_fields) {
+          toast.error('Missing required fields: ' + data.missing_fields.join(', '));
+        } else {
+          toast.error(data?.error || `Failed to update status (${res.status})`);
+        }
       }
     } catch (err: any) {
       if (err instanceof Error && err.message === 'network') {
@@ -602,7 +850,59 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
       }
     } finally {
       setIsLoading(false);
-      setConfirm({ open: false, action: null });
+    }
+  }
+
+  // Helper to resend approve with force=true
+  async function handleForceApprove() {
+    if (!request.id) return;
+    setIsLoading(true);
+    try {
+      // Format times to H:i (strip seconds if present)
+      const formatTimeForBackend = (time: string) => {
+        if (!time) return '';
+        const parts = time.split(':');
+        return parts.length >= 2 ? `${parts[0]}:${parts[1]}` : time;
+      };
+      
+      const payload: any = {
+        status: 'Approved',
+        send_email: confirm.sendEmail,
+        force: true,
+        panels: {
+          defense_chairperson: panels.defense_chairperson,
+          defense_panelist1: panels.defense_panelist1,
+          defense_panelist2: panels.defense_panelist2,
+          defense_panelist3: panels.defense_panelist3,
+          defense_panelist4: panels.defense_panelist4,
+        },
+        schedule: {
+          scheduled_date: schedule.scheduled_date,
+          scheduled_time: formatTimeForBackend(schedule.scheduled_time),
+          scheduled_end_time: formatTimeForBackend(schedule.scheduled_end_time),
+          defense_mode: schedule.defense_mode,
+          defense_venue: schedule.defense_venue,
+          scheduling_notes: schedule.scheduling_notes,
+        }
+      };
+
+      const res = await fetchWithCsrfRetry(`/defense-requests/${request.id}/status`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok) {
+        if (data.request) setRequest(data.request);
+        toast.success('Coordinator status set to Approved (forced)');
+      } else {
+        toast.error(data?.error || `Failed to force approve (${res.status})`);
+      }
+    } catch (e) {
+      toast.error('Network error while forcing approval');
+    } finally {
+      setIsLoading(false);
+      setConfirm({ open: false, action: null, sendEmail: false });
     }
   }
 
@@ -631,14 +931,14 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
 
   // Attachments (show all, including manuscript, similarity, avisee, etc.)
   const attachments = [
-    { label: "Adviser’s Endorsement", url: resolveFileUrl(request.advisers_endorsement) },
-    { label: 'REC Endorsement', url: resolveFileUrl(request.rec_endorsement) },
-    { label: 'Proof of Payment', url: resolveFileUrl(request.proof_of_payment) },
-    { label: 'Manuscript', url: resolveFileUrl(request.manuscript_proposal) },
-    { label: 'Similarity Index', url: resolveFileUrl(request.similarity_index) },
-    { label: 'Avisee-Adviser File', url: resolveFileUrl(request.avisee_adviser_attachment) },
-    { label: 'AI Detection Certificate', url: resolveFileUrl(request.ai_detection_certificate) },
-    { label: 'Endorsement Form', url: resolveFileUrl(request.endorsement_form) },
+    { label: "Adviser’s Endorsement", url: resolveFileUrl(request.attachments?.advisers_endorsement || request.advisers_endorsement) },
+    { label: 'REC Endorsement', url: resolveFileUrl(request.attachments?.rec_endorsement || request.rec_endorsement) },
+    { label: 'Proof of Payment', url: resolveFileUrl(request.attachments?.proof_of_payment || request.proof_of_payment) },
+    { label: 'Manuscript', url: resolveFileUrl(request.attachments?.manuscript_proposal || request.manuscript_proposal) },
+    { label: 'Similarity Form', url: resolveFileUrl(request.attachments?.similarity_index || request.similarity_index) },
+    { label: 'Advisee-Adviser File', url: resolveFileUrl(request.attachments?.avisee_adviser_attachment || request.avisee_adviser_attachment) },
+    { label: 'AI Declaration Form', url: resolveFileUrl(request.attachments?.ai_detection_certificate || request.ai_detection_certificate) },
+    { label: 'Endorsement Form', url: resolveFileUrl(request.attachments?.endorsement_form || request.endorsement_form) },
   ];
 
   // Helper for workflow history rendering robustness
@@ -695,7 +995,7 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
     }
   }
 
-  // Workflow stepper config
+  // Workflow stepper config (UPDATED ORDER)
   const workflowSteps = [
     {
       key: 'submitted',
@@ -704,8 +1004,28 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
     },
     {
       key: 'adviser-approved',
-      label: 'Endorsed by Adviser', // CHANGED from "Approved by Adviser"
+      label: 'Endorsed by Adviser',
       icon: <UserCheck className="h-5 w-5" />,
+    },
+    {
+      key: 'adviser-rejected',
+      label: 'Rejected by Adviser',
+      icon: <XCircle className="h-5 w-5" />,
+    },
+    {
+      key: 'adviser-retrieved',
+      label: 'Retrieved by Adviser',
+      icon: <CircleArrowLeft className="h-5 w-5" />,
+    },
+    {
+      key: 'panels-assigned',
+      label: 'Panels Assigned',
+      icon: <UsersIcon className="h-5 w-5" />,
+    },
+    {
+      key: 'scheduled',
+      label: 'Scheduled',
+      icon: <Clock className="h-5 w-5" />,
     },
     {
       key: 'coordinator-approved',
@@ -713,36 +1033,68 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
       icon: <Signature className="h-5 w-5" />, 
     },
     {
-      key: 'rejected',
+      key: 'coordinator-rejected',
       label: 'Rejected by Coordinator',
       icon: <XCircle className="h-5 w-5" />,
     },
     {
-      key: 'retrieved',
-      label: 'Retrieved (Set to Pending)',
+      key: 'coordinator-retrieved',
+      label: 'Retrieved by Coordinator',
       icon: <CircleArrowLeft className="h-5 w-5" />,
     },
     {
-      key: 'panels-assigned',
-      label: 'Panels Assigned',
-      icon: <User className="h-5 w-5" />,
+      key: 'payment-ready',
+      label: 'Payment Ready for Finance',
+      icon: <ArrowRight className="h-5 w-5" />,
     },
     {
-      key: 'scheduled',
-      label: 'Scheduled',
-      icon: <Clock className="h-5 w-5" />,
+      key: 'payment-in-progress',
+      label: 'Payment In Progress',
+      icon: <Hourglass className="h-5 w-5" />,
     },
-    // Add more steps as needed
+    {
+      key: 'payment-paid',
+      label: 'Payment Paid',
+      icon: <Banknote className="h-5 w-5" />,
+    },
+    {
+      key: 'payment-invalid',
+      label: 'Payment Invalid',
+      icon: <AlertTriangle className="h-5 w-5" />,
+    },
   ];
 
   // Update this function:
-  function getStepForEvent(event: string) {
+  function getStepForEvent(event: string, toState?: string) {
     event = (event || '').toLowerCase();
+    const state = (toState || '').toLowerCase();
+    
     if (event.includes('submit')) return 'submitted';
-    if (event.includes('adviser')) return 'adviser-approved';
+    
+    // Handle adviser actions based on to_state
+    if (event.includes('adviser')) {
+      if (state.includes('reject')) return 'adviser-rejected';
+      if (state.includes('retrieved') || state.includes('pending')) return 'adviser-retrieved';
+      if (state.includes('approved') || state.includes('endorsed')) return 'adviser-approved';
+      return 'adviser-approved'; // default for adviser actions
+    }
+    
+    // Handle coordinator actions based on to_state
+    if (event.includes('coordinator')) {
+      if (state.includes('reject')) return 'coordinator-rejected';
+      if (state.includes('retrieved') || state.includes('pending')) return 'coordinator-retrieved';
+      if (state.includes('approved')) return 'coordinator-approved';
+      return 'coordinator-approved'; // default for coordinator actions
+    }
+    
+    // Handle payment-related events
+    if (event.includes('payment ready') || event.includes('ready for finance')) return 'payment-ready';
+    if (event.includes('payment in progress') || event.includes('in progress')) return 'payment-in-progress';
+    if (event.includes('payment paid') || event.includes('paid')) return 'payment-paid';
+    if (event.includes('payment invalid') || event.includes('invalid')) return 'payment-invalid';
+    
     if (event.includes('rejected')) return 'rejected';
     if (event.includes('retrieved')) return 'retrieved';
-    if (event.includes('coordinator')) return 'coordinator-approved';
     if (event.includes('panel')) return 'panels-assigned';
     if (event.includes('schedule')) return 'scheduled'; 
     return '';
@@ -758,6 +1110,76 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
 
   // Tabs: "details" and "assign-schedule"
   const [tab, setTab] = useState<'details' | 'assign-schedule'>('details');
+
+  // Local helper to get receivable (matching AA logic)
+  function getMemberReceivable(role: string): number | null {
+    if (!request.program_level || !request.defense_type) {
+      return null;
+    }
+    
+    // Map role to payment rate type EXACTLY as stored in DB
+    // IMPORTANT: Database stores "Panel Member 1", "Panel Member 2", etc. with numbers!
+    let rateType = '';
+    if (role === 'Adviser') {
+      rateType = 'Adviser';
+    } else if (role === 'Panel Chair' || role === 'Chairperson') {
+      rateType = 'Panel Chair';
+    } else if (role.includes('Panel Member')) {
+      // Keep the full role name including number (Panel Member 1, Panel Member 2, etc.)
+      rateType = role;
+    } else if (role === 'Panelist') {
+      // Generic panelist - try to find any Panel Member rate
+      rateType = 'Panel Member 1'; // Default to Panel Member 1
+    } else {
+      // Default fallback
+      rateType = role;
+    }
+    
+    // Normalize defense type for case-insensitive comparison
+    const normalizeDefenseType = (dt: string) => dt.toLowerCase().replace(/[^a-z]/g, '');
+    const targetDefenseType = normalizeDefenseType(request.defense_type);
+    
+    // Log for debugging
+    console.log('💰 Rate Lookup:', {
+      originalRole: role,
+      mappedRateType: rateType,
+      program_level: request.program_level,
+      defense_type: request.defense_type,
+      targetDefenseType,
+    });
+    
+    // Direct comparison with normalization
+    const rate = paymentRates.find(
+      r => {
+        const matchesProgram = r.program_level === request.program_level;
+        const matchesType = r.type === rateType;
+        const matchesDefense = normalizeDefenseType(r.defense_type || '') === targetDefenseType;
+        
+        return matchesProgram && matchesType && matchesDefense;
+      }
+    );
+    
+    if (!rate) {
+      console.error('❌ No rate found:', {
+        role,
+        rateType,
+        searched_for: { 
+          program_level: request.program_level, 
+          type: rateType, 
+          defense_type: targetDefenseType 
+        },
+        available_rates: paymentRates.map(r => ({ 
+          program: r.program_level, 
+          type: r.type, 
+          defense: r.defense_type 
+        }))
+      });
+    } else {
+      console.log('✅ Rate found:', rate);
+    }
+    
+    return rate ? Number(rate.amount) : null;
+  }
 
   const statusMap: Record<string, string> = {
     'submitted': 'Submitted',
@@ -803,11 +1225,11 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
           </div>
           {canEdit && (
             <div className="flex gap-2">
-              {/* Approve button: only enabled if not already approved or completed */}
+              {/* Approve button: opens the coordinator approve dialog */}
               <Button
                 size="sm"
                 variant="outline"
-                onClick={() => setConfirm({ open: true, action: 'approve' })}
+                onClick={handleOpenApprovalDialog}
                 disabled={
                   isLoading ||
                   request.coordinator_status === 'Approved' ||
@@ -815,13 +1237,13 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
                 }
               >
                 <CheckCircle className="h-4 w-4 mr-1 text-green-600" />
-                Approve
+                Approve & Sign
               </Button>
               {/* Reject button: only enabled if not already rejected, not approved, and not completed */}
               <Button
                 size="sm"
                 variant="outline"
-                onClick={() => setConfirm({ open: true, action: 'reject' })}
+                onClick={() => setConfirm({ open: true, action: 'reject', sendEmail: false })}
                 disabled={
                   isLoading ||
                   request.coordinator_status === 'Rejected' ||
@@ -836,7 +1258,7 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
               <Button
                 size="sm"
                 variant="outline"
-                onClick={() => setConfirm({ open: true, action: 'retrieve' })}
+                onClick={() => setConfirm({ open: true, action: 'retrieve', sendEmail: false })}
                 disabled={
                   isLoading ||
                   !['Rejected', 'Approved'].includes(request.coordinator_status || '') ||
@@ -857,39 +1279,37 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
             <Tabs value={tab} onValueChange={v => setTab(v as 'details' | 'assign-schedule')} className="w-full">
               {/* DETAILS TAB */}
               <TabsContent value="details" className="space-y-5">
-                {/* Submission summary card */}
+                {/* Submission summary card - MATCHING ADVISER LAYOUT */}
                 <div className="rounded-xl border p-8 bg-white dark:bg-zinc-900">
-                  {/* Thesis Title Header with Status */}
-                  <div className="mb-1 flex flex-col md:flex-row md:items-center md:justify-between gap-2">
-                    <div>
+                  {/* Thesis Title Header with Adviser Status ONLY */}
+                  <div className="mb-1 flex flex-col md:flex-row md:items-start md:justify-between gap-2">
+                    <div className="flex-1">
                       <div className="text-2xl font-semibold">{request.thesis_title}</div>
                       <div className="text-xs text-muted-foreground font-medium mt-0.5">Thesis Title</div>
                     </div>
                     <div className="flex flex-col md:items-end gap-1">
-                      {/* Coordinator Status */}
-                      {request.coordinator_status && (
-                        <span
-                          className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
-                            request.coordinator_status === 'Approved'
-                              ? 'bg-green-100 text-green-600'
-                              : request.coordinator_status === 'Rejected'
-                              ? 'bg-red-100 text-red-600'
-                              : request.coordinator_status === 'Needs Signature'
-                              ? 'bg-blue-100 text-blue-600'
-                              : request.coordinator_status === 'Not Scheduled'
-                              ? 'bg-yellow-100 text-yellow-700'
-                              : request.coordinator_status === 'No Assigned Panelists'
-                              ? 'bg-orange-100 text-orange-600'
-                              : 'bg-gray-100 text-gray-600'
-                          }`}
+                      {/* Adviser Status Badge */}
+                      {request.adviser_status && (
+                        <Badge
+                          variant="secondary"
+                          className={cn(
+                            "text-xs font-semibold px-3 py-1",
+                            request.adviser_status === 'Approved'
+                              ? 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300'
+                              : request.adviser_status === 'Rejected'
+                              ? 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300'
+                              : 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300'
+                          )}
                         >
-                          Coordinator Status: {request.coordinator_status}
-                        </span>
+                          Adviser Status: {request.adviser_status === 'Approved' ? 'Endorsed' : request.adviser_status}
+                        </Badge>
                       )}
                     </div>
                   </div>
+
                   {/* Info Grid */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-6 mt-6">
+                    {/* Presenter */}
                     <div>
                       <div className="text-xs text-muted-foreground mb-1">Presenter</div>
                       <div className="flex items-center gap-3">
@@ -908,20 +1328,129 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
                         </div>
                       </div>
                     </div>
+
+                    {/* Program */}
                     <div>
                       <div className="text-xs text-muted-foreground mb-1">Program</div>
                       <div className="font-medium text-sm">{request.program}</div>
                     </div>
+
+                    {/* Defense Type */}
                     <div>
                       <div className="text-xs text-muted-foreground mb-1">Defense Type</div>
                       <Badge variant="secondary" className="text-xs font-medium">
                         {request.defense_type ?? '—'}
                       </Badge>
                     </div>
+
+                    {/* Reference No. */}
+                    <div>
+                      <div className="text-xs text-muted-foreground mb-1">Reference No.</div>
+                      <div className="font-medium text-sm">{request.reference_no || '—'}</div>
+                    </div>
+
+                    {/* Amount */}
+                    <div>
+                      <div className="text-xs text-muted-foreground mb-1">Amount</div>
+                      <div className="font-medium text-sm">
+                        {request.amount ? `₱${Number(request.amount).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '—'}
+                      </div>
+                    </div>
+
+                    {/* AA Verification Status */}
+                    <div>
+                      <div className="text-xs text-muted-foreground mb-1">AA Payment Status</div>
+                      <Badge
+                        variant="secondary"
+                        className={cn(
+                          "text-xs font-semibold px-2 py-1 h-fit flex items-center gap-1.5 w-fit",
+                          request.aa_verification_status === 'completed'
+                            ? 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300'
+                            : request.aa_verification_status === 'paid'
+                            ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300'
+                            : request.aa_verification_status === 'ready_for_finance'
+                            ? 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300'
+                            : request.aa_verification_status === 'in_progress'
+                            ? 'bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300'
+                            : request.aa_verification_status === 'invalid'
+                            ? 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300'
+                            : 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300'
+                        )}
+                      >
+                        {request.aa_verification_status === 'completed' && <CheckCircle className="h-3 w-3" />}
+                        {request.aa_verification_status === 'paid' && <Banknote className="h-3 w-3" />}
+                        {request.aa_verification_status === 'ready_for_finance' && <DollarSign className="h-3 w-3" />}
+                        {request.aa_verification_status === 'in_progress' && <Hourglass className="h-3 w-3" />}
+                        {request.aa_verification_status === 'invalid' && <AlertTriangle className="h-3 w-3" />}
+                        {!request.aa_verification_status && <Clock className="h-3 w-3" />}
+                        {request.aa_verification_status === 'completed'
+                          ? 'Completed'
+                          : request.aa_verification_status === 'paid'
+                          ? 'Paid'
+                          : request.aa_verification_status === 'ready_for_finance'
+                          ? 'Ready for Finance'
+                          : request.aa_verification_status === 'in_progress'
+                          ? 'In Progress'
+                          : request.aa_verification_status === 'invalid'
+                          ? 'Invalid'
+                          : 'Pending'}
+                      </Badge>
+                    </div>
+
+                    {/* Invalid Comment Display */}
+                    {request.invalid_comment && (
+                      <div className="md:col-span-2">
+                        <div className="p-3 bg-red-50 border border-red-200 rounded-md">
+                          <p className="text-xs text-muted-foreground mb-1">Invalid Reason</p>
+                          <p className="text-sm text-red-800">{request.invalid_comment}</p>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Submitted At */}
+                    <div>
+                      <div className="text-xs text-muted-foreground mb-1">Submitted At</div>
+                      <div className="font-medium text-sm">{formatDate(request.submitted_at)}</div>
+                    </div>
+
+                    {/* Program Coordinator */}
+                    <div>
+                      <div className="text-xs text-muted-foreground mb-1">Program Coordinator</div>
+                      <div className="font-medium text-sm">
+                        {request.coordinator?.name || 'Rogelio O. Badiang (rbadiang@uic.edu.ph)'}
+                      </div>
+                    </div>
+
+                    {/* Coordinator Status */}
+                    <div>
+                      <div className="text-xs text-muted-foreground mb-1">Coordinator Status</div>
+                      <Badge
+                        variant="secondary"
+                        className={cn(
+                          "text-xs font-semibold",
+                          request.coordinator_status === 'Approved'
+                            ? 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300'
+                            : request.coordinator_status === 'Rejected'
+                            ? 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300'
+                            : 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300'
+                        )}
+                      >
+                        {request.coordinator_status || 'Pending'}
+                      </Badge>
+                    </div>
+
+                    {/* Separator before schedule info */}
+                    <div className="md:col-span-2">
+                      <Separator className="my-2" />
+                    </div>
+
+                    {/* Scheduled Date */}
                     <div>
                       <div className="text-xs text-muted-foreground mb-1">Scheduled Date</div>
                       <div className="font-medium text-sm">{formatDate(request.scheduled_date)}</div>
                     </div>
+
+                    {/* Time */}
                     <div>
                       <div className="text-xs text-muted-foreground mb-1">Time</div>
                       <div className="font-medium text-sm">
@@ -930,14 +1459,22 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
                           : '—'}
                       </div>
                     </div>
+
+                    {/* Venue */}
                     <div>
                       <div className="text-xs text-muted-foreground mb-1">Venue</div>
                       <div className="font-medium text-sm">{request.defense_venue || '—'}</div>
                     </div>
+
+                    {/* Mode */}
                     <div>
                       <div className="text-xs text-muted-foreground mb-1">Mode</div>
-                      <div className="font-medium text-sm">{request.defense_mode ? (request.defense_mode === 'face-to-face' ? 'Face-to-Face' : 'Online') : '—'}</div>
+                      <div className="font-medium text-sm capitalize">
+                        {request.defense_mode ? (request.defense_mode === 'face-to-face' ? 'Face-to-Face' : 'Online') : '—'}
+                      </div>
                     </div>
+
+                    {/* Notes */}
                     <div className="md:col-span-2">
                       <div className="text-xs text-muted-foreground mb-1">Notes</div>
                       <div className="font-medium text-sm">{request.scheduling_notes || '—'}</div>
@@ -955,39 +1492,40 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
                     const memberFor = (value: string | null | undefined, fallbackRole: string) => {
                       const resolved = findPanelMember(panelMembers, value);
                       return {
-                        displayName: resolved?.name || value || '—',
-                        email: resolved?.email || '',
-                        rawValue: value || '',
-                        role: fallbackRole,
+                          displayName: resolved?.name || value || '—',
+                          email: resolved?.email || '',
+                          rawValue: value || '',
+                          role: fallbackRole,
                       };
                     };
 
-                    const rows = [
+                    // Build rows based on program level
+                    const baseRows = [
                       { key: 'adviser', info: memberFor(request.defense_adviser, 'Adviser') },
                       { key: 'defense_chairperson', info: memberFor(panels.defense_chairperson || request.defense_chairperson, 'Panel Chair') },
-                      { key: 'defense_panelist1', info: memberFor(panels.defense_panelist1 || request.defense_panelist1, 'Panel Member') },
-                      { key: 'defense_panelist2', info: memberFor(panels.defense_panelist2 || request.defense_panelist2, 'Panel Member') },
-                      { key: 'defense_panelist3', info: memberFor(panels.defense_panelist3 || request.defense_panelist3, 'Panel Member') },
-                      { key: 'defense_panelist4', info: memberFor(panels.defense_panelist4 || request.defense_panelist4, 'Panel Member') },
-                    ].map(r => {
-                      const namePresent = !!(r.info.rawValue || (r.info.displayName && r.info.displayName !== '—'));
-                      const emailPresent = !!(r.info.email);
-                      const status = namePresent ? (emailPresent ? 'Assigned' : 'Pending confirmation') : '—';
+                      { key: 'defense_panelist1', info: memberFor(panels.defense_panelist1 || request.defense_panelist1, 'Panel Member 1') },
+                      { key: 'defense_panelist2', info: memberFor(panels.defense_panelist2 || request.defense_panelist2, 'Panel Member 2') },
+                      { key: 'defense_panelist3', info: memberFor(panels.defense_panelist3 || request.defense_panelist3, 'Panel Member 3') },
+                    ];
 
-                      const receivable = namePresent
-                        ? (
-                            request.program_level
-                              ? getMemberReceivableByProgramLevel(paymentRates, request.program_level, request.defense_type, r.info.role)
-                              : getMemberReceivable(paymentRates, request.program, request.defense_type, r.info.role)
-                          )
-                        : null;
+                    // Add panelist 4 only for Doctorate
+                    if (request.program_level === 'Doctorate') {
+                      baseRows.push(
+                        { key: 'defense_panelist4', info: memberFor(panels.defense_panelist4 || request.defense_panelist4, 'Panel Member 4') }
+                      );
+                    }
+
+                    const rows = baseRows.map(r => {
+                      const namePresent = !!(r.info.rawValue || (r.info.displayName && r.info.displayName !== '—'));
+                      
+                      // Use local function for receivables (matches AA logic)
+                      const receivable = namePresent ? getMemberReceivable(r.info.role) : null;
 
                       return {
-                        name: r.info.displayName,
-                        email: r.info.email || '—',
-                        role: r.info.role,
-                        status,
-                        receivable,
+                          name: r.info.displayName,
+                          email: r.info.email || '—',
+                          role: r.info.role,
+                          receivable,
                       };
                     });
 
@@ -997,38 +1535,42 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
                         : v ?? '—';
 
                     return (
-                      <div className="rounded-md border overflow-x-auto">
-                        <Table>
+                      <div className="overflow-x-auto">
+                        <Table className="border-0">
                           <TableHeader>
                             <TableRow>
-                              <TableHead className="min-w-[180px]">Name</TableHead>
-                              <TableHead className="min-w-[220px]">Email</TableHead>
-                              <TableHead className="min-w-[120px]">Role</TableHead>
-                              <TableHead className="min-w-[120px]">Status</TableHead>
-                              <TableHead className="min-w-[160px] text-right">Receivable</TableHead>
+                              <TableHead className="min-w-[200px]">Name & Email</TableHead>
+                              <TableHead className="min-w-[100px]">Role</TableHead>
+                              {/* <TableHead className="min-w-[100px]">Status</TableHead> */}
+                              <TableHead className="min-w-[140px] text-right">Receivable</TableHead>
                             </TableRow>
                           </TableHeader>
                           <TableBody>
                             {rows.map((r, idx) => (
                               <TableRow key={idx}>
-                                <TableCell className="font-medium">{r.name}</TableCell>
-                                <TableCell className="text-xs text-muted-foreground">{r.email || '—'}</TableCell>
-                                <TableCell>{r.role}</TableCell>
                                 <TableCell>
+                                  <div className="flex flex-col">
+                                    <span className="font-medium text-sm">{r.name}</span>
+                                    <span className="text-xs text-muted-foreground">{r.email}</span>
+                                  </div>
+                                </TableCell>
+                                <TableCell className="text-xs">{r.role}</TableCell>
+                                {/* <TableCell>
                                   <Badge
                                     variant="secondary"
-                                    className={
+                                    className={cn(
+                                      "text-xs",
                                       r.status === 'Assigned'
                                         ? 'bg-green-100 text-green-700'
                                         : r.status === 'Pending confirmation'
                                         ? 'bg-yellow-100 text-amber-700'
                                         : 'bg-amber-100 text-amber-700'
-                                    }
+                                    )}
                                   >
                                     {r.status}
                                   </Badge>
-                                </TableCell>
-                                <TableCell className="text-right">{formatCurrency(r.receivable)}</TableCell>
+                                </TableCell> */}
+                                <TableCell className="text-right text-xs font-medium">{formatCurrency(r.receivable)}</TableCell>
                               </TableRow>
                             ))}
                           </TableBody>
@@ -1086,34 +1628,35 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
                   </h2>
                   <Separator />
                   <div className="grid md:grid-cols-2 gap-4">
+                    {/* Always show Chairperson and first 3 panelists for Masteral */}
                     {[
                       { label: 'Chairperson', key: 'defense_chairperson' },
                       { label: 'Panelist 1', key: 'defense_panelist1' },
                       { label: 'Panelist 2', key: 'defense_panelist2' },
                       { label: 'Panelist 3', key: 'defense_panelist3' },
-                      { label: 'Panelist 4', key: 'defense_panelist4' }
                     ].map(({ label, key }) => (
                       <PanelMemberCombobox
                         key={key}
                         label={label}
                         value={panels[key as keyof typeof panels]}
                         onChange={v => setPanels(p => ({ ...p, [key]: v }))}
-                        options={panelMembers}
+                        options={panelOptionsForAssignment}
                         disabled={!canEdit || loadingMembers}
                         taken={taken}
                       />
                     ))}
-                  </div>
-                  <div className="flex justify-end mt-4">
-                    <Button
-                      onClick={savePanels}
-                      disabled={!canEdit || savingPanels}
-                      className="gap-2 dark:bg-rose-500 text-white hover:cursor-pointer"
-                    >
-                      {savingPanels && <Loader2 className="animate-spin h-4 w-4" />}
-                      <Save className="h-4 w-4" />
-                      Save Panel Assignment
-                    </Button>
+                    {/* Show Panelist 4 only for Doctorate */}
+                    {request.program_level === 'Doctorate' && (
+                      <PanelMemberCombobox
+                        key="defense_panelist4"
+                        label="Panelist 4"
+                        value={panels.defense_panelist4}
+                        onChange={v => setPanels(p => ({ ...p, defense_panelist4: v }))}
+                        options={panelOptionsForAssignment}
+                        disabled={!canEdit || loadingMembers}
+                        taken={taken}
+                      />
+                    )}
                   </div>
                   {panelLoadError && (
                     <div className="text-xs text-red-500 mt-2">{panelLoadError}</div>
@@ -1160,6 +1703,12 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
                                   ? format(date, "yyyy-MM-dd")
                                   : ""
                               }));
+                            }}
+                            disabled={(date) => {
+                              // Disable dates before today
+                              const today = new Date();
+                              today.setHours(0, 0, 0, 0);
+                              return date < today;
                             }}
                             initialFocus
                           />
@@ -1227,17 +1776,6 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
                       />
                     </div>
                   </div>
-                  <div className="flex justify-end mt-4">
-                    <Button
-                      onClick={saveSchedule}
-                      disabled={!canEdit || savingSchedule}
-                      className="gap-2 dark:bg-rose-500 dark:text-white hover:cursor-pointer"
-                    >
-                      {savingSchedule && <Loader2 className="animate-spin h-4 w-4" />}
-                      <Save className="h-4 w-4" />
-                      Save Schedule
-                    </Button>
-                  </div>
                 </div>
               </TabsContent>
             </Tabs>
@@ -1253,14 +1791,16 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
               <div className="flex flex-col gap-0 relative">
                 {Array.isArray(request.workflow_history) && request.workflow_history.length > 0 ? (
                   request.workflow_history.map((item: any, idx: number) => {
-                    const { event, created, userName } = resolveHistoryFields(item);
-                    const stepKey = getStepForEvent(event);
+                    const { event, created, userName, to } = resolveHistoryFields(item);
+                    const stepKey = getStepForEvent(event, to);
                     const step = workflowSteps.find(s => s.key === stepKey) || {
                       label: event.charAt(0).toUpperCase() + event.slice(1),
                       icon: <Clock className="h-5 w-5 text-gray-500" />,
                     };
                     const isLast = Array.isArray(request.workflow_history) && idx === request.workflow_history.length - 1;
-                    const iconBoxColor = 'bg-gray-100 text-gray-500';
+                    const isInvalid = event.toLowerCase().includes('invalid');
+                    const iconBoxColor = isInvalid ? 'bg-red-100 text-red-600' : 'bg-gray-100 text-gray-500';
+                    const comment = item.comment || item.rejection_reason || '';
                     return (
                       <div key={idx} className="flex items-start gap-3 relative">
                         <div className="flex flex-col items-center">
@@ -1271,7 +1811,7 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
                             <div className="h-8 border-l-2 border-dotted border-gray-300 dark:border-zinc-700 mx-auto"></div>
                           )}
                         </div>
-                        <div className="pb-4">
+                        <div className="pb-4 flex-1">
                           <div className="font-semibold text-xs">{step.label}</div>
                           <div className="text-[11px] text-muted-foreground">
                             {userName && <span>{userName}</span>}
@@ -1282,6 +1822,15 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
                               </span>
                             )}
                           </div>
+                          {comment && (
+                            <div className={`mt-2 p-2 rounded text-[11px] ${
+                              isInvalid 
+                                ? 'bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 text-red-900 dark:text-red-100'
+                                : 'bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 text-amber-900 dark:text-amber-100'
+                            }`}>
+                              {comment}
+                            </div>
+                          )}
                         </div>
                       </div>
                     );
@@ -1294,37 +1843,51 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
           </div>
         </div>
 
-        <div className="text-[11px] text-muted-foreground">
-          Last updated by:{' '}
-          {request.last_status_updated_by_name ||
-            request.last_status_updated_by ||
-            '—'}{' '}
-          {request.last_status_updated_at
-            ? `(${request.last_status_updated_at})`
-            : ''}
-        </div>
+    
       </div>
 
+      {/* Coordinator Approve Dialog */}
+      <CoordinatorApproveDialog
+        open={approveDialogOpen}
+        onOpenChange={setApproveDialogOpen}
+        defenseRequest={request}
+        coordinatorId={request.coordinator?.id}
+        coordinatorName={request.coordinator?.name || 'Coordinator'}
+        panelsData={panels}
+        scheduleData={schedule}
+        onApproveComplete={() => {
+          // The dialog already handles the reload, but this is a fallback
+          console.log('🔄 Approval complete callback triggered');
+        }}
+      />
+
       {/* Confirmation Dialog for Approve/Reject/Retrieve */}
-      <Dialog open={confirm.open} onOpenChange={o => { if (!o) setConfirm({ open: false, action: null }); }}>
+      <Dialog open={confirm.open} onOpenChange={o => { 
+        if (!o) {
+          setConfirm({ open: false, action: null, sendEmail: false });
+          setRejectionReason(''); // Clear reason when closing
+        }
+      }}>
         <DialogContent>
           <DialogTitle>Confirm Action</DialogTitle>
           <DialogDescription>
             {confirm.action === 'approve'
               ? 'Please review before approving.'
+              : confirm.action === 'reject'
+              ? 'Please provide a reason for rejecting this defense request.'
               : 'Apply this status change?'}
           </DialogDescription>
           <div className="mt-3 text-sm space-y-3">
-            <p>
-              Set request to{' '}
-              <span className="font-semibold">
-                {confirm.action === 'approve'
-                  ? 'Approved'
-                  : confirm.action === 'reject'
-                  ? 'Rejected'
-                  : 'Pending'}
-              </span>?
-            </p>
+            {confirm.action !== 'reject' && (
+              <p>
+                Set request to{' '}
+                <span className="font-semibold">
+                  {confirm.action === 'approve'
+                    ? 'Approved'
+                    : 'Pending'}
+                </span>?
+              </p>
+            )}
             {confirm.action === 'approve' && (
               <div className="flex flex-col items-center gap-3 rounded-md border bg-muted/40 p-5">
                 <div className="rounded-full bg-primary/10 p-4">
@@ -1336,18 +1899,76 @@ export default function DefenseRequestDetailsPage(rawProps: any) {
                 </p>
               </div>
             )}
+            
+            {confirm.action === 'reject' && (
+              <div className="space-y-2">
+                <Label htmlFor="rejectionReason" className="text-sm font-medium">
+                  Rejection Reason <span className="text-red-500">*</span>
+                </Label>
+                <textarea
+                  id="rejectionReason"
+                  value={rejectionReason}
+                  onChange={(e) => setRejectionReason(e.target.value)}
+                  placeholder="Explain why this defense request is being rejected..."
+                  className="w-full min-h-[120px] p-3 text-sm border rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-primary"
+                  maxLength={500}
+                />
+                <p className="text-xs text-muted-foreground">
+                  {rejectionReason.length}/500 characters
+                </p>
+              </div>
+            )}
           </div>
-          <div className="flex justify-end gap-2 mt-4">
-            <Button variant="ghost" onClick={() => setConfirm({ open: false, action: null })}>Cancel</Button>
-            <Button
-              onClick={() => confirm.action && handleStatusChange(confirm.action)}
-              disabled={isLoading}
-            >
-              Confirm
-            </Button>
-          </div>
+          
+          {/* Action buttons */}
+          {confirm.action === 'reject' ? (
+            <div className="flex justify-end gap-2 mt-4">
+              <Button 
+                variant="ghost" 
+                onClick={() => {
+                  setConfirm({ open: false, action: null, sendEmail: false });
+                  setRejectionReason('');
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={() => handleStatusChange('reject', false)}
+                disabled={isLoading || !rejectionReason.trim()}
+                variant="destructive"
+              >
+                {isLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Processing...
+                  </>
+                ) : (
+                  'Reject Request'
+                )}
+              </Button>
+            </div>
+          ) : confirm.action === 'retrieve' ? (
+            <div className="flex justify-end gap-2 mt-4">
+              <Button variant="ghost" onClick={() => setConfirm({ open: false, action: null, sendEmail: false })}>Cancel</Button>
+              <Button
+                onClick={() => handleStatusChange('retrieve', false)}
+                disabled={isLoading}
+              >
+                {isLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Processing...
+                  </>
+                ) : (
+                  'Confirm Retrieve'
+                )}
+              </Button>
+            </div>
+          ) : null}
         </DialogContent>
       </Dialog>
     </AppLayout>
   );
 }
+
+

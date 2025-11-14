@@ -6,7 +6,7 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Cache;
 use Carbon\Carbon;
-use App\Models\{LegacyCredential, LegacyRecordCache, DataAccessAudit};
+use App\Models\DataAccessAudit;
 use Throwable;
 
 class LegacyPortalClient

@@ -1,11 +1,9 @@
-import { Head, useForm } from '@inertiajs/react';
+import { Head, useForm, Link } from '@inertiajs/react';
 import { LoaderCircle } from 'lucide-react';
-import { FormEventHandler, useEffect, useState } from 'react';
+import { FormEventHandler } from 'react';
 
 import InputError from '@/components/input-error';
-import TextLink from '@/components/text-link';
 import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import AuthLayout from '@/layouts/auth-layout';
@@ -13,37 +11,40 @@ import AuthLayout from '@/layouts/auth-layout';
 type LoginForm = {
     identifier: string; // email or student number
     password: string;
-    remember: boolean;
+    mode: 'api';
 };
 
 interface LoginProps {
     status?: string;
-    canResetPassword: boolean;
 }
 
-export default function Login(props: LoginProps) {
-    const { status, canResetPassword } = props;
+export default function LoginAPI(props: LoginProps) {
+    const { status } = props;
     const { data, setData, post, processing, errors, reset } = useForm<Required<LoginForm>>({
         identifier: '',
         password: '',
-        remember: false,
+        mode: 'api',
     });
 
     const submit: FormEventHandler = (e) => {
         e.preventDefault();
+        // API login mode
         post(route('login'), {
+            preserveState: true,  // Keep state to show errors
+            preserveScroll: true,
             onSuccess: () => {
                 reset('password');
             },
-            onError: () => {
+            onError: (errors) => {
                 reset('password');
+                console.log('Login errors:', errors);
             },
         });
     };
 
     return (
         <AuthLayout title="Graduate School System" description="Login to your UIC account">
-            <Head title="Log in" />
+            <Head title="Log in - API" />
 
             {status && <div className="mb-4 text-center text-sm font-medium text-green-600">{status}</div>}
 
@@ -57,22 +58,17 @@ export default function Login(props: LoginProps) {
                             type="text"
                             required
                             autoComplete="username"
+                            tabIndex={1}
                             value={data.identifier}
                             onChange={e => setData('identifier', e.target.value)}
-                            placeholder="Email or Student Number"
+                            placeholder="Use your myuic credentials"
+                            className={errors.identifier ? 'border-red-500' : ''}
                         />
                         <InputError message={errors.identifier} />
                     </div>
 
                     <div className="grid gap-2">
-                        <div className="flex items-center">
-                            <Label htmlFor="password">Password</Label>
-                            {canResetPassword && (
-                                <TextLink href={route('password.request')} className="ml-auto text-sm" tabIndex={5}>
-                                    Forgot password?
-                                </TextLink>
-                            )}
-                        </div>
+                        <Label htmlFor="password">Password</Label>
                         <Input
                             id="password"
                             type="password"
@@ -82,22 +78,12 @@ export default function Login(props: LoginProps) {
                             value={data.password}
                             onChange={(e) => setData('password', e.target.value)}
                             placeholder="Password"
+                            className={errors.password ? 'border-red-500' : ''}
                         />
                         <InputError message={errors.password} />
                     </div>
 
-                    <div className="flex items-center space-x-3">
-                        <Checkbox
-                            id="remember"
-                            name="remember"
-                            checked={data.remember}
-                            onClick={() => setData('remember', !data.remember)}
-                            tabIndex={3}
-                        />
-                        <Label htmlFor="remember">Remember me</Label>
-                    </div>
-
-                    <Button type="submit" className="mt-4 w-full" tabIndex={4} disabled={processing}>
+                    <Button type="submit" className="mt-4 w-full" tabIndex={3} disabled={processing}>
                         {processing && <LoaderCircle className="h-4 w-4 animate-spin" />}
                         Log in
                     </Button>

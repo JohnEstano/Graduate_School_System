@@ -5,7 +5,9 @@ namespace App\Helpers;
 class ProgramLevel
 {
     /**
-     * Get the program level ("Masteral" or "Doctorate") based on the program name or code.
+     * Get the program level ("Masteral", "Doctorate", or "Bachelors") based on the program name or code.
+     * 
+     * FOR TESTING: Map all Bachelor programs to "Masteral" since payment rates only exist for Masteral/Doctorate
      */
     public static function getLevel(?string $program): string
     {
@@ -13,11 +15,10 @@ class ProgramLevel
 
         $p = strtolower(trim(preg_replace('/\s+/', ' ', $program)));
 
-        // Doctorate keywords and abbreviations
+        // Doctorate keywords and abbreviations - CHECK FIRST
         $doctorateKeywords = [
-            'phd', 'ph.d', 'doctor', 'doctoral', 'doctorate',
-            'edd', 'ed.d',
-            'dm', 'd.m', 'dba', 'd.b.a',
+            'doctor', 'doctorate', 'doctoral', 'phd', 'ph.d', 'ph. d',
+            'dba', 'edd', 'ed.d', 'dsc', 'dpm', 'dpa'
         ];
 
         foreach ($doctorateKeywords as $kw) {
@@ -26,9 +27,8 @@ class ProgramLevel
             }
         }
 
-        // Fallback by leading letter D- vs M-
-        if (preg_match('/^(d[.\-\s]|doctor)/', $p)) return 'Doctorate';
-
+        // FOR TESTING: Map ALL other programs (including Bachelors) to Masteral
+        // This ensures payment rates work since we only have Masteral/Doctorate rates
         return 'Masteral';
     }
 }

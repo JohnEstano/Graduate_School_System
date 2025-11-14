@@ -3,10 +3,10 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Inertia\Inertia;
+use Illuminate\Http\RedirectResponse;
 
 class CoordinatorComprePaymentController extends Controller
 {
@@ -203,5 +203,78 @@ class CoordinatorComprePaymentController extends Controller
             ]);
 
         return redirect()->route('coordinator.compre-payment.index')->with('success', 'Payment rejected.');
+    }
+
+    public function bulkApprove(Request $request): RedirectResponse
+    {
+        $user = $request->user();
+        if (method_exists($user, 'isCoordinator') && ! $user->isCoordinator()) {
+            abort(403, 'Only coordinators can approve.');
+        }
+
+        $ids = collect($request->input('ids', []))->map(fn ($v) => (int) $v)->filter()->unique()->values();
+        if ($ids->isEmpty()) {
+            return back()->withErrors(['ids' => 'No records selected.']);
+        }
+
+        if (!Schema::hasTable('payment_submissions')) {
+            return back()->withErrors(['status' => 'Payments table not found.']);
+        }
+
+        $programs = method_exists($user, 'allowedProgramNames') ? $user->allowedProgramNames() : array_filter([$user->program]);
+
+        $allowedIds = DB::table('payment_submissions as p')
+            ->leftJoin('users as u', 'u.id', '=', 'p.student_id')
+            ->whereIn('p.payment_id', $ids)
+            ->whereIn('u.program', $programs)
+            ->where('p.status', 'pending')
+            ->pluck('p.payment_id');
+
+        if ($allowedIds->isEmpty()) {
+            return back()->withErrors(['status' => 'No pending records eligible for approval.']);
+        }
+
+        DB::table('payment_submissions')
+            ->whereIn('payment_id', $allowedIds)
+            ->update(['status' => 'approved', 'updated_at' => now()]);
+
+        return redirect()->route('coordinator.compre-payment.index')->with('success', $allowedIds->count().' payment(s) approved.');
+    }
+
+    public function bulkReject(Request $request): RedirectResponse
+    {
+        $user = $request->user();
+        if (method_exists($user, 'isCoordinator') && ! $user->isCoordinator()) {
+            abort(403, 'Only coordinators can reject.');
+        }
+
+        $data = $request->validate([
+            'ids' => ['required','array','min:1'],
+            'ids.*' => ['integer'],
+            'remarks' => ['required','string','min:3','max:500'],
+        ]);
+
+        if (!Schema::hasTable('payment_submissions')) {
+            return back()->withErrors(['status' => 'Payments table not found.']);
+        }
+
+        $programs = method_exists($user, 'allowedProgramNames') ? $user->allowedProgramNames() : array_filter([$user->program]);
+
+        $allowedIds = DB::table('payment_submissions as p')
+            ->leftJoin('users as u', 'u.id', '=', 'p.student_id')
+            ->whereIn('p.payment_id', $data['ids'])
+            ->whereIn('u.program', $programs)
+            ->where('p.status', 'pending')
+            ->pluck('p.payment_id');
+
+        if ($allowedIds->isEmpty()) {
+            return back()->withErrors(['status' => 'No pending records eligible for rejection.']);
+        }
+
+        DB::table('payment_submissions')
+            ->whereIn('payment_id', $allowedIds)
+            ->update(['status' => 'rejected', 'remarks' => $data['remarks'], 'updated_at' => now()]);
+
+        return redirect()->route('coordinator.compre-payment.index')->with('success', $allowedIds->count().' payment(s) rejected.');
     }
 }

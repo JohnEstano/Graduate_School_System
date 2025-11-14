@@ -6,217 +6,241 @@
     <title>Defense Scheduled - Adviser Notification</title>
     <style>
         body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif,
+                'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol';
+            line-height: 1.6;
+            color: #333;
             margin: 0;
             padding: 0;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-            background-color: #f5f5f5;
-            line-height: 1.6;
+            background-color: #f4f4f4;
         }
+
+        .email-wrapper {
+            width: 100%;
+            background-color: #f4f4f4;
+            padding: 20px 0;
+        }
+
         .email-container {
             max-width: 600px;
             margin: 0 auto;
             background-color: #ffffff;
+            padding: 30px;
         }
-        .header {
-            background: linear-gradient(135deg, #991B1B 0%, #7F1D1D 100%);
-            padding: 40px 30px;
-            text-align: center;
-        }
+
+        
+
+        
+
         .logo {
-            width: 80px;
-            height: 80px;
-            margin: 0 auto 20px;
+            max-width: 50px;
+            height: auto;
         }
-        .header h1 {
-            color: #ffffff;
-            margin: 0;
-            font-size: 28px;
-            font-weight: 600;
+
+        .header-title {
+            color: #FF4B64;
+            font-size: 14px;
+            font-weight: bold;
         }
-        .header p {
-            color: #FEE2E2;
-            margin: 10px 0 0 0;
-            font-size: 16px;
-        }
-        .content {
-            padding: 40px 30px;
-        }
-        .greeting {
-            font-size: 18px;
-            color: #374151;
+
+        h1 {
+            font-size: 32px;
+            font-weight: bold;
+            margin-top: 0;
             margin-bottom: 20px;
         }
-        .message {
-            color: #6B7280;
+
+        .content {
             margin-bottom: 30px;
-            font-size: 16px;
         }
-        .defense-details {
-            background-color: #FEF2F2;
-            border-left: 4px solid #991B1B;
+
+        .message { font-size: 16px; line-height: 1.8; margin-bottom: 20px; color: #333; }
+
+        .info-box { border: 1px solid #e5e7eb; padding: 20px; margin: 20px 0;
+        }
+
+        .info-box h2 {
+            font-size: 18px;
+            font-weight: bold;
+            margin-top: 0;
+            margin-bottom: 15px;
+        }
+
+        .info-box .label {
+            font-weight: bold;
+            color: #374151;
+            font-size: 14px;
+            margin-top: 10px;
+        }
+
+        .info-box .value {
+            color: #6b7280;
+            font-size: 14px;
+            margin-bottom: 10px;
+        }
+
+        .schedule-box {
+            background-color: #f3f4f6;
             padding: 20px;
-            margin: 30px 0;
-            border-radius: 4px;
-        }
-        .defense-details h2 {
-            color: #991B1B;
-            margin: 0 0 15px 0;
-            font-size: 20px;
-            font-weight: 600;
-        }
-        .detail-row {
-            display: flex;
-            margin-bottom: 12px;
-            padding-bottom: 12px;
-            border-bottom: 1px solid #FEE2E2;
-        }
-        .detail-row:last-child {
-            margin-bottom: 0;
-            padding-bottom: 0;
-            border-bottom: none;
-        }
-        .detail-label {
-            font-weight: 600;
-            color: #991B1B;
-            min-width: 140px;
-            font-size: 14px;
-        }
-        .detail-value {
-            color: #374151;
-            font-size: 14px;
-        }
-        .panel-section {
-            margin-top: 20px;
-            padding-top: 20px;
-            border-top: 2px solid #FEE2E2;
-        }
-        .panel-section h3 {
-            color: #991B1B;
-            margin: 0 0 15px 0;
-            font-size: 16px;
-            font-weight: 600;
-        }
-        .panel-member {
-            background-color: #ffffff;
-            padding: 10px 15px;
-            margin-bottom: 8px;
-            border-radius: 4px;
-            border: 1px solid #FEE2E2;
-        }
-        .panel-member-name {
-            font-weight: 600;
-            color: #374151;
-            font-size: 14px;
-        }
-        .panel-member-role {
-            color: #991B1B;
-            font-size: 12px;
-            font-weight: 500;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-        .footer {
-            background-color: #F9FAFB;
-            padding: 30px;
-            text-align: center;
-            border-top: 1px solid #E5E7EB;
-        }
-        .footer p {
-            color: #6B7280;
-            margin: 5px 0;
-            font-size: 14px;
-        }
-        .footer-divider {
-            border: none;
-            border-top: 1px solid #E5E7EB;
             margin: 20px 0;
+            border-radius: 0px;
+            text-align: center;
+        }
+
+        .schedule-box .date {
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .schedule-box .time {
+            font-size: 18px;
+            color: #374151;
+            margin-bottom: 10px;
+        }
+
+        .schedule-box .venue {
+            font-size: 14px;
+            color: #6b7280;
+            margin-top: 10px;
+        }
+
+        .footer {
+            text-align: center;
+            margin-top: 30px;
+            padding-top: 20px;
+            font-size: 12px;
+            color: #6b7280;
+        }
+
+        .footer .logo {
+            max-width: 60px;
+            margin-bottom: 10px;
+        }
+
+        .mode-badge {
+            display: inline-block;
+            padding: 6px 12px;
+            border-radius: 4px;
+            font-size: 13px;
+            font-weight: 600;
+            margin-top: 10px;
+            background-color: #e5e7eb;
+            color: #374151;
+        }
+    
+        @media (max-width: 600px) {
+            .email-container { padding: 20px !important; }
+            h1 { font-size: 24px !important; }
+            .message { font-size: 14px !important; }
+            .info-box, .notice-box, .schedule-box { padding: 15px !important; }
+            .cta-button { display: block !important; width: 100% !important; text-align: center; padding: 12px 20px !important; }
         }
     </style>
 </head>
 <body>
-    <div class="email-container">
-        <!-- Header -->
-        <div class="header">
-            <div class="logo">
-                <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-                    <circle cx="50" cy="50" r="45" fill="#ffffff" opacity="0.2"/>
-                    <path d="M30 40 L30 70 L40 70 L40 40 Z M50 40 L50 70 L70 70 L70 60 L60 60 L60 55 L70 55 L70 45 L60 45 L60 40 Z" fill="#ffffff"/>
-                </svg>
+    <div class="email-wrapper">
+        <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #f4f4f4;">
+            <tr>
+                <td align="center" style="padding: 20px 0;">
+                    <table class="email-container" width="600" cellpadding="0" cellspacing="0" border="0" style="background-color: #ffffff; max-width: 600px;">
+                        <tr>
+                            <td style="padding: 30px;">
+        <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                                    <tr>
+                                        <td width="50">
+                                            <img src="{{ asset('gss-uic-logo-v2.png') }}" alt="UIC Graduate School Logo" style="max-width: 50px; height: auto;">
+                                        </td>
+                                        <td align="right">
+                                            <span style="color: #FF4B64; font-size: 14px; font-weight: bold;">Graduate School System</span>
+                                        </td>
+                                    </tr>
+                                </table>
+        {{-- Testing Disclaimer --}}
+        @include('emails.partials.testing-disclaimer')
+
+        <h1>Defense Scheduled - Adviser Notification</h1>
+
+        
+            <p class="message">
+                <strong>Dear Prof. {{ $defenseRequest->defense_adviser }},</strong>
+            </p>
+            <p class="message">
+                This is to inform you that the thesis/dissertation defense for your advisee has been officially approved and scheduled by the Graduate School coordinator.
+            </p>
+
+            <div class="schedule-box">
+                <div class="date">
+                    <i class="fas fa-calendar-alt"></i> {{ $defenseRequest->scheduled_date->format('l, F j, Y') }}
+                </div>
+                <div class="time">
+                    <i class="fa-regular fa-clock"></i>  {{ $defenseRequest->scheduled_time }} - {{ $defenseRequest->scheduled_end_time }}
+                </div>
+                @if($defenseRequest->defense_mode)
+                    <span class="mode-badge">
+                        {{ ucfirst($defenseRequest->defense_mode) }}
+                    </span>
+                @endif
+                @if($defenseRequest->defense_venue)
+                    <div class="venue">
+                        <strong><i class="fas fa-map-marker-alt"></i> Venue:</strong> {{ $defenseRequest->defense_venue }}
+                    </div>
+                @endif
             </div>
-            <h1>Defense Scheduled</h1>
-            <p>Adviser Notification</p>
-        </div>
 
-        <!-- Content -->
-        <div class="content">
-            <div class="greeting">
-                Dear Prof. {{ $adviserName }},
+            <div class="info-box">
+                <h2>Defense Details</h2>
+                
+                <div class="label">Student</div>
+                <div class="value">{{ $defenseRequest->first_name }} {{ $defenseRequest->middle_name }} {{ $defenseRequest->last_name }}</div>
+
+                <div class="label">Defense Title</div>
+                <div class="value" style="font-style: italic;">{{ $defenseRequest->thesis_title }}</div>
             </div>
 
-            <div class="message">
-                <p>This is to inform you that the thesis/dissertation defense for your advisee has been officially approved and scheduled by the Graduate School coordinator.</p>
-            </div>
+            @php
+                $panelists = collect([
+                    $defenseRequest->defense_chairperson,
+                    $defenseRequest->defense_panelist1,
+                    $defenseRequest->defense_panelist2,
+                    $defenseRequest->defense_panelist3,
+                    $defenseRequest->defense_panelist4,
+                ])->filter()->values();
+            @endphp
 
-            <!-- Defense Details -->
-            <div class="defense-details">
-                <h2>Defense Schedule & Details</h2>
-                
-                <div class="detail-row">
-                    <div class="detail-label">Student:</div>
-                    <div class="detail-value"><strong>{{ $studentName }}</strong></div>
-                </div>
-                
-                <div class="detail-row">
-                    <div class="detail-label">Defense Title:</div>
-                    <div class="detail-value"><strong>{{ $defenseTitle }}</strong></div>
-                </div>
-                
-                <div class="detail-row">
-                    <div class="detail-label">Date:</div>
-                    <div class="detail-value"><strong>{{ \Carbon\Carbon::parse($defenseDate)->format('F j, Y (l)') }}</strong></div>
-                </div>
-                
-                <div class="detail-row">
-                    <div class="detail-label">Time:</div>
-                    <div class="detail-value"><strong>{{ \Carbon\Carbon::parse($defenseTime)->format('g:i A') }} - {{ \Carbon\Carbon::parse($defenseEndTime)->format('g:i A') }}</strong></div>
-                </div>
-                
-                <div class="detail-row">
-                    <div class="detail-label">Mode:</div>
-                    <div class="detail-value"><strong>{{ ucfirst($defenseMode) }}</strong></div>
-                </div>
-                
-                <div class="detail-row">
-                    <div class="detail-label">Venue:</div>
-                    <div class="detail-value"><strong>{{ $defenseVenue }}</strong></div>
-                </div>
-
-                <!-- Panel Section -->
-                <div class="panel-section">
-                    <h3>Defense Panel Composition</h3>
-                    @foreach($panels as $panel)
-                        <div class="panel-member">
-                            <div class="panel-member-name">{{ $panel->name }}</div>
-                            <div class="panel-member-role">{{ $panel->role }}</div>
-                        </div>
+            @if($panelists->count() > 0)
+                <div class="info-box">
+                    <h2>Defense Panel Composition</h2>
+                    @if($defenseRequest->defense_chairperson)
+                        <div class="label">Chairperson</div>
+                        <div class="value">{{ $defenseRequest->defense_chairperson }}</div>
+                    @endif
+                    @foreach([$defenseRequest->defense_panelist1, $defenseRequest->defense_panelist2, $defenseRequest->defense_panelist3, $defenseRequest->defense_panelist4] as $index => $panelist)
+                        @if($panelist)
+                            <div class="label">Panelist {{ $index + 1 }}</div>
+                            <div class="value">{{ $panelist }}</div>
+                        @endif
                     @endforeach
                 </div>
-            </div>
+            @endif
 
-            <div class="message">
-                <p>As the adviser, your presence and guidance during the defense are greatly appreciated. Please ensure your advisee is well-prepared for this important academic milestone.</p>
-                <p>If you have any concerns or need to request any changes to the schedule, please contact the Graduate School office as soon as possible.</p>
-            </div>
-        </div>
-
-        <!-- Footer -->
-        <div class="footer">
-            <p><strong>University of the Immaculate Conception</strong></p>
-            <p>Graduate School</p>
-            <hr class="footer-divider">
-            <p>This is an automated notification. Please do not reply to this email.</p>
-            <p>For assistance, contact the Graduate School office.</p>
-        </div>
+            <p class="message" style="font-size: 14px; color: #6b7280;">
+                As the adviser, your presence and guidance during the defense are greatly appreciated. Please ensure your advisee is well-prepared for this important academic milestone.
+            </p>
+            <p class="message" style="font-size: 14px; color: #6b7280;">
+                If you have any concerns or need to request any changes to the schedule, please contact the Graduate School office as soon as possible.
+            </p>
+        </td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 20px 30px; border-top: 1px solid #e5e7eb;">
+                                @include('emails.partials.footer')
+                            </td>
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+        </table>
     </div>
 </body>
 </html>

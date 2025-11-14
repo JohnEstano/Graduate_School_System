@@ -5,24 +5,42 @@ import { Separator } from '@/components/ui/separator';
 
 type NavItem = { title:string; href:string; roles?:string[] };
 
+
+// Role-based settings navigation logic
+// Student: hide General and E‑Signatures
+// Coordinator/Dean: show Document Templates for esignatures
+// AA: hide Document Templates, E‑Signatures, and General
 const baseNav: NavItem[] = [
   { title:'Profile',    href:'/settings/profile' },
-   { title:'General',            href:'/settings/general', roles:['Coordinator'] }, 
-  { title:'Password',   href:'/settings/password' },
+  { title:'General',    href:'/settings/general', roles:['Coordinator','Adviser','Faculty'] },
+ // { title:'Password',   href:'/settings/password' },
   { title:'Appearance', href:'/settings/appearance' },
 ];
 
 const extraNav: NavItem[] = [
-  { title:'Document Templates', href:'/settings/documents', roles:['Dean','Coordinator'] },
-  { title:'E‑Signatures',       href:'/settings/signatures' },
- 
+  //{ title:'Document Templates', href:'/settings/documents', roles:['Dean','Coordinator'] },
+  { title:'E‑Signatures',       href:'/settings/signatures', roles:['Dean','Coordinator','Adviser','Faculty'] },
+  { title:'Coordinator Delegation', href:'/settings/dean-delegation', roles:['Dean'] },
 ];
 
 export default function SettingsLayout({ children }: PropsWithChildren) {
   const page = usePage();
   const role = (page.props as any)?.auth?.user?.role;
   // Only filter links by role for those that specify roles
-  const items = [...baseNav, ...extraNav.filter(i => !i.roles || i.roles.includes(role))];
+  let items = [...baseNav, ...extraNav];
+  if (role === 'Student') {
+    // Hide General and E‑Signatures for students
+    items = items.filter(i => i.title !== 'General' && i.title !== 'E‑Signatures' && i.title !== 'Document Templates');
+  } else if (role === 'Administrative Assistant' || role === 'AA') {
+    // Hide Document Templates, E‑Signatures, and General for AA
+    items = items.filter(i => i.title !== 'Document Templates' && i.title !== 'E‑Signatures' && i.title !== 'General');
+  } else if (role === 'Coordinator' || role === 'Dean') {
+    // Show Document Templates for esignatures (already included by roles)
+    items = items.filter(i => i.title !== 'Password'); // Optionally hide password for these roles
+  } else {
+    // For Adviser/Faculty, show General and E‑Signatures, hide Document Templates
+    items = items.filter(i => i.title !== 'Document Templates');
+  }
   const path = typeof window !== 'undefined' ? window.location.pathname : '';
 
   return (

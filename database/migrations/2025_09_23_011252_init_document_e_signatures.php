@@ -18,6 +18,7 @@ return new class extends Migration {
       $t->unsignedInteger('page_count')->default(1);
       $t->unsignedInteger('version')->default(1);
       $t->json('fields')->nullable();            // stored JSON field descriptors
+      $t->json('fields_meta')->nullable();       // canvas dimensions and other metadata
       $t->foreignId('created_by')->constrained('users');
       $t->timestamps();
     });
