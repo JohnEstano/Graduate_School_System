@@ -69,7 +69,7 @@ class CoordinatorProgramSeeder extends Seeder
             ],
         ],
         [
-            'email' => 'rbadiang@uic.edu.ph',
+            'email' => 'hbeltran@uic.edu.ph',
             'programs' => [
                 'Doctor in Business Management with specialization in Information Systems',
                 'Doctor of Philosophy in Education major in Information Technology Integration',
