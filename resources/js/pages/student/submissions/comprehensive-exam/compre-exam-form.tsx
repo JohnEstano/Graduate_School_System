@@ -301,16 +301,6 @@ export default function CompreExamForm({ open, onOpenChange, onFinish }: Props) 
               />
             </div>
             <div>
-              <Label className="text-s">Middle Initial</Label>
-              <Input
-                className="h-10 text-s disabled:opacity-100"
-                maxLength={3}
-                value={(user.middle_name?.[0] ?? '')} // changed
-                readOnly
-                disabled
-              />
-            </div>
-            <div>
               <Label className="text-s">Last Name</Label>
               <Input
                 className="h-10 text-s disabled:opacity-100"
@@ -342,7 +332,7 @@ export default function CompreExamForm({ open, onOpenChange, onFinish }: Props) 
             </div>
             <div>
               <Label className="text-s">Program</Label>
-              <Input className="h-10 text-s w-105 disabled:opacity-100" value={data.program} readOnly disabled />
+              <Input className="h-10 text-s w-full disabled:opacity-100" value={data.program} readOnly disabled />
             </div>
           </div>
         </>
