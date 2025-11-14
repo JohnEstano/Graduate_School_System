@@ -231,6 +231,7 @@ export default function CoordinatorCompreExamScheduleIndex() {
   });
   const [submitting, setSubmitting] = useState(false);
   const [dateOpen, setDateOpen] = useState(false);
+  const [serverErrors, setServerErrors] = useState<Record<string, string[]>>({});
 
   // --- delete dialog
   const [deleteOpen, setDeleteOpen] = useState(false);
@@ -319,6 +320,7 @@ export default function CoordinatorCompreExamScheduleIndex() {
     const presets = SUBJECT_PRESETS[program] ?? [];
     const first = presets[0];
     setEditing(null);
+    setServerErrors({});
     setForm({
       program: program === 'All' ? (programOptions[0] || '') : (program || ''),
       school_year: schoolYear || '',
@@ -336,6 +338,7 @@ export default function CoordinatorCompreExamScheduleIndex() {
 
   function openEdit(row: Offering) {
     setEditing(row);
+    setServerErrors({});
     setForm({
         id: row.id,
         program: row.program,
@@ -357,14 +360,16 @@ export default function CoordinatorCompreExamScheduleIndex() {
     if (submitting && !force) return;
     setOpen(false);
     setEditing(null);
+    setServerErrors({});
   }
 
   function onFormChange<K extends keyof Offering>(key: K, value: Offering[K] | string | boolean) {
     setForm(prev => ({ ...prev, [key]: value as any }));
   }
 
-  function save() {
+  async function save() {
     if (!isFormValid || submitting) return;
+    setServerErrors({});
 
     const payload: any = {
       id: editing?.id,
@@ -381,48 +386,60 @@ export default function CoordinatorCompreExamScheduleIndex() {
     };
 
     setSubmitting(true);
-
-    // Use web routes (they exist in routes/web.php)
     const id = editing?.id;
     const url = id
-      ? (safeRoute('coordinator.compre-exam-schedule.offerings.update', { offering: id }) ||
-       `/coordinator/compre-exam-schedule/offerings/${id}`)
-      : (safeRoute('coordinator.compre-exam-schedule.offerings.store') ||
-       '/coordinator/compre-exam-schedule/offerings');
+      ? (safeRoute('coordinator.compre-exam-schedule.offerings.update', { offering: id }) || `/coordinator/compre-exam-schedule/offerings/${id}`)
+      : (safeRoute('coordinator.compre-exam-schedule.offerings.store') || '/coordinator/compre-exam-schedule/offerings');
     const method = id ? 'PUT' : 'POST';
 
-    fetch(url, {
-      method,
-      headers: {
-        Accept: 'application/json',
-        'Content-Type': 'application/json',
-        'X-Requested-With': 'XMLHttpRequest',
-        'X-CSRF-Token': getCsrfToken(),
-      },
-      credentials: 'same-origin',
-      body: JSON.stringify(payload),
-      redirect: 'follow',
-    })
-      .then(async (r) => {
-        if (r.status >= 200 && r.status < 400) return;
-        const msg = await safeText(r);
-        throw new Error(msg || `Request failed (${r.status})`)
-      })
-      .then(() => {
+    try {
+      const r = await fetch(url, {
+        method,
+        headers: {
+          Accept: 'application/json',
+          'Content-Type': 'application/json',
+          'X-Requested-With': 'XMLHttpRequest',
+          'X-CSRF-Token': getCsrfToken(),
+        },
+        credentials: 'same-origin',
+        body: JSON.stringify(payload),
+        redirect: 'follow',
+      });
+
+      if (r.ok) {
         const msg = editing ? 'Saved changes' : 'Posted schedule';
         const desc = `${payload.subject_name || ''} • ${payload.program} • ${payload.school_year}`;
-        // Use success style for both add and edit confirmations
         toast.success(msg, { description: desc });
         closeDialog();
         refresh();
-      })
-      .catch((e) => {
-        console.error(e);
-        toast.error('Failed to save schedule', {
-          description: 'Please try again.',
-        });
-      })
-      .finally(() => setSubmitting(false));
+        return;
+      }
+
+      let json: any = null;
+      try { json = await r.json(); } catch { /* ignore */ }
+      const status = r.status;
+      if (status === 422 && json) {
+        const errs: Record<string, string[]> = {};
+        if (json.errors && typeof json.errors === 'object') {
+          for (const [k, v] of Object.entries(json.errors)) {
+            if (Array.isArray(v)) errs[k] = v.map(String);
+            else if (typeof v === 'string') errs[k] = [v];
+          }
+        }
+        setServerErrors(errs);
+        const firstErr = Object.values(errs)[0]?.[0] || json.message || 'Validation error';
+        toast.error('Cannot save schedule', { description: firstErr });
+        return; // keep dialog open so inline errors show
+      }
+
+      const text = json?.message || (await safeText(r)) || `Request failed (${status})`;
+      toast.error('Failed to save schedule', { description: text });
+    } catch (e: any) {
+      console.error(e);
+      toast.error('Failed to save schedule', { description: e?.message || 'Please try again.' });
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   function openDelete(row: Offering) {
@@ -1053,6 +1070,12 @@ export default function CoordinatorCompreExamScheduleIndex() {
                 {!timeOrderInvalid && duplicateConflict && (
                   <p className="mt-1 text-xs text-rose-600">A schedule for this subject already exists on the selected date/time.</p>
                 )}
+                {serverErrors.start_time && serverErrors.start_time.map((m, i) => (
+                  <p key={`st-${i}`} className="mt-1 text-xs text-rose-600">{m}</p>
+                ))}
+                {serverErrors.end_time && serverErrors.end_time.map((m, i) => (
+                  <p key={`et-${i}`} className="mt-1 text-xs text-rose-600">{m}</p>
+                ))}
               </div>
 
               {/* Proctor (required) */}
@@ -1069,6 +1092,9 @@ export default function CoordinatorCompreExamScheduleIndex() {
                   {!String(form.proctor || '').trim() && (
                     <p className="mt-1 text-xs text-rose-600">Proctor is required.</p>
                   )}
+                  {serverErrors.proctor && serverErrors.proctor.map((m, i) => (
+                    <p key={`proctor-${i}`} className="mt-1 text-xs text-rose-600">{m}</p>
+                  ))}
               </div>
 
             <div className="sm:col-span-2 min-w-0">
@@ -1083,6 +1109,9 @@ export default function CoordinatorCompreExamScheduleIndex() {
                 {venueConflict && (
                   <p className="mt-1 text-xs text-rose-600">This venue is already booked at the selected date/time.</p>
                 )}
+                {serverErrors.venue && serverErrors.venue.map((m, i) => (
+                  <p key={`venue-${i}`} className="mt-1 text-xs text-rose-600">{m}</p>
+                ))}
               </div>
             </div>
 
