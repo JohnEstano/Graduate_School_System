@@ -361,11 +361,7 @@ export default function DisplayApplication({ application }: Props) {
           </div>
 
           {/* Quick summary */}
-          <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
-            <div className="rounded border p-2">
-              <div className="text-[11px] text-muted-foreground">Status</div>
-              <div className="mt-1">{statusBadge(application.status)}</div>
-            </div>
+          <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
             <div className="rounded border p-2">
               <div className="text-[11px] text-muted-foreground">Submitted</div>
               <div className="mt-1 text-sm">{createdAt ? format(createdAt, 'PPP p') : '—'}</div>
