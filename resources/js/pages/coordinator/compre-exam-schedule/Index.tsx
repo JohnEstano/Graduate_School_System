@@ -187,11 +187,7 @@ export default function CoordinatorCompreExamScheduleIndex() {
   // const dq = useDeferredValue(q);
 
   // keep program BEFORE any effects that reference it
-  const [program, setProgram] = useState<string>(
-    props.currentProgram && programs.includes(props.currentProgram)
-      ? props.currentProgram
-      : 'All'
-  );
+  const [program, setProgram] = useState<string>('All');
 
   // ensure current program is valid if list changes
   useEffect(() => {
@@ -605,6 +601,7 @@ export default function CoordinatorCompreExamScheduleIndex() {
     const prog = String((form.program ?? '') || program).trim();
     const sy = String((form.school_year ?? '') || schoolYear).trim();
     const name = String(form.subject_name ?? '').trim();
+    const proctorName = String(form.proctor ?? '').trim();
     const syOk = /^\d{4}-\d{4}$/.test(sy);
     // time ordering: if both provided, end must be after start
     const st = toHHmm(form.start_time || '');
@@ -623,8 +620,8 @@ export default function CoordinatorCompreExamScheduleIndex() {
       return d < today;
     })();
     // Duplicate and venue conflicts block save
-    return !!(prog && syOk && name) && !invalidTime && !invalidDate && !duplicateConflict && !venueConflict;
-    }, [form.program, form.school_year, form.subject_name, form.start_time, form.end_time, form.exam_date, program, schoolYear, duplicateConflict, venueConflict]);
+    return !!(prog && syOk && name && proctorName) && !invalidTime && !invalidDate && !duplicateConflict && !venueConflict;
+    }, [form.program, form.school_year, form.subject_name, form.start_time, form.end_time, form.exam_date, form.proctor, program, schoolYear, duplicateConflict, venueConflict]);
 
   // Helper to apply a suggestion
   function applySuggestion(val: string) {
@@ -1058,15 +1055,20 @@ export default function CoordinatorCompreExamScheduleIndex() {
                 )}
               </div>
 
-              {/* Proctor */}
+              {/* Proctor (required) */}
               <div className="sm:col-span-2 min-w-0">
-                  <Label className="text-xs text-muted-foreground">Proctor (optional)</Label>
+                  <Label className="text-xs text-muted-foreground">Proctor</Label>
                   <Input
-                    className="mt-1 h-9"
+                    className={`mt-1 h-9 ${!String(form.proctor || '').trim() ? 'border-rose-300 focus-visible:ring-rose-500' : ''}`}
+                    aria-invalid={!String(form.proctor || '').trim()}
+                    required
                     value={form.proctor || ''}
                     onChange={(e) => onFormChange('proctor', e.target.value)}
                     placeholder="e.g., Prof. Jane Doe"
                   />
+                  {!String(form.proctor || '').trim() && (
+                    <p className="mt-1 text-xs text-rose-600">Proctor is required.</p>
+                  )}
               </div>
 
             <div className="sm:col-span-2 min-w-0">

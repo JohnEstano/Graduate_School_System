@@ -91,7 +91,7 @@ class ExamSubjectOfferingController extends Controller
             'exam_date'    => ['nullable','date'],
             'start_time'   => ['nullable','date_format:H:i'],
             'end_time'     => ['nullable','date_format:H:i'],
-            'proctor'      => ['nullable','string','max:255'],
+            'proctor'      => ['required','string','max:255'],
             'venue'        => ['nullable','string','max:255'],
             'is_active'    => ['boolean'],
         ]);
@@ -124,7 +124,7 @@ class ExamSubjectOfferingController extends Controller
             'exam_date'    => ['nullable','date'],
             'start_time'   => ['nullable','date_format:H:i'],
             'end_time'     => ['nullable','date_format:H:i'],
-            'proctor'      => ['nullable','string','max:255'],
+            'proctor'      => ['required','string','max:255'],
             'venue'        => ['nullable','string','max:255'],
             'is_active'    => ['boolean'],
         ]);
@@ -134,7 +134,7 @@ class ExamSubjectOfferingController extends Controller
         }
 
         $offering->update($data + ['is_active' => $request->boolean('is_active', true)]);
-        
+            
         if ($request->expectsJson()) {
             return response()->noContent(); // 204
         }
