@@ -1,7 +1,7 @@
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/table';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogTrigger, DialogContent } from '@/components/ui/dialog';
+import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Info, Filter, Check, CheckCircle, CircleX, CircleArrowLeft, X, ArrowUp, ArrowDown, ArrowUpDown } from 'lucide-react';
 import { format } from 'date-fns';
@@ -111,6 +111,10 @@ export default function TableComprePayment({
         toast.success('Payment approved.');
         refreshLight();
       },
+      onError: (errors) => {
+        const msg = errors?.message || 'Failed to approve payment.';
+        toast.error(String(msg));
+      },
       onFinish: () => {
         setSubmitting(false);
         setApproveId(null);
@@ -125,6 +129,10 @@ export default function TableComprePayment({
       onSuccess: () => {
         toast.success('Payment rejected.');
         refreshLight();
+      },
+      onError: (errors) => {
+        const msg = errors?.message || 'Failed to reject payment.';
+        toast.error(String(msg));
       },
       onFinish: () => {
         setSubmitting(false);
@@ -141,6 +149,10 @@ export default function TableComprePayment({
       onSuccess: () => {
         toast.success('Payment retrieved for review.');
         refreshLight();
+      },
+      onError: (errors) => {
+        const msg = errors?.message || 'Failed to retrieve payment.';
+        toast.error(String(msg));
       },
       onFinish: () => {
         setSubmitting(false);
@@ -377,6 +389,10 @@ export default function TableComprePayment({
                         </Button>
                       </DialogTrigger>
                       <DialogContent className="max-w-md w-full max-h-[90vh]">
+                        <DialogHeader>
+                          <DialogTitle>Payment Details</DialogTitle>
+                          <DialogDescription>View payment submission information.</DialogDescription>
+                        </DialogHeader>
                         <div className="max-h-[80vh] overflow-y-auto">{selectedRow && <Details payment={selectedRow} />}</div>
                       </DialogContent>
                     </Dialog>
@@ -431,9 +447,11 @@ export default function TableComprePayment({
                         {/* Reject dialog with reason */}
                         <Dialog open={rejectId === r.id} onOpenChange={(open) => !open && setRejectId(null)}>
                           <DialogContent className="max-w-md">
+                            <DialogHeader>
+                              <DialogTitle>Reject this payment</DialogTitle>
+                              <DialogDescription>Provide a reason. The student will see this message.</DialogDescription>
+                            </DialogHeader>
                             <div className="space-y-2">
-                              <h3 className="text-base font-semibold">Reject this payment</h3>
-                              <p className="text-sm text-muted-foreground">Provide a reason. The student will see this message.</p>
                               <Textarea value={rejectReason} onChange={(e) => setRejectReason(e.target.value)} placeholder="Reason for rejection" rows={4} />
                               <div className="flex justify-end gap-2 pt-2">
                                 <Button variant="outline" onClick={() => setRejectId(null)} disabled={submitting}>
@@ -559,9 +577,11 @@ export default function TableComprePayment({
       {/* Bulk Reject dialog */}
       <Dialog open={rejectManyOpen} onOpenChange={setRejectManyOpen}>
         <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Reject {selectedPendingIds.length} pending payment(s)</DialogTitle>
+            <DialogDescription>Provide a reason. Only pending selections will be rejected. The student will see this message.</DialogDescription>
+          </DialogHeader>
           <div className="space-y-2">
-            <h3 className="text-base font-semibold">Reject {selectedPendingIds.length} pending payment(s)</h3>
-            <p className="text-sm text-muted-foreground">Provide a reason. Only pending selections will be rejected. The student will see this message.</p>
             <Textarea
               value={rejectManyReason}
               onChange={(e) => setRejectManyReason(e.target.value)}

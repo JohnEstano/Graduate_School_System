@@ -1,15 +1,14 @@
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/table';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogTrigger, DialogContent } from '@/components/ui/dialog';
+import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Info, Filter, Check, Pencil } from 'lucide-react';
+import { Info, Filter, Check, ClipboardCheck } from 'lucide-react';
 import { format } from 'date-fns';
 import { useMemo, useState, useEffect } from 'react';
 import type { CompreExamApplicationSummary } from './Index';
 import Details from './details';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@/components/ui/dropdown-menu';
-import { DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast } from '@/components/ui/sonner';
@@ -324,6 +323,10 @@ export default function TableCompreExam({ paged, columns, onVisibleCountChange }
                       </Button>
                     </DialogTrigger>
                     <DialogContent className="max-w-md w-full max-h-[90vh]">
+                      <DialogHeader>
+                        <DialogTitle>Application Details</DialogTitle>
+                        <DialogDescription>View student application information.</DialogDescription>
+                      </DialogHeader>
                       <div className="max-h-[80vh] overflow-y-auto">
                         {selectedRow && <Details application={selectedRow} />}
                       </div>
@@ -337,7 +340,7 @@ export default function TableCompreExam({ paged, columns, onVisibleCountChange }
                       title="Post Score"
                       onClick={() => openScoresDialog(r)}
                     >
-                      <Pencil className="h-4 w-4" />
+                      <ClipboardCheck className="h-4 w-4" />
                     </Button>
                   ) : null}
                 </TableCell>

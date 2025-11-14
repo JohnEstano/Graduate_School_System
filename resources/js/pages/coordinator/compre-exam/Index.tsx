@@ -18,28 +18,7 @@ import TableCompreExam from './table-compre-exam';
 import { PaperclipIcon } from 'lucide-react';
 import { Toaster } from '@/components/ui/sonner';
 // add dialog ui
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from '@/components/ui/dialog';
-
-// add Recharts imports
-import {
-  ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
-  Tooltip as ReTooltip,
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Legend,
-} from 'recharts';
+// (Insights removed: dialog & chart imports deleted)
 
 export type CompreExamApplicationSummary = {
   id: number;
@@ -73,8 +52,7 @@ export default function CoordinatorCompreExamIndex() {
   const [q, setQ] = useState('');
   // search: defer like payments page for smoother typing
   const dq = useDeferredValue(q);
-  // insights dialog
-  const [openInsights, setOpenInsights] = useState(false);
+  // insights removed
 
   const data = tab === 'eligible' ? eligible : notEligible;
 
@@ -243,9 +221,7 @@ export default function CoordinatorCompreExamIndex() {
                 </button>
               )}
             </div>
-            <Button variant="outline" className="h-9 bg-rose-500 text-white" onClick={() => setOpenInsights(true)}>
-              Insights
-            </Button>
+            {/* Insights button removed */}
           </div>
         </div>
 
@@ -347,44 +323,7 @@ export default function CoordinatorCompreExamIndex() {
           </div>
         </div>
 
-        {/* Insights Dialog (charts) */}
-        <Dialog open={openInsights} onOpenChange={setOpenInsights}>
-          <DialogContent className="max-w-5xl">
-            <DialogHeader>
-              <DialogTitle>Insights</DialogTitle>
-              <DialogDescription>
-                Eligibility breakdown and weekly readiness trend for your students.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-              <div className="rounded-md border p-4">
-                <div className="text-sm font-medium mb-2">Eligibility Breakdown</div>
-                <EligibilityDonut items={lackingBreakdown.items} total={lackingBreakdown.total} />
-                <div className="mt-3 space-y-1">
-                  {lackingBreakdown.items.map((i, idx) => (
-                    <div key={i.key} className="flex items-center justify-between text-sm">
-                      <div className="flex items-center gap-2">
-                        <span className={`inline-block h-2.5 w-2.5 rounded-sm ${colorForIndex(idx)}`} />
-                        <span>{i.label}</span>
-                      </div>
-                      <span className="text-zinc-600">{i.value}</span>
-                    </div>
-                  ))}
-                  {lackingBreakdown.items.length === 0 && (
-                    <div className="text-sm text-zinc-500">All set—no missing requirements detected.</div>
-                  )}
-                </div>
-              </div>
-              <div className="rounded-md border p-4 lg:col-span-2">
-                <div className="text-sm font-medium mb-2">Exam Readiness Trend (Weekly Eligible Submissions)</div>
-                <MiniBarChart series={readinessTrend.series} max={readinessTrend.max} />
-                <div className="mt-2 text-xs text-zinc-500">
-                  Shows weekly count of eligible students based on <code>submitted_at</code>.
-                </div>
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
+        {/* Insights removed */}
       </div>
       {/* Toasts for bottom-right success messages */}
       <Toaster position="bottom-right" duration={5000} richColors closeButton />
@@ -402,11 +341,7 @@ function normalizeLacking(k: string) {
   return 'Other';
 }
 
-function colorForIndex(i: number) {
-  // Tailwind utility classes (no explicit hex to keep it simple)
-  const palette = ['bg-rose-500', 'bg-amber-500', 'bg-emerald-500', 'bg-sky-500', 'bg-violet-500'];
-  return palette[i % palette.length];
-}
+// colorForIndex removed with insights
 
 /** Simple donut (SVG) */
 // function EligibilityDonut({ items, total }: { items: { key: string; label: string; value: number }[]; total: number }) {
@@ -455,64 +390,10 @@ function colorForIndex(i: number) {
 // }
 
 // replace EligibilityDonut with a Recharts Pie
-function EligibilityDonut({ items, total }: { items: { key: string; label: string; value: number }[]; total: number }) {
-  const palette = ['#ef4444', '#f59e0b', '#10b981', '#0ea5e9', '#7c3aed'];
-  const data = items.map((it, idx) => ({ name: it.label, value: it.value, color: palette[idx % palette.length] }));
-
-  return (
-    <div className="flex gap-4 items-center">
-      <div className="w-[160px] h-[160px]">
-        <ResponsiveContainer width="100%" height="100%">
-          <PieChart>
-            <Pie data={data} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={44} outerRadius={68} paddingAngle={4}>
-              {data.map((entry, i) => (
-                <Cell key={`cell-${i}`} fill={entry.color} />
-              ))}
-            </Pie>
-            <ReTooltip formatter={(v: number) => `${v}`} />
-          </PieChart>
-        </ResponsiveContainer>
-      </div>
-
-      <div className="text-xs text-zinc-600">
-        <div className="mb-2 font-medium">Missing items</div>
-        <div className="space-y-2">
-          {data.map((d) => (
-            <div key={d.name} className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <span style={{ backgroundColor: d.color }} className="inline-block w-3 h-3 rounded-sm" />
-                <span>{d.name}</span>
-              </div>
-              <div className="text-zinc-700">{d.value}</div>
-            </div>
-          ))}
-          {data.length === 0 && <div className="text-sm text-zinc-500">All set—no missing requirements detected.</div>}
-        </div>
-      </div>
-    </div>
-  );
-}
+// EligibilityDonut removed with insights
 
 // replace MiniBarChart with a Recharts BarChart
-function MiniBarChart({ series, max }: { series: { weekStart: string; count: number }[]; max: number }) {
-  // format x labels, keep last N weeks
-  const data = series.map((s) => ({ week: s.weekStart, count: s.count }));
-
-  return (
-    <div className="w-full h-36">
-      <ResponsiveContainer width="100%" height="100%">
-        <BarChart data={data} margin={{ top: 6, right: 12, left: 0, bottom: 6 }}>
-          <CartesianGrid strokeDasharray="3 3" vertical={false} />
-          <XAxis dataKey="week" tick={{ fontSize: 11 }} />
-          <YAxis allowDecimals={false} />
-          <ReTooltip />
-          <Legend verticalAlign="top" height={24} />
-          <Bar dataKey="count" fill="#10b981" radius={[4, 4, 0, 0]} />
-        </BarChart>
-      </ResponsiveContainer>
-    </div>
-  );
-}
+// MiniBarChart removed with insights
 
 function CardKPI({
   label,

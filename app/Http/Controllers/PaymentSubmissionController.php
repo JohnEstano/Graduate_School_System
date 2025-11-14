@@ -274,7 +274,7 @@ class PaymentSubmissionController extends Controller
             ->firstOrFail();
 
         if (strtolower($row->status) !== 'rejected') {
-            return back()->withErrors(['status' => 'Only rejected payments can be retrieved.']);
+            return back()->withErrors(['message' => 'Only rejected payments can be retrieved.']);
         }
 
         $row->status = 'pending';
