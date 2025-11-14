@@ -23,11 +23,16 @@ class ExamApplication extends Model
         'permit_reason',
         'final_approval_status',
         'final_approval_DATE',
+        'final_approval_reason',
         'approved_by',
         'contact_number',
         'telephone_number',
         'office_address',
         'program',
+        'registrar_status',
+        'registrar_reason',
+        'registrar_reviewer_id',
+        'registrar_reviewed_at',
         'created_at',
     ];
 

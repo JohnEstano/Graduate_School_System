@@ -17,6 +17,8 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { UIC_PROGRAMS } from '@/constants/programs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Calendar } from '@/components/ui/calendar';
+import type { DateRange } from 'react-day-picker';
+import { toast } from '@/components/ui/sonner';
 
 export type CompreExamApplicationSummary = {
 	id: number;
@@ -53,14 +55,10 @@ type Props = {
 	schoolYearOptions?: string[];
 	schoolYearValue?: string;
 	onSchoolYearChange?: (v: string) => void;
-	fromDate?: Date | null;
-	toDate?: Date | null;
-	onFromDateChange?: (d: Date | null) => void;
-	onToDateChange?: (d: Date | null) => void;
+	dateRange?: DateRange | undefined;
+	onDateRangeChange?: (range: DateRange | undefined) => void;
 	hasRemarks?: 'all'|'yes'|'no';
 	onHasRemarksChange?: (v: 'all'|'yes'|'no') => void;
-	sortDir?: 'asc'|'desc';
-	onSortDirChange?: (dir: 'asc'|'desc') => void;
 	onResetFilters?: () => void;
 };
 
@@ -68,8 +66,8 @@ export default function TableDeanCompreExam({
 	paged, columns, tabType, showStatusFilter, programOptions, programValue, onProgramChange,
 	onApprove, onReject, onApproveMany, onRejectMany, onRetrieve, onRetrieveMany, loading,
 	schoolYearOptions, schoolYearValue, onSchoolYearChange,
-	fromDate, toDate, onFromDateChange, onToDateChange,
-	hasRemarks, onHasRemarksChange, sortDir, onSortDirChange, onResetFilters,
+	dateRange, onDateRangeChange,
+	hasRemarks, onHasRemarksChange, onResetFilters,
 }: Props) {
 	const [selected, setSelected] = useState<number[]>([]);
 	const [selectedRow, setSelectedRow] = useState<CompreExamApplicationSummary | null>(null);
@@ -78,15 +76,6 @@ export default function TableDeanCompreExam({
 	const [rejectId, setRejectId] = useState<number | null>(null);
 	const [rejectReason, setRejectReason] = useState('');
 	const [submitting, setSubmitting] = useState(false);
-
-	// NEW: success dialog state
-	const [successOpen, setSuccessOpen] = useState(false);
-	const [successText, setSuccessText] = useState('');
-	useEffect(() => {
-		if (!successOpen) return;
-		const t = setTimeout(() => setSuccessOpen(false), 4000);
-		return () => clearTimeout(t);
-	}, [successOpen]);
 
 	const [approveManyOpen, setApproveManyOpen] = useState(false);
 	const [rejectManyOpen, setRejectManyOpen] = useState(false);
@@ -194,8 +183,9 @@ export default function TableDeanCompreExam({
 		setSubmitting(true);
 		try {
 			await onApprove(id);
-			setSuccessText('Decision saved: Approved');
-			setSuccessOpen(true);
+			toast.success('Application approved successfully');
+		} catch (err) {
+			toast.error('Failed to approve application');
 		} finally { setSubmitting(false); setApproveId(null); }
 	}
 	async function callReject(id: number) {
@@ -203,8 +193,9 @@ export default function TableDeanCompreExam({
 		setSubmitting(true);
 		try {
 			await onReject(id, rejectReason.trim());
-			setSuccessText('Decision saved: Rejected');
-			setSuccessOpen(true);
+			toast.error('Application rejected', { description: rejectReason.trim() });
+		} catch (err) {
+			toast.error('Failed to reject application');
 		} finally { setSubmitting(false); setRejectId(null); setRejectReason(''); }
 	}
 	async function callApproveMany(ids: number[]) {
@@ -213,8 +204,9 @@ export default function TableDeanCompreExam({
 		try {
 			await onApproveMany(ids);
 			setSelected([]);
-			setSuccessText(`Approved ${ids.length} application(s)`);
-			setSuccessOpen(true);
+			toast.success(`Approved ${ids.length} application(s)`);
+		} catch (err) {
+			toast.error('Failed to approve applications');
 		} finally { setSubmitting(false); setApproveManyOpen(false); }
 	}
 	async function callRejectMany(ids: number[], reason: string) {
@@ -223,8 +215,9 @@ export default function TableDeanCompreExam({
 		try {
 			await onRejectMany(ids, reason.trim());
 			setSelected([]);
-			setSuccessText(`Rejected ${ids.length} application(s)`);
-			setSuccessOpen(true);
+			toast.error(`Rejected ${ids.length} application(s)`, { description: reason.trim() });
+		} catch (err) {
+			toast.error('Failed to reject applications');
 		} finally { setSubmitting(false); setRejectManyOpen(false); setRejectManyReason(''); }
 	}
 	async function callRetrieve(id: number) {
@@ -232,8 +225,9 @@ export default function TableDeanCompreExam({
 		setSubmitting(true);
 		try {
 			await onRetrieve(id);
-			setSuccessText('Decision reverted to Pending');
-			setSuccessOpen(true);
+			toast.success('Decision reverted to Pending');
+		} catch (err) {
+			toast.error('Failed to revert decision');
 		} finally { setSubmitting(false); setRetrieveId(null); }
 	}
 	async function callRetrieveMany(ids: number[]) {
@@ -242,8 +236,9 @@ export default function TableDeanCompreExam({
 		try {
 			await onRetrieveMany(ids);
 			setSelected([]);
-			setSuccessText(`Reverted ${ids.length} application(s) to Pending`);
-			setSuccessOpen(true);
+			toast.success(`Reverted ${ids.length} application(s) to Pending`);
+		} catch (err) {
+			toast.error('Failed to revert applications');
 		} finally { setSubmitting(false); setRetrieveManyOpen(false); }
 	}
 
@@ -315,41 +310,50 @@ export default function TableDeanCompreExam({
 								</div>
 							)}
 
-							{onFromDateChange && (
-								<div className="flex items-center gap-2">
-									<span className="text-xs text-muted-foreground">From</span>
-									<Popover>
-										<PopoverTrigger asChild>
-											<Button variant="outline" size="sm" className="h-8 w-[150px] justify-start">
-												<CalendarIcon className="mr-2 h-4 w-4" />
-												{fromDate ? format(fromDate, 'MMM dd, yyyy') : <span className="text-muted-foreground">Pick a date</span>}
-											</Button>
-										</PopoverTrigger>
-										<PopoverContent className="p-0" align="start">
-											<Calendar mode="single" selected={fromDate ?? undefined} onSelect={(d)=>onFromDateChange(d ?? null)} initialFocus />
-										</PopoverContent>
-									</Popover>
-								</div>
+					{onDateRangeChange && (
+						<div className="flex items-center gap-2">
+							<span className="text-xs text-muted-foreground">Date Range</span>
+							<Popover>
+								<PopoverTrigger asChild>
+									<Button variant="outline" size="sm" className="h-8 w-[220px] justify-start text-left font-normal">
+										<CalendarIcon className="mr-2 h-4 w-4" />
+										{dateRange?.from ? (
+											dateRange.to ? (
+												<>
+													{format(dateRange.from, 'LLL dd, y')} - {format(dateRange.to, 'LLL dd, y')}
+												</>
+											) : (
+												format(dateRange.from, 'LLL dd, y')
+											)
+										) : (
+											<span className="text-muted-foreground">Pick a date range</span>
+										)}
+									</Button>
+								</PopoverTrigger>
+								<PopoverContent className="w-auto p-0" align="start">
+									<Calendar
+										initialFocus
+										mode="range"
+										defaultMonth={dateRange?.from}
+										selected={dateRange}
+										onSelect={onDateRangeChange}
+										numberOfMonths={2}
+									/>
+								</PopoverContent>
+							</Popover>
+							{dateRange?.from && (
+								<Button
+									variant="ghost"
+									size="sm"
+									className="h-8 px-2"
+									onClick={() => onDateRangeChange(undefined)}
+									title="Clear date range"
+								>
+									<X className="h-4 w-4" />
+								</Button>
 							)}
-
-							{onToDateChange && (
-								<div className="flex items-center gap-2">
-									<span className="text-xs text-muted-foreground">To</span>
-									<Popover>
-										<PopoverTrigger asChild>
-											<Button variant="outline" size="sm" className="h-8 w-[150px] justify-start">
-												<CalendarIcon className="mr-2 h-4 w-4" />
-												{toDate ? format(toDate, 'MMM dd, yyyy') : <span className="text-muted-foreground">Pick a date</span>}
-											</Button>
-										</PopoverTrigger>
-										<PopoverContent className="p-0" align="start">
-											<Calendar mode="single" selected={toDate ?? undefined} onSelect={(d)=>onToDateChange(d ?? null)} initialFocus />
-										</PopoverContent>
-									</Popover>
-								</div>
-							)}
-
-							{onHasRemarksChange && (
+						</div>
+					)}							{onHasRemarksChange && (
 								<div className="flex items-center gap-2">
 									<span className="text-xs text-muted-foreground">Remarks</span>
 									<Select value={hasRemarks ?? 'all'} onValueChange={(v)=>onHasRemarksChange(v as any)}>
@@ -362,22 +366,13 @@ export default function TableDeanCompreExam({
 											<SelectItem value="no">No remarks</SelectItem>
 										</SelectContent>
 									</Select>
-								</div>
-							)}
+						</div>
+					)}
 
-							{onSortDirChange && (
-								<div className="flex items-center gap-1">
-									<span className="text-xs text-muted-foreground mr-1">Sort</span>
-									<Button type="button" size="sm" variant={sortDir==='desc'?'default':'ghost'} className="h-8" onClick={()=>onSortDirChange('desc')}>Newest</Button>
-									<Button type="button" size="sm" variant={sortDir==='asc'?'default':'ghost'} className="h-8" onClick={()=>onSortDirChange('asc')}>Oldest</Button>
-									{onResetFilters && (
-										<Button type="button" size="sm" variant="outline" className="h-8" onClick={onResetFilters}>Reset</Button>
-									)}
-								</div>
-							)}
-				</div>
-
-				{shouldShowStatusFilter && (
+					{onResetFilters && (
+						<Button type="button" size="sm" variant="outline" className="h-8" onClick={onResetFilters}>Reset Filters</Button>
+					)}
+		</div>				{shouldShowStatusFilter && (
 					<DropdownMenu>
 						<DropdownMenuTrigger asChild>
 							<Button variant="outline" size="sm" className="h-8">
@@ -674,33 +669,9 @@ export default function TableDeanCompreExam({
 						<AlertDialogAction disabled={submitting || ((tabType === 'approved' ? selectedApprovedIds.length : selectedRejectedIds.length) === 0)} onClick={() => callRetrieveMany(tabType === 'approved' ? selectedApprovedIds : selectedRejectedIds)}>
 							{submitting ? 'Reverting…' : 'Revert'}
 						</AlertDialogAction>
-					</AlertDialogFooter>
-				</AlertDialogContent>
-			</AlertDialog>
-
-			{/* Bottom-right success dialog */}
-			{successOpen && (
-				<div className="fixed bottom-6 right-6 z-50">
-					<div className="flex items-start gap-3 rounded-xl border border-emerald-200 bg-white px-4 py-3 shadow-lg text-sm
-									dark:border-emerald-900 dark:bg-slate-900">
-						<CheckCircle className="h-5 w-5 text-emerald-600 mt-0.5" />
-						<div className="pr-6">
-							<div className="font-medium text-emerald-700 dark:text-emerald-300">Success</div>
-							<div className="text-foreground/80 dark:text-foreground/80">{successText}</div>
-						</div>
-						<button
-							type="button"
-							onClick={() => setSuccessOpen(false)}
-							className="absolute top-2 right-2 rounded p-1 hover:bg-emerald-50 dark:hover:bg-slate-800"
-							aria-label="Close"
-							title="Close"
-						>
-							<X className="h-4 w-4 opacity-70" />
-						</button>
-					</div>
-				</div>
-			)}
-		</div>
+				</AlertDialogFooter>
+			</AlertDialogContent>
+		</AlertDialog>
+	</div>
 	);
 }
-

@@ -29,7 +29,10 @@ type ApplicationVM = {
   permit_status: string;
   final_approval_status: string;
   final_approval_reason?: string | null;
+  registrar_status?: 'pending' | 'approved' | 'rejected' | null;
   registrar_reason?: string | null;
+  dean_status?: 'pending' | 'approved' | 'rejected' | null;
+  dean_reason?: string | null;
   contact_number?: string | null;
   telephone_number?: string | null;
   office_address?: string | null;
@@ -338,7 +341,10 @@ export default function ComprehensiveExamIndex() {
                   telephone_no: application.telephone_number ?? null,
                   email: application.email,
                   status: (application.final_approval_status || 'Pending') as any,
+                  registrar_status: application.registrar_status ?? null,
                   registrar_reason: application.registrar_reason ?? null,
+                  dean_status: application.dean_status ?? null,
+                  dean_reason: application.dean_reason ?? null,
                   subjects: application.subjects,
                   created_at: application.created_at ?? null,
                 }}

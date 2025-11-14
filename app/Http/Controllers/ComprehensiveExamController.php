@@ -36,6 +36,15 @@ class ComprehensiveExamController extends Controller
 
         $response = null;
         if ($application) {
+            // DEBUG: Log raw database values
+            \Log::info('===== COMPREHENSIVE EXAM DEBUG =====');
+            \Log::info('Application ID: ' . $application->application_id);
+            \Log::info('Raw registrar_status from DB: ' . var_export($application->registrar_status, true));
+            \Log::info('Raw final_approval_status from DB: ' . var_export($application->final_approval_status, true));
+            \Log::info('Raw registrar_reason from DB: ' . var_export($application->registrar_reason, true));
+            \Log::info('Raw final_approval_reason from DB: ' . var_export($application->final_approval_reason, true));
+            \Log::info('====================================');
+            
             // Format created_at to Asia/Manila timezone
             $createdAt = null;
             if ($application->created_at) {
@@ -60,8 +69,11 @@ class ComprehensiveExamController extends Controller
                 'created_at'            => $createdAt,
                 'status'                => $application->final_approval_status
                                             ?? ($application->registrar_status ?? 'pending'),
-                'registrar_reason'      => $application->final_approval_reason
-                                            ?? ($application->registrar_reason ?? null),
+                // Separate statuses for tracking progress (normalized to lowercase)
+                'registrar_status'      => strtolower($application->registrar_status ?? 'pending'),
+                'dean_status'           => strtolower($application->final_approval_status ?? 'pending'),
+                'registrar_reason'      => $application->registrar_reason ?? null,
+                'dean_reason'           => $application->final_approval_reason ?? null,
                 // Live values from offering if available; fallback to snapshot
                 'subjects'              => $application->subjects->map(function ($s) {
                     $live = $s->offering;
@@ -77,11 +89,14 @@ class ComprehensiveExamController extends Controller
                 'average_score'        => $application->average_score,
                 'result_status'        => $application->result_status,
                 // personal info from users table
-                'first_name' => $user->first_name ?? '',
-                'middle_name'=> $user->middle_name ?? null,
-                'last_name'  => $user->last_name ?? '',
-                'email'      => $user->email ?? '',
-                'student_id' => $studentId,
+                'first_name'    => $user->first_name ?? '',
+                'middle_initial'=> $user->middle_name ? substr($user->middle_name, 0, 1) : null,
+                'last_name'     => $user->last_name ?? '',
+                'email'         => $user->email ?? '',
+                'student_id'    => $studentId,
+                // Contact info from application
+                'mobile_no'     => $application->contact_number,
+                'telephone_no'  => $application->telephone_number,
             ];
         }
 

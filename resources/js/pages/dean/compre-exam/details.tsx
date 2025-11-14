@@ -1,7 +1,8 @@
 import { Badge } from '@/components/ui/badge';
-import { User2, GraduationCap, Mail, CalendarDays, RefreshCcw } from 'lucide-react';
+import { User2, GraduationCap, Mail, CalendarDays, RefreshCcw, CreditCard, FileText } from 'lucide-react';
 import { format } from 'date-fns';
 import React, { useEffect, useState } from 'react';
+import { Separator } from '@/components/ui/separator';
 
 export type CompreExamApplicationSummary = {
 	id: number;
@@ -81,77 +82,80 @@ export default function Details({ application }: { application: CompreExamApplic
 	};
 
 	return (
-		<div className="max-w-md w-full text-sm mx-auto">
-			<div className="rounded-lg border bg-white/60 dark:bg-background p-3">
-				<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-					<div>
-						<div className="flex items-center gap-2 text-[15px] font-medium">
-							<User2 className="h-5 w-5 text-muted-foreground" />
-							<span className="text-base md:text-[17px] font-semibold">
-								{application.last_name}, {application.first_name} {application.middle_name ? `${application.middle_name[0]}.` : ''}
-							</span>
+		<div className="max-w-2xl w-full mx-auto">
+			{/* Student Header Card */}
+			<div className="rounded-lg border bg-gradient-to-br from-white to-slate-50/50 dark:from-background dark:to-slate-900/50 p-5 shadow-sm">
+				<div className="flex items-start justify-between mb-4">
+					<div className="flex items-center gap-3">
+						<div className="flex h-12 w-12 items-center justify-center rounded-full bg-rose-100 border border-rose-200">
+							<User2 className="h-6 w-6 text-rose-600" />
 						</div>
-						<div className="mt-1 flex flex-wrap items-center gap-3 text-[13px] text-muted-foreground">
-							<span className="inline-flex items-center gap-1">
-								<Mail className="h-3.5 w-3.5" />
-								{application.email || '—'}
-							</span>
-							<span className="inline-flex items-center gap-1">ID: <span className="font-medium text-foreground">{application.school_id || '—'}</span></span>
+						<div>
+							<h3 className="text-lg font-semibold text-foreground">
+								{application.last_name}, {application.first_name} {application.middle_name ? `${application.middle_name[0]}.` : ''}
+							</h3>
+							<p className="text-sm text-muted-foreground">Comprehensive Exam Applicant</p>
 						</div>
 					</div>
+					<Badge variant="outline" className={`rounded-full ${statusCls}`}>
+						{application.application_status[0].toUpperCase() + application.application_status.slice(1)}
+					</Badge>
+				</div>
 
-					<div>
-						<div className="flex items-start gap-2 text-[15px] min-w-0">
-							<GraduationCap className="h-5 w-4 shrink-0 text-muted-foreground" />
-							<span className="text-foreground leading-tight break-words whitespace-normal min-w-0">
-								{application.program || '—'}
-							</span>
+				<Separator className="my-4" />
+
+				{/* Info Grid */}
+				<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+					<div className="space-y-3">
+						<div className="flex items-start gap-2">
+							<Mail className="h-4 w-4 text-muted-foreground mt-0.5" />
+							<div className="flex-1 min-w-0">
+								<div className="text-xs text-muted-foreground">Email</div>
+								<div className="text-sm font-medium truncate">{application.email || '—'}</div>
+							</div>
 						</div>
-						<div className="mt-2 flex flex-wrap items-center gap-2">
-							<Badge variant="outline" className={`rounded-full ${statusCls}`}>
-								{application.application_status[0].toUpperCase() + application.application_status.slice(1)}
-							</Badge>
-							<Badge variant="outline" className="rounded-full inline-flex items-center gap-1">
-								<CalendarDays className="h-3.5 w-3.5" />
-								{application.submitted_at ? format(new Date(application.submitted_at), 'MMM dd, yyyy') : '—'}
-							</Badge>
+					<div className="flex items-start gap-2">
+						<CreditCard className="h-4 w-4 text-muted-foreground mt-0.5" />
+						<div className="flex-1">
+							<div className="text-xs text-muted-foreground">Student ID</div>
+							<div className="text-sm font-medium">{application.school_id || '—'}</div>
+						</div>
+					</div>
+					</div>
+
+					<div className="space-y-3">
+						<div className="flex items-start gap-2">
+							<GraduationCap className="h-4 w-4 text-muted-foreground mt-0.5" />
+							<div className="flex-1 min-w-0">
+								<div className="text-xs text-muted-foreground">Program</div>
+								<div className="text-sm font-medium break-words">{application.program || '—'}</div>
+							</div>
+						</div>
+						<div className="flex items-start gap-2">
+							<CalendarDays className="h-4 w-4 text-muted-foreground mt-0.5" />
+							<div className="flex-1">
+								<div className="text-xs text-muted-foreground">Submitted</div>
+								<div className="text-sm font-medium">
+									{application.submitted_at ? format(new Date(application.submitted_at), 'MMMM dd, yyyy • hh:mm a') : '—'}
+								</div>
+							</div>
 						</div>
 					</div>
 				</div>
-
-				{/* <div className="mt-3">
-					<div className="mb-1 flex items-center justify-between">
-						<div className="text-xs text-muted-foreground">Eligibility</div>
-						<button
-							type="button"
-							className="inline-flex items-center gap-1 text-xs text-slate-600 hover:text-slate-900 disabled:opacity-60"
-							onClick={fetchEligibility}
-							disabled={elig.loading}
-							title="Refresh eligibility"
-						>
-							<RefreshCcw className={`h-3.5 w-3.5 ${elig.loading ? 'animate-spin' : ''}`} /> Refresh
-						</button>
-					</div>
-
-					<div className="space-y-2">
-						<div className="flex items-center justify-between rounded border px-3 py-2">
-							<span>Complete grades (registrar verified)</span>
-							{chip(elig.gradesComplete)}
-						</div>
-						<div className="flex items-center justify-between rounded border px-3 py-2">
-							<span>No outstanding tuition balance</span>
-							{chip(elig.noOutstandingBalance)}
-						</div>
-					</div>
-				</div> */}
-
-				{application.remarks && (
-					<div className="mt-3">
-						<div className="text-xs text-muted-foreground">Remarks</div>
-						<div className="font-normal text-foreground">{application.remarks}</div>
-					</div>
-				)}
 			</div>
+
+			{/* Remarks Section */}
+			{application.remarks && (
+				<div className="mt-4 rounded-lg border bg-amber-50/50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-900 p-4">
+					<div className="flex items-start gap-2">
+						<FileText className="h-4 w-4 text-amber-600 dark:text-amber-400 mt-0.5" />
+						<div className="flex-1">
+							<div className="text-xs font-medium text-amber-900 dark:text-amber-300 mb-1">Decision Remarks</div>
+							<div className="text-sm text-amber-800 dark:text-amber-200 whitespace-pre-wrap">{application.remarks}</div>
+						</div>
+					</div>
+				</div>
+			)}
 		</div>
 	);
 }
