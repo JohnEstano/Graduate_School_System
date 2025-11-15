@@ -24,7 +24,10 @@ class PaymentSubmissionController extends Controller
      */
     private function userHasApprovedExamApplication($user): bool
     {
-        if (!Schema::hasTable('exam_application')) return false;
+        if (!Schema::hasTable('exam_application')) {
+            \Log::warning('PaymentSubmission: exam_application table does not exist');
+            return false;
+        }
 
         $ids = array_values(array_unique(array_filter([
             $user->student_id ? trim((string) $user->student_id) : null,
@@ -33,8 +36,23 @@ class PaymentSubmissionController extends Controller
             (string) $user->id,
         ])));
 
-        if (empty($ids)) return false;
+        if (empty($ids)) {
+            \Log::warning('PaymentSubmission: No valid IDs found for user', ['user_id' => $user->id]);
+            return false;
+        }
 
+        // First, check if there's ANY application for this student
+        $anyApp = DB::table('exam_application')
+            ->where(function ($q) use ($ids) {
+                foreach ($ids as $i => $val) {
+                    $i === 0
+                        ? $q->whereRaw('TRIM(student_id) = ?', [$val])
+                        : $q->orWhereRaw('TRIM(student_id) = ?', [$val]);
+                }
+            })
+            ->first();
+
+        // Check for dean-approved application
         $hasApproved = DB::table('exam_application')
             ->where(function ($q) use ($ids) {
                 foreach ($ids as $i => $val) {
@@ -50,6 +68,9 @@ class PaymentSubmissionController extends Controller
             'user_id' => $user->id,
             'user_email' => $user->email,
             'search_ids' => $ids,
+            'has_any_application' => (bool) $anyApp,
+            'application_status' => $anyApp ? ($anyApp->final_approval_status ?? 'null') : 'no_app',
+            'registrar_status' => $anyApp ? ($anyApp->registrar_status ?? 'null') : 'no_app',
             'has_dean_approved' => $hasApproved,
         ]);
 
