@@ -91,6 +91,14 @@ class PaymentSubmissionController extends Controller
             ->orderByDesc('payment_id')
             ->first();
 
+        \Log::info('PaymentSubmission index:', [
+            'user_id' => $user->id,
+            'hasApp' => $hasApp,
+            'paymentWindowOpen' => $paymentWindowOpen,
+            'canSubmit' => $hasApp && $paymentWindowOpen,
+            'existing_payment_status' => $payment ? $payment->status : 'no_payment',
+        ]);
+
         return Inertia::render('payment/Index', [
             'student' => [
                 'name'    => trim($user->first_name.' '.($user->middle_name ? $user->middle_name.' ' : '').$user->last_name),
