@@ -34,8 +34,21 @@ export default function Index() {
   const { props } = usePage<PageProps>();
   const { student, canSubmit, payment, paymentWindowOpen  } = props;
 
+  // Debug logging
+  console.log('Payment Index - Props:', {
+    canSubmit,
+    paymentWindowOpen,
+    paymentStatus: payment?.status || 'no_payment',
+    hasPayment: !!payment,
+  });
+
   // Can open form if: canSubmit (has approved app + window open) AND (no payment OR payment rejected)
   const canOpenForm = canSubmit && (!payment || payment.status === 'rejected');
+
+  console.log('Payment Index - Can open form:', canOpenForm, {
+    canSubmit,
+    noPaymentOrRejected: !payment || payment.status === 'rejected',
+  });
 
   const [open, setOpen] = useState(false);
   const [showSuccessPanel, setShowSuccessPanel] = useState(false); // ensure this exists
