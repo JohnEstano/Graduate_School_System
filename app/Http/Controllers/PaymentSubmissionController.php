@@ -35,7 +35,7 @@ class PaymentSubmissionController extends Controller
 
         if (empty($ids)) return false;
 
-        return DB::table('exam_application')
+        $hasApproved = DB::table('exam_application')
             ->where(function ($q) use ($ids) {
                 foreach ($ids as $i => $val) {
                     $i === 0
@@ -45,6 +45,15 @@ class PaymentSubmissionController extends Controller
             })
             ->where('final_approval_status', 'approved')
             ->exists();
+
+        \Log::info('PaymentSubmission: Checking dean approval', [
+            'user_id' => $user->id,
+            'user_email' => $user->email,
+            'search_ids' => $ids,
+            'has_dean_approved' => $hasApproved,
+        ]);
+
+        return $hasApproved;
     }
     public function index(Request $request)
     {
