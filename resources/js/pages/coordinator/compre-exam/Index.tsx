@@ -48,21 +48,12 @@ export default function CoordinatorCompreExamIndex() {
   const { props } = usePage<PageProps>();
   const { programs = [], eligible = [], notEligible = [] } = props;
 
-  // Debug logging
-  console.log('CoordinatorCompreExamIndex props:', { 
-    programs, 
-    eligibleCount: eligible.length, 
-    notEligibleCount: notEligible.length,
-    totalData: eligible.length + notEligible.length 
-  });
-
-  const [tab, setTab] = useState<'eligible' | 'not'>('eligible');
   const [q, setQ] = useState('');
   // search: defer like payments page for smoother typing
   const dq = useDeferredValue(q);
   // insights removed
 
-  const data = tab === 'eligible' ? eligible : notEligible;
+  const data = [...eligible, ...notEligible];
 
   // --- Richer metrics for the KPI strip
   const metrics = useMemo(() => {
@@ -168,8 +159,8 @@ export default function CoordinatorCompreExamIndex() {
   const [page, setPage] = useState(1);
   const pageSize = 10;
   useEffect(() => {
-    setPage(1); // reset when tab/search changes
-  }, [tab, dq]);
+    setPage(1); // reset when search changes
+  }, [dq]);
   const total = filtered.length;
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
   const pageStart = (page - 1) * pageSize;
@@ -295,7 +286,7 @@ export default function CoordinatorCompreExamIndex() {
         </div>
 
         {/* Table container (highlight) */}
-        <div className="mt-6 bg-white dark:bg-zinc-900">
+        <div className="mt-6 bg-white dark:bg-zinc-900 border border-zinc-200 rounded-lg">
           <div>
             <TableCompreExam paged={pageItems} columns={columns} />
           </div>

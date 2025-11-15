@@ -30,12 +30,18 @@ export default function TableCompreExam({ paged, columns, onVisibleCountChange }
   const [scoreRows, setScoreRows] = useState<{ id: number; subject_name: string; score: number | null }[]>([]);
   const [savingScores, setSavingScores] = useState(false);
 
-  // Eligibility filter
+  // Eligibility filter - default to 'all' to show everyone
   const [eligibilityFilter, setEligibilityFilter] = useState<'all' | 'eligible' | 'not'>('all');
   // Applied filter
   const [appliedFilter, setAppliedFilter] = useState<'all' | 'yes' | 'no'>('all');
   // Application status filter
   const [statusFilter, setStatusFilter] = useState<'all' | 'approved' | 'pending' | 'rejected' | 'not_yet_applied'>('all');
+
+  // Debug logging
+  useEffect(() => {
+    console.log('TableCompreExam - paged data:', paged.length, 'items');
+    console.log('TableCompreExam - filters:', { eligibilityFilter, appliedFilter, statusFilter });
+  }, [paged, eligibilityFilter, appliedFilter, statusFilter]);
 
   const sorted = useMemo(() => {
     // sort by submitted_at desc, nulls last
@@ -48,6 +54,7 @@ export default function TableCompreExam({ paged, columns, onVisibleCountChange }
 
   // Apply all filters
   const filtered = useMemo(() => {
+    console.log('Filtering - input:', sorted.length, 'items');
     let out = sorted;
     // eligibility
     if (eligibilityFilter === 'eligible') out = out.filter(r => r.eligible === true);
@@ -59,6 +66,7 @@ export default function TableCompreExam({ paged, columns, onVisibleCountChange }
     if (statusFilter !== 'all') {
       out = out.filter(r => (r.application_status || 'not_yet_applied') === statusFilter);
     }
+    console.log('Filtering - output:', out.length, 'items');
     return out;
   }, [sorted, eligibilityFilter, appliedFilter, statusFilter]);
 

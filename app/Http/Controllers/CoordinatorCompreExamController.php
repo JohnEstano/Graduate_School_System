@@ -42,10 +42,6 @@ class CoordinatorCompreExamController extends Controller
         }
 
         if (empty($programs)) {
-            \Log::warning('CoordinatorCompreExamController: No programs found for coordinator', [
-                'user_id' => $user->id,
-                'email' => $user->email,
-            ]);
             return Inertia::render('coordinator/compre-exam/Index', [
                 'programs'    => [],
                 'eligible'    => [],
@@ -53,12 +49,6 @@ class CoordinatorCompreExamController extends Controller
                 'counts'      => ['eligible' => 0, 'notEligible' => 0],
             ]);
         }
-
-        \Log::info('CoordinatorCompreExamController: Programs found', [
-            'user_id' => $user->id,
-            'email' => $user->email,
-            'programs' => $programs,
-        ]);
 
         // normalize programs for case-insensitive matching
         $normalizedPrograms = array_values(array_unique(array_map(fn($p) => mb_strtolower(trim(preg_replace('/\s+/', ' ', (string)$p))), $programs)));
@@ -112,15 +102,6 @@ class CoordinatorCompreExamController extends Controller
             ->where('u.id', '<>', $user->id)
             ->orderBy('u.last_name')
             ->get();
-
-        \Log::info('CoordinatorCompreExamController: Students query result', [
-            'user_id' => $user->id,
-            'programs' => $programs,
-            'normalized_programs' => $normalizedPrograms,
-            'students_count' => $students->count(),
-            'use_role_string' => $useRoleString,
-            'student_role_ids' => $studentRoleIds,
-        ]);
 
         $hasExamApp = Schema::hasTable('exam_application');
 
@@ -195,13 +176,6 @@ class CoordinatorCompreExamController extends Controller
 
         $eligible    = $rows->where('eligible', true)->values();
         $notEligible = $rows->where('eligible', false)->values();
-
-        \Log::info('CoordinatorCompreExamController: Final data', [
-            'user_id' => $user->id,
-            'total_rows' => $rows->count(),
-            'eligible_count' => $eligible->count(),
-            'not_eligible_count' => $notEligible->count(),
-        ]);
 
         return Inertia::render('coordinator/compre-exam/Index', [
             'programs'    => $programs,
