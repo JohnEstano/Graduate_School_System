@@ -48,6 +48,14 @@ export default function CoordinatorCompreExamIndex() {
   const { props } = usePage<PageProps>();
   const { programs = [], eligible = [], notEligible = [] } = props;
 
+  // Debug logging
+  console.log('CoordinatorCompreExamIndex props:', { 
+    programs, 
+    eligibleCount: eligible.length, 
+    notEligibleCount: notEligible.length,
+    totalData: eligible.length + notEligible.length 
+  });
+
   const [tab, setTab] = useState<'eligible' | 'not'>('eligible');
   const [q, setQ] = useState('');
   // search: defer like payments page for smoother typing
