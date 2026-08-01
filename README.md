@@ -257,6 +257,81 @@ Two fixes were applied:
 
 ---
 
+## 🚀 Using Google SSO (Out-of-the-Box)
+
+The `Google-SSO` branch comes **pre-configured** with Google OAuth authentication. After cloning and running the setup steps above, Google SSO works immediately — no extra code changes needed.
+
+### What's Already Configured
+
+✅ **`app/Http/Controllers/Auth/GoogleAuthController.php`** — Handles the OAuth flow (redirect → callback → login/register)  
+✅ **`config/services.php`** — Google service config wired to `.env` variables  
+✅ **`routes/web.php`** — Routes registered:
+- `GET /auth/google` → redirects to Google
+- `GET /auth/google/callback` → handles Google response
+
+### How It Works
+
+1. **User clicks "Login with Google"** on the login page
+2. **Redirected to Google** — prompted to select an account
+3. **Google returns user data** (email, name, avatar) to `/auth/google/callback`
+4. **System checks the database**:
+   - If user **exists** → logs them in
+   - If user is **new** → auto-creates account with a random password
+5. **User is redirected** to the dashboard
+
+### Testing Google SSO Locally
+
+1. Make sure your `.env` has valid Google credentials:
+   ```env
+   GOOGLE_CLIENT_ID=your-client-id.apps.googleusercontent.com
+   GOOGLE_CLIENT_SECRET=your-client-secret
+   GOOGLE_REDIRECT_URI=http://localhost:8000/auth/google/callback
+   ```
+
+2. Start the server:
+   ```bash
+   php artisan serve
+   ```
+
+3. Visit `http://localhost:8000/login`
+
+4. Click the **"Login with Google"** button
+
+5. Select your `@uic.edu.ph` Google account
+
+6. You'll be redirected back and logged in automatically 🎉
+
+### Switching Google Accounts
+
+The controller forces the account picker every time:
+```php
+->with(['prompt' => 'select_account'])
+```
+This means even if you're already logged into Google, you'll see the account selection screen — perfect for testing with multiple accounts.
+
+### Troubleshooting SSO
+
+| Issue | Fix |
+|-------|-----|
+| `redirect_uri_mismatch` | Verify the redirect URI in Google Cloud Console **exactly** matches `http://localhost:8000/auth/google/callback` |
+| `Class 'Laravel\Socialite\Two\GoogleProvider' not found` | Run `composer require laravel/socialite` |
+| Stuck on "Loading..." after Google login | Clear browser cookies or use incognito mode |
+| New user can't log in | Check that the `users` table allows `password` to be nullable, OR that the controller auto-generates a password (it does) |
+| Want to test with a different Google account | Use incognito mode — the `prompt=select_account` ensures the picker always shows |
+
+### Adding Google Login Button (Frontend)
+
+If the button isn't showing on your login page, add this to your React login component:
+
+```tsx
+<a href="/auth/google" className="btn btn-google">
+    <img src="/google-icon.svg" alt="Google" />
+    Sign in with Google
+</a>
+```
+
+---
+
 ## Architecture & Tech Stack
 
 **Backend:**  
