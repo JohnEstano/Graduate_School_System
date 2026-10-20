@@ -270,7 +270,7 @@ class DefenseRequestController extends Controller
                 'student' => $defenseRequest->first_name . ' ' . $defenseRequest->last_name
             ]);
             
-            $adviserUser = User::findByFullName($defenseRequest->defense_adviser, 'Faculty')->first();
+            $adviserUser = User::findByFullName($defenseRequest->defense_adviser, 'Adviser')->first();
             
             if ($adviserUser) {
                 Log::info('Defense Request: Adviser found', [
@@ -327,7 +327,7 @@ class DefenseRequestController extends Controller
                 Log::error('Defense Request: Adviser not found', [
                     'defense_request_id' => $defenseRequest->id,
                     'adviser_name_searched' => $defenseRequest->defense_adviser,
-                    'available_faculty' => User::where('role', 'Faculty')
+                    'available_faculty' => User::where('role', 'Adviser')
                         ->get(['id', 'first_name', 'middle_name', 'last_name', 'email'])
                         ->map(fn($u) => $u->full_name)
                         ->toArray()
@@ -357,7 +357,7 @@ class DefenseRequestController extends Controller
     {
         $user = Auth::user();
         if (!$user) abort(401);
-        if (!in_array($user->role, ['Faculty', 'Adviser'])) {
+        if (!in_array($user->role, ['Adviser'])) {
             abort(403);
         }
 
@@ -1381,7 +1381,7 @@ class DefenseRequestController extends Controller
     {
         $user = $request->user();
         if (!$user) abort(401);
-        if (!in_array($user->role, ['Faculty','Adviser'])) {
+        if (!in_array($user->role, ['Adviser'])) {
             return response()->json(['error'=>'Forbidden'],403);
         }
 
@@ -1466,7 +1466,7 @@ class DefenseRequestController extends Controller
             $q->where('submitted_by',$user->id);
         }
 
-        if (in_array($user->role, ['Faculty','Adviser'])) {
+        if (in_array($user->role, ['Adviser'])) {
             $full = strtolower(trim(($user->first_name ?? '').' '.($user->last_name ?? '')));
             $q->where(function($qq) use ($user,$full){
                 $qq->where('adviser_user_id',$user->id)
@@ -1544,7 +1544,7 @@ class DefenseRequestController extends Controller
                 $counts['coordinator_review'] = DefenseRequest::where('workflow_state', 'coordinator-review')->count();
             }
 
-            if (in_array($user->role, ['Faculty', 'Adviser'])) {
+            if (in_array($user->role, ['Adviser'])) {
                 $counts['adviser_review'] = DefenseRequest::where('workflow_state', 'adviser-review')->count();
             }
 
@@ -1589,7 +1589,7 @@ class DefenseRequestController extends Controller
     public function bulkApprove(Request $request)
     {
         $user = Auth::user();
-        if (!$user || !in_array($user->role, ['Faculty', 'Adviser'])) {
+        if (!$user || !in_array($user->role, ['Adviser'])) {
             return response()->json(['error' => 'Unauthorized'], 403);
         }
 
@@ -1646,7 +1646,7 @@ class DefenseRequestController extends Controller
     public function bulkReject(Request $request)
     {
         $user = Auth::user();
-        if (!$user || !in_array($user->role, ['Faculty', 'Adviser'])) {
+        if (!$user || !in_array($user->role, ['Adviser'])) {
             return response()->json(['error' => 'Unauthorized'], 403);
         }
 
@@ -1685,7 +1685,7 @@ class DefenseRequestController extends Controller
     public function bulkRetrieve(Request $request)
     {
         $user = Auth::user();
-        if (!$user || !in_array($user->role, ['Faculty', 'Adviser'])) {
+        if (!$user || !in_array($user->role, ['Adviser'])) {
             return response()->json(['error' => 'Unauthorized'], 403);
         }
 
@@ -1744,7 +1744,7 @@ class DefenseRequestController extends Controller
             ]);
             
             $user = Auth::user();
-            if (!$user || !in_array($user->role, ['Faculty', 'Adviser'])) {
+            if (!$user || !in_array($user->role, ['Adviser'])) {
                 \Log::error('updateAdviserStatus: Unauthorized', [
                     'user_id' => $user->id ?? null,
                     'role' => $user->role ?? null

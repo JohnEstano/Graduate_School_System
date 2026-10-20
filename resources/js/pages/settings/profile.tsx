@@ -184,7 +184,7 @@ export default function Profile({ mustVerifyEmail, status }: { mustVerifyEmail: 
                                 )}
                             </div>
                         )}
-                        {(user.role === "Adviser" || user.role === "Faculty") && (
+                        {(user.role === "Adviser") && (
                             <>
                                
                                 <div>

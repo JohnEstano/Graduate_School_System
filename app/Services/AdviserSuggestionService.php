@@ -8,7 +8,9 @@ use Illuminate\Support\Facades\Log;
 
 class AdviserSuggestionService
 {
-    public function __construct(protected LegacyPortalClient $legacy) {}
+    public function __construct(protected LegacyPortalClient $legacy)
+    {
+    }
 
     /**
      * Suggest adviser for a student by inspecting class schedule instructors or existing historical defense requests.
@@ -20,7 +22,8 @@ class AdviserSuggestionService
      */
     public function suggestForStudent(User $student, ?array $legacySession, ?string $program = null, ?string $periodId = null): ?array
     {
-        if (!$student->school_id) return null;
+        if (!$student->school_id)
+            return null;
         // 1. If we have previous defense requests by this student with adviser set, reuse most recent.
         $recent = DefenseRequest::where('school_id', $student->school_id)
             ->whereNotNull('defense_adviser')
@@ -42,13 +45,16 @@ class AdviserSuggestionService
                     $studentLast = $student->last_name ? strtoupper($student->last_name) : null;
                     $match = null;
                     foreach ($instructors as $inst) {
-                        if ($studentLast && str_contains(strtoupper($inst), $studentLast)) { $match = $inst; break; }
+                        if ($studentLast && str_contains(strtoupper($inst), $studentLast)) {
+                            $match = $inst;
+                            break;
+                        }
                     }
                     $chosen = $match ?: $instructors[0];
                     return ['suggestion' => $chosen, 'source' => 'class-schedule'];
                 }
             } catch (\Throwable $e) {
-                Log::debug('AdviserSuggestionService schedule phase failed: '.$e->getMessage());
+                Log::debug('AdviserSuggestionService schedule phase failed: ' . $e->getMessage());
             }
         }
 
@@ -67,8 +73,9 @@ class AdviserSuggestionService
         }
 
         // Coordinator fallback: user with role Coordinator possibly matching program (best-effort)
-        $coord = User::where('role','Coordinator')
-            ->when($program, function($q) use ($program) { $q->where('program', $program); })
+        $coord = User::where('role', 'Coordinator')
+            ->when($program, function ($q) use ($program) {
+                $q->where('program', $program); })
             ->orderByDesc('updated_at')
             ->first();
         if ($coord) {
@@ -113,10 +120,13 @@ class AdviserSuggestionService
                     $original = $selectedPeriod;
                     $tries = 0;
                     foreach ($periods as $p) {
-                        if ($tries >= 5) break; // safety limit
-                        if ($p['id'] === $selectedPeriod) continue;
+                        if ($tries >= 5)
+                            break; // safety limit
+                        if ($p['id'] === $selectedPeriod)
+                            continue;
                         $ok = $this->legacy->setStudentClassSchedulePeriod($legacySession, $p['id']);
-                        if (!$ok) continue;
+                        if (!$ok)
+                            continue;
                         $h2 = $this->legacy->fetchStudentClassScheduleHtml($legacySession);
                         $parsed2 = $this->legacy->parseStudentClassSchedule($h2);
                         $newInst = $parsed2['instructors'] ?? [];
@@ -134,7 +144,7 @@ class AdviserSuggestionService
                     }
                 }
             } catch (\Throwable $e) {
-                Log::debug('collectCandidates schedule parse error: '.$e->getMessage());
+                Log::debug('collectCandidates schedule parse error: ' . $e->getMessage());
             }
         }
         // Add previous adviser if not already in list
@@ -151,7 +161,7 @@ class AdviserSuggestionService
                 ->orderByDesc('c')
                 ->limit(5)
                 ->get()
-                ->map(fn($r) => ['name' => $r->name, 'count' => (int)$r->c])
+                ->map(fn($r) => ['name' => $r->name, 'count' => (int) $r->c])
                 ->all();
             foreach ($programTop as $row) {
                 if ($row['name'] && !in_array($row['name'], $instructors, true)) {
@@ -160,8 +170,8 @@ class AdviserSuggestionService
             }
         }
         // Coordinator fallback: include ALL coordinators matching program (or any if none) for visibility
-        $coordinators = User::where('role','Coordinator')
-            ->when($program, fn($q)=>$q->where('program',$program))
+        $coordinators = User::where('role', 'Coordinator')
+            ->when($program, fn($q) => $q->where('program', $program))
             ->orderBy('last_name')
             ->limit(10)
             ->get();
@@ -170,14 +180,14 @@ class AdviserSuggestionService
                 $instructors[] = $coord->name;
             }
         }
-        // If still empty, pull faculty list (program-scoped) as broad fallback so dropdown is never blank.
+        // If still empty, pull Adviser list (program-scoped) as broad fallback so dropdown is never blank.
         if (empty($instructors)) {
-            $faculty = User::where('role','Faculty')
-                ->when($program, fn($q)=>$q->where('program',$program))
+            $Adviser = User::where('role', 'Adviser')
+                ->when($program, fn($q) => $q->where('program', $program))
                 ->orderBy('last_name')
                 ->limit(25)
                 ->get();
-            foreach ($faculty as $f) {
+            foreach ($Adviser as $f) {
                 if ($f->name && !in_array($f->name, $instructors, true)) {
                     $instructors[] = $f->name;
                 }
@@ -185,8 +195,8 @@ class AdviserSuggestionService
         }
         $reason = null;
         if (empty($instructors)) {
-            // Final broad fallback: any coordinators or faculty at all (ignoring program) so UI not blank.
-            $anyStaff = User::whereIn('role',['Coordinator','Faculty'])
+            // Final broad fallback: any coordinators or Adviser at all (ignoring program) so UI not blank.
+            $anyStaff = User::whereIn('role', ['Coordinator', 'Adviser'])
                 ->orderBy('last_name')
                 ->limit(25)
                 ->get();
@@ -203,12 +213,12 @@ class AdviserSuggestionService
             Log::debug('collectCandidates still empty initial, applied broad fallback', [
                 'student_id' => $student->id,
                 'program' => $program,
-                'had_legacy_session' => (bool)$legacySession,
+                'had_legacy_session' => (bool) $legacySession,
                 'periods_count' => count($periods),
                 'final_count' => count($instructors),
             ]);
         }
-        sort($instructors, SORT_NATURAL|SORT_FLAG_CASE);
+        sort($instructors, SORT_NATURAL | SORT_FLAG_CASE);
         return [
             'instructors' => $instructors,
             'previous_adviser' => $previous,

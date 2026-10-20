@@ -85,7 +85,7 @@ class CoordinatorDefenseController extends Controller
                 ];
             });
 
-        $facultyMembers = User::where('role','Faculty')
+        $facultyMembers = User::where('role','Adviser')
             ->select('id','first_name','last_name','email')
             ->orderBy('last_name')
             ->get()
@@ -790,7 +790,7 @@ class CoordinatorDefenseController extends Controller
         $offset   = ($page - 1) * $perPage;
 
         // Faculty sources
-        $facultyQuery = User::whereIn('role',['Faculty','Adviser'])
+        $facultyQuery = User::whereIn('role',['Adviser'])
             ->when($q !== '', function($query) use ($q) {
                 $query->where(function($sub) use ($q) {
                     $sub->where('first_name','LIKE',"%{$q}%")
@@ -811,7 +811,7 @@ class CoordinatorDefenseController extends Controller
                 'id' => 'faculty-'.$f->id,
                 'name' => trim($f->first_name.' '.($f->middle_name ? $f->middle_name.' ' : '').$f->last_name),
                 'email' => $f->email,
-                'type' => 'Faculty',
+                'type' => 'Adviser',
             ]);
 
         // Panelists

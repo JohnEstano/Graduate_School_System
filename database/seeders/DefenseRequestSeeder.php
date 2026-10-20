@@ -118,7 +118,7 @@ class DefenseRequestSeeder extends Seeder
                 'last_name' => $faker->lastName,
                 'email' => "adviser" . ($i+1) . "@school.edu",
                 'password' => Hash::make('password'),
-                'role' => 'Faculty',
+                'role' => 'Adviser',
                 'program' => $programs[$i % count($programs)],
             ]);
         }

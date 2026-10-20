@@ -23,8 +23,8 @@ class UserObserver
 
     protected function syncAdviserWithUser(User $user): void
     {
-        // Only sync for adviser/faculty roles
-        if (! in_array($user->role, ['Adviser', 'Faculty'])) {
+        // Only sync for adviser/Adviser roles
+        if (!in_array($user->role, ['Adviser'])) {
             return;
         }
 

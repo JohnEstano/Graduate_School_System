@@ -24,7 +24,7 @@ class DefenseRequirementController extends Controller
         $acceptDefense = $acceptDefense === null ? true : $acceptDefense === '1';
 
         return inertia('student/submissions/defense-requirements/Index', [
-            'defenseRequirements' => $requirements->map(function($r) {
+            'defenseRequirements' => $requirements->map(function ($r) {
                 return [
                     'id' => $r->id,
                     'first_name' => $r->first_name,
@@ -102,44 +102,45 @@ class DefenseRequirementController extends Controller
                 'last_status_updated_at' => $defenseRequest->last_status_updated_at,
                 'workflow_history' => $defenseRequest->workflow_history ?? [],
             ] : null,
-             'acceptDefense' => $acceptDefense,
-             'auth' => [
-                 'user' => [
-                     'id' => $user->id,
-                     'first_name' => $user->first_name,
-                     'middle_name' => $user->middle_name,
-                     'last_name' => $user->last_name,
-                     'school_id' => $user->school_id,
-                     'program' => $user->program,
-                     'email' => $user->email,
-                     // Show only accepted advisers
-                     'advisers' => $user->advisers()
-                         ->wherePivot('status', 'accepted')
-                         ->select('users.id', 'users.first_name', 'users.middle_name', 'users.last_name', 'users.email', 'users.adviser_code')
-                         ->get(),
-                 ],
-             ],
-         ]);
+            'acceptDefense' => $acceptDefense,
+            'auth' => [
+                'user' => [
+                    'id' => $user->id,
+                    'first_name' => $user->first_name,
+                    'middle_name' => $user->middle_name,
+                    'last_name' => $user->last_name,
+                    'school_id' => $user->school_id,
+                    'program' => $user->program,
+                    'email' => $user->email,
+                    // Show only accepted advisers
+                    'advisers' => $user->advisers()
+                        ->wherePivot('status', 'accepted')
+                        ->select('users.id', 'users.first_name', 'users.middle_name', 'users.last_name', 'users.email', 'users.adviser_code')
+                        ->get(),
+                ],
+            ],
+        ]);
     }
 
     public function all(Request $request)
     {
         $user = Auth::user();
-        if (!$user) abort(401);
+        if (!$user)
+            abort(401);
 
         // Show all requests where this user is adviser or assigned
-        $requests = DefenseRequest::where(function($q) use ($user) {
+        $requests = DefenseRequest::where(function ($q) use ($user) {
             $q->where('adviser_user_id', $user->id)
-              ->orWhere('assigned_to_user_id', $user->id)
-              ->orWhereRaw('LOWER(defense_adviser) = ?', [strtolower(trim($user->first_name . ' ' . $user->last_name))]);
+                ->orWhere('assigned_to_user_id', $user->id)
+                ->orWhereRaw('LOWER(defense_adviser) = ?', [strtolower(trim($user->first_name . ' ' . $user->last_name))]);
         })
-        // Exclude cancelled workflow_state or status
-        ->where('workflow_state', '!=', 'cancelled')
-        ->where(function($q) {
-            $q->whereNull('status')->orWhere('status', '!=', 'Cancelled');
-        })
-        ->orderByDesc('created_at')
-        ->get();
+            // Exclude cancelled workflow_state or status
+            ->where('workflow_state', '!=', 'cancelled')
+            ->where(function ($q) {
+                $q->whereNull('status')->orWhere('status', '!=', 'Cancelled');
+            })
+            ->orderByDesc('created_at')
+            ->get();
 
         return inertia('adviser/defense-requirements/Index', [
             'defenseRequirements' => [],
@@ -157,19 +158,19 @@ class DefenseRequirementController extends Controller
         }
 
         // Early upload error interception
-        foreach (['rec_endorsement','proof_of_payment','manuscript_proposal','similarity_index'] as $fileField) {
+        foreach (['rec_endorsement', 'proof_of_payment', 'manuscript_proposal', 'similarity_index'] as $fileField) {
             if ($request->hasFile($fileField)) {
                 $err = $request->file($fileField)->getError();
                 if ($err !== UPLOAD_ERR_OK) {
                     return back()->withErrors([
-                        $fileField => 'File upload failed (code '.$err.'). Please retry.'
+                        $fileField => 'File upload failed (code ' . $err . '). Please retry.'
                     ])->withInput();
                 }
             }
         }
 
         $maxFileSize = config('upload.max_file_size_kb', 204800);
-        $allowedMimes = implode(',', config('upload.allowed_extensions', ['pdf','doc','docx','jpg','jpeg','png']));
+        $allowedMimes = implode(',', config('upload.allowed_extensions', ['pdf', 'doc', 'docx', 'jpg', 'jpeg', 'png']));
 
         $data = $request->validate([
             'first_name' => 'required|string',
@@ -190,20 +191,20 @@ class DefenseRequirementController extends Controller
             'amount' => 'required|numeric|min:0', // <-- Add this line
         ]);
 
-        foreach (['rec_endorsement','proof_of_payment','manuscript_proposal','similarity_index','avisee_adviser_attachment'] as $f) {
+        foreach (['rec_endorsement', 'proof_of_payment', 'manuscript_proposal', 'similarity_index', 'avisee_adviser_attachment'] as $f) {
             if ($request->hasFile($f)) {
                 try {
                     $uploaded = $request->file($f);
                     Log::info('File upload attempt', [
-                        'field'=>$f,
-                        'name'=>$uploaded->getClientOriginalName(),
-                        'size'=>$uploaded->getSize(),
-                        'user'=>Auth::id()
+                        'field' => $f,
+                        'name' => $uploaded->getClientOriginalName(),
+                        'size' => $uploaded->getSize(),
+                        'user' => Auth::id()
                     ]);
-                    $data[$f] = $uploaded->store('defense_requirements','public');
+                    $data[$f] = $uploaded->store('defense_requirements', 'public');
                 } catch (\Throwable $e) {
-                    Log::error('Upload failed', ['field'=>$f,'err'=>$e->getMessage()]);
-                    return back()->withErrors([$f=>'Failed to store file. Try again.'])->withInput();
+                    Log::error('Upload failed', ['field' => $f, 'err' => $e->getMessage()]);
+                    return back()->withErrors([$f => 'Failed to store file. Try again.'])->withInput();
                 }
             }
         }
@@ -236,13 +237,13 @@ class DefenseRequirementController extends Controller
 
             // If adviser_id is not present, fallback to name mapping
             if (!$defenseRequestData['adviser_user_id'] && $defenseRequestData['defense_adviser']) {
-                $normalized = preg_replace('/\s+/',' ', strtolower($defenseRequestData['defense_adviser']));
-                $match = \App\Models\User::whereIn('role',['Faculty','Adviser'])
+                $normalized = preg_replace('/\s+/', ' ', strtolower($defenseRequestData['defense_adviser']));
+                $match = \App\Models\User::whereIn('role', ['Adviser'])
                     ->get()
-                    ->first(function($u) use ($normalized) {
-                        $combo1 = strtolower($u->first_name.' '.$u->last_name);
-                        $combo2 = strtolower($u->last_name.', '.$u->first_name);
-                        return str_contains($normalized,$combo1) || str_contains($normalized,$combo2);
+                    ->first(function ($u) use ($normalized) {
+                        $combo1 = strtolower($u->first_name . ' ' . $u->last_name);
+                        $combo2 = strtolower($u->last_name . ', ' . $u->first_name);
+                        return str_contains($normalized, $combo1) || str_contains($normalized, $combo2);
                     });
                 if ($match) {
                     $defenseRequestData['adviser_user_id'] = $match->id;
@@ -263,7 +264,7 @@ class DefenseRequirementController extends Controller
             // Send email notification to adviser
             if ($dr->adviser_user_id) {
                 $adviserUser = User::find($dr->adviser_user_id);
-                
+
                 if ($adviserUser) {
                     Log::info('Defense Request: Adviser found', [
                         'defense_request_id' => $dr->id,
@@ -271,7 +272,7 @@ class DefenseRequirementController extends Controller
                         'adviser_name' => $adviserUser->full_name,
                         'adviser_email' => $adviserUser->email
                     ]);
-                    
+
                     // Create in-app notification
                     Notification::create([
                         'user_id' => $adviserUser->id,
@@ -280,7 +281,7 @@ class DefenseRequirementController extends Controller
                         'message' => "Review needed for {$dr->defense_type} request ({$dr->thesis_title}).",
                         'link' => url("/defense-request/{$dr->id}")
                     ]);
-                    
+
                     // Send email notification
                     if ($adviserUser->email) {
                         try {
@@ -289,11 +290,11 @@ class DefenseRequirementController extends Controller
                                 'adviser_email' => $adviserUser->email,
                                 'adviser_name' => $adviserUser->full_name
                             ]);
-                            
+
                             // Send email IMMEDIATELY (not queued) to ensure it's sent
                             Mail::to($adviserUser->email)
                                 ->send(new DefenseRequestSubmitted($dr, $adviserUser));
-                            
+
                             Log::info('Defense Request: Email sent successfully', [
                                 'defense_request_id' => $dr->id,
                                 'adviser_email' => $adviserUser->email,
@@ -328,32 +329,32 @@ class DefenseRequirementController extends Controller
             }
 
         } catch (\Throwable $e) {
-            Log::error('Defense request create failed', ['err'=>$e->getMessage()]);
-            return back()->with('error','Failed to submit defense requirements.');
+            Log::error('Defense request create failed', ['err' => $e->getMessage()]);
+            return back()->with('error', 'Failed to submit defense requirements.');
         }
 
-        return back()->with('success','Defense requirements submitted.');
+        return back()->with('success', 'Defense requirements submitted.');
     }
 
     public function unsubmit(Request $request, $id)
     {
         $dr = DefenseRequest::findOrFail($id);
         if ($dr->submitted_by !== Auth::id()) {
-            return response()->json(['success'=>false,'message'=>'Unauthorized'],403);
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
         }
 
-        $allowedWorkflow = ['submitted','adviser-review'];
+        $allowedWorkflow = ['submitted', 'adviser-review'];
         $wf = strtolower($dr->workflow_state ?? '');
         $status = strtolower($dr->status ?? '');
 
-        if (!($status === 'pending' || in_array($wf,$allowedWorkflow))) {
+        if (!($status === 'pending' || in_array($wf, $allowedWorkflow))) {
             return response()->json([
-                'success'=>false,
-                'message'=>'You can only unsubmit while pending or under adviser review.'
-            ],403);
+                'success' => false,
+                'message' => 'You can only unsubmit while pending or under adviser review.'
+            ], 403);
         }
 
-        $reason = trim($request->input('reason','(no reason provided)'));
+        $reason = trim($request->input('reason', '(no reason provided)'));
 
         $from = $dr->workflow_state;
         $dr->status = 'Cancelled';
@@ -362,12 +363,12 @@ class DefenseRequirementController extends Controller
         $dr->last_status_updated_by = Auth::id();
         $dr->addWorkflowEntry(
             'cancelled',
-            'Student unsubmitted: '.$reason,
+            'Student unsubmitted: ' . $reason,
             Auth::id(),
             $from,
             'cancelled'
         )->save();
 
-        return response()->json(['success'=>true]);
+        return response()->json(['success' => true]);
     }
 }

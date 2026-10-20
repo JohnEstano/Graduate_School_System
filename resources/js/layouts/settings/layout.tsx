@@ -12,14 +12,14 @@ type NavItem = { title:string; href:string; roles?:string[] };
 // AA: hide Document Templates, E‑Signatures, and General
 const baseNav: NavItem[] = [
   { title:'Profile',    href:'/settings/profile' },
-  { title:'General',    href:'/settings/general', roles:['Coordinator','Adviser','Faculty'] },
+  { title:'General',    href:'/settings/general', roles:['Coordinator','Adviser'] },
  // { title:'Password',   href:'/settings/password' },
   { title:'Appearance', href:'/settings/appearance' },
 ];
 
 const extraNav: NavItem[] = [
   //{ title:'Document Templates', href:'/settings/documents', roles:['Dean','Coordinator'] },
-  { title:'E‑Signatures',       href:'/settings/signatures', roles:['Dean','Coordinator','Adviser','Faculty'] },
+  { title:'E‑Signatures',       href:'/settings/signatures', roles:['Dean','Coordinator','Adviser'] },
   { title:'Coordinator Delegation', href:'/settings/dean-delegation', roles:['Dean'] },
 ];
 

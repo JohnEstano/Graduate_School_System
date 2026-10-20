@@ -43,6 +43,16 @@ class LoginRequest extends FormRequest
             'has_password' => !empty($password)
         ]);
 
+        // Allow existing UIC accounts to authenticate with their local password hash.
+        if (str_ends_with(strtolower($identifier), '@uic.edu.ph')) {
+            $localUser = User::where('email', strtolower($identifier))->first();
+            if ($localUser && Hash::check($password, $localUser->password)) {
+                Auth::login($localUser, $this->boolean('remember'));
+                RateLimiter::clear($this->throttleKey());
+                return;
+            }
+        }
+
         // Super Admin bypass
         if ($identifier === 'superadmin@uic.edu.ph' || $identifier === 'superadmin') {
             $superAdmin = User::where('email', 'superadmin@uic.edu.ph')->first();
@@ -250,7 +260,7 @@ class LoginRequest extends FormRequest
                 'student_number' => $mappedNumeric,
                 'school_id' => $mappedNumeric,
                 'password' => Hash::make(Str::random(32)),
-                'role' => $isStaff ? 'Faculty' : 'Student',
+                'role' => $isStaff ? 'Adviser' : 'Student',
             ];
             
             if ($clearanceData) {
@@ -287,7 +297,7 @@ class LoginRequest extends FormRequest
                 $user->addRole('Student');
             }
             if ($isStaff) {
-                $user->addRole('Faculty');
+                $user->addRole('Adviser');
             }
         } else {
             // Update existing user
@@ -298,8 +308,8 @@ class LoginRequest extends FormRequest
             if ($mappedNumeric && empty($user->school_id)) {
                 $updates['school_id'] = $mappedNumeric;
             }
-            if ($isStaff && !in_array($user->role, ['Coordinator', 'Faculty', 'Dean', 'Chair'])) {
-                $updates['role'] = 'Faculty';
+            if ($isStaff && !in_array($user->role, ['Coordinator', 'Adviser', 'Dean', 'Chair'])) {
+                $updates['role'] = 'Adviser';
             }
             if ($updates) {
                 Log::info("Login: Updating existing user", [
@@ -313,7 +323,7 @@ class LoginRequest extends FormRequest
                 $user->addRole('Student');
             }
             if ($isStaff) {
-                $user->addRole('Faculty');
+                $user->addRole('Adviser');
             }
         }
 

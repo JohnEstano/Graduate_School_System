@@ -3,11 +3,11 @@ import type { BreadcrumbItem } from '@/types';
 import { Head, usePage } from '@inertiajs/react';
 import React from 'react';
 
+import AdviserDashboard from './dashboard-layouts/Adviser-dashboard';
 import AssistantDashboard from './dashboard-layouts/assistant-dashboard';
 import CoordinatorDashboard from './dashboard-layouts/coordinator-dashboard';
 import DeanDashboard from './dashboard-layouts/dean-dashboard';
 import StudentDashboard from './dashboard-layouts/student-dashboard';
-import FacultyDashboard from './dashboard-layouts/faculty-dashboard';
 import SuperAdminDashboard from './dashboard-layouts/super-admin-dashboard';
 
 const breadcrumbs: BreadcrumbItem[] = [{ title: 'Dashboard', href: '/dashboard' }];
@@ -24,7 +24,9 @@ type PageProps = {
 
 export default function DashboardIndex() {
     const page = usePage<PageProps>().props;
-    const { auth: { user } } = page;
+    const {
+        auth: { user },
+    } = page;
 
     let ComponentToRender: React.FC<any>;
     const activeRole = (user as any)?.effective_role || user.role;
@@ -43,8 +45,8 @@ export default function DashboardIndex() {
         case 'Dean':
             ComponentToRender = DeanDashboard;
             break;
-        case 'Faculty':
-            ComponentToRender = FacultyDashboard;
+        case 'Adviser':
+            ComponentToRender = AdviserDashboard;
             break;
         case 'Super Admin':
         case 'SuperAdmin':

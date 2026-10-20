@@ -56,7 +56,7 @@ const MANAGE_ROLES = ["Coordinator", "Dean", "Administrative Assistant"];
 
 export default function QuickActionsWidget({ userRole }: Props) {
     let actions;
-    if (userRole === "Faculty") {
+    if (userRole === "Adviser") {
         actions = FACULTY_ACTIONS;
     } else if (MANAGE_ROLES.includes(userRole || "")) {
         actions = ADMIN_ACTIONS;

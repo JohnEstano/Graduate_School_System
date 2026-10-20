@@ -125,7 +125,7 @@ export function AppSidebar() {
         navItems = deanNavItems;
     } else if (user.role === 'Administrative Assistant') {
         navItems = assistantNavItems;
-    } else if (user.role === 'Faculty' || user.role === 'Adviser') {
+    } else if (user.role === 'Adviser') {
         navItems = facultyNavItems;
     } else if (user.role === 'Registrar') {
         navItems = registrarNavItems;
@@ -149,7 +149,7 @@ export function AppSidebar() {
 
     // Show "Others" section for Faculty, Coordinator, Dean, or actual Adviser
     const showOthers =
-        user.role === 'Faculty' ||
+        user.role === 'Adviser' ||
         user.role === 'Coordinator' ||
         user.role === 'Dean' ||
         is_adviser; // <-- Only show if user is an actual adviser

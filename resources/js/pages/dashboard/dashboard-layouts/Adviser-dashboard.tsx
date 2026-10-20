@@ -133,7 +133,7 @@ export default function FacultyDashboard() {
                                     Hi, {user?.name}!
                                 </h1>
                                 <span className="text-xs text-gray-400 dark:text-gray-500 mt-1 relative z-10">
-                                    {user?.role ?? 'Faculty'}
+                                    {user?.role ?? 'Adviser'}
                                 </span>
                             </div>
                             {/* Quick Actions - Hidden on mobile, shown on md+ */}

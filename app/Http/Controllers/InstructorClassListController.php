@@ -13,7 +13,7 @@ class InstructorClassListController extends Controller
     public function index(Request $request)
     {
         $user = $request->user();
-        $session = Cache::get('legacy_session_'.$user->id);
+        $session = Cache::get('legacy_session_' . $user->id);
         $payload = ['rows' => [], 'periods' => [], 'selected_period_id' => null, 'short_period_label' => null];
         $error = null;
         if ($session) {
@@ -24,14 +24,14 @@ class InstructorClassListController extends Controller
                 if ($periodId) {
                     $html = $legacy->setInstructorClassListPeriod($session, $periodId) ?? $legacy->fetchInstructorClassListHtml($session);
                     // persist updated header
-                    Cache::put('legacy_session_'.$user->id, $session, now()->addMinutes(30));
+                    Cache::put('legacy_session_' . $user->id, $session, now()->addMinutes(30));
                 } else {
                     $html = $legacy->fetchInstructorClassListHtml($session);
                 }
                 $payload = $legacy->parseInstructorClassList($html);
             } catch (\Throwable $e) {
                 $error = 'Failed to fetch class list.';
-                Log::debug('Instructor class list fetch failure: '.$e->getMessage());
+                Log::debug('Instructor class list fetch failure: ' . $e->getMessage());
             }
         } else {
             $error = 'Legacy session missing; please re-login.';

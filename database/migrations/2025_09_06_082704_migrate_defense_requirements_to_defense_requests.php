@@ -5,8 +5,7 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\DB;
 
-return new class extends Migration
-{
+return new class extends Migration {
     /**
      * Run the migrations.
      */
@@ -25,33 +24,33 @@ return new class extends Migration
 
         // Migrate all data from defense_requirements to defense_requests
         $requirements = DB::table('defense_requirements')->get();
-        
+
         foreach ($requirements as $req) {
             // Map adviser name to user ID if possible
             $adviserUserId = null;
             $assignedToUserId = null;
-            
+
             if ($req->adviser) {
                 $adviserUser = DB::table('users')
-                    ->where('role', 'Faculty')
-                    ->where(function($query) use ($req) {
+                    ->where('role', 'Adviser')
+                    ->where(function ($query) use ($req) {
                         $adviserName = $req->adviser;
                         $query->whereRaw('CONCAT(first_name, " ", last_name) = ?', [$adviserName])
-                              ->orWhereRaw('CONCAT(last_name, ", ", first_name) = ?', [$adviserName]);
-                        
+                            ->orWhereRaw('CONCAT(last_name, ", ", first_name) = ?', [$adviserName]);
+
                         // Handle name parts
                         $nameParts = explode(' ', $adviserName);
                         if (count($nameParts) >= 2) {
                             $firstName = $nameParts[0];
                             $lastName = end($nameParts);
-                            $query->orWhere(function($q) use ($firstName, $lastName) {
+                            $query->orWhere(function ($q) use ($firstName, $lastName) {
                                 $q->where('first_name', 'LIKE', '%' . $firstName . '%')
-                                  ->where('last_name', 'LIKE', '%' . $lastName . '%');
+                                    ->where('last_name', 'LIKE', '%' . $lastName . '%');
                             });
                         }
                     })
                     ->first();
-                    
+
                 if ($adviserUser) {
                     $adviserUserId = $adviserUser->id;
                     $assignedToUserId = $adviserUser->id;
@@ -109,7 +108,7 @@ return new class extends Migration
                 $table->dropColumn('similarity_index');
             }
         });
-        
+
         // Note: We don't restore defense_requirements data in down() 
         // as it's still preserved in the original table
     }
