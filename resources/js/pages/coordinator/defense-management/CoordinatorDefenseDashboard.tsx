@@ -77,14 +77,14 @@ interface Stats {
 
 interface Props {
     defenseRequests: DefenseRequest[];
-    AdviserMembers: AdviserMember[];
+    facultyMembers: AdviserMember[];
     panelists: Panelist[];
     availablePanelMembers: PanelMember[];
     stats: Stats;
     user: any;
 }
 
-export default function CoordinatorDefenseDashboard({ defenseRequests, AdviserMembers, panelists, availablePanelMembers, stats, user }: Props) {
+export default function CoordinatorDefenseDashboard({ defenseRequests, facultyMembers, panelists, availablePanelMembers, stats, user }: Props) {
     // Sonner toast is imported directly
     const [selectedRequest, setSelectedRequest] = useState<DefenseRequest | null>(null);
     const [activeDialog, setActiveDialog] = useState<'panels' | 'schedule' | 'edit' | 'view' | null>(null);
@@ -501,7 +501,7 @@ export default function CoordinatorDefenseDashboard({ defenseRequests, AdviserMe
                             {availablePanelMembers.length > 0 && (
                                 <span>
                                     {' '}
-                                    {panelists.length} panelists and {AdviserMembers.length} Adviser members available.
+                                    {panelists.length} panelists and {facultyMembers.length} Adviser members available.
                                 </span>
                             )}
                             <br />
@@ -537,7 +537,7 @@ export default function CoordinatorDefenseDashboard({ defenseRequests, AdviserMe
                                 <SelectContent>
                                     {(availablePanelMembers ?? []).map((member) => (
                                         <SelectItem key={`${member.type}-${member.id}`} value={member.name}>
-                                            {member.name} ({member.type === 'Adviser' ? 'Adviser' : 'Panelist'})
+                                            {member.name} ({member.type === 'faculty' ? 'Adviser' : 'Panelist'})
                                         </SelectItem>
                                     ))}
                                 </SelectContent>
@@ -559,7 +559,7 @@ export default function CoordinatorDefenseDashboard({ defenseRequests, AdviserMe
                                 <SelectContent>
                                     {(availablePanelMembers ?? []).map((member) => (
                                         <SelectItem key={`${member.type}-${member.id}`} value={member.name}>
-                                            {member.name} ({member.type === 'Adviser' ? 'Adviser' : 'Panelist'})
+                                            {member.name} ({member.type === 'faculty' ? 'Adviser' : 'Panelist'})
                                         </SelectItem>
                                     ))}
                                 </SelectContent>
@@ -582,7 +582,7 @@ export default function CoordinatorDefenseDashboard({ defenseRequests, AdviserMe
                                     <SelectItem value="none">None</SelectItem>
                                     {(availablePanelMembers ?? []).map((member) => (
                                         <SelectItem key={`${member.type}-${member.id}`} value={member.name}>
-                                            {member.name} ({member.type === 'Adviser' ? 'Adviser' : 'Panelist'})
+                                            {member.name} ({member.type === 'faculty' ? 'Adviser' : 'Panelist'})
                                         </SelectItem>
                                     ))}
                                 </SelectContent>
@@ -602,7 +602,7 @@ export default function CoordinatorDefenseDashboard({ defenseRequests, AdviserMe
                                     <SelectItem value="none">None</SelectItem>
                                     {(availablePanelMembers ?? []).map((member) => (
                                         <SelectItem key={`${member.type}-${member.id}`} value={member.name}>
-                                            {member.name} ({member.type === 'Adviser' ? 'Adviser' : 'Panelist'})
+                                            {member.name} ({member.type === 'faculty' ? 'Adviser' : 'Panelist'})
                                         </SelectItem>
                                     ))}
                                 </SelectContent>
@@ -622,7 +622,7 @@ export default function CoordinatorDefenseDashboard({ defenseRequests, AdviserMe
                                     <SelectItem value="none">None</SelectItem>
                                     {availablePanelMembers.map((member) => (
                                         <SelectItem key={`${member.type}-${member.id}`} value={member.name}>
-                                            {member.name} ({member.type === 'Adviser' ? 'Adviser' : 'Panelist'})
+                                            {member.name} ({member.type === 'faculty' ? 'Adviser' : 'Panelist'})
                                         </SelectItem>
                                     ))}
                                 </SelectContent>
