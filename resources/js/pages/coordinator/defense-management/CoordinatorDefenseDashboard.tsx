@@ -51,7 +51,7 @@ interface AdviserMember {
     id: number;
     name: string;
     email?: string;
-    type: 'Adviser';
+    type: 'faculty';
 }
 
 interface Panelist {
@@ -65,7 +65,7 @@ interface PanelMember {
     id: number;
     name: string;
     email?: string;
-    type: 'Adviser' | 'panelist';
+    type: 'faculty' | 'panelist';
 }
 
 interface Stats {
