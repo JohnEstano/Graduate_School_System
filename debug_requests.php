@@ -21,9 +21,9 @@ if ($requests->count() == 0) {
     }
 }
 
-echo "\n2. FACULTY USERS:\n";
-$faculty = User::where('role', 'Faculty')->get();
-foreach ($faculty as $f) {
+echo "\n2. Adviser USERS:\n";
+$Adviser = User::where('role', 'Adviser')->get();
+foreach ($Adviser as $f) {
     echo "   ID: {$f->id} | Name: {$f->first_name} {$f->last_name} | Role: {$f->role}\n";
 }
 
@@ -39,14 +39,14 @@ if (\Illuminate\Support\Facades\Auth::check()) {
 echo "\n4. WHAT ADVISER 'Muslimin Ontong' (ID: 17) WOULD SEE:\n";
 $muslimin = User::find(17);
 if ($muslimin) {
-    $assignedRequests = DefenseRequest::with(['adviserUser','assignedTo'])
-        ->where(function($q) use ($muslimin){
+    $assignedRequests = DefenseRequest::with(['adviserUser', 'assignedTo'])
+        ->where(function ($q) use ($muslimin) {
             $q->where('adviser_user_id', $muslimin->id)
-              ->orWhere('assigned_to_user_id', $muslimin->id);
+                ->orWhere('assigned_to_user_id', $muslimin->id);
         })
         ->orderByDesc('created_at')
         ->get();
-    
+
     if ($assignedRequests->count() == 0) {
         echo "   No defense requests assigned to this adviser.\n";
     } else {

@@ -4,9 +4,9 @@ import { NavUser } from '@/components/nav-user';
 import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '@/components/ui/sidebar';
 import { MainNavItem, type NavItem } from '@/types';
 import { Link, usePage } from '@inertiajs/react';
-import { CalendarFold, Calendar, CreditCard, DollarSign, FileText, GraduationCap, LayoutGrid, MessageSquareText, ScrollText, SquareUserRound, Users, Box, LibraryBig, Send, BadgeDollarSign } from 'lucide-react';
+import { CalendarFold, CreditCard, DollarSign, FileText, GraduationCap, LayoutGrid, LibraryBig, Send, Users } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import AppLogo from './app-logo';
-import { useEffect, useState } from "react";
 
 type PageProps = {
     auth: {
@@ -53,10 +53,7 @@ const studentNavItems: MainNavItem[] = [
         title: 'Schedules',
         href: '/schedule',
         icon: CalendarFold,
-
     },
-    
-
 ];
 
 const coordinatorNavItems: MainNavItem[] = [
@@ -68,7 +65,7 @@ const coordinatorNavItems: MainNavItem[] = [
         subItems: [
             { title: 'Defense Requests', href: '/coordinator/defense-requests' },
             { title: 'Panel Assignment', href: '/panelists' },
-            { title: 'Adviser List', href: '/coordinator/adviser-list'},
+            { title: 'Adviser List', href: '/coordinator/adviser-list' },
         ],
     },
     {
@@ -82,15 +79,14 @@ const coordinatorNavItems: MainNavItem[] = [
     },
     { title: 'Honorarium', href: '/honorarium-summary', icon: DollarSign },
     { title: 'Student Records', href: '/student-records', icon: Users },
-     { title: 'Payment Rates', href: '/dean/payment-rates', icon: DollarSign },
+    { title: 'Payment Rates', href: '/dean/payment-rates', icon: DollarSign },
     { title: 'Schedules', href: '/schedules', icon: CalendarFold },
-   
 ];
 
 const assistantNavItems: MainNavItem[] = [
     { title: 'Dashboard', href: '/dashboard', icon: LayoutGrid },
-    { title: 'Defense Requests', href: '/assistant/all-defense-list', icon: FileText }, 
-   
+    { title: 'Defense Requests', href: '/assistant/all-defense-list', icon: FileText },
+
     {
         title: 'Applications',
         href: '/defense',
@@ -102,12 +98,11 @@ const assistantNavItems: MainNavItem[] = [
     },
     { title: 'Honorarium', href: '/honorarium-summary', icon: DollarSign },
     { title: 'Student Records', href: '/student-records', icon: Users },
-     { title: 'Payment Rates', href: '/dean/payment-rates', icon: DollarSign },
+    { title: 'Payment Rates', href: '/dean/payment-rates', icon: DollarSign },
     { title: 'Schedules', href: '/schedules', icon: CalendarFold },
-    
 ];
 
-const facultyNavItems: MainNavItem[] = [
+const AdviserNavItems: MainNavItem[] = [
     { title: 'Dashboard', href: '/dashboard', icon: LayoutGrid },
     { title: 'Schedules', href: '/schedules', icon: CalendarFold },
 ];
@@ -123,7 +118,7 @@ const footerNavItems: NavItem[] = [];
 
 export function AppSidebar() {
     const {
-        auth: { user, is_adviser }, 
+        auth: { user, is_adviser },
     } = usePage<PageProps>().props;
 
     let navItems: MainNavItem[];
@@ -134,8 +129,8 @@ export function AppSidebar() {
         navItems = deanNavItems;
     } else if (user.role === 'Administrative Assistant') {
         navItems = assistantNavItems;
-    } else if (user.role === 'Faculty' || user.role === 'Adviser') {
-        navItems = facultyNavItems;
+    } else if (user.role === 'Adviser' || user.role === 'Adviser') {
+        navItems = AdviserNavItems;
     } else {
         navItems = studentNavItems;
     }
@@ -143,7 +138,7 @@ export function AppSidebar() {
     // Expanded menus state
     const [expandedMenus, setExpandedMenus] = useState<string[]>(() => {
         try {
-            const saved = localStorage.getItem("sidebar.expandedMenus");
+            const saved = localStorage.getItem('sidebar.expandedMenus');
             return saved ? JSON.parse(saved) : [];
         } catch {
             return [];
@@ -151,15 +146,11 @@ export function AppSidebar() {
     });
 
     useEffect(() => {
-        localStorage.setItem("sidebar.expandedMenus", JSON.stringify(expandedMenus));
+        localStorage.setItem('sidebar.expandedMenus', JSON.stringify(expandedMenus));
     }, [expandedMenus]);
 
-    // Show "Others" section for Faculty, Coordinator, Dean, or actual Adviser
-    const showOthers =
-        user.role === 'Faculty' ||
-        user.role === 'Coordinator' ||
-        user.role === 'Dean' ||
-        is_adviser; // <-- Only show if user is an actual adviser
+    // Show "Others" section for Adviser, Coordinator, Dean, or actual Adviser
+    const showOthers = user.role === 'Adviser' || user.role === 'Coordinator' || user.role === 'Dean' || is_adviser; // <-- Only show if user is an actual adviser
 
     // Items for the Others section
     const othersNavItems: MainNavItem[] = [
@@ -190,19 +181,10 @@ export function AppSidebar() {
             </SidebarHeader>
 
             <SidebarContent>
-                <NavMain
-                    items={navItems}
-                    expandedMenus={expandedMenus}
-                    setExpandedMenus={setExpandedMenus}
-                />
+                <NavMain items={navItems} expandedMenus={expandedMenus} setExpandedMenus={setExpandedMenus} />
                 {showOthers && (
                     <div className="mb-2">
-                        <NavMain
-                            items={othersNavItems}
-                            expandedMenus={expandedMenus}
-                            setExpandedMenus={setExpandedMenus}
-                            sectionTitle="Others"
-                        />
+                        <NavMain items={othersNavItems} expandedMenus={expandedMenus} setExpandedMenus={setExpandedMenus} sectionTitle="Others" />
                     </div>
                 )}
             </SidebarContent>

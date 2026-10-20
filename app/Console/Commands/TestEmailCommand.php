@@ -44,14 +44,14 @@ class TestEmailCommand extends Command
                 case 'simple':
                     Mail::raw('Test email from Graduate School System - Email is working! 🎉', function ($message) use ($email) {
                         $message->to($email)
-                                ->subject('Test Email - Graduate School System');
+                            ->subject('Test Email - Graduate School System');
                     });
                     $this->info('✅ Simple test email sent!');
                     break;
 
                 case 'submitted':
                     $student = User::where('role', 'Student')->first();
-                    $adviser = User::where('role', 'Faculty')->first();
+                    $adviser = User::where('role', 'Adviser')->first();
                     $defenseRequest = DefenseRequest::first();
 
                     if (!$student || !$adviser || !$defenseRequest) {
@@ -121,7 +121,7 @@ class TestEmailCommand extends Command
             $this->newLine();
             $this->info("Check your inbox at: {$email}");
             $this->info("If using queue, run: php artisan queue:work");
-            
+
             return 0;
         } catch (\Exception $e) {
             $this->error("Error sending email: {$e->getMessage()}");

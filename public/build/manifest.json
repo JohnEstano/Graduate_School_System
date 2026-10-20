@@ -1093,7 +1093,7 @@
       "resources/js/pages/dashboard/dashboard-layouts/assistant-dashboard.tsx",
       "resources/js/pages/dashboard/dashboard-layouts/coordinator-dashboard.tsx",
       "resources/js/pages/dashboard/dashboard-layouts/dean-dashboard.tsx",
-      "resources/js/pages/dashboard/dashboard-layouts/faculty-dashboard.tsx",
+      "resources/js/pages/dashboard/dashboard-layouts/Adviser-dashboard.tsx",
       "resources/js/pages/dashboard/dashboard-layouts/student-dashboard.tsx",
       "resources/js/pages/dashboard/dashboard-layouts/super-admin-dashboard.tsx",
       "resources/js/pages/dashboard/widgets/defense-status-widget.tsx",
@@ -1111,8 +1111,8 @@
       "resources/js/pages/dashboard/widgets/visual-charts/students-per-program-count.tsx",
       "resources/js/pages/dashboard/widgets/weekly-defense-schedule-widget.tsx",
       "resources/js/pages/dean/payment-rates/Index.tsx",
-      "resources/js/pages/faculty/ClassList.tsx",
-      "resources/js/pages/faculty/submissions/defense-request/Index.tsx",
+      "resources/js/pages/Adviser/ClassList.tsx",
+      "resources/js/pages/Adviser/submissions/defense-request/Index.tsx",
       "resources/js/pages/honorarium/honorarium-summary/Index.tsx",
       "resources/js/pages/honorarium/honorarium-summary/honorarium-modals/add-panelist-modal.tsx",
       "resources/js/pages/honorarium/honorarium-summary/honorarium-modals/record-modal.tsx",
@@ -2899,7 +2899,7 @@
       "resources/js/pages/dashboard/dashboard-layouts/coordinator-dashboard.tsx",
       "resources/js/pages/dashboard/dashboard-layouts/dean-dashboard.tsx",
       "resources/js/pages/dashboard/dashboard-layouts/student-dashboard.tsx",
-      "resources/js/pages/dashboard/dashboard-layouts/faculty-dashboard.tsx",
+      "resources/js/pages/dashboard/dashboard-layouts/Adviser-dashboard.tsx",
       "resources/js/pages/dashboard/dashboard-layouts/super-admin-dashboard.tsx",
       "_index-CEqJL0NP.js",
       "_index-DZZQifJx.js",
@@ -3106,10 +3106,10 @@
       "_trending-up-FSP76S9w.js"
     ]
   },
-  "resources/js/pages/dashboard/dashboard-layouts/faculty-dashboard.tsx": {
-    "file": "assets/faculty-dashboard-BG-m2obg.js",
-    "name": "faculty-dashboard",
-    "src": "resources/js/pages/dashboard/dashboard-layouts/faculty-dashboard.tsx",
+  "resources/js/pages/dashboard/dashboard-layouts/Adviser-dashboard.tsx": {
+    "file": "assets/Adviser-dashboard-BG-m2obg.js",
+    "name": "Adviser-dashboard",
+    "src": "resources/js/pages/dashboard/dashboard-layouts/Adviser-dashboard.tsx",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/app.tsx",
@@ -3494,10 +3494,10 @@
       "_sun-D0NfJtcj.js"
     ]
   },
-  "resources/js/pages/faculty/ClassList.tsx": {
+  "resources/js/pages/Adviser/ClassList.tsx": {
     "file": "assets/ClassList-aiAXHDJa.js",
     "name": "ClassList",
-    "src": "resources/js/pages/faculty/ClassList.tsx",
+    "src": "resources/js/pages/Adviser/ClassList.tsx",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/app.tsx",
@@ -3540,10 +3540,10 @@
       "_sun-D0NfJtcj.js"
     ]
   },
-  "resources/js/pages/faculty/submissions/defense-request/Index.tsx": {
+  "resources/js/pages/Adviser/submissions/defense-request/Index.tsx": {
     "file": "assets/Index-BxNCwbBR.js",
     "name": "Index",
-    "src": "resources/js/pages/faculty/submissions/defense-request/Index.tsx",
+    "src": "resources/js/pages/Adviser/submissions/defense-request/Index.tsx",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/app.tsx",

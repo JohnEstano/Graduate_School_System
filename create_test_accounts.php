@@ -33,7 +33,7 @@ if ($coordinator) {
         'program' => 'Graduate School',
         'school_id' => 'COORD-2025-001',
     ]);
-    
+
     echo "✅ Coordinator Account Created!\n";
     echo "   Name: {$coordinator->first_name} {$coordinator->last_name}\n";
     echo "   Email: japzdiapana@gmail.com\n";
@@ -42,7 +42,7 @@ if ($coordinator) {
 }
 
 // ===========================================
-// ADVISER (FACULTY) ACCOUNT
+// ADVISER (Adviser) ACCOUNT
 // ===========================================
 $adviser = User::where('email', 'japzdiapana@gmail.com')->first();
 
@@ -57,19 +57,19 @@ if ($adviser) {
         'last_name' => 'Smith',
         'email' => 'japzdiapana@gmail.com',
         'password' => Hash::make('password123'),
-        'role' => 'Faculty',
+        'role' => 'Adviser',
         'program' => 'Graduate School',
         'school_id' => 'FAC-2025-001',
     ]);
-    
+
     // Generate adviser code
     $adviser->generateAdviserCode();
-    
+
     echo "✅ Adviser Account Created!\n";
     echo "   Name: {$adviser->first_name} {$adviser->last_name}\n";
     echo "   Email: japzdiapana@gmail.com\n";
     echo "   Password: password123\n";
-    echo "   Role: Faculty (Adviser)\n";
+    echo "   Role: Adviser (Adviser)\n";
     echo "   Adviser Code: {$adviser->adviser_code}\n\n";
 }
 
@@ -93,7 +93,7 @@ if ($student) {
         'program' => 'Master of Arts in Education',
         'school_id' => '2025-12345',
     ]);
-    
+
     echo "✅ Student Account Created (Bonus)!\n";
     echo "   Name: {$student->first_name} {$student->last_name}\n";
     echo "   Email: student@test.com\n";
@@ -114,7 +114,7 @@ echo "   Login: coordinator@test.com\n";
 echo "   Password: password123\n";
 echo "   URL: http://127.0.0.1:8000/login\n\n";
 
-echo "🔹 ADVISER (FACULTY)\n";
+echo "🔹 ADVISER (Adviser)\n";
 echo "   Login: adviser@test.com\n";
 echo "   Password: password123\n";
 echo "   URL: http://127.0.0.1:8000/login\n\n";

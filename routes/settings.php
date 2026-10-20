@@ -12,7 +12,7 @@ use Illuminate\Http\Request;
 | Central settings & profile routes.
 | Provides both /settings/profile and legacy /profile path (same name: profile.edit).
 */
-Route::middleware(['auth','verified'])->group(function () {
+Route::middleware(['auth', 'verified'])->group(function () {
 
     // /settings -> /settings/profile
     Route::redirect('/settings', '/settings/profile')->name('settings');
@@ -30,19 +30,19 @@ Route::middleware(['auth','verified'])->group(function () {
     Route::put('/settings/password', [PasswordController::class, 'update'])->name('password.update');
 
     // Appearance (example page)
-    Route::get('/settings/appearance', fn () => Inertia::render('settings/appearance'))->name('appearance');
+    Route::get('/settings/appearance', fn() => Inertia::render('settings/appearance'))->name('appearance');
 
     // Document Templates (Dean / Coordinator)
     Route::get('/settings/documents', function () {
-        abort_unless(in_array(Auth::user()->role,['Dean','Coordinator']),403);
+        abort_unless(in_array(Auth::user()->role, ['Dean', 'Coordinator']), 403);
         return Inertia::render('settings/documents/Index');
     })->name('settings.documents');
 
     Route::get('/settings/documents/{template}/edit', function (DocumentTemplate $template) {
-        abort_unless(in_array(Auth::user()->role,['Dean','Coordinator']),403);
+        abort_unless(in_array(Auth::user()->role, ['Dean', 'Coordinator']), 403);
         return Inertia::render('settings/documents/TemplateEditor', [
             'templateId' => $template->id,
-            'template'   => $template
+            'template' => $template
         ]);
     })->name('settings.documents.edit');
 
@@ -54,7 +54,7 @@ Route::middleware(['auth','verified'])->group(function () {
     // General Settings (Coordinator only)
     Route::get('/settings/general', function () {
         $role = Auth::user()->role;
-        abort_unless(in_array($role, ['Coordinator', 'Adviser', 'Faculty']), 403);
+        abort_unless(in_array($role, ['Coordinator', 'Adviser', 'Adviser']), 403);
 
         // Coordinator: defense submissions
         $acceptDefense = null;
@@ -63,10 +63,10 @@ Route::middleware(['auth','verified'])->group(function () {
             $acceptDefense = $acceptDefense === null ? true : $acceptDefense === '1';
         }
 
-        // Adviser/Faculty: adviser code and auto-accept
+        // Adviser/Adviser: adviser code and auto-accept
         $autoAccept = null;
         $adviserCode = null;
-        if (in_array($role, ['Adviser', 'Faculty'])) {
+        if (in_array($role, ['Adviser', 'Adviser'])) {
             $autoAccept = \DB::table('adviser_settings')->where('adviser_id', Auth::id())->value('auto_accept_students');
             $autoAccept = $autoAccept === null ? false : $autoAccept == 1;
             $adviserCode = Auth::user()->adviser_code;
@@ -93,7 +93,7 @@ Route::middleware(['auth','verified'])->group(function () {
     // Adviser code reset
     Route::post('/settings/adviser/reset-code', function (Request $request) {
         $user = Auth::user();
-        abort_unless(in_array($user->role, ['Adviser', 'Faculty']), 403);
+        abort_unless(in_array($user->role, ['Adviser', 'Adviser']), 403);
         $user->adviser_code = null;
         $user->generateAdviserCode();
         $user->save();
@@ -103,7 +103,7 @@ Route::middleware(['auth','verified'])->group(function () {
     // Adviser auto-accept toggle
     Route::post('/settings/adviser/auto-accept', function (Request $request) {
         $user = Auth::user();
-        abort_unless(in_array($user->role, ['Adviser', 'Faculty']), 403);
+        abort_unless(in_array($user->role, ['Adviser', 'Adviser']), 403);
         $autoAccept = $request->input('autoAccept') ? 1 : 0;
         \DB::table('adviser_settings')->updateOrInsert(
             ['adviser_id' => $user->id],
@@ -114,7 +114,7 @@ Route::middleware(['auth','verified'])->group(function () {
 
     Route::get('/settings/adviser', function () {
         $user = Auth::user();
-        abort_unless(in_array($user->role, ['Adviser', 'Faculty']), 403);
+        abort_unless(in_array($user->role, ['Adviser', 'Adviser']), 403);
 
         $autoAccept = \DB::table('adviser_settings')->where('adviser_id', $user->id)->value('auto_accept_students');
         $autoAccept = $autoAccept === null ? false : $autoAccept == 1;

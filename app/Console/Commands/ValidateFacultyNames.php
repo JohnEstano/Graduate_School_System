@@ -6,34 +6,34 @@ use Illuminate\Console\Command;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 
-class ValidateFacultyNames extends Command
+class ValidateAdviserNames extends Command
 {
-    protected $signature = 'faculty:validate-names {--fix : Automatically fix common issues}';
-    protected $description = 'Validate and optionally fix faculty member names for email matching';
+    protected $signature = 'Adviser:validate-names {--fix : Automatically fix common issues}';
+    protected $description = 'Validate and optionally fix Adviser member names for email matching';
 
     public function handle()
     {
-        $this->info('🔍 Validating Faculty Names...');
+        $this->info('🔍 Validating Adviser Names...');
         $this->newLine();
 
-        $faculty = User::where('role', 'Faculty')->get();
-        
-        if ($faculty->isEmpty()) {
-            $this->warn('⚠️  No faculty members found in the database.');
+        $Adviser = User::where('role', 'Adviser')->get();
+
+        if ($Adviser->isEmpty()) {
+            $this->warn('⚠️  No Adviser members found in the database.');
             return 0;
         }
 
         $issues = [];
         $fixed = 0;
 
-        foreach ($faculty as $user) {
+        foreach ($Adviser as $user) {
             $problems = [];
-            
+
             // Check for missing email
             if (!$user->email) {
                 $problems[] = 'Missing email address';
             }
-            
+
             // Check for extra whitespace
             if ($user->first_name !== trim($user->first_name)) {
                 $problems[] = 'First name has leading/trailing whitespace';
@@ -42,7 +42,7 @@ class ValidateFacultyNames extends Command
                     $fixed++;
                 }
             }
-            
+
             if ($user->middle_name && $user->middle_name !== trim($user->middle_name)) {
                 $problems[] = 'Middle name has leading/trailing whitespace';
                 if ($this->option('fix')) {
@@ -50,7 +50,7 @@ class ValidateFacultyNames extends Command
                     $fixed++;
                 }
             }
-            
+
             if ($user->last_name !== trim($user->last_name)) {
                 $problems[] = 'Last name has leading/trailing whitespace';
                 if ($this->option('fix')) {
@@ -58,7 +58,7 @@ class ValidateFacultyNames extends Command
                     $fixed++;
                 }
             }
-            
+
             // Check for multiple consecutive spaces
             if ($user->first_name && preg_match('/\s{2,}/', $user->first_name)) {
                 $problems[] = 'First name has multiple consecutive spaces';
@@ -67,7 +67,7 @@ class ValidateFacultyNames extends Command
                     $fixed++;
                 }
             }
-            
+
             if ($user->middle_name && preg_match('/\s{2,}/', $user->middle_name)) {
                 $problems[] = 'Middle name has multiple consecutive spaces';
                 if ($this->option('fix')) {
@@ -75,7 +75,7 @@ class ValidateFacultyNames extends Command
                     $fixed++;
                 }
             }
-            
+
             if ($user->last_name && preg_match('/\s{2,}/', $user->last_name)) {
                 $problems[] = 'Last name has multiple consecutive spaces';
                 if ($this->option('fix')) {
@@ -83,7 +83,7 @@ class ValidateFacultyNames extends Command
                     $fixed++;
                 }
             }
-            
+
             if (!empty($problems)) {
                 $issues[] = [
                     'id' => $user->id,
@@ -91,7 +91,7 @@ class ValidateFacultyNames extends Command
                     'email' => $user->email ?? 'N/A',
                     'problems' => implode(', ', $problems)
                 ];
-                
+
                 if ($this->option('fix')) {
                     $user->save();
                 }
@@ -99,12 +99,12 @@ class ValidateFacultyNames extends Command
         }
 
         if (empty($issues)) {
-            $this->info('✅ All faculty names are properly formatted!');
+            $this->info('✅ All Adviser names are properly formatted!');
             $this->newLine();
         } else {
-            $this->warn("⚠️  Found {$faculty->count()} faculty members, " . count($issues) . " have issues:");
+            $this->warn("⚠️  Found {$Adviser->count()} Adviser members, " . count($issues) . " have issues:");
             $this->newLine();
-            
+
             $this->table(
                 ['ID', 'Name', 'Email', 'Issues'],
                 array_map(fn($issue) => [
@@ -114,21 +114,21 @@ class ValidateFacultyNames extends Command
                     $issue['problems']
                 ], $issues)
             );
-            
+
             if ($this->option('fix')) {
                 $this->info("✅ Fixed {$fixed} issues!");
             } else {
                 $this->newLine();
                 $this->comment('💡 Run with --fix to automatically correct these issues:');
-                $this->line('   php artisan faculty:validate-names --fix');
+                $this->line('   php artisan Adviser:validate-names --fix');
             }
         }
 
         $this->newLine();
-        $this->info('📋 Faculty Summary:');
+        $this->info('📋 Adviser Summary:');
         $this->table(
             ['ID', 'Full Name', 'Email'],
-            $faculty->map(fn($f) => [
+            $Adviser->map(fn($f) => [
                 $f->id,
                 $f->full_name,
                 $f->email ?? '❌ NO EMAIL'

@@ -1,17 +1,16 @@
-import React, { useEffect, useState } from 'react';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Separator } from '@/components/ui/separator';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Textarea } from '@/components/ui/textarea';
 import { usePage } from '@inertiajs/react';
-import { Sun, Moon, Users, CalendarDays, ClipboardList, Settings, Mail, UserCheck, BookOpen, Shield, Database, GraduationCap } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Separator } from "@/components/ui/separator";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Link } from "@inertiajs/react";
+import { BookOpen, ClipboardList, Database, GraduationCap, Mail, Moon, Settings, Shield, Sun, UserCheck, Users } from 'lucide-react';
+import React, { useState } from 'react';
 
 type Program = {
     id: number | string;
@@ -63,7 +62,7 @@ export default function SuperAdminDashboard() {
         allUsers = [],
         programs = [],
         coordinators = [],
-        stats = { total_users: 0, total_programs: 0, pending_requests: 0 }
+        stats = { total_users: 0, total_programs: 0, pending_requests: 0 },
     } = usePage<PageProps>().props;
 
     const [loading, setLoading] = useState(false);
@@ -72,126 +71,110 @@ export default function SuperAdminDashboard() {
         name: '',
         code: '',
         coordinator_id: '',
-        description: ''
+        description: '',
     });
     const [notification, setNotification] = useState({
         recipient_type: 'all',
         subject: '',
         message: '',
-        recipient_roles: []
+        recipient_roles: [],
     });
 
     // Dashboard header with greeting
     const greeting = isDaytime() ? 'Good morning' : 'Good evening';
 
     return (
-        <div className="flex h-full flex-1 flex-col gap-4 md:gap-6 overflow-auto rounded-xl pt-4 md:pt-6 px-4 md:px-7 pb-4 md:pb-6">
+        <div className="flex h-full flex-1 flex-col gap-4 overflow-auto rounded-xl px-4 pt-4 pb-4 md:gap-6 md:px-7 md:pt-6 md:pb-6">
             {/* Header Section - Mobile Responsive */}
             <div className="flex flex-col gap-2">
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-0">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-0">
                     <div className="flex flex-col">
-                        <h1 className="text-xl md:text-2xl lg:text-3xl font-bold text-gray-900 dark:text-white">
+                        <h1 className="text-xl font-bold text-gray-900 md:text-2xl lg:text-3xl dark:text-white">
                             {greeting}, {user?.name ?? 'Super Admin'}
                         </h1>
-                        <p className="text-xs md:text-sm text-gray-500 dark:text-gray-400">
-                            {getFormattedDate()} • System Administrator
-                        </p>
+                        <p className="text-xs text-gray-500 md:text-sm dark:text-gray-400">{getFormattedDate()} • System Administrator</p>
                     </div>
                     <div className="flex items-center gap-2">
-                        {isDaytime() ? (
-                            <Sun className="size-5 md:size-6 text-yellow-500" />
-                        ) : (
-                            <Moon className="size-5 md:size-6 text-blue-400" />
-                        )}
+                        {isDaytime() ? <Sun className="size-5 text-yellow-500 md:size-6" /> : <Moon className="size-5 text-blue-400 md:size-6" />}
                     </div>
                 </div>
                 <Separator />
             </div>
 
             {/* Stats Cards - Mobile Responsive */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:gap-4 lg:grid-cols-3">
                 <Card className="border-l-4 border-l-blue-500">
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                         <CardTitle className="text-sm font-medium">Total Users</CardTitle>
-                        <Users className="h-4 w-4 text-muted-foreground" />
+                        <Users className="text-muted-foreground h-4 w-4" />
                     </CardHeader>
                     <CardContent>
                         <div className="text-2xl font-bold">{stats.total_users}</div>
-                        <p className="text-xs text-muted-foreground">All registered accounts</p>
+                        <p className="text-muted-foreground text-xs">All registered accounts</p>
                     </CardContent>
                 </Card>
 
                 <Card className="border-l-4 border-l-purple-500">
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                         <CardTitle className="text-sm font-medium">Programs</CardTitle>
-                        <BookOpen className="h-4 w-4 text-muted-foreground" />
+                        <BookOpen className="text-muted-foreground h-4 w-4" />
                     </CardHeader>
                     <CardContent>
                         <div className="text-2xl font-bold">{stats.total_programs}</div>
-                        <p className="text-xs text-muted-foreground">Active programs</p>
+                        <p className="text-muted-foreground text-xs">Active programs</p>
                     </CardContent>
                 </Card>
 
                 <Card className="border-l-4 border-l-orange-500">
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                         <CardTitle className="text-sm font-medium">Pending Requests</CardTitle>
-                        <ClipboardList className="h-4 w-4 text-muted-foreground" />
+                        <ClipboardList className="text-muted-foreground h-4 w-4" />
                     </CardHeader>
                     <CardContent>
                         <div className="text-2xl font-bold">{stats.pending_requests}</div>
-                        <p className="text-xs text-muted-foreground">Requires attention</p>
+                        <p className="text-muted-foreground text-xs">Requires attention</p>
                     </CardContent>
                 </Card>
             </div>
 
             {/* Tab Navigation - Mobile Responsive */}
-            <div className="flex flex-col sm:flex-row space-y-1 sm:space-y-0 sm:space-x-1 rounded-lg bg-muted p-1 overflow-x-auto">
+            <div className="bg-muted flex flex-col space-y-1 overflow-x-auto rounded-lg p-1 sm:flex-row sm:space-y-0 sm:space-x-1">
                 <button
                     onClick={() => setSelectedTab('overview')}
-                    className={`flex-1 sm:flex-none rounded-md px-2 md:px-3 py-2 text-xs md:text-sm font-medium transition-colors whitespace-nowrap ${
-                        selectedTab === 'overview'
-                            ? 'bg-background text-foreground shadow-sm'
-                            : 'text-muted-foreground hover:text-foreground'
+                    className={`flex-1 rounded-md px-2 py-2 text-xs font-medium whitespace-nowrap transition-colors sm:flex-none md:px-3 md:text-sm ${
+                        selectedTab === 'overview' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
                     }`}
                 >
                     Overview
                 </button>
                 <button
                     onClick={() => setSelectedTab('users')}
-                    className={`flex-1 sm:flex-none rounded-md px-2 md:px-3 py-2 text-xs md:text-sm font-medium transition-colors whitespace-nowrap ${
-                        selectedTab === 'users'
-                            ? 'bg-background text-foreground shadow-sm'
-                            : 'text-muted-foreground hover:text-foreground'
+                    className={`flex-1 rounded-md px-2 py-2 text-xs font-medium whitespace-nowrap transition-colors sm:flex-none md:px-3 md:text-sm ${
+                        selectedTab === 'users' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
                     }`}
                 >
                     Users
                 </button>
                 <button
                     onClick={() => setSelectedTab('programs')}
-                    className={`flex-1 sm:flex-none rounded-md px-2 md:px-3 py-2 text-xs md:text-sm font-medium transition-colors whitespace-nowrap ${
-                        selectedTab === 'programs'
-                            ? 'bg-background text-foreground shadow-sm'
-                            : 'text-muted-foreground hover:text-foreground'
+                    className={`flex-1 rounded-md px-2 py-2 text-xs font-medium whitespace-nowrap transition-colors sm:flex-none md:px-3 md:text-sm ${
+                        selectedTab === 'programs' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
                     }`}
                 >
                     Programs
                 </button>
                 <button
                     onClick={() => setSelectedTab('notifications')}
-                    className={`flex-1 sm:flex-none rounded-md px-2 md:px-3 py-2 text-xs md:text-sm font-medium transition-colors whitespace-nowrap ${
-                        selectedTab === 'notifications'
-                            ? 'bg-background text-foreground shadow-sm'
-                            : 'text-muted-foreground hover:text-foreground'
+                    className={`flex-1 rounded-md px-2 py-2 text-xs font-medium whitespace-nowrap transition-colors sm:flex-none md:px-3 md:text-sm ${
+                        selectedTab === 'notifications' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
                     }`}
                 >
                     Notifications
                 </button>
                 <button
                     onClick={() => setSelectedTab('coordinators')}
-                    className={`flex-1 sm:flex-none rounded-md px-2 md:px-3 py-2 text-xs md:text-sm font-medium transition-colors whitespace-nowrap ${
-                        selectedTab === 'coordinators'
-                            ? 'bg-background text-foreground shadow-sm'
-                            : 'text-muted-foreground hover:text-foreground'
+                    className={`flex-1 rounded-md px-2 py-2 text-xs font-medium whitespace-nowrap transition-colors sm:flex-none md:px-3 md:text-sm ${
+                        selectedTab === 'coordinators' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
                     }`}
                 >
                     Coordinators
@@ -200,7 +183,7 @@ export default function SuperAdminDashboard() {
 
             {/* Tab Content */}
             {selectedTab === 'overview' && (
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
                     {/* Recent Programs */}
                     <Card>
                         <CardHeader>
@@ -215,7 +198,7 @@ export default function SuperAdminDashboard() {
                                     <div key={program.id} className="flex items-center justify-between">
                                         <div>
                                             <p className="text-sm font-medium">{program.name}</p>
-                                            <p className="text-xs text-muted-foreground">{program.coordinator_name}</p>
+                                            <p className="text-muted-foreground text-xs">{program.coordinator_name}</p>
                                         </div>
                                         <Badge variant={program.status === 'active' ? 'default' : 'secondary'}>
                                             {program.students_count} students
@@ -223,7 +206,7 @@ export default function SuperAdminDashboard() {
                                     </div>
                                 ))}
                             </div>
-                            <Button variant="outline" className="w-full mt-4" onClick={() => setSelectedTab('programs')}>
+                            <Button variant="outline" className="mt-4 w-full" onClick={() => setSelectedTab('programs')}>
                                 Manage Programs
                             </Button>
                         </CardContent>
@@ -242,30 +225,40 @@ export default function SuperAdminDashboard() {
                             </CardTitle>
                         </CardHeader>
                         <CardContent>
-                            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 md:gap-4">
+                            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:gap-4 lg:grid-cols-6">
                                 <div className="text-center">
-                                    <div className="text-2xl font-bold text-blue-600">{allUsers.filter(u => u.role === 'Student').length}</div>
-                                    <div className="text-sm text-muted-foreground">Students</div>
+                                    <div className="text-2xl font-bold text-blue-600">{allUsers.filter((u) => u.role === 'Student').length}</div>
+                                    <div className="text-muted-foreground text-sm">Students</div>
                                 </div>
                                 <div className="text-center">
-                                    <div className="text-2xl font-bold text-green-600">{allUsers.filter(u => u.role === 'Faculty').length}</div>
-                                    <div className="text-sm text-muted-foreground">Faculty</div>
+                                    <div className="text-2xl font-bold text-green-600">{allUsers.filter((u) => u.role === 'Adviser').length}</div>
+                                    <div className="text-muted-foreground text-sm">Adviser</div>
                                 </div>
                                 <div className="text-center">
-                                    <div className="text-2xl font-bold text-purple-600">{allUsers.filter(u => u.role === 'Coordinator').length}</div>
-                                    <div className="text-sm text-muted-foreground">Coordinators</div>
+                                    <div className="text-2xl font-bold text-purple-600">
+                                        {allUsers.filter((u) => u.role === 'Coordinator').length}
+                                    </div>
+                                    <div className="text-muted-foreground text-sm">Coordinators</div>
                                 </div>
                                 <div className="text-center">
-                                    <div className="text-2xl font-bold text-orange-600">{allUsers.filter(u => u.role === 'Administrative Assistant').length}</div>
-                                    <div className="text-sm text-muted-foreground">Admin Assistants</div>
+                                    <div className="text-2xl font-bold text-orange-600">
+                                        {allUsers.filter((u) => u.role === 'Administrative Assistant').length}
+                                    </div>
+                                    <div className="text-muted-foreground text-sm">Admin Assistants</div>
                                 </div>
                                 <div className="text-center">
-                                    <div className="text-2xl font-bold text-red-600">{allUsers.filter(u => u.role === 'Dean').length}</div>
-                                    <div className="text-sm text-muted-foreground">Deans</div>
+                                    <div className="text-2xl font-bold text-red-600">{allUsers.filter((u) => u.role === 'Dean').length}</div>
+                                    <div className="text-muted-foreground text-sm">Deans</div>
                                 </div>
                                 <div className="text-center">
-                                    <div className="text-2xl font-bold text-gray-600">{allUsers.filter(u => !['Student', 'Faculty', 'Coordinator', 'Administrative Assistant', 'Dean'].includes(u.role)).length}</div>
-                                    <div className="text-sm text-muted-foreground">Others</div>
+                                    <div className="text-2xl font-bold text-gray-600">
+                                        {
+                                            allUsers.filter(
+                                                (u) => !['Student', 'Adviser', 'Coordinator', 'Administrative Assistant', 'Dean'].includes(u.role),
+                                            ).length
+                                        }
+                                    </div>
+                                    <div className="text-muted-foreground text-sm">Others</div>
                                 </div>
                             </div>
                         </CardContent>
@@ -275,30 +268,32 @@ export default function SuperAdminDashboard() {
                     <Card>
                         <CardHeader>
                             <CardTitle className="flex items-center gap-2 text-base md:text-lg">
-                                <Users className="h-4 w-4 md:h-5 md:w-5 text-blue-600" />
-                                Students ({allUsers.filter(u => u.role === 'Student').length})
+                                <Users className="h-4 w-4 text-blue-600 md:h-5 md:w-5" />
+                                Students ({allUsers.filter((u) => u.role === 'Student').length})
                             </CardTitle>
                         </CardHeader>
                         <CardContent>
-                            <div className="border rounded-lg overflow-x-auto">
+                            <div className="overflow-x-auto rounded-lg border">
                                 <div className="min-w-[600px]">
-                                    <div className="grid grid-cols-4 gap-4 p-3 md:p-4 bg-blue-50 dark:bg-blue-950 font-medium text-xs md:text-sm">
+                                    <div className="grid grid-cols-4 gap-4 bg-blue-50 p-3 text-xs font-medium md:p-4 md:text-sm dark:bg-blue-950">
                                         <div>Name</div>
                                         <div>Email</div>
                                         <div>School ID</div>
                                         <div>Program</div>
                                     </div>
                                     <div className="max-h-60 overflow-y-auto">
-                                        {allUsers.filter(u => u.role === 'Student').map((user) => (
-                                            <div key={user.id} className="grid grid-cols-4 gap-4 p-3 md:p-4 border-t text-xs md:text-sm">
-                                                <div className="font-medium">{user.name || 'N/A'}</div>
-                                                <div className="text-muted-foreground">{user.email}</div>
-                                                <div className="text-muted-foreground">{user.school_id || 'N/A'}</div>
-                                                <div className="text-muted-foreground">{user.program || 'N/A'}</div>
-                                            </div>
-                                        ))}
-                                        {allUsers.filter(u => u.role === 'Student').length === 0 && (
-                                            <div className="p-4 text-center text-muted-foreground">No students found</div>
+                                        {allUsers
+                                            .filter((u) => u.role === 'Student')
+                                            .map((user) => (
+                                                <div key={user.id} className="grid grid-cols-4 gap-4 border-t p-3 text-xs md:p-4 md:text-sm">
+                                                    <div className="font-medium">{user.name || 'N/A'}</div>
+                                                    <div className="text-muted-foreground">{user.email}</div>
+                                                    <div className="text-muted-foreground">{user.school_id || 'N/A'}</div>
+                                                    <div className="text-muted-foreground">{user.program || 'N/A'}</div>
+                                                </div>
+                                            ))}
+                                        {allUsers.filter((u) => u.role === 'Student').length === 0 && (
+                                            <div className="text-muted-foreground p-4 text-center">No students found</div>
                                         )}
                                     </div>
                                 </div>
@@ -306,34 +301,36 @@ export default function SuperAdminDashboard() {
                         </CardContent>
                     </Card>
 
-                    {/* Faculty Section - Mobile Responsive */}
+                    {/* Adviser Section - Mobile Responsive */}
                     <Card>
                         <CardHeader>
                             <CardTitle className="flex items-center gap-2 text-base md:text-lg">
-                                <BookOpen className="h-4 w-4 md:h-5 md:w-5 text-green-600" />
-                                Faculty ({allUsers.filter(u => u.role === 'Faculty').length})
+                                <BookOpen className="h-4 w-4 text-green-600 md:h-5 md:w-5" />
+                                Adviser ({allUsers.filter((u) => u.role === 'Adviser').length})
                             </CardTitle>
                         </CardHeader>
                         <CardContent>
-                            <div className="border rounded-lg overflow-x-auto">
+                            <div className="overflow-x-auto rounded-lg border">
                                 <div className="min-w-[600px]">
-                                    <div className="grid grid-cols-4 gap-4 p-3 md:p-4 bg-green-50 dark:bg-green-950 font-medium text-xs md:text-sm">
+                                    <div className="grid grid-cols-4 gap-4 bg-green-50 p-3 text-xs font-medium md:p-4 md:text-sm dark:bg-green-950">
                                         <div>Name</div>
                                         <div>Email</div>
                                         <div>School ID</div>
                                         <div>Program</div>
                                     </div>
                                     <div className="max-h-60 overflow-y-auto">
-                                        {allUsers.filter(u => u.role === 'Faculty').map((user) => (
-                                            <div key={user.id} className="grid grid-cols-4 gap-4 p-3 md:p-4 border-t text-xs md:text-sm">
-                                                <div className="font-medium">{user.name || 'N/A'}</div>
-                                                <div className="text-muted-foreground">{user.email}</div>
-                                                <div className="text-muted-foreground">{user.school_id || 'N/A'}</div>
-                                                <div className="text-muted-foreground">{user.program || 'N/A'}</div>
-                                            </div>
-                                        ))}
-                                        {allUsers.filter(u => u.role === 'Faculty').length === 0 && (
-                                            <div className="p-4 text-center text-muted-foreground">No faculty found</div>
+                                        {allUsers
+                                            .filter((u) => u.role === 'Adviser')
+                                            .map((user) => (
+                                                <div key={user.id} className="grid grid-cols-4 gap-4 border-t p-3 text-xs md:p-4 md:text-sm">
+                                                    <div className="font-medium">{user.name || 'N/A'}</div>
+                                                    <div className="text-muted-foreground">{user.email}</div>
+                                                    <div className="text-muted-foreground">{user.school_id || 'N/A'}</div>
+                                                    <div className="text-muted-foreground">{user.program || 'N/A'}</div>
+                                                </div>
+                                            ))}
+                                        {allUsers.filter((u) => u.role === 'Adviser').length === 0 && (
+                                            <div className="text-muted-foreground p-4 text-center">No Adviser found</div>
                                         )}
                                     </div>
                                 </div>
@@ -345,30 +342,32 @@ export default function SuperAdminDashboard() {
                     <Card>
                         <CardHeader>
                             <CardTitle className="flex items-center gap-2 text-base md:text-lg">
-                                <Settings className="h-4 w-4 md:h-5 md:w-5 text-purple-600" />
-                                Coordinators ({allUsers.filter(u => u.role === 'Coordinator').length})
+                                <Settings className="h-4 w-4 text-purple-600 md:h-5 md:w-5" />
+                                Coordinators ({allUsers.filter((u) => u.role === 'Coordinator').length})
                             </CardTitle>
                         </CardHeader>
                         <CardContent>
-                            <div className="border rounded-lg overflow-x-auto">
+                            <div className="overflow-x-auto rounded-lg border">
                                 <div className="min-w-[600px]">
-                                    <div className="grid grid-cols-4 gap-4 p-3 md:p-4 bg-purple-50 dark:bg-purple-950 font-medium text-xs md:text-sm">
+                                    <div className="grid grid-cols-4 gap-4 bg-purple-50 p-3 text-xs font-medium md:p-4 md:text-sm dark:bg-purple-950">
                                         <div>Name</div>
                                         <div>Email</div>
                                         <div>Program</div>
                                         <div>School ID</div>
                                     </div>
                                     <div className="max-h-60 overflow-y-auto">
-                                        {allUsers.filter(u => u.role === 'Coordinator').map((user) => (
-                                            <div key={user.id} className="grid grid-cols-4 gap-4 p-3 md:p-4 border-t text-xs md:text-sm">
-                                                <div className="font-medium">{user.name || 'N/A'}</div>
-                                                <div className="text-muted-foreground">{user.email}</div>
-                                                <div className="text-muted-foreground">{user.program || 'N/A'}</div>
-                                                <div className="text-muted-foreground">{user.school_id || 'N/A'}</div>
-                                            </div>
-                                        ))}
-                                        {allUsers.filter(u => u.role === 'Coordinator').length === 0 && (
-                                            <div className="p-4 text-center text-muted-foreground">No coordinators found</div>
+                                        {allUsers
+                                            .filter((u) => u.role === 'Coordinator')
+                                            .map((user) => (
+                                                <div key={user.id} className="grid grid-cols-4 gap-4 border-t p-3 text-xs md:p-4 md:text-sm">
+                                                    <div className="font-medium">{user.name || 'N/A'}</div>
+                                                    <div className="text-muted-foreground">{user.email}</div>
+                                                    <div className="text-muted-foreground">{user.program || 'N/A'}</div>
+                                                    <div className="text-muted-foreground">{user.school_id || 'N/A'}</div>
+                                                </div>
+                                            ))}
+                                        {allUsers.filter((u) => u.role === 'Coordinator').length === 0 && (
+                                            <div className="text-muted-foreground p-4 text-center">No coordinators found</div>
                                         )}
                                     </div>
                                 </div>
@@ -380,30 +379,32 @@ export default function SuperAdminDashboard() {
                     <Card>
                         <CardHeader>
                             <CardTitle className="flex items-center gap-2 text-base md:text-lg">
-                                <UserCheck className="h-4 w-4 md:h-5 md:w-5 text-orange-600" />
-                                Administrative Assistants ({allUsers.filter(u => u.role === 'Administrative Assistant').length})
+                                <UserCheck className="h-4 w-4 text-orange-600 md:h-5 md:w-5" />
+                                Administrative Assistants ({allUsers.filter((u) => u.role === 'Administrative Assistant').length})
                             </CardTitle>
                         </CardHeader>
                         <CardContent>
-                            <div className="border rounded-lg overflow-x-auto">
+                            <div className="overflow-x-auto rounded-lg border">
                                 <div className="min-w-[600px]">
-                                    <div className="grid grid-cols-4 gap-4 p-3 md:p-4 bg-orange-50 dark:bg-orange-950 font-medium text-xs md:text-sm">
+                                    <div className="grid grid-cols-4 gap-4 bg-orange-50 p-3 text-xs font-medium md:p-4 md:text-sm dark:bg-orange-950">
                                         <div>Name</div>
                                         <div>Email</div>
                                         <div>School ID</div>
                                         <div>Program</div>
                                     </div>
                                     <div className="max-h-60 overflow-y-auto">
-                                        {allUsers.filter(u => u.role === 'Administrative Assistant').map((user) => (
-                                            <div key={user.id} className="grid grid-cols-4 gap-4 p-3 md:p-4 border-t text-xs md:text-sm">
-                                                <div className="font-medium">{user.name || 'N/A'}</div>
-                                                <div className="text-muted-foreground">{user.email}</div>
-                                                <div className="text-muted-foreground">{user.school_id || 'N/A'}</div>
-                                                <div className="text-muted-foreground">{user.program || 'N/A'}</div>
-                                            </div>
-                                        ))}
-                                        {allUsers.filter(u => u.role === 'Administrative Assistant').length === 0 && (
-                                            <div className="p-4 text-center text-muted-foreground">No administrative assistants found</div>
+                                        {allUsers
+                                            .filter((u) => u.role === 'Administrative Assistant')
+                                            .map((user) => (
+                                                <div key={user.id} className="grid grid-cols-4 gap-4 border-t p-3 text-xs md:p-4 md:text-sm">
+                                                    <div className="font-medium">{user.name || 'N/A'}</div>
+                                                    <div className="text-muted-foreground">{user.email}</div>
+                                                    <div className="text-muted-foreground">{user.school_id || 'N/A'}</div>
+                                                    <div className="text-muted-foreground">{user.program || 'N/A'}</div>
+                                                </div>
+                                            ))}
+                                        {allUsers.filter((u) => u.role === 'Administrative Assistant').length === 0 && (
+                                            <div className="text-muted-foreground p-4 text-center">No administrative assistants found</div>
                                         )}
                                     </div>
                                 </div>
@@ -415,30 +416,32 @@ export default function SuperAdminDashboard() {
                     <Card>
                         <CardHeader>
                             <CardTitle className="flex items-center gap-2 text-base md:text-lg">
-                                <Shield className="h-4 w-4 md:h-5 md:w-5 text-red-600" />
-                                Deans ({allUsers.filter(u => u.role === 'Dean').length})
+                                <Shield className="h-4 w-4 text-red-600 md:h-5 md:w-5" />
+                                Deans ({allUsers.filter((u) => u.role === 'Dean').length})
                             </CardTitle>
                         </CardHeader>
                         <CardContent>
-                            <div className="border rounded-lg overflow-x-auto">
+                            <div className="overflow-x-auto rounded-lg border">
                                 <div className="min-w-[600px]">
-                                    <div className="grid grid-cols-4 gap-4 p-3 md:p-4 bg-red-50 dark:bg-red-950 font-medium text-xs md:text-sm">
+                                    <div className="grid grid-cols-4 gap-4 bg-red-50 p-3 text-xs font-medium md:p-4 md:text-sm dark:bg-red-950">
                                         <div>Name</div>
                                         <div>Email</div>
                                         <div>School ID</div>
                                         <div>Program</div>
                                     </div>
                                     <div className="max-h-60 overflow-y-auto">
-                                        {allUsers.filter(u => u.role === 'Dean').map((user) => (
-                                            <div key={user.id} className="grid grid-cols-4 gap-4 p-3 md:p-4 border-t text-xs md:text-sm">
-                                                <div className="font-medium">{user.name || 'N/A'}</div>
-                                                <div className="text-muted-foreground">{user.email}</div>
-                                                <div className="text-muted-foreground">{user.school_id || 'N/A'}</div>
-                                                <div className="text-muted-foreground">{user.program || 'N/A'}</div>
-                                            </div>
-                                        ))}
-                                        {allUsers.filter(u => u.role === 'Dean').length === 0 && (
-                                            <div className="p-4 text-center text-muted-foreground">No deans found</div>
+                                        {allUsers
+                                            .filter((u) => u.role === 'Dean')
+                                            .map((user) => (
+                                                <div key={user.id} className="grid grid-cols-4 gap-4 border-t p-3 text-xs md:p-4 md:text-sm">
+                                                    <div className="font-medium">{user.name || 'N/A'}</div>
+                                                    <div className="text-muted-foreground">{user.email}</div>
+                                                    <div className="text-muted-foreground">{user.school_id || 'N/A'}</div>
+                                                    <div className="text-muted-foreground">{user.program || 'N/A'}</div>
+                                                </div>
+                                            ))}
+                                        {allUsers.filter((u) => u.role === 'Dean').length === 0 && (
+                                            <div className="text-muted-foreground p-4 text-center">No deans found</div>
                                         )}
                                     </div>
                                 </div>
@@ -447,34 +450,46 @@ export default function SuperAdminDashboard() {
                     </Card>
 
                     {/* Other Roles Section - Mobile Responsive */}
-                    {allUsers.filter(u => !['Student', 'Faculty', 'Coordinator', 'Administrative Assistant', 'Dean'].includes(u.role)).length > 0 && (
+                    {allUsers.filter((u) => !['Student', 'Adviser', 'Coordinator', 'Administrative Assistant', 'Dean'].includes(u.role)).length >
+                        0 && (
                         <Card>
                             <CardHeader>
                                 <CardTitle className="flex items-center gap-2 text-base md:text-lg">
-                                    <Users className="h-4 w-4 md:h-5 md:w-5 text-gray-600" />
-                                    Other Roles ({allUsers.filter(u => !['Student', 'Faculty', 'Coordinator', 'Administrative Assistant', 'Dean'].includes(u.role)).length})
+                                    <Users className="h-4 w-4 text-gray-600 md:h-5 md:w-5" />
+                                    Other Roles (
+                                    {
+                                        allUsers.filter(
+                                            (u) => !['Student', 'Adviser', 'Coordinator', 'Administrative Assistant', 'Dean'].includes(u.role),
+                                        ).length
+                                    }
+                                    )
                                 </CardTitle>
                             </CardHeader>
                             <CardContent>
-                                <div className="border rounded-lg overflow-x-auto">
+                                <div className="overflow-x-auto rounded-lg border">
                                     <div className="min-w-[600px]">
-                                        <div className="grid grid-cols-4 gap-4 p-3 md:p-4 bg-gray-50 dark:bg-gray-950 font-medium text-xs md:text-sm">
+                                        <div className="grid grid-cols-4 gap-4 bg-gray-50 p-3 text-xs font-medium md:p-4 md:text-sm dark:bg-gray-950">
                                             <div>Name</div>
                                             <div>Email</div>
                                             <div>Role</div>
                                             <div>School ID</div>
                                         </div>
                                         <div className="max-h-60 overflow-y-auto">
-                                            {allUsers.filter(u => !['Student', 'Faculty', 'Coordinator', 'Administrative Assistant', 'Dean'].includes(u.role)).map((user) => (
-                                                <div key={user.id} className="grid grid-cols-4 gap-4 p-3 md:p-4 border-t text-xs md:text-sm">
-                                                    <div className="font-medium">{user.name || 'N/A'}</div>
-                                                    <div className="text-muted-foreground">{user.email}</div>
-                                                    <div>
-                                                        <Badge variant="secondary">{user.role}</Badge>
+                                            {allUsers
+                                                .filter(
+                                                    (u) =>
+                                                        !['Student', 'Adviser', 'Coordinator', 'Administrative Assistant', 'Dean'].includes(u.role),
+                                                )
+                                                .map((user) => (
+                                                    <div key={user.id} className="grid grid-cols-4 gap-4 border-t p-3 text-xs md:p-4 md:text-sm">
+                                                        <div className="font-medium">{user.name || 'N/A'}</div>
+                                                        <div className="text-muted-foreground">{user.email}</div>
+                                                        <div>
+                                                            <Badge variant="secondary">{user.role}</Badge>
+                                                        </div>
+                                                        <div className="text-muted-foreground">{user.school_id || 'N/A'}</div>
                                                     </div>
-                                                    <div className="text-muted-foreground">{user.school_id || 'N/A'}</div>
-                                                </div>
-                                            ))}
+                                                ))}
                                         </div>
                                     </div>
                                 </div>
@@ -488,7 +503,7 @@ export default function SuperAdminDashboard() {
                 <div className="space-y-4 md:space-y-6">
                     <Card>
                         <CardHeader>
-                            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
+                            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                                 <CardTitle className="flex items-center gap-2 text-base md:text-lg">
                                     <Settings className="h-4 w-4 md:h-5 md:w-5" />
                                     Program Management
@@ -507,7 +522,7 @@ export default function SuperAdminDashboard() {
                                                 <Input
                                                     id="program-name"
                                                     value={newProgram.name}
-                                                    onChange={(e) => setNewProgram({...newProgram, name: e.target.value})}
+                                                    onChange={(e) => setNewProgram({ ...newProgram, name: e.target.value })}
                                                     placeholder="e.g., Master of Science in Computer Science"
                                                 />
                                             </div>
@@ -516,13 +531,16 @@ export default function SuperAdminDashboard() {
                                                 <Input
                                                     id="program-code"
                                                     value={newProgram.code}
-                                                    onChange={(e) => setNewProgram({...newProgram, code: e.target.value})}
+                                                    onChange={(e) => setNewProgram({ ...newProgram, code: e.target.value })}
                                                     placeholder="e.g., MSCS"
                                                 />
                                             </div>
                                             <div>
                                                 <Label htmlFor="coordinator">Coordinator</Label>
-                                                <Select value={newProgram.coordinator_id} onValueChange={(value) => setNewProgram({...newProgram, coordinator_id: value})}>
+                                                <Select
+                                                    value={newProgram.coordinator_id}
+                                                    onValueChange={(value) => setNewProgram({ ...newProgram, coordinator_id: value })}
+                                                >
                                                     <SelectTrigger>
                                                         <SelectValue placeholder="Select coordinator" />
                                                     </SelectTrigger>
@@ -540,7 +558,7 @@ export default function SuperAdminDashboard() {
                                                 <Textarea
                                                     id="description"
                                                     value={newProgram.description}
-                                                    onChange={(e) => setNewProgram({...newProgram, description: e.target.value})}
+                                                    onChange={(e) => setNewProgram({ ...newProgram, description: e.target.value })}
                                                     placeholder="Program description..."
                                                 />
                                             </div>
@@ -551,8 +569,8 @@ export default function SuperAdminDashboard() {
                             </div>
                         </CardHeader>
                         <CardContent>
-                            <div className="border rounded-lg">
-                                <div className="grid grid-cols-7 gap-4 p-4 bg-muted font-medium text-sm">
+                            <div className="rounded-lg border">
+                                <div className="bg-muted grid grid-cols-7 gap-4 p-4 text-sm font-medium">
                                     <div>Program Name</div>
                                     <div>Code</div>
                                     <div>Coordinator</div>
@@ -563,19 +581,21 @@ export default function SuperAdminDashboard() {
                                 </div>
                                 <div className="max-h-96 overflow-y-auto">
                                     {programs.map((program) => (
-                                        <div key={program.id} className="grid grid-cols-7 gap-4 p-4 border-t text-sm">
+                                        <div key={program.id} className="grid grid-cols-7 gap-4 border-t p-4 text-sm">
                                             <div className="font-medium">{program.name}</div>
                                             <div className="text-muted-foreground font-mono text-xs">{program.code}</div>
                                             <div className="font-medium text-blue-600">{program.coordinator_name}</div>
                                             <div className="text-muted-foreground text-xs">{program.coordinator_email}</div>
                                             <div>
-                                                <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                                                <Badge variant="outline" className="border-green-200 bg-green-50 text-green-700">
                                                     {program.students_count} students
                                                 </Badge>
                                             </div>
                                             <div>
-                                                <Badge variant={program.status === 'active' ? 'default' : 'secondary'} 
-                                                       className="bg-emerald-100 text-emerald-800 border-emerald-200">
+                                                <Badge
+                                                    variant={program.status === 'active' ? 'default' : 'secondary'}
+                                                    className="border-emerald-200 bg-emerald-100 text-emerald-800"
+                                                >
                                                     {program.status}
                                                 </Badge>
                                             </div>
@@ -591,8 +611,8 @@ export default function SuperAdminDashboard() {
                                     ))}
                                 </div>
                                 {programs.length === 0 && (
-                                    <div className="p-8 text-center text-muted-foreground">
-                                        <GraduationCap className="mx-auto h-8 w-8 mb-2 opacity-50" />
+                                    <div className="text-muted-foreground p-8 text-center">
+                                        <GraduationCap className="mx-auto mb-2 h-8 w-8 opacity-50" />
                                         <p>No programs found</p>
                                     </div>
                                 )}
@@ -614,14 +634,17 @@ export default function SuperAdminDashboard() {
                         <div className="space-y-4">
                             <div>
                                 <Label htmlFor="recipient-type">Recipients</Label>
-                                <Select value={notification.recipient_type} onValueChange={(value) => setNotification({...notification, recipient_type: value})}>
+                                <Select
+                                    value={notification.recipient_type}
+                                    onValueChange={(value) => setNotification({ ...notification, recipient_type: value })}
+                                >
                                     <SelectTrigger>
                                         <SelectValue />
                                     </SelectTrigger>
                                     <SelectContent>
                                         <SelectItem value="all">All Users</SelectItem>
                                         <SelectItem value="students">Students Only</SelectItem>
-                                        <SelectItem value="faculty">Faculty Only</SelectItem>
+                                        <SelectItem value="Adviser">Adviser Only</SelectItem>
                                         <SelectItem value="coordinators">Coordinators Only</SelectItem>
                                         <SelectItem value="staff">Staff Only</SelectItem>
                                     </SelectContent>
@@ -632,7 +655,7 @@ export default function SuperAdminDashboard() {
                                 <Input
                                     id="subject"
                                     value={notification.subject}
-                                    onChange={(e) => setNotification({...notification, subject: e.target.value})}
+                                    onChange={(e) => setNotification({ ...notification, subject: e.target.value })}
                                     placeholder="Email subject line"
                                 />
                             </div>
@@ -641,7 +664,7 @@ export default function SuperAdminDashboard() {
                                 <Textarea
                                     id="message"
                                     value={notification.message}
-                                    onChange={(e) => setNotification({...notification, message: e.target.value})}
+                                    onChange={(e) => setNotification({ ...notification, message: e.target.value })}
                                     placeholder="Enter your message here..."
                                     rows={6}
                                 />
@@ -656,9 +679,7 @@ export default function SuperAdminDashboard() {
             )}
 
             {/* Coordinator Assignments Tab */}
-            {selectedTab === 'coordinators' && (
-                <CoordinatorAssignmentsManager />
-            )}
+            {selectedTab === 'coordinators' && <CoordinatorAssignmentsManager />}
         </div>
     );
 }
@@ -673,7 +694,7 @@ function CoordinatorAssignmentsManager() {
     const [newAssignment, setNewAssignment] = React.useState({
         coordinator_user_id: '',
         program_name: '',
-        notes: ''
+        notes: '',
     });
 
     React.useEffect(() => {
@@ -686,7 +707,7 @@ function CoordinatorAssignmentsManager() {
             const [assignmentsRes, coordinatorsRes, programsRes] = await Promise.all([
                 fetch('/api/coordinator-assignments'),
                 fetch('/api/coordinator-assignments/coordinators'),
-                fetch('/api/coordinator-assignments/programs')
+                fetch('/api/coordinator-assignments/programs'),
             ]);
 
             const assignmentsData = await assignmentsRes.json();
@@ -714,9 +735,9 @@ function CoordinatorAssignmentsManager() {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || ''
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
                 },
-                body: JSON.stringify(newAssignment)
+                body: JSON.stringify(newAssignment),
             });
 
             const data = await response.json();
@@ -744,8 +765,8 @@ function CoordinatorAssignmentsManager() {
             const response = await fetch(`/api/coordinator-assignments/${id}`, {
                 method: 'DELETE',
                 headers: {
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || ''
-                }
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+                },
             });
 
             const data = await response.json();
@@ -769,7 +790,7 @@ function CoordinatorAssignmentsManager() {
             acc[key] = {
                 coordinator: assignment.coordinator_name,
                 email: assignment.coordinator_email,
-                programs: []
+                programs: [],
             };
         }
         acc[key].programs.push(assignment);
@@ -785,7 +806,7 @@ function CoordinatorAssignmentsManager() {
                         <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
                             <DialogTrigger asChild>
                                 <Button>
-                                    <Users className="h-4 w-4 mr-2" />
+                                    <Users className="mr-2 h-4 w-4" />
                                     Assign Program
                                 </Button>
                             </DialogTrigger>
@@ -798,7 +819,7 @@ function CoordinatorAssignmentsManager() {
                                         <Label htmlFor="coordinator">Coordinator</Label>
                                         <Select
                                             value={newAssignment.coordinator_user_id}
-                                            onValueChange={(value) => setNewAssignment({...newAssignment, coordinator_user_id: value})}
+                                            onValueChange={(value) => setNewAssignment({ ...newAssignment, coordinator_user_id: value })}
                                         >
                                             <SelectTrigger>
                                                 <SelectValue placeholder="Select coordinator..." />
@@ -816,7 +837,7 @@ function CoordinatorAssignmentsManager() {
                                         <Label htmlFor="program">Program</Label>
                                         <Select
                                             value={newAssignment.program_name}
-                                            onValueChange={(value) => setNewAssignment({...newAssignment, program_name: value})}
+                                            onValueChange={(value) => setNewAssignment({ ...newAssignment, program_name: value })}
                                         >
                                             <SelectTrigger>
                                                 <SelectValue placeholder="Select program..." />
@@ -836,7 +857,7 @@ function CoordinatorAssignmentsManager() {
                                             id="notes"
                                             placeholder="Add any notes about this assignment..."
                                             value={newAssignment.notes}
-                                            onChange={(e) => setNewAssignment({...newAssignment, notes: e.target.value})}
+                                            onChange={(e) => setNewAssignment({ ...newAssignment, notes: e.target.value })}
                                             rows={3}
                                         />
                                     </div>
@@ -856,29 +877,27 @@ function CoordinatorAssignmentsManager() {
                             <Skeleton className="h-12 w-full" />
                         </div>
                     ) : Object.keys(assignmentsByCoordinator).length === 0 ? (
-                        <div className="text-center py-8 text-muted-foreground">
+                        <div className="text-muted-foreground py-8 text-center">
                             No coordinator assignments yet. Click "Assign Program" to get started.
                         </div>
                     ) : (
                         <div className="space-y-6">
                             {Object.values(assignmentsByCoordinator).map((group: any, idx: number) => (
-                                <div key={idx} className="border rounded-lg p-4">
-                                    <div className="flex items-center justify-between mb-3">
+                                <div key={idx} className="rounded-lg border p-4">
+                                    <div className="mb-3 flex items-center justify-between">
                                         <div>
-                                            <h3 className="font-semibold text-lg">{group.coordinator}</h3>
-                                            <p className="text-sm text-muted-foreground">{group.email}</p>
+                                            <h3 className="text-lg font-semibold">{group.coordinator}</h3>
+                                            <p className="text-muted-foreground text-sm">{group.email}</p>
                                         </div>
                                         <Badge variant="secondary">{group.programs.length} programs</Badge>
                                     </div>
                                     <div className="space-y-2">
                                         {group.programs.map((assignment: any) => (
-                                            <div key={assignment.id} className="flex items-center justify-between bg-muted p-3 rounded-md">
+                                            <div key={assignment.id} className="bg-muted flex items-center justify-between rounded-md p-3">
                                                 <div className="flex-1">
                                                     <p className="font-medium">{assignment.program_name}</p>
-                                                    {assignment.notes && (
-                                                        <p className="text-sm text-muted-foreground">{assignment.notes}</p>
-                                                    )}
-                                                    <p className="text-xs text-muted-foreground mt-1">
+                                                    {assignment.notes && <p className="text-muted-foreground text-sm">{assignment.notes}</p>}
+                                                    <p className="text-muted-foreground mt-1 text-xs">
                                                         Assigned {assignment.created_at} by {assignment.assigned_by_name}
                                                     </p>
                                                 </div>

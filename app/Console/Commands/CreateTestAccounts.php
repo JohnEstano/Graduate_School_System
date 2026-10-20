@@ -44,10 +44,10 @@ class CreateTestAccounts extends Command
 
         // Create Coordinator
         $coordinator = $this->createCoordinator();
-        
+
         // Create Adviser
         $adviser = $this->createAdviser();
-        
+
         // Create Student
         $student = $this->createStudent();
 
@@ -70,10 +70,10 @@ class CreateTestAccounts extends Command
         $this->newLine();
         $this->info('✅ All test accounts created successfully!');
         $this->newLine();
-        
+
         $this->line('💡 Login URL: http://127.0.0.1:8000/login');
         $this->newLine();
-        
+
         $this->comment('📧 To test email workflow:');
         $this->line('   1. Login as STUDENT → Submit defense request');
         $this->line('   2. Login as ADVISER → Approve request');
@@ -128,7 +128,7 @@ class CreateTestAccounts extends Command
             'last_name' => 'Smith',
             'email' => 'adviser@test.com',
             'password' => Hash::make('password'),
-            'role' => 'Faculty',
+            'role' => 'Adviser',
             'program' => 'Graduate School',
             'school_id' => 'FAC-2025-001',
         ]);

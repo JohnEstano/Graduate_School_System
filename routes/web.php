@@ -98,7 +98,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::put('/panelists/honorarium-specs', [PanelistHonorariumSpecController::class, 'update'])
         ->name('panelists.honorarium-specs.update');
 
-    
+
 
     //PAYMENTVERIFIATION AA
     Route::prefix('aa')->group(function () {
@@ -467,19 +467,19 @@ Route::middleware(['auth'])->group(function () {
 | Public / Shared API
 |--------------------------------------------------------------------------
 */
-Route::get('/api/faculty-search', function (\Illuminate\Http\Request $request) {
+Route::get('/api/Adviser-search', function (\Illuminate\Http\Request $request) {
     $q = $request->input('q', '');
     return User::where(function ($query) use ($q) {
         $query->where('first_name', 'like', "%$q%")
             ->orWhere('last_name', 'like', "%$q%");
     })
         ->where(function ($query) {
-            $query->where('role', 'Faculty')
-                ->orWhereHas('roles', fn($q) => $q->where('name', 'Faculty'));
+            $query->where('role', 'Adviser')
+                ->orWhereHas('roles', fn($q) => $q->where('name', 'Adviser'));
         })
         ->limit(10)
         ->get(['id', 'first_name', 'middle_name', 'last_name']);
-})->name('api.faculty-search');
+})->name('api.Adviser-search');
 
 Route::get('/api/coordinator/defense-requests', function () {
     $user = Auth::user();
@@ -519,10 +519,10 @@ Route::get('/legacy/academic-records/dashboard', fn() => Inertia::render('legacy
 Route::get('/legacy/link', [\App\Http\Controllers\LegacyLinkController::class, 'form'])->name('legacy.link.form');
 Route::post('/legacy/link', [\App\Http\Controllers\LegacyLinkController::class, 'link'])->name('legacy.link.submit');
 Route::delete('/legacy/link', [\App\Http\Controllers\LegacyLinkController::class, 'unlink'])->name('legacy.link.unlink');
-Route::get('/faculty/class-list', [\App\Http\Controllers\InstructorClassListController::class, 'page'])
-    ->name('faculty.class-list.page');
-Route::get('/legacy/faculty/class-list', [\App\Http\Controllers\InstructorClassListController::class, 'index'])
-    ->name('legacy.faculty.class-list');
+Route::get('/Adviser/class-list', [\App\Http\Controllers\InstructorClassListController::class, 'page'])
+    ->name('Adviser.class-list.page');
+Route::get('/legacy/Adviser/class-list', [\App\Http\Controllers\InstructorClassListController::class, 'index'])
+    ->name('legacy.Adviser.class-list');
 
 // Temporary test route for comprehensive exam eligibility
 Route::get('/test-eligibility', [\App\Http\Controllers\Api\ComprehensiveExamEligibilityController::class, 'checkEligibility'])
@@ -575,7 +575,7 @@ Route::middleware(['auth'])->group(function () {
 // Adviser view: Defense Requirement Details (for /adviser/defense-requirements/{id}/details)
 Route::get('/adviser/defense-requirements/{id}/details', function ($id) {
     $user = Auth::user();
-    if (!$user || !in_array($user->role, ['Adviser', 'Faculty']))
+    if (!$user || !in_array($user->role, ['Adviser', 'Adviser']))
         abort(403);
 
     $defenseRequest = \App\Models\DefenseRequest::findOrFail($id);

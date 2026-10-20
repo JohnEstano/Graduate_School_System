@@ -4,8 +4,7 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration
-{
+return new class extends Migration {
     /**
      * Run the migrations.
      */
@@ -15,7 +14,7 @@ return new class extends Migration
             $table->id();
             $table->unsignedBigInteger('defense_request_id');
             $table->unsignedBigInteger('panelist_id');
-            $table->string('panelist_type')->default('Panelist'); // 'Panelist' or 'Faculty'
+            $table->string('panelist_type')->default('Panelist'); // 'Panelist' or 'Adviser'
             $table->string('role'); // Chairperson/Panel Member
             $table->decimal('amount', 10, 2)->default(0);
             $table->date('payment_date')->nullable();

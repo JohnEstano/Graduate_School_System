@@ -33,8 +33,8 @@ $adviserName = $latest->defense_adviser;
 echo "   Looking for: {$adviserName}\n";
 
 // Try to find adviser with full name (including middle name) or without
-$adviserUser = User::where('role', 'Faculty')
-    ->where(function($query) use ($adviserName) {
+$adviserUser = User::where('role', 'Adviser')
+    ->where(function ($query) use ($adviserName) {
         // Try with middle name: "FirstName MiddleName LastName"
         $query->whereRaw('LOWER(CONCAT(first_name," ",COALESCE(middle_name,"")," ",last_name)) = ?', [strtolower($adviserName)])
             // Or without middle name: "FirstName LastName"
@@ -46,19 +46,19 @@ $adviserUser = User::where('role', 'Faculty')
 
 if (!$adviserUser) {
     echo "   ❌ Adviser NOT FOUND with exact name match!\n\n";
-    
-    echo "3. Available Faculty users:\n";
-    $faculty = User::where('role', 'Faculty')->get(['id', 'first_name', 'last_name', 'email']);
-    foreach ($faculty as $f) {
+
+    echo "3. Available Adviser users:\n";
+    $Adviser = User::where('role', 'Adviser')->get(['id', 'first_name', 'last_name', 'email']);
+    foreach ($Adviser as $f) {
         $fullName = "{$f->first_name} {$f->last_name}";
         echo "   - {$fullName} (email: {$f->email})\n";
     }
-    
+
     echo "\n";
-    echo "   🔧 FIX: The defense adviser name must EXACTLY match a Faculty user's name.\n";
+    echo "   🔧 FIX: The defense adviser name must EXACTLY match a Adviser user's name.\n";
     echo "   Current adviser name: '{$adviserName}'\n";
     echo "   Try using one of the names above exactly as shown.\n\n";
-    
+
     exit;
 }
 
@@ -83,7 +83,7 @@ echo "   Pending jobs in queue: {$jobsCount}\n";
 if ($jobsCount > 0) {
     echo "   ℹ️ There are jobs waiting to be processed.\n";
     echo "   Make sure queue worker is running: php artisan queue:work\n";
-    
+
     $jobs = DB::table('jobs')->get();
     foreach ($jobs as $job) {
         $payload = json_decode($job->payload, true);

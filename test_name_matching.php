@@ -14,14 +14,14 @@ $tests = [
     'muslimin banto ontong',   // Lowercase
     'MUSLIMIN BANTO ONTONG',   // Uppercase
     '  Muslimin   Banto   Ontong  ', // Extra spaces
-    'Dr. John Michael Smith',  // Another faculty
+    'Dr. John Michael Smith',  // Another Adviser
     'Dr. John Smith',          // Without middle
 ];
 
 foreach ($tests as $testName) {
     echo "Testing: '{$testName}'\n";
-    $user = User::findByFullName($testName, 'Faculty')->first();
-    
+    $user = User::findByFullName($testName, 'Adviser')->first();
+
     if ($user) {
         echo "  ✅ FOUND: {$user->full_name} ({$user->email})\n";
     } else {

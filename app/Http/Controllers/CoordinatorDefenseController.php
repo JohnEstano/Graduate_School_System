@@ -20,7 +20,7 @@ use App\Mail\DefenseScheduled;
 
 class CoordinatorDefenseController extends Controller
 {
-    private array $roles = ['Coordinator','Administrative Assistant','Dean'];
+    private array $roles = ['Coordinator', 'Administrative Assistant', 'Dean'];
 
     private function authorizeRole(): void
     {
@@ -41,17 +41,17 @@ class CoordinatorDefenseController extends Controller
             abort(403, 'Unauthorized access to coordinator dashboard');
         }
 
-        $defenseRequests = DefenseRequest::with(['user','adviserUser','panelsAssignedBy','scheduleSetBy'])
-            ->whereIn('workflow_state', ['adviser-approved','coordinator-review','coordinator-approved','coordinator-rejected','panels-assigned','scheduled','completed'])
+        $defenseRequests = DefenseRequest::with(['user', 'adviserUser', 'panelsAssignedBy', 'scheduleSetBy'])
+            ->whereIn('workflow_state', ['adviser-approved', 'coordinator-review', 'coordinator-approved', 'coordinator-rejected', 'panels-assigned', 'scheduled', 'completed'])
             ->where('coordinator_user_id', $user->id) // <-- Only show requests for this coordinator
-            ->orderBy('adviser_reviewed_at','desc')
-            ->orderBy('created_at','desc')
+            ->orderBy('adviser_reviewed_at', 'desc')
+            ->orderBy('created_at', 'desc')
             ->get()
-//            ->each(fn($r)=>$r->ensureStatusWorkflowSync(true))   // REMOVE: was promoting states too early
+            //            ->each(fn($r)=>$r->ensureStatusWorkflowSync(true))   // REMOVE: was promoting states too early
             ->map(function ($r) {
                 return [
                     'id' => $r->id,
-                    'student_name' => $r->first_name.' '.$r->last_name,
+                    'student_name' => $r->first_name . ' ' . $r->last_name,
                     'school_id' => $r->school_id,
                     'program' => $r->program,
                     'thesis_title' => $r->thesis_title,
@@ -85,19 +85,19 @@ class CoordinatorDefenseController extends Controller
                 ];
             });
 
-        $facultyMembers = User::where('role','Faculty')
-            ->select('id','first_name','last_name','email')
+        $AdviserMembers = User::where('role', 'Adviser')
+            ->select('id', 'first_name', 'last_name', 'email')
             ->orderBy('last_name')
             ->get()
             ->map(fn($f) => [
                 'id' => $f->id,
-                'name' => $f->first_name.' '.$f->last_name,
+                'name' => $f->first_name . ' ' . $f->last_name,
                 'email' => $f->email ?? '',
-                'type' => 'faculty'
+                'type' => 'Adviser'
             ]);
 
-        $panelists = Panelist::where('status','Available')
-            ->select('id','name','email','status')
+        $panelists = Panelist::where('status', 'Available')
+            ->select('id', 'name', 'email', 'status')
             ->orderBy('name')
             ->get()
             ->map(fn($p) => [
@@ -107,20 +107,20 @@ class CoordinatorDefenseController extends Controller
                 'type' => 'panelist'
             ]);
 
-        $availablePanelMembers = $facultyMembers->concat($panelists)->values();
+        $availablePanelMembers = $AdviserMembers->concat($panelists)->values();
 
         $stats = [
-            'pending_panels' => DefenseRequest::where('scheduling_status','pending-panels')
-                ->whereIn('workflow_state',['adviser-approved','coordinator-review','coordinator-approved'])
+            'pending_panels' => DefenseRequest::where('scheduling_status', 'pending-panels')
+                ->whereIn('workflow_state', ['adviser-approved', 'coordinator-review', 'coordinator-approved'])
                 ->count(),
-            'panels_assigned' => DefenseRequest::where('scheduling_status','panels-assigned')->count(),
-            'scheduled' => DefenseRequest::where('scheduling_status','scheduled')->count(),
-            'completed' => DefenseRequest::where('scheduling_status','completed')->count(),
+            'panels_assigned' => DefenseRequest::where('scheduling_status', 'panels-assigned')->count(),
+            'scheduled' => DefenseRequest::where('scheduling_status', 'scheduled')->count(),
+            'completed' => DefenseRequest::where('scheduling_status', 'completed')->count(),
         ];
 
         return Inertia::render('coordinator/defense-management/CoordinatorDefenseDashboard', [
             'defenseRequests' => $defenseRequests,
-            'facultyMembers' => $facultyMembers,
+            'AdviserMembers' => $AdviserMembers,
             'panelists' => $panelists,
             'availablePanelMembers' => $availablePanelMembers,
             'stats' => $stats,
@@ -134,25 +134,29 @@ class CoordinatorDefenseController extends Controller
 
         $validated = $request->validate([
             'defense_chairperson' => 'required|string|max:255',
-            'defense_panelist1'   => 'required|string|max:255',
-            'defense_panelist2'   => 'nullable|string|max:255',
-            'defense_panelist3'   => 'nullable|string|max:255',
-            'defense_panelist4'   => 'nullable|string|max:255',
+            'defense_panelist1' => 'required|string|max:255',
+            'defense_panelist2' => 'nullable|string|max:255',
+            'defense_panelist3' => 'nullable|string|max:255',
+            'defense_panelist4' => 'nullable|string|max:255',
         ]);
 
         // Only allow from adviser-approved / coordinator-approved / panels-assigned
-        if (!in_array($defenseRequest->workflow_state, [
-            'adviser-approved','coordinator-approved','panels-assigned'
-        ])) {
+        if (
+            !in_array($defenseRequest->workflow_state, [
+                'adviser-approved',
+                'coordinator-approved',
+                'panels-assigned'
+            ])
+        ) {
             $msg = "Cannot assign panels from state '{$defenseRequest->workflow_state}'";
             if ($request->expectsJson()) {
-                return response()->json(['error'=>$msg],422);
+                return response()->json(['error' => $msg], 422);
             }
-            return back()->withErrors(['error'=>$msg]);
+            return back()->withErrors(['error' => $msg]);
         }
 
         try {
-            DB::transaction(function () use ($defenseRequest,$validated) {
+            DB::transaction(function () use ($defenseRequest, $validated) {
                 $defenseRequest->assignPanels(
                     $validated['defense_chairperson'],
                     $validated['defense_panelist1'],
@@ -167,25 +171,25 @@ class CoordinatorDefenseController extends Controller
 
             if ($request->expectsJson()) {
                 return response()->json([
-                    'ok'=>true,
-                    'workflow_state'=>$defenseRequest->workflow_state
+                    'ok' => true,
+                    'workflow_state' => $defenseRequest->workflow_state
                 ]);
             }
 
             return back()->with([
-                'success'=>'Defense panel assigned. Proceed to scheduling.',
-                'assigned_request_id'=>$defenseRequest->id
+                'success' => 'Defense panel assigned. Proceed to scheduling.',
+                'assigned_request_id' => $defenseRequest->id
             ]);
         } catch (\Throwable $e) {
-            Log::error('assignPanels failure',[
+            Log::error('assignPanels failure', [
 
-                'id'=>$defenseRequest->id,
-                'error'=>$e->getMessage()
+                'id' => $defenseRequest->id,
+                'error' => $e->getMessage()
             ]);
             if ($request->expectsJson()) {
-                return response()->json(['error'=>'Assign panels failed'],500);
+                return response()->json(['error' => 'Assign panels failed'], 500);
             }
-            return back()->withErrors(['error'=>'Failed to assign defense panel.']);
+            return back()->withErrors(['error' => 'Failed to assign defense panel.']);
         }
     }
 
@@ -193,10 +197,10 @@ class CoordinatorDefenseController extends Controller
     {
         // Check if this is an update (defense already has a schedule) or new schedule
         $isUpdate = !empty($defenseRequest->scheduled_date);
-        
+
         // For new schedules, require future date. For updates, allow any date including past.
         $dateRule = $isUpdate ? 'required|date' : 'required|date|after_or_equal:today';
-        
+
         $validated = $request->validate([
             'scheduled_date' => $dateRule,
             'scheduled_time' => 'required|date_format:H:i',
@@ -205,7 +209,7 @@ class CoordinatorDefenseController extends Controller
             'defense_venue' => 'required|string|max:255',
             'scheduling_notes' => 'nullable|string|max:1000',
         ]);
-        
+
         // Validate that end time is after start time manually
         if ($validated['scheduled_end_time'] <= $validated['scheduled_time']) {
             return back()->withErrors([
@@ -233,7 +237,7 @@ class CoordinatorDefenseController extends Controller
             if ($conflicts) {
                 $startTime = Carbon::parse($validated['scheduled_time']);
                 $endTime = Carbon::parse($validated['scheduled_end_time']);
-                $timeRange = $startTime->format('g:i A').' - '.$endTime->format('g:i A');
+                $timeRange = $startTime->format('g:i A') . ' - ' . $endTime->format('g:i A');
 
                 $conflictMessages = [];
                 foreach ($conflicts as $c) {
@@ -247,27 +251,29 @@ class CoordinatorDefenseController extends Controller
                     );
                 }
 
-                $message = "Scheduling conflict for {$timeRange}:\n".implode("\n",$conflictMessages);
-                return back()->withErrors(['scheduled_time'=>$message])->withInput();
+                $message = "Scheduling conflict for {$timeRange}:\n" . implode("\n", $conflictMessages);
+                return back()->withErrors(['scheduled_time' => $message])->withInput();
             }
 
-            if ($conflictService->hasVenueConflict(
-                $defenseRequest,
-                $validated['defense_venue'],
-                $validated['scheduled_date'],
-                $validated['scheduled_time'],
-                $validated['scheduled_end_time']
-            )) {
+            if (
+                $conflictService->hasVenueConflict(
+                    $defenseRequest,
+                    $validated['defense_venue'],
+                    $validated['scheduled_date'],
+                    $validated['scheduled_time'],
+                    $validated['scheduled_end_time']
+                )
+            ) {
                 $startTime = Carbon::parse($validated['scheduled_time']);
                 $endTime = Carbon::parse($validated['scheduled_end_time']);
-                $timeRange = $startTime->format('g:i A').' - '.$endTime->format('g:i A');
+                $timeRange = $startTime->format('g:i A') . ' - ' . $endTime->format('g:i A');
                 $date = Carbon::parse($validated['scheduled_date'])->format('M d, Y');
                 return back()->withErrors([
-                    'defense_venue'=>"Venue conflict: {$validated['defense_venue']} already used on {$date} during {$timeRange}"
+                    'defense_venue' => "Venue conflict: {$validated['defense_venue']} already used on {$date} during {$timeRange}"
                 ])->withInput();
             }
 
-            DB::transaction(function () use ($defenseRequest,$validated) {
+            DB::transaction(function () use ($defenseRequest, $validated) {
                 $defenseRequest->scheduleDefense(
                     Carbon::parse($validated['scheduled_date']),
                     Carbon::parse($validated['scheduled_time']),
@@ -281,19 +287,19 @@ class CoordinatorDefenseController extends Controller
 
             $scheduleDate = Carbon::parse($validated['scheduled_date'])->format('M d, Y');
             $timeRange = Carbon::parse($validated['scheduled_time'])->format('g:i A')
-                .' - '.Carbon::parse($validated['scheduled_end_time'])->format('g:i A');
-            $this->createSchedulingNotifications($defenseRequest,$scheduleDate,$timeRange,$validated);
+                . ' - ' . Carbon::parse($validated['scheduled_end_time'])->format('g:i A');
+            $this->createSchedulingNotifications($defenseRequest, $scheduleDate, $timeRange, $validated);
 
             return back()->with([
-                'success'=>"Defense scheduled for {$scheduleDate} ({$timeRange})",
-                'scheduling_completed'=>true
+                'success' => "Defense scheduled for {$scheduleDate} ({$timeRange})",
+                'scheduling_completed' => true
             ]);
         } catch (\Throwable $e) {
-            Log::error('Failed to schedule defense',[
-                'defense_request_id'=>$defenseRequest->id,
-                'error'=>$e->getMessage()
+            Log::error('Failed to schedule defense', [
+                'defense_request_id' => $defenseRequest->id,
+                'error' => $e->getMessage()
             ]);
-            return back()->withErrors(['error'=>'Failed to schedule defense.'])->withInput();
+            return back()->withErrors(['error' => 'Failed to schedule defense.'])->withInput();
         }
     }
 
@@ -306,15 +312,15 @@ class CoordinatorDefenseController extends Controller
 
         try {
             $service = new DefenseNotificationService();
-            $notified = $service->sendSchedulingNotifications($defenseRequest,$validated['notify_parties']);
+            $notified = $service->sendSchedulingNotifications($defenseRequest, $validated['notify_parties']);
             $defenseRequest->notifyParties($validated['notify_parties']);
-            return back()->with('success','Notifications sent: '.implode(', ',$notified));
+            return back()->with('success', 'Notifications sent: ' . implode(', ', $notified));
         } catch (\Throwable $e) {
-            Log::error('Notification send failed',[
-                'defense_request_id'=>$defenseRequest->id,
-                'error'=>$e->getMessage()
+            Log::error('Notification send failed', [
+                'defense_request_id' => $defenseRequest->id,
+                'error' => $e->getMessage()
             ]);
-            return back()->withErrors(['error'=>'Failed to send notifications.']);
+            return back()->withErrors(['error' => 'Failed to send notifications.']);
         }
     }
 
@@ -334,38 +340,40 @@ class CoordinatorDefenseController extends Controller
         ]);
 
         try {
-            DB::transaction(function () use ($defenseRequest,$validated) {
+            DB::transaction(function () use ($defenseRequest, $validated) {
                 $changes = [];
                 foreach ($validated as $field => $value) {
                     if ($defenseRequest->$field !== $value) {
-                        $changes[$field] = ['from'=>$defenseRequest->$field,'to'=>$value];
+                        $changes[$field] = ['from' => $defenseRequest->$field, 'to' => $value];
                     }
                 }
                 if ($changes) {
                     $defenseRequest->update($validated);
-                    $desc = 'Defense details updated: '.implode(', ',
-                        array_map(fn($k,$c) => "{$k}: {$c['from']} → {$c['to']}", array_keys($changes), $changes));
-                    $defenseRequest->addWorkflowEntry('defense-updated',$desc,Auth::id());
+                    $desc = 'Defense details updated: ' . implode(
+                        ', ',
+                        array_map(fn($k, $c) => "{$k}: {$c['from']} → {$c['to']}", array_keys($changes), $changes)
+                    );
+                    $defenseRequest->addWorkflowEntry('defense-updated', $desc, Auth::id());
                 }
             });
 
-            return back()->with('success','Defense details updated successfully!');
+            return back()->with('success', 'Defense details updated successfully!');
         } catch (\Throwable $e) {
-            Log::error('Defense update failed',[
-                'defense_request_id'=>$defenseRequest->id,
-                'error'=>$e->getMessage()
+            Log::error('Defense update failed', [
+                'defense_request_id' => $defenseRequest->id,
+                'error' => $e->getMessage()
             ]);
-            return back()->withErrors(['error'=>'Failed to update defense details.']);
+            return back()->withErrors(['error' => 'Failed to update defense details.']);
         }
     }
 
     public function show(DefenseRequest $defenseRequest)
     {
-        $defenseRequest->load(['user','adviserUser','panelsAssignedBy','scheduleSetBy']);
+        $defenseRequest->load(['user', 'adviserUser', 'panelsAssignedBy', 'scheduleSetBy']);
 
         return response()->json([
             'id' => $defenseRequest->id,
-            'student_name' => $defenseRequest->first_name.' '.$defenseRequest->last_name,
+            'student_name' => $defenseRequest->first_name . ' ' . $defenseRequest->last_name,
             'school_id' => $defenseRequest->school_id,
             'program' => $defenseRequest->program,
             'thesis_title' => $defenseRequest->thesis_title,
@@ -395,7 +403,7 @@ class CoordinatorDefenseController extends Controller
                 'message' => "Your {$defenseRequest->defense_type} defense: {$scheduleDate} {$timeRange}, Venue: {$validated['defense_venue']}",
                 'link' => '/defense-requirements',
             ]);
-            
+
             // Send email notification to student
             $student = User::find($defenseRequest->submitted_by);
             if ($student && $student->email) {
@@ -414,34 +422,34 @@ class CoordinatorDefenseController extends Controller
 
         foreach ($panelMembers as $panelMemberName) {
             $panelUser = User::where(function ($q) use ($panelMemberName) {
-                $parts = preg_split('/\s+/',trim($panelMemberName));
+                $parts = preg_split('/\s+/', trim($panelMemberName));
                 if (count($parts) >= 2) {
-                    $q->where('first_name','LIKE','%'.$parts[0].'%')
-                      ->where('last_name','LIKE','%'.end($parts).'%');
+                    $q->where('first_name', 'LIKE', '%' . $parts[0] . '%')
+                        ->where('last_name', 'LIKE', '%' . end($parts) . '%');
                 } else {
-                    $q->where('first_name','LIKE','%'.$panelMemberName.'%')
-                      ->orWhere('last_name','LIKE','%'.$panelMemberName.'%');
+                    $q->where('first_name', 'LIKE', '%' . $panelMemberName . '%')
+                        ->orWhere('last_name', 'LIKE', '%' . $panelMemberName . '%');
                 }
             })->first();
 
             if ($panelUser) {
                 Notification::create([
-                    'user_id'=>$panelUser->id,
-                    'type'=>'defense-request',
-                    'title'=>'Panel Assignment',
-                    'message'=>"Assigned to {$defenseRequest->first_name} {$defenseRequest->last_name}'s defense: {$scheduleDate} {$timeRange} at {$validated['defense_venue']}",
-                    'link'=>'/defense-requests',
+                    'user_id' => $panelUser->id,
+                    'type' => 'defense-request',
+                    'title' => 'Panel Assignment',
+                    'message' => "Assigned to {$defenseRequest->first_name} {$defenseRequest->last_name}'s defense: {$scheduleDate} {$timeRange} at {$validated['defense_venue']}",
+                    'link' => '/defense-requests',
                 ]);
             }
         }
 
-        if ($defenseRequest->adviser_user_id && !in_array($defenseRequest->adviser_user_id,$panelMembers)) {
+        if ($defenseRequest->adviser_user_id && !in_array($defenseRequest->adviser_user_id, $panelMembers)) {
             Notification::create([
-                'user_id'=>$defenseRequest->adviser_user_id,
-                'type'=>'defense-request',
-                'title'=>"Student's Defense Scheduled",
-                'message'=>"Defense for {$defenseRequest->first_name} {$defenseRequest->last_name}: {$scheduleDate} {$timeRange}.",
-                'link'=>'/defense-requests',
+                'user_id' => $defenseRequest->adviser_user_id,
+                'type' => 'defense-request',
+                'title' => "Student's Defense Scheduled",
+                'message' => "Defense for {$defenseRequest->first_name} {$defenseRequest->last_name}: {$scheduleDate} {$timeRange}.",
+                'link' => '/defense-requests',
             ]);
         }
     }
@@ -449,29 +457,29 @@ class CoordinatorDefenseController extends Controller
     public function getRequestsForApproval(Request $request)
     {
         $user = Auth::user();
-        $coordinatorRoles = ['Coordinator','Administrative Assistant','Dean'];
-        if (!in_array($user->role,$coordinatorRoles)) {
-            abort(403,'Unauthorized access');
+        $coordinatorRoles = ['Coordinator', 'Administrative Assistant', 'Dean'];
+        if (!in_array($user->role, $coordinatorRoles)) {
+            abort(403, 'Unauthorized access');
         }
 
-        $defenseRequests = DefenseRequest::with(['user','adviserUser'])
-            ->orderBy('created_at','desc')
+        $defenseRequests = DefenseRequest::with(['user', 'adviserUser'])
+            ->orderBy('created_at', 'desc')
             ->get()
             ->map(function ($r) {
                 return [
-                    'id'=>$r->id,
-                    'first_name'=>$r->first_name,
-                    'middle_name'=>$r->middle_name,
-                    'last_name'=>$r->last_name,
-                    'program'=>$r->program,
-                    'thesis_title'=>$r->thesis_title,
-                    'date_of_defense'=>$r->scheduled_date?->format('Y-m-d H:i:s'),
-                    'defense_type'=>$r->defense_type,
-                    'mode_defense'=>$r->defense_mode,
-                    'status'=>$this->mapToReactStatus($r->workflow_state),
-                    'priority'=>$r->priority ?? 'Medium',
-                    'last_status_updated_by'=>$r->lastStatusUpdatedBy?->name,
-                    'last_status_updated_at'=>$r->last_status_updated_at?->format('Y-m-d H:i:s'),
+                    'id' => $r->id,
+                    'first_name' => $r->first_name,
+                    'middle_name' => $r->middle_name,
+                    'last_name' => $r->last_name,
+                    'program' => $r->program,
+                    'thesis_title' => $r->thesis_title,
+                    'date_of_defense' => $r->scheduled_date?->format('Y-m-d H:i:s'),
+                    'defense_type' => $r->defense_type,
+                    'mode_defense' => $r->defense_mode,
+                    'status' => $this->mapToReactStatus($r->workflow_state),
+                    'priority' => $r->priority ?? 'Medium',
+                    'last_status_updated_by' => $r->lastStatusUpdatedBy?->name,
+                    'last_status_updated_at' => $r->last_status_updated_at?->format('Y-m-d H:i:s'),
                 ];
             });
 
@@ -481,12 +489,12 @@ class CoordinatorDefenseController extends Controller
     private function mapToReactStatus($workflowState)
     {
         $mapping = [
-            'adviser-approved'     => 'Pending',
-            'coordinator-review'   => 'Pending',
+            'adviser-approved' => 'Pending',
+            'coordinator-review' => 'Pending',
             'coordinator-approved' => 'Approved',
-            'panels-assigned'      => 'Approved',
-            'scheduled'            => 'Approved',
-            'rejected'             => 'Rejected',
+            'panels-assigned' => 'Approved',
+            'scheduled' => 'Approved',
+            'rejected' => 'Rejected',
         ];
         return $mapping[$workflowState] ?? 'Pending';
     }
@@ -494,16 +502,19 @@ class CoordinatorDefenseController extends Controller
     private function normalizeDefenseRequestStatus(DefenseRequest $r): string
     {
         $raw = $r->status ?? '';
-        if (in_array($raw,['Approved','Rejected','Pending'])) return $raw;
+        if (in_array($raw, ['Approved', 'Rejected', 'Pending']))
+            return $raw;
 
         $lc = strtolower($raw);
-        if (str_contains($lc,'approved')) return 'Approved';
-        if (str_contains($lc,'rejected')) return 'Rejected';
+        if (str_contains($lc, 'approved'))
+            return 'Approved';
+        if (str_contains($lc, 'rejected'))
+            return 'Rejected';
 
-        return match($r->workflow_state) {
-            'submitted','adviser-review','adviser-approved','coordinator-review','needs-info' => 'Pending',
-            'coordinator-approved','panels-assigned','scheduled','completed' => 'Approved',
-            'adviser-rejected','coordinator-rejected','rejected' => 'Rejected',
+        return match ($r->workflow_state) {
+            'submitted', 'adviser-review', 'adviser-approved', 'coordinator-review', 'needs-info' => 'Pending',
+            'coordinator-approved', 'panels-assigned', 'scheduled', 'completed' => 'Approved',
+            'adviser-rejected', 'coordinator-rejected', 'rejected' => 'Rejected',
             default => 'Pending'
         };
     }
@@ -517,13 +528,13 @@ class CoordinatorDefenseController extends Controller
         $this->authorizeRole();
 
         // Allow approval if adviser-approved OR coordinator-review OR still submitted legacy
-        if (!in_array($defenseRequest->workflow_state, ['adviser-approved','coordinator-review','submitted', null])) {
-            return back()->withErrors(['error'=>'Cannot approve in current state.']);
+        if (!in_array($defenseRequest->workflow_state, ['adviser-approved', 'coordinator-review', 'submitted', null])) {
+            return back()->withErrors(['error' => 'Cannot approve in current state.']);
         }
 
         // Validate required fields before approval
         $missingFields = [];
-        
+
         // Check schedule fields
         if (empty($defenseRequest->scheduled_date)) {
             $missingFields[] = 'Defense Date';
@@ -540,7 +551,7 @@ class CoordinatorDefenseController extends Controller
         if (empty($defenseRequest->defense_venue)) {
             $missingFields[] = 'Defense Venue';
         }
-        
+
         // Check if panels are assigned
         $panels = $defenseRequest->panelists()->get();
         if ($panels->isEmpty()) {
@@ -562,21 +573,21 @@ class CoordinatorDefenseController extends Controller
             // Approve the defense request
             $comment = $request->input('comment');
             $defenseRequest->approveByCoordinator($comment, Auth::id());
-            
+
             // Send emails to all parties
             $this->sendDefenseNotificationEmails($defenseRequest);
 
             DB::commit();
 
             return back()->with('success', 'Defense request approved successfully! Notification emails have been sent to all parties.');
-            
+
         } catch (\Exception $e) {
             DB::rollBack();
             Log::error('Failed to approve defense request and send emails', [
                 'error' => $e->getMessage(),
                 'defense_request_id' => $defenseRequest->id
             ]);
-            
+
             return back()->withErrors([
                 'error' => 'Failed to approve defense request: ' . $e->getMessage()
             ]);
@@ -638,8 +649,8 @@ class CoordinatorDefenseController extends Controller
                 if ($panel->email) {
                     $role = isset($panel->pivot->role) ? $panel->pivot->role : 'Panel Member';
                     Mail::to($panel->email)->send(new \App\Mail\DefensePanelInvitation(
-                        $defenseRequest, 
-                        $panel, 
+                        $defenseRequest,
+                        $panel,
                         $role
                     ));
                     $emailsSent[] = "Panel ({$role}): {$panel->email}";
@@ -676,8 +687,8 @@ class CoordinatorDefenseController extends Controller
     public function allDefenseRequests(Request $request)
     {
         $user = Auth::user();
-        if (!$user || !in_array($user->role,['Coordinator','Administrative Assistant','Dean'])) {
-            return response()->json(['error'=>'Unauthorized'],403);
+        if (!$user || !in_array($user->role, ['Coordinator', 'Administrative Assistant', 'Dean'])) {
+            return response()->json(['error' => 'Unauthorized'], 403);
         }
 
         $visibleStates = [
@@ -689,11 +700,11 @@ class CoordinatorDefenseController extends Controller
             'completed'
         ];
 
-        $items = DefenseRequest::with(['user','adviserUser','panelsAssignedBy','scheduleSetBy','lastStatusUpdater'])
+        $items = DefenseRequest::with(['user', 'adviserUser', 'panelsAssignedBy', 'scheduleSetBy', 'lastStatusUpdater'])
             ->whereIn('workflow_state', $visibleStates)
-            ->whereNotIn('workflow_state', ['submitted','adviser-review']) // defensive guard
-            ->orderBy('adviser_reviewed_at','desc')
-            ->orderBy('created_at','desc')
+            ->whereNotIn('workflow_state', ['submitted', 'adviser-review']) // defensive guard
+            ->orderBy('adviser_reviewed_at', 'desc')
+            ->orderBy('created_at', 'desc')
             ->get()
             ->map(fn($r) => $this->mapDefenseRequestForList($r));
 
@@ -750,51 +761,51 @@ class CoordinatorDefenseController extends Controller
     }
 
     /**
-     * Faculty + available panelists
+     * Adviser + available panelists
      */
     public function availablePanelMembersJson(Request $request)
     {
         $user = Auth::user();
-        if (!$user || !in_array($user->role,['Coordinator','Administrative Assistant','Dean'])) {
-            return response()->json(['data'=>[],'next_page'=>null],403);
+        if (!$user || !in_array($user->role, ['Coordinator', 'Administrative Assistant', 'Dean'])) {
+            return response()->json(['data' => [], 'next_page' => null], 403);
         }
 
-        $q        = trim($request->query('q',''));
-        $page     = max(1, (int)$request->query('page', 1));
-        $perPage  = min(100, max(5, (int)$request->query('per_page', 25)));
-        $offset   = ($page - 1) * $perPage;
+        $q = trim($request->query('q', ''));
+        $page = max(1, (int) $request->query('page', 1));
+        $perPage = min(100, max(5, (int) $request->query('per_page', 25)));
+        $offset = ($page - 1) * $perPage;
 
-        // Faculty sources
-        $facultyQuery = User::whereIn('role',['Faculty','Adviser'])
-            ->when($q !== '', function($query) use ($q) {
-                $query->where(function($sub) use ($q) {
-                    $sub->where('first_name','LIKE',"%{$q}%")
-                        ->orWhere('last_name','LIKE',"%{$q}%")
-                        ->orWhereRaw("CONCAT(first_name,' ',last_name) LIKE ?",["%{$q}%"]);
+        // Adviser sources
+        $AdviserQuery = User::whereIn('role', ['Adviser', 'Adviser'])
+            ->when($q !== '', function ($query) use ($q) {
+                $query->where(function ($sub) use ($q) {
+                    $sub->where('first_name', 'LIKE', "%{$q}%")
+                        ->orWhere('last_name', 'LIKE', "%{$q}%")
+                        ->orWhereRaw("CONCAT(first_name,' ',last_name) LIKE ?", ["%{$q}%"]);
                 });
             });
 
-        $facultyTotal = (clone $facultyQuery)->count();
+        $AdviserTotal = (clone $AdviserQuery)->count();
 
-        $faculty = $facultyQuery
+        $Adviser = $AdviserQuery
             ->orderBy('first_name')
             ->orderBy('last_name')
             ->skip($offset)
             ->take($perPage)
             ->get()
             ->map(fn($f) => [
-                'id' => 'faculty-'.$f->id,
-                'name' => trim($f->first_name.' '.($f->middle_name ? $f->middle_name.' ' : '').$f->last_name),
+                'id' => 'Adviser-' . $f->id,
+                'name' => trim($f->first_name . ' ' . ($f->middle_name ? $f->middle_name . ' ' : '') . $f->last_name),
                 'email' => $f->email,
-                'type' => 'Faculty',
+                'type' => 'Adviser',
             ]);
 
         // Panelists
-        $panelQuery = Panelist::where('status','Available')
-            ->when($q !== '', function($query) use ($q) {
-                $query->where(function($sub) use ($q) {
-                    $sub->where('name','LIKE',"%{$q}%")
-                        ->orWhere('email','LIKE',"%{$q}%");
+        $panelQuery = Panelist::where('status', 'Available')
+            ->when($q !== '', function ($query) use ($q) {
+                $query->where(function ($sub) use ($q) {
+                    $sub->where('name', 'LIKE', "%{$q}%")
+                        ->orWhere('email', 'LIKE', "%{$q}%");
                 });
             });
 
@@ -806,17 +817,17 @@ class CoordinatorDefenseController extends Controller
             ->take($perPage)
             ->get()
             ->map(fn($p) => [
-                'id' => 'panelist-'.$p->id,
+                'id' => 'panelist-' . $p->id,
                 'name' => $p->name,
                 'email' => $p->email,
                 'type' => 'Panelist',
             ]);
 
-        // Merge (faculty + panelists) for this page
-        $merged = $faculty->concat($panelists)->values();
+        // Merge (Adviser + panelists) for this page
+        $merged = $Adviser->concat($panelists)->values();
 
         // Decide next page: if BOTH sources exhausted for this page size
-        $maxTotal = $facultyTotal + $panelTotal;
+        $maxTotal = $AdviserTotal + $panelTotal;
         $fetchedSoFar = $offset + $merged->count();
         $nextPage = $fetchedSoFar < $maxTotal ? $page + 1 : null;
 
@@ -852,19 +863,19 @@ class CoordinatorDefenseController extends Controller
 
         // Check if this is an update (defense already has a schedule) or new schedule
         $isUpdate = !empty($defenseRequest->scheduled_date);
-        
+
         // For new schedules, require future date. For updates, allow any date.
         $dateRule = $isUpdate ? 'required|date' : 'required|date|after_or_equal:today';
 
         $data = $request->validate([
-            'scheduled_date'      => $dateRule,
-            'scheduled_time'      => 'required|date_format:H:i',
-            'scheduled_end_time'  => 'required|date_format:H:i',
-            'defense_mode'        => 'required|in:face-to-face,online',
-            'defense_venue'       => 'required|string|max:255',
-            'scheduling_notes'    => 'nullable|string|max:1000'
+            'scheduled_date' => $dateRule,
+            'scheduled_time' => 'required|date_format:H:i',
+            'scheduled_end_time' => 'required|date_format:H:i',
+            'defense_mode' => 'required|in:face-to-face,online',
+            'defense_venue' => 'required|string|max:255',
+            'scheduling_notes' => 'nullable|string|max:1000'
         ]);
-        
+
         // Validate that end time is after start time manually
         if ($data['scheduled_end_time'] <= $data['scheduled_time']) {
             return response()->json([
@@ -878,15 +889,20 @@ class CoordinatorDefenseController extends Controller
 
             $origState = $defenseRequest->workflow_state;
             // Allow scheduling from coordinator-review, coordinator-approved, panels-assigned, or scheduled
-            if (!in_array($origState, [
-                'coordinator-review', 'coordinator-approved', 'panels-assigned', 'scheduled'
-            ])) {
+            if (
+                !in_array($origState, [
+                    'coordinator-review',
+                    'coordinator-approved',
+                    'panels-assigned',
+                    'scheduled'
+                ])
+            ) {
                 return response()->json([
-                    'error'=>"Cannot schedule from state '{$origState}'"
-                ],422);
+                    'error' => "Cannot schedule from state '{$origState}'"
+                ], 422);
             }
 
-            foreach ($data as $k=>$v) {
+            foreach ($data as $k => $v) {
                 $defenseRequest->{$k} = $v;
             }
 
@@ -907,7 +923,7 @@ class CoordinatorDefenseController extends Controller
                 );
             }
 
-            if (property_exists($defenseRequest,'scheduling_status') || isset($defenseRequest->scheduling_status)) {
+            if (property_exists($defenseRequest, 'scheduling_status') || isset($defenseRequest->scheduling_status)) {
                 $defenseRequest->scheduling_status = 'scheduled';
             }
 
@@ -918,17 +934,17 @@ class CoordinatorDefenseController extends Controller
             DB::commit();
 
             return response()->json([
-                'ok'=>true,
-                'request'=>$this->mapForDetails($defenseRequest)
+                'ok' => true,
+                'request' => $this->mapForDetails($defenseRequest)
             ]);
         } catch (\Throwable $e) {
             DB::rollBack();
-            Log::error('scheduleDefenseJson error',[
+            Log::error('scheduleDefenseJson error', [
 
-                'id'=>$defenseRequest->id,
-                'error'=>$e->getMessage()
+                'id' => $defenseRequest->id,
+                'error' => $e->getMessage()
             ]);
-            return response()->json(['error'=>'Scheduling failed'],500);
+            return response()->json(['error' => 'Scheduling failed'], 500);
         }
     }
 
@@ -936,32 +952,32 @@ class CoordinatorDefenseController extends Controller
     {
         $r->attemptAutoComplete(); // lazy auto-complete for coordinator view
         return [
-            'id'=>$r->id,
-            'first_name'=>$r->first_name,
-            'middle_name'=>$r->middle_name,
-            'last_name'=>$r->last_name,
-            'school_id'=>$r->school_id,
-            'program'=>$r->program,
-            'thesis_title'=>$r->thesis_title,
-            'defense_type'=>$r->defense_type,
-            'defense_adviser'=>$r->defense_adviser,
-            'defense_chairperson'=>$r->defense_chairperson,
-            'defense_panelist1'=>$r->defense_panelist1,
-            'defense_panelist2'=>$r->defense_panelist2,
-            'defense_panelist3'=>$r->defense_panelist3,
-            'defense_panelist4'=>$r->defense_panelist4,
-            'scheduled_date'=>$r->scheduled_date,
-            'scheduled_time'=>$r->scheduled_time,
-            'scheduled_end_time'=>$r->scheduled_end_time,
-            'defense_mode'=>$r->defense_mode,
-            'defense_venue'=>$r->defense_venue,
-            'scheduling_notes'=>$r->scheduling_notes ?? null,
-            'workflow_state'=>$r->workflow_state,
-            'status'=>$r->status,
-            'priority'=>$r->priority,
-            'workflow_history'=>$r->workflow_history,
-            'last_status_updated_at'=>$r->last_status_updated_at?->toIso8601String(),
-            'last_status_updated_by'=>$r->last_status_updated_by
+            'id' => $r->id,
+            'first_name' => $r->first_name,
+            'middle_name' => $r->middle_name,
+            'last_name' => $r->last_name,
+            'school_id' => $r->school_id,
+            'program' => $r->program,
+            'thesis_title' => $r->thesis_title,
+            'defense_type' => $r->defense_type,
+            'defense_adviser' => $r->defense_adviser,
+            'defense_chairperson' => $r->defense_chairperson,
+            'defense_panelist1' => $r->defense_panelist1,
+            'defense_panelist2' => $r->defense_panelist2,
+            'defense_panelist3' => $r->defense_panelist3,
+            'defense_panelist4' => $r->defense_panelist4,
+            'scheduled_date' => $r->scheduled_date,
+            'scheduled_time' => $r->scheduled_time,
+            'scheduled_end_time' => $r->scheduled_end_time,
+            'defense_mode' => $r->defense_mode,
+            'defense_venue' => $r->defense_venue,
+            'scheduling_notes' => $r->scheduling_notes ?? null,
+            'workflow_state' => $r->workflow_state,
+            'status' => $r->status,
+            'priority' => $r->priority,
+            'workflow_history' => $r->workflow_history,
+            'last_status_updated_at' => $r->last_status_updated_at?->toIso8601String(),
+            'last_status_updated_by' => $r->last_status_updated_by
         ];
     }
 
@@ -981,15 +997,15 @@ class CoordinatorDefenseController extends Controller
         try {
             if ($newStatus === 'Approved') {
                 // Only allow approval from certain states
-                if (!in_array($origState, ['adviser-approved','coordinator-review','submitted', null])) {
-                    return response()->json(['error'=>'Cannot approve in current state.'], 422);
+                if (!in_array($origState, ['adviser-approved', 'coordinator-review', 'submitted', null])) {
+                    return response()->json(['error' => 'Cannot approve in current state.'], 422);
                 }
                 $defenseRequest->approveByCoordinator(null, $user->id);
                 // approveByCoordinator should already add a workflow entry
             } elseif ($newStatus === 'Rejected') {
                 // Allow rejection from any state except already rejected
                 if ($origState === 'rejected') {
-                    return response()->json(['error'=>'Already rejected.'], 422);
+                    return response()->json(['error' => 'Already rejected.'], 422);
                 }
                 $defenseRequest->status = 'Rejected';
                 $defenseRequest->workflow_state = 'rejected';

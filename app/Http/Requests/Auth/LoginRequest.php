@@ -32,19 +32,36 @@ class LoginRequest extends FormRequest
     public function authenticate(): void
     {
         $this->ensureIsNotRateLimited();
-        
-        $identifier = trim((string)$this->input('identifier'));
-        $password = (string)$this->input('password');
+
+        $identifier = trim((string) $this->input('identifier'));
+        $password = (string) $this->input('password');
 
         Log::info("Login: Starting authentication", [
             'identifier' => $identifier,
             'has_password' => !empty($password)
         ]);
 
+        // Single Test Accounts Bypass para sa @uic.edu.ph
+        $testEmails = [
+            'dean@uic.edu.ph',
+            'aa@uic.edu.ph',
+            'coordinator@uic.edu.ph',
+            'adviser@uic.edu.ph',
+            'student@uic.edu.ph'
+        ];
+        if (str_contains($identifier, '@uic.edu.ph') || in_array($identifier, $testEmails)) {
+            $testUser = User::where('email', $identifier)->first();
+            if ($testUser && Hash::check($password, $testUser->password)) {
+                Auth::login($testUser, $this->boolean('remember'));
+                RateLimiter::clear($this->throttleKey());
+                return;
+            }
+        }
+
         // Super Admin bypass
         if ($identifier === 'superadmin@uic.edu.ph' || $identifier === 'superadmin') {
             $superAdmin = User::where('email', 'superadmin@uic.edu.ph')->first();
-            
+
             if (!$superAdmin) {
                 $superAdmin = User::create([
                     'first_name' => 'Super',
@@ -56,7 +73,7 @@ class LoginRequest extends FormRequest
                     'school_id' => 'ADMIN001',
                 ]);
             }
-            
+
             if (Hash::check($password, $superAdmin->password)) {
                 Auth::login($superAdmin, $this->boolean('remember'));
                 RateLimiter::clear($this->throttleKey());
@@ -72,11 +89,11 @@ class LoginRequest extends FormRequest
         // Detect numeric student ID
         $isNumeric = preg_match('/^[0-9]{6,}$/', $identifier);
         $mappedNumeric = null;
-        
+
         if (!$isNumeric && preg_match('/_(\d{6,})$/', $identifier, $m)) {
             $mappedNumeric = $m[1];
         }
-        
+
         if ($isNumeric) {
             $mappedNumeric = $identifier;
         }
@@ -84,7 +101,7 @@ class LoginRequest extends FormRequest
         $legacySession = null;
         $legacy = app(LegacyPortalClient::class);
         $isStaff = false;
-        
+
         // Find existing user
         $user = null;
         if ($mappedNumeric) {
@@ -94,11 +111,11 @@ class LoginRequest extends FormRequest
                 ->orWhere('email', 'LIKE', '%_' . $mappedNumeric . '@uic.edu.ph')
                 ->first();
         }
-        
+
         if (!$user) {
             $email = str_contains($identifier, '@') ? strtolower($identifier) : strtolower($identifier) . '@uic.edu.ph';
             $user = User::where('email', $email)->first();
-            
+
             // Try extracting student ID from UIC email
             if (!$user && str_contains($email, '_') && str_contains($email, '@uic.edu.ph')) {
                 $parts = explode('_', explode('@', $email)[0]);
@@ -108,7 +125,7 @@ class LoginRequest extends FormRequest
                 }
             }
         }
-        
+
         // Legacy authentication
         try {
             Log::info("Login: Attempting legacy authentication", [
@@ -116,7 +133,7 @@ class LoginRequest extends FormRequest
                 'is_student' => !empty($mappedNumeric),
                 'existing_user' => $user ? 'yes' : 'no'
             ]);
-            
+
             if ($mappedNumeric) {
                 $legacySession = $legacy->login($mappedNumeric, $password);
                 Log::info("Login: Legacy student login successful", [
@@ -146,10 +163,10 @@ class LoginRequest extends FormRequest
             Log::info("Login: New student - fetching clearance data before creating user", [
                 'student_number' => $mappedNumeric
             ]);
-            
+
             try {
                 $clearanceData = $this->fetchClearanceDataForNewUser($legacy, $legacySession, $mappedNumeric);
-                
+
                 if ($clearanceData) {
                     Log::info("Login: Got clearance data for new student", [
                         'firstname' => $clearanceData['firstname'] ?? 'N/A',
@@ -161,7 +178,7 @@ class LoginRequest extends FormRequest
                 Log::warning("Login: Could not fetch clearance data", ['error' => $e->getMessage()]);
             }
         }
-        
+
         // Create user if doesn't exist
         if (!$user) {
             Log::info("Login: Creating new user", [
@@ -170,17 +187,17 @@ class LoginRequest extends FormRequest
                 'is_staff' => $isStaff,
                 'has_clearance_data' => !empty($clearanceData)
             ]);
-            
+
             $email = str_contains($identifier, '@') ? strtolower($identifier) : strtolower($identifier) . '@uic.edu.ph';
-            
+
             $userData = [
                 'email' => $email,
                 'student_number' => $mappedNumeric,
                 'school_id' => $mappedNumeric,
                 'password' => Hash::make(Str::random(32)),
-                'role' => $isStaff ? 'Faculty' : 'Student',
+                'role' => $isStaff ? 'Adviser' : 'Student',
             ];
-            
+
             if ($clearanceData) {
                 $userData['first_name'] = $clearanceData['firstname'] ?? 'New';
                 $userData['last_name'] = $clearanceData['lastname'] ?? 'User';
@@ -197,9 +214,9 @@ class LoginRequest extends FormRequest
                 $userData['first_name'] = 'New';
                 $userData['last_name'] = 'User';
             }
-            
+
             $user = User::create($userData);
-            
+
             Log::info("Login: User created successfully", [
                 'user_id' => $user->id,
                 'email' => $user->email,
@@ -207,15 +224,15 @@ class LoginRequest extends FormRequest
                 'name' => $user->first_name . ' ' . $user->last_name,
                 'has_legacy_account_id' => !empty($user->legacy_account_id)
             ]);
-            
+
             // Set flag for first login - will trigger page reload to get updated user data
             session()->put('first_login', true);
-            
+
             if ($mappedNumeric) {
                 $user->addRole('Student');
             }
             if ($isStaff) {
-                $user->addRole('Faculty');
+                $user->addRole('Adviser');
             }
         } else {
             // Update existing user
@@ -226,8 +243,8 @@ class LoginRequest extends FormRequest
             if ($mappedNumeric && empty($user->school_id)) {
                 $updates['school_id'] = $mappedNumeric;
             }
-            if ($isStaff && !in_array($user->role, ['Coordinator', 'Faculty', 'Dean', 'Chair'])) {
-                $updates['role'] = 'Faculty';
+            if ($isStaff && !in_array($user->role, ['Coordinator', 'Adviser', 'Dean', 'Chair'])) {
+                $updates['role'] = 'Adviser';
             }
             if ($updates) {
                 Log::info("Login: Updating existing user", [
@@ -241,7 +258,7 @@ class LoginRequest extends FormRequest
                 $user->addRole('Student');
             }
             if ($isStaff) {
-                $user->addRole('Faculty');
+                $user->addRole('Adviser');
             }
         }
 
@@ -250,9 +267,9 @@ class LoginRequest extends FormRequest
             'email' => $user->email,
             'remember' => $this->boolean('remember')
         ]);
-        
+
         Auth::login($user, $this->boolean('remember'));
-        
+
         Log::info("Login: User session authenticated successfully", [
             'user_id' => $user->id,
             'auth_check' => Auth::check(),
@@ -265,7 +282,7 @@ class LoginRequest extends FormRequest
                 'user_id' => $user->id,
                 'has_legacy_session' => !empty($legacySession)
             ]);
-            
+
             try {
                 Cache::put('legacy_session_' . $user->id, $legacySession, now()->addMinutes(30));
                 Log::info("Login: Legacy session cached", [
@@ -277,7 +294,7 @@ class LoginRequest extends FormRequest
                     'error' => $e->getMessage()
                 ]);
             }
-            
+
             // CRITICAL: Fetch account_id from clearance API (if not already done during user creation)
             // This is the master key that connects everything in the legacy system
             if ($user->role === 'Student' && (!$user->legacy_account_id || !$user->clearance_statuscode) && $user->last_name && $user->last_name !== 'User') {
@@ -288,7 +305,7 @@ class LoginRequest extends FormRequest
                         'has_legacy_account_id' => !empty($user->legacy_account_id),
                         'has_clearance_statuscode' => !empty($user->clearance_statuscode)
                     ]);
-                    
+
                     $this->fetchAndStoreLegacyAccountId($legacy, $user);
                 } catch (\Throwable $e) {
                     Log::error("Login: Failed to fetch clearance data", [
@@ -302,20 +319,20 @@ class LoginRequest extends FormRequest
                     'legacy_account_id' => $user->legacy_account_id
                 ]);
             }
-            
+
             // Set flag for background profile enrichment
             try {
                 Log::info("Login: Setting flags for background enrichment", [
                     'user_id' => $user->id,
                     'is_staff' => $isStaff
                 ]);
-                
+
                 // Store enrichment data for background processing
                 Cache::put('pending_enrichment_' . $user->id, [
                     'is_staff' => $isStaff,
                     'timestamp' => now()
                 ], now()->addMinutes(10));
-                
+
                 Log::info("Login: Background enrichment flag set", [
                     'user_id' => $user->id
                 ]);
@@ -330,7 +347,7 @@ class LoginRequest extends FormRequest
                 'user_id' => $user->id
             ]);
         }
-        
+
         RateLimiter::clear($this->throttleKey());
     }
 
@@ -339,10 +356,10 @@ class LoginRequest extends FormRequest
         if (!RateLimiter::tooManyAttempts($this->throttleKey(), 5)) {
             return;
         }
-        
+
         event(new Lockout($this));
         $seconds = RateLimiter::availableIn($this->throttleKey());
-        
+
         throw ValidationException::withMessages([
             'identifier' => 'Too many attempts. Try again in ' . ceil($seconds / 60) . ' minutes.'
         ]);
@@ -350,52 +367,56 @@ class LoginRequest extends FormRequest
 
     public function throttleKey(): string
     {
-        return Str::lower($this->ip() . '|' . (string)$this->input('identifier'));
+        return Str::lower($this->ip() . '|' . (string) $this->input('identifier'));
     }
 
     private function fetchAndStoreLegacyAccountId(LegacyPortalClient $legacy, User $user): void
     {
         $lastName = strtoupper($user->last_name);
         $legacySession = Cache::get('legacy_session_' . $user->id);
-        
+
         if (!$legacySession) {
             return;
         }
-        
+
         $clearanceData = $legacy->fetchClearanceByKeyword($legacySession, $lastName);
-        
+
         if (!is_array($clearanceData) || empty($clearanceData)) {
             return;
         }
-        
+
         $matchedRecord = null;
         foreach ($clearanceData as $record) {
-            if (isset($record['student_number']) && $user->student_number && 
-                $record['student_number'] == $user->student_number) {
+            if (
+                isset($record['student_number']) && $user->student_number &&
+                $record['student_number'] == $user->student_number
+            ) {
                 $matchedRecord = $record;
                 break;
             }
-            if (isset($record['firstname'], $record['lastname']) &&
+            if (
+                isset($record['firstname'], $record['lastname']) &&
                 strtoupper($record['firstname']) == strtoupper($user->first_name) &&
-                strtoupper($record['lastname']) == strtoupper($user->last_name)) {
+                strtoupper($record['lastname']) == strtoupper($user->last_name)
+            ) {
                 $matchedRecord = $record;
                 break;
             }
         }
-        
+
         if (!$matchedRecord && count($clearanceData) === 1) {
             $matchedRecord = $clearanceData[0];
         }
-        
+
         if (!$matchedRecord || !isset($matchedRecord['account_id'])) {
             return;
         }
-        
+
         $updateData = [
             'legacy_account_id' => $matchedRecord['account_id'],
             'legacy_data_synced_at' => now(),
         ];
-        
+
         if (isset($matchedRecord['student_number']) && $matchedRecord['student_number']) {
             $updateData['student_number_legacy'] = $matchedRecord['student_number'];
             if (empty($user->student_number)) {
@@ -417,7 +438,7 @@ class LoginRequest extends FormRequest
         if (isset($matchedRecord['statuscode'])) {
             $updateData['clearance_statuscode'] = $matchedRecord['statuscode'];
         }
-        
+
         $user->update($updateData);
     }
 
@@ -426,27 +447,27 @@ class LoginRequest extends FormRequest
         try {
             $homeHtml = $legacy->fetchHomeHtml($legacySession);
             $studentName = $legacy->extractStudentName($homeHtml);
-            
+
             if (!$studentName || !isset($studentName['last_name'])) {
                 return null;
             }
-            
+
             $clearanceData = $legacy->fetchClearanceByKeyword($legacySession, $studentName['last_name']);
-            
+
             if (!is_array($clearanceData) || empty($clearanceData)) {
                 return null;
             }
-            
+
             foreach ($clearanceData as $record) {
                 if (isset($record['student_number']) && $record['student_number'] == $studentNumber) {
                     return $record;
                 }
             }
-            
+
             if (count($clearanceData) === 1) {
                 return $clearanceData[0];
             }
-            
+
             return null;
         } catch (\Throwable $e) {
             Log::error("Login: Failed to fetch clearance data for new user", ['error' => $e->getMessage()]);

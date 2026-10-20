@@ -1,15 +1,13 @@
-import { type BreadcrumbItem, type SharedData } from '@/types';
-import { Head, usePage } from '@inertiajs/react';
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import AppLayout from '@/layouts/app-layout';
 import SettingsLayout from '@/layouts/settings/layout';
-import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
-import { Info } from "lucide-react";
-import { useState } from "react";
-import axios from "axios";
-import { Input } from "@/components/ui/input";
-import { toast } from "sonner";
+import { type BreadcrumbItem, type SharedData } from '@/types';
+import { Head, usePage } from '@inertiajs/react';
+import axios from 'axios';
+import { Info } from 'lucide-react';
+import { useState } from 'react';
+import { toast } from 'sonner';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -25,13 +23,11 @@ function getInitials(user: any) {
 }
 
 function getFullName(user: any) {
-    return user.display_name
-        ?? user.name
-        ?? [
-            user.first_name,
-            user.middle_name ? `${user.middle_name[0].toUpperCase()}.` : '',
-            user.last_name
-        ].filter(Boolean).join(' ');
+    return (
+        user.display_name ??
+        user.name ??
+        [user.first_name, user.middle_name ? `${user.middle_name[0].toUpperCase()}.` : '', user.last_name].filter(Boolean).join(' ')
+    );
 }
 
 export default function Profile({ mustVerifyEmail, status }: { mustVerifyEmail: boolean; status?: string }) {
@@ -39,23 +35,22 @@ export default function Profile({ mustVerifyEmail, status }: { mustVerifyEmail: 
     const user = auth.user;
 
     type Adviser = { name: string; email: string };
-    const adviser: Adviser | null = Array.isArray(user.advisers) ? user.advisers[0] ?? null : null;
-    const [adviserCode, setAdviserCode] = useState(user.adviser_code ?? "");
+    const adviser: Adviser | null = Array.isArray(user.advisers) ? (user.advisers[0] ?? null) : null;
+    const [adviserCode, setAdviserCode] = useState(user.adviser_code ?? '');
     const [registerLoading, setRegisterLoading] = useState(false);
-    const [error, setError] = useState("");
+    const [error, setError] = useState('');
 
-    // --- Coordinator registration for Adviser/Faculty ---
-    const [coordinatorCode, setCoordinatorCode] = useState("");
+    // --- Coordinator registration for Adviser/Adviser ---
+    const [coordinatorCode, setCoordinatorCode] = useState('');
     const [coordinatorRegisterLoading, setCoordinatorRegisterLoading] = useState(false);
-    const [coordinatorError, setCoordinatorError] = useState("");
+    const [coordinatorError, setCoordinatorError] = useState('');
     // Always use { name, email } for coordinator state
     const [coordinator, setCoordinator] = useState(() => {
         const arr = Array.isArray(user.coordinators) ? user.coordinators : [];
         if (arr.length > 0) {
             const c = arr[0];
             return {
-                name: c.name
-                    || [c.first_name, c.middle_name ? `${c.middle_name[0]}.` : '', c.last_name].filter(Boolean).join(' '),
+                name: c.name || [c.first_name, c.middle_name ? `${c.middle_name[0]}.` : '', c.last_name].filter(Boolean).join(' '),
                 email: c.email,
             };
         }
@@ -64,23 +59,22 @@ export default function Profile({ mustVerifyEmail, status }: { mustVerifyEmail: 
 
     const handleRegisterCoordinator = async () => {
         setCoordinatorRegisterLoading(true);
-        setCoordinatorError("");
-        const toastId = toast.loading("Registering coordinator...");
+        setCoordinatorError('');
+        const toastId = toast.loading('Registering coordinator...');
         try {
-            const res = await axios.post("/api/adviser/register-with-coordinator-code", { coordinator_code: coordinatorCode });
-            toast.success("Coordinator registered successfully!", { id: toastId });
+            const res = await axios.post('/api/adviser/register-with-coordinator-code', { coordinator_code: coordinatorCode });
+            toast.success('Coordinator registered successfully!', { id: toastId });
             if (res.data?.coordinator) {
                 const c = res.data.coordinator;
                 setCoordinator({
-                    name: c.name
-                        || [c.first_name, c.middle_name ? `${c.middle_name[0]}.` : '', c.last_name].filter(Boolean).join(' '),
+                    name: c.name || [c.first_name, c.middle_name ? `${c.middle_name[0]}.` : '', c.last_name].filter(Boolean).join(' '),
                     email: c.email,
                 });
-                setCoordinatorCode("");
+                setCoordinatorCode('');
             }
         } catch (e: any) {
             toast.dismiss(toastId);
-            setCoordinatorError(e.response?.data?.error || "Registration failed.");
+            setCoordinatorError(e.response?.data?.error || 'Registration failed.');
         } finally {
             setCoordinatorRegisterLoading(false);
         }
@@ -88,15 +82,15 @@ export default function Profile({ mustVerifyEmail, status }: { mustVerifyEmail: 
 
     const handleRegisterAdviser = async () => {
         setRegisterLoading(true);
-        setError("");
-        const toastId = toast.loading("Registering adviser...");
+        setError('');
+        const toastId = toast.loading('Registering adviser...');
         try {
-            const res = await axios.post("/api/adviser/register-with-code", { adviser_code: adviserCode });
-            toast.success("Adviser registered successfully!", { id: toastId });
+            const res = await axios.post('/api/adviser/register-with-code', { adviser_code: adviserCode });
+            toast.success('Adviser registered successfully!', { id: toastId });
             window.location.reload();
         } catch (e: any) {
             toast.dismiss(toastId);
-            setError(e.response?.data?.error || "Registration failed.");
+            setError(e.response?.data?.error || 'Registration failed.');
         } finally {
             setRegisterLoading(false);
         }
@@ -107,85 +101,86 @@ export default function Profile({ mustVerifyEmail, status }: { mustVerifyEmail: 
             <Head title="Profile settings" />
             <SettingsLayout>
                 <div className="space-y-6">
-                    <Alert className="bg-rose-50 dark:bg-rose-950 border-rose-200 dark:border-rose-900 text-rose-900 dark:text-rose-100 flex items-start gap-3 px-6 py-5 rounded-xl">
-                        <Info className="h-5 w-5 text-rose-500 dark:text-rose-400 mt-1 flex-shrink-0" />
+                    <Alert className="flex items-start gap-3 rounded-xl border-rose-200 bg-rose-50 px-6 py-5 text-rose-900 dark:border-rose-900 dark:bg-rose-950 dark:text-rose-100">
+                        <Info className="mt-1 h-5 w-5 flex-shrink-0 text-rose-500 dark:text-rose-400" />
                         <div>
-                            <AlertTitle className="font-semibold mb-1">Notice</AlertTitle>
+                            <AlertTitle className="mb-1 font-semibold">Notice</AlertTitle>
                             <AlertDescription>
-                                Account details and information are fetched directly from the official myUIC portal database. Use the official myUIC portal if you wish to change any of the user information.
+                                Account details and information are fetched directly from the official myUIC portal database. Use the official myUIC
+                                portal if you wish to change any of the user information.
                             </AlertDescription>
                         </div>
                     </Alert>
-                    <div className="flex flex-row items-center gap-6 mb-8">
+                    <div className="mb-8 flex flex-row items-center gap-6">
                         <Avatar className="h-20 w-20">
-                            <AvatarFallback className="text-3xl font-bold bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-200">
+                            <AvatarFallback className="bg-zinc-200 text-3xl font-bold text-zinc-700 dark:bg-zinc-800 dark:text-zinc-200">
                                 {getInitials(user)}
                             </AvatarFallback>
                         </Avatar>
                         <div>
-                            <div className="text-2xl font-semibold">
-                                {getFullName(user)}
-                            </div>
+                            <div className="text-2xl font-semibold">{getFullName(user)}</div>
                             <div className="text-muted-foreground text-sm">{user.email}</div>
                         </div>
                     </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-6 mt-4">
+                    <div className="mt-4 grid grid-cols-1 gap-x-12 gap-y-6 md:grid-cols-2">
                         <div>
-                            <div className="text-xs text-muted-foreground mb-1">First Name</div>
-                            <div className="font-medium text-base">{user.first_name}</div>
+                            <div className="text-muted-foreground mb-1 text-xs">First Name</div>
+                            <div className="text-base font-medium">{user.first_name}</div>
                         </div>
                         <div>
-                            <div className="text-xs text-muted-foreground mb-1">Last Name</div>
-                            <div className="font-medium text-base">{user.last_name}</div>
+                            <div className="text-muted-foreground mb-1 text-xs">Last Name</div>
+                            <div className="text-base font-medium">{user.last_name}</div>
                         </div>
                         <div>
-                            <div className="text-xs text-muted-foreground mb-1">School ID</div>
-                            <div className="font-medium text-base">{user.school_id ?? '—'}</div>
+                            <div className="text-muted-foreground mb-1 text-xs">School ID</div>
+                            <div className="text-base font-medium">{user.school_id ?? '—'}</div>
                         </div>
                         <div>
-                            <div className="text-xs text-muted-foreground mb-1">Role</div>
-                            <div className="font-medium text-base">{user.role ?? '—'}</div>
+                            <div className="text-muted-foreground mb-1 text-xs">Role</div>
+                            <div className="text-base font-medium">{user.role ?? '—'}</div>
                         </div>
                         <div>
-                            <div className="text-xs text-muted-foreground mb-1">Email</div>
-                            <div className="font-medium text-base">{user.email ?? '—'}</div>
+                            <div className="text-muted-foreground mb-1 text-xs">Email</div>
+                            <div className="text-base font-medium">{user.email ?? '—'}</div>
                         </div>
                         {user.program && (
                             <div>
-                                <div className="text-xs text-muted-foreground mb-1">Program</div>
-                                <div className="font-medium text-base">{user.program}</div>
+                                <div className="text-muted-foreground mb-1 text-xs">Program</div>
+                                <div className="text-base font-medium">{user.program}</div>
                             </div>
                         )}
                         {/* Show Adviser info for Students */}
-                        {user.role === "Student" && (
+                        {user.role === 'Student' && (
                             <div>
-                                <div className="text-xs text-muted-foreground mb-1">Adviser</div>
+                                <div className="text-muted-foreground mb-1 text-xs">Adviser</div>
                                 {adviser ? (
                                     <>
-                                        <div className="font-medium text-base">{adviser.name}</div>
-                                        <div className="text-xs text-muted-foreground mt-1">{adviser.email}</div>
+                                        <div className="text-base font-medium">{adviser.name}</div>
+                                        <div className="text-muted-foreground mt-1 text-xs">{adviser.email}</div>
                                     </>
                                 ) : (
-                                    <div className="text-base text-muted-foreground">No adviser assigned.</div>
+                                    <div className="text-muted-foreground text-base">No adviser assigned.</div>
                                 )}
                             </div>
                         )}
-                        {(user.role === "Adviser" || user.role === "Faculty") && (
+                        {(user.role === 'Adviser' || user.role === 'Adviser') && (
                             <>
                                 <div>
-                                    <div className="text-xs text-muted-foreground mb-1">Adviser Code</div>
-                                    <div className=" font-medium text-base">{adviserCode ? String(adviserCode) : "—"}</div>
-                                    <div className="text-xs text-muted-foreground mt-1">Share this code with your students so they can register you as their adviser.</div>
+                                    <div className="text-muted-foreground mb-1 text-xs">Adviser Code</div>
+                                    <div className="text-base font-medium">{adviserCode ? String(adviserCode) : '—'}</div>
+                                    <div className="text-muted-foreground mt-1 text-xs">
+                                        Share this code with your students so they can register you as their adviser.
+                                    </div>
                                 </div>
                                 <div>
-                                    <div className="text-xs text-muted-foreground mb-1">Coordinator</div>
+                                    <div className="text-muted-foreground mb-1 text-xs">Coordinator</div>
                                     {coordinator ? (
                                         <>
-                                            <div className="font-medium text-base">{coordinator.name}</div>
-                                            <div className="text-xs text-muted-foreground mt-1">{coordinator.email}</div>
+                                            <div className="text-base font-medium">{coordinator.name}</div>
+                                            <div className="text-muted-foreground mt-1 text-xs">{coordinator.email}</div>
                                         </>
                                     ) : (
-                                        <div className="text-base text-muted-foreground">No coordinator assigned.</div>
+                                        <div className="text-muted-foreground text-base">No coordinator assigned.</div>
                                     )}
                                 </div>
                             </>
@@ -206,4 +201,3 @@ export default function Profile({ mustVerifyEmail, status }: { mustVerifyEmail: 
         </AppLayout>
     );
 }
-
