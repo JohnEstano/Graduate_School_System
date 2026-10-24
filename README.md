@@ -89,6 +89,249 @@ This repository is the combined work of three collaborating groups:
 
 ---
 
+## Local Development Setup
+
+This section documents the setup required to run the project locally, including the migration from XAMPP/SQLite to **Laravel Herd + MySQL** and the configuration of **Google SSO**.
+
+### Prerequisites
+
+Install the following on your Windows machine:
+
+1. **Laravel Herd** — https://herd.laravel.com/windows (replaces XAMPP's Apache with Nginx; bundles PHP 8.2+)
+2. **MySQL Server 8.0** — https://dev.mysql.com/downloads/installer/ (use MySQL Installer, NOT DBngin)
+   - Set `root` password to: **`root`**
+   - Default port: `3306`
+3. **MySQL Workbench 8.0** (optional, for DB GUI) — install via the same MySQL Installer
+4. **Composer** — https://getcomposer.org/Composer-Setup.exe
+5. **Node.js (LTS)** — https://nodejs.org/
+
+### Project Location
+
+Place the project in Herd's default directory:
+
+```
+C:\Users\<your-username>\Herd\graduate-school-system
+```
+
+### Installation Steps
+
+```powershell
+cd C:\Users\<your-username>\Herd\graduate-school-system
+composer install
+npm install
+php artisan key:generate
+```
+
+### Database Setup
+
+Create the database using MySQL CLI (or Workbench):
+
+```powershell
+"C:\Program Files\MySQL\MySQL Server 8.0\bin\mysql.exe" -u root -p
+```
+
+```sql
+CREATE DATABASE grad_db;
+EXIT;
+```
+
+Then run migrations:
+
+```powershell
+php artisan migrate:fresh --force
+```
+
+### Environment Configuration (`.env`)
+
+Use these **critical** settings:
+
+```env
+APP_URL=http://localhost:8000
+
+DB_CONNECTION=mysql
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_DATABASE=grad_db
+DB_USERNAME=root
+DB_PASSWORD=root
+
+GOOGLE_CLIENT_ID=your-client-id.apps.googleusercontent.com
+GOOGLE_CLIENT_SECRET=your-client-secret
+GOOGLE_REDIRECT_URI=http://localhost:8000/auth/google/callback
+```
+
+> ⚠️ **`APP_URL` must be `http://localhost:8000`** — Google OAuth rejects `.test` domains.
+
+### Google OAuth Setup
+
+1. Go to https://console.cloud.google.com/ and create a project
+2. **APIs & Services** → **Credentials** → **Create OAuth 2.0 Client ID** (Web application)
+3. Add this **Authorized redirect URI**:
+   ```
+   http://localhost:8000/auth/google/callback
+   ```
+4. Copy the Client ID and Client Secret into `.env`
+
+### Running the App
+
+```powershell
+php artisan serve
+```
+
+Visit: **http://localhost:8000**
+
+In a separate terminal for frontend assets:
+
+```powershell
+npm run dev
+```
+
+---
+
+## Recent Setup Changes (Migration Notes)
+
+The following changes were made to get Google SSO working with Laravel Herd + MySQL:
+
+### 1. Migrated from XAMPP to Laravel Herd
+- Moved project from `C:\xampp\htdocs\SOFTWARE_ENGEERING_2\-Graduate_School_System` to `C:\Users\matth\Herd\graduate-school-system`
+- Used `robocopy /E /XD node_modules vendor .git` to copy without heavy folders
+- Herd auto-detects projects in `~\Herd\` and serves them at `http://<project>.test`
+
+### 2. Migrated from SQLite to MySQL
+- Installed MySQL Server 8.0 via MySQL Installer (DBngin was tested and caused issues)
+- Created `grad_db` database
+- Updated `.env`: `DB_CONNECTION=mysql`, host `127.0.0.1`, user `root`, password `root`
+- Deleted old `database/database.sqlite` file
+- Ran `php artisan migrate:fresh --force` — all 80+ migrations succeeded
+
+### 3. Fixed Google OAuth Redirect URI
+- **Problem**: Google rejected `http://graduate-school-system.test/auth/google/callback` (`.test` domains are not allowed)
+- **Solution**: Reverted `APP_URL` to `http://localhost:8000` and updated Google Cloud Console redirect URI to match
+- Run the server with `php artisan serve` (not Herd's auto `.test` domain) so OAuth works
+
+### 4. Fixed GoogleAuthController
+File: `app/Http/Controllers/Auth/GoogleAuthController.php`
+
+Two fixes were applied:
+
+- **Force account selection** (so users can switch Google accounts):
+  ```php
+  ->with(['prompt' => 'select_account'])
+  ```
+
+- **Fix NOT NULL constraint on user creation** (auto-generated password for OAuth-only users):
+  ```php
+  'password' => bcrypt(uniqid())
+  ```
+
+---
+
+## Troubleshooting
+
+| Issue | Fix |
+|---|---|
+| Google OAuth `redirect_uri_mismatch` | Ensure Google Cloud Console redirect URI is exactly `http://localhost:8000/auth/google/callback` (no `.test`) |
+| MySQL `Access denied for user 'root'` | Verify password is `root` in `.env`; check MySQL service is running |
+| `SQLSTATE[HY000] [2002]` | Start MySQL: `net start MySQL80` (as Administrator) |
+| Port 8000 in use | `netstat -ano \| findstr :8000` then `taskkill /PID <PID> /F` |
+| Migration errors | `php artisan migrate:fresh --force`; verify `grad_db` exists |
+| `Class 'Google_Client' not found` | `composer require laravel/socialite` |
+| Google not prompting account selection | Use incognito mode or clear cookies; the `prompt=select_account` fix is already in `GoogleAuthController.php` |
+
+---
+
+## Developer Onboarding Checklist
+
+- [ ] Install Laravel Herd
+- [ ] Install MySQL Server 8.0 (root password: `root`)
+- [ ] Install Composer and Node.js
+- [ ] Copy project to `C:\Users\<you>\Herd\graduate-school-system`
+- [ ] Run `composer install` and `npm install`
+- [ ] Run `php artisan key:generate`
+- [ ] Create `grad_db` database in MySQL
+- [ ] Run `php artisan migrate:fresh --force`
+- [ ] Configure `.env` (use `localhost:8000`, MySQL credentials)
+- [ ] Set up Google OAuth credentials with redirect URI `http://localhost:8000/auth/google/callback`
+- [ ] Start server: `php artisan serve`
+- [ ] Visit `http://localhost:8000` and test Google login
+
+---
+
+## 🚀 Using Google SSO (Out-of-the-Box)
+
+The `Google-SSO` branch comes **pre-configured** with Google OAuth authentication. After cloning and running the setup steps above, Google SSO works immediately — no extra code changes needed.
+
+### What's Already Configured
+
+✅ **`app/Http/Controllers/Auth/GoogleAuthController.php`** — Handles the OAuth flow (redirect → callback → login/register)  
+✅ **`config/services.php`** — Google service config wired to `.env` variables  
+✅ **`routes/web.php`** — Routes registered:
+- `GET /auth/google` → redirects to Google
+- `GET /auth/google/callback` → handles Google response
+
+### How It Works
+
+1. **User clicks "Login with Google"** on the login page
+2. **Redirected to Google** — prompted to select an account
+3. **Google returns user data** (email, name, avatar) to `/auth/google/callback`
+4. **System checks the database**:
+   - If user **exists** → logs them in
+   - If user is **new** → auto-creates account with a random password
+5. **User is redirected** to the dashboard
+
+### Testing Google SSO Locally
+
+1. Make sure your `.env` has valid Google credentials:
+   ```env
+   GOOGLE_CLIENT_ID=your-client-id.apps.googleusercontent.com
+   GOOGLE_CLIENT_SECRET=your-client-secret
+   GOOGLE_REDIRECT_URI=http://localhost:8000/auth/google/callback
+   ```
+
+2. Start the server:
+   ```bash
+   php artisan serve
+   ```
+
+3. Visit `http://localhost:8000/login`
+
+4. Click the **"Login with Google"** button
+
+5. Select your `@uic.edu.ph` Google account
+
+6. You'll be redirected back and logged in automatically 🎉
+
+### Switching Google Accounts
+
+The controller forces the account picker every time:
+```php
+->with(['prompt' => 'select_account'])
+```
+This means even if you're already logged into Google, you'll see the account selection screen — perfect for testing with multiple accounts.
+
+### Troubleshooting SSO
+
+| Issue | Fix |
+|-------|-----|
+| `redirect_uri_mismatch` | Verify the redirect URI in Google Cloud Console **exactly** matches `http://localhost:8000/auth/google/callback` |
+| `Class 'Laravel\Socialite\Two\GoogleProvider' not found` | Run `composer require laravel/socialite` |
+| Stuck on "Loading..." after Google login | Clear browser cookies or use incognito mode |
+| New user can't log in | Check that the `users` table allows `password` to be nullable, OR that the controller auto-generates a password (it does) |
+| Want to test with a different Google account | Use incognito mode — the `prompt=select_account` ensures the picker always shows |
+
+### Adding Google Login Button (Frontend)
+
+If the button isn't showing on your login page, add this to your React login component:
+
+```tsx
+<a href="/auth/google" className="btn btn-google">
+    <img src="/google-icon.svg" alt="Google" />
+    Sign in with Google
+</a>
+```
+
+---
+
 ## Architecture & Tech Stack
 
 **Backend:**  

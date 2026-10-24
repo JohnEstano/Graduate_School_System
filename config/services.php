@@ -44,4 +44,11 @@ return [
         'issuer' => env('SCHOOL_OIDC_ISSUER'),
     ],
 
+    // Google SSO (Laravel Socialite)
+    'google' => [
+        'client_id' => env('GOOGLE_CLIENT_ID'),
+        'client_secret' => env('GOOGLE_CLIENT_SECRET'),
+        'redirect' => env('GOOGLE_REDIRECT_URI'),
+    ],
+
 ];

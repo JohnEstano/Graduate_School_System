@@ -45,13 +45,6 @@ Route::get('/', function () {
         : redirect()->route('login');
 })->name('home');
 
-Route::middleware('guest')->group(function () {
-    // BASIC login page (adjust Inertia component path to what you actually have)
-    Route::get('/login', fn() => Inertia::render('auth/Login'))->name('login');
-    // Uncomment if you allow registration
-    // Route::get('/register', fn() => Inertia::render('auth/Register'))->name('register');
-});
-
 /*
 |--------------------------------------------------------------------------
 | Debug / Diagnostics (optional)
@@ -182,14 +175,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('/', [\App\Http\Controllers\CoordinatorProgramAssignmentController::class, 'store'])->name('coordinator-assignments.store');
         Route::delete('/{id}', [\App\Http\Controllers\CoordinatorProgramAssignmentController::class, 'destroy'])->name('coordinator-assignments.destroy');
     });
-
-    // Logout
-    Route::post('/logout', function (\Illuminate\Http\Request $r) {
-        Auth::logout();
-        $r->session()->invalidate();
-        $r->session()->regenerateToken();
-        return redirect()->route('login');
-    })->name('logout');
 
     /* Notifications */
     Route::get('/notification', fn() => Inertia::render('notification/Index'))->name('notification.index');
