@@ -203,7 +203,13 @@ export default function DetailsRequirementsPage(rawProps: any) {
         },
         body: JSON.stringify(payload),
       });
-      const data = await res.json();
+      const responseText = await res.text();
+      let data: { error?: string; message?: string; [key: string]: unknown } = {};
+      try {
+        data = responseText ? JSON.parse(responseText) : {};
+      } catch {
+        data = {};
+      }
       if (res.ok) {
         if (data.request) {
           setRequest(data.request); // This will update workflow_history and re-render the workflow section
@@ -398,6 +404,9 @@ export default function DetailsRequirementsPage(rawProps: any) {
 
       const res = await fetchWithCsrfRetry(`/adviser/defense-requirements/${request.id}/documents`, {
         method: 'POST',
+        headers: {
+          Accept: 'application/json',
+        },
         body: formData,
       });
       const data = await res.json();
@@ -412,10 +421,10 @@ export default function DetailsRequirementsPage(rawProps: any) {
         setEndorsementFormFile(null);
         toast.success('Documents uploaded successfully.');
       } else {
-        toast.error(data?.error || 'Failed to upload documents.');
+        toast.error(data.error || data.message || `Upload failed (${res.status}).`);
       }
-    } catch {
-      toast.error('Network error uploading documents.');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Network error uploading documents.');
     } finally {
       setAiDetectionCertUploading(false);
       setEndorsementFormUploading(false);

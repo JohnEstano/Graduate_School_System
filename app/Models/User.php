@@ -25,6 +25,7 @@ class User extends Authenticatable
         'middle_name',
         'last_name',
         'email',
+        'google_id',
         'password',
         'role', // legacy single role for backward compatibility
         'program',
@@ -71,6 +72,7 @@ class User extends Authenticatable
     {
         return [
             'email_verified_at' => 'datetime',
+            'google_verified_at' => 'datetime',
             'password' => 'hashed',
         ];
     }

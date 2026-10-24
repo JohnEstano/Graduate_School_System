@@ -43,14 +43,7 @@ Route::get('/', function () {
     return Auth::check()
         ? redirect()->route('dashboard')
         : redirect()->route('login');
-})->name('home');
-
-Route::middleware('guest')->group(function () {
-    // BASIC login page (adjust Inertia component path to what you actually have)
-    Route::get('/login', fn() => Inertia::render('auth/Login'))->name('login');
-    // Uncomment if you allow registration
-    // Route::get('/register', fn() => Inertia::render('auth/Register'))->name('register');
-});
+})->name('home');   
 
 /*
 |--------------------------------------------------------------------------
@@ -603,6 +596,7 @@ Route::get('/adviser/defense-requirements/{id}/details', function ($id) {
 
 /* Adviser: Upload documents for defense requirements */
 Route::post('/adviser/defense-requirements/{defenseRequest}/documents', [DefenseRequestController::class, 'uploadDocuments'])
+    ->middleware(['auth', 'verified'])
     ->name('adviser.defense-requirements.upload-documents');
 
 Route::post('/adviser/defense-requirements/{id}/endorsement-form', function ($id) {
