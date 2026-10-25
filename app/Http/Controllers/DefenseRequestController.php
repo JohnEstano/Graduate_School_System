@@ -1293,15 +1293,29 @@ class DefenseRequestController extends Controller
 
     public function uploadDocuments(Request $request, DefenseRequest $defenseRequest)
     {
+        $user = Auth::user();
+        if (!$user || !in_array($user->role, ['Adviser', 'Adviser'])) {
+            return response()->json(['error' => 'Only the assigned adviser can upload these documents.'], 403);
+        }
+
+        $validated = $request->validate([
+            'ai_detection_certificate' => ['nullable', 'file', 'mimes:pdf', 'max:40960'],
+            'endorsement_form' => ['nullable', 'file', 'mimes:pdf', 'max:40960'],
+        ]);
+
+        if (!$request->hasFile('ai_detection_certificate') && !$request->hasFile('endorsement_form')) {
+            return response()->json(['error' => 'Select at least one PDF document to upload.'], 422);
+        }
+
         $data = [];
         if ($request->hasFile('ai_detection_certificate')) {
-            $file = $request->file('ai_detection_certificate');
+            $file = $validated['ai_detection_certificate'];
             $path = $file->store('defense_documents', 'public');
             $defenseRequest->ai_detection_certificate = '/storage/' . $path;
             $data['ai_detection_certificate'] = $defenseRequest->ai_detection_certificate;
         }
         if ($request->hasFile('endorsement_form')) {
-            $file = $request->file('endorsement_form');
+            $file = $validated['endorsement_form'];
             $path = $file->store('defense_documents', 'public');
             $defenseRequest->endorsement_form = '/storage/' . $path;
             $data['endorsement_form'] = $defenseRequest->endorsement_form;

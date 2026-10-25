@@ -8,6 +8,7 @@ use App\Http\Controllers\Auth\NewPasswordController;
 use App\Http\Controllers\Auth\PasswordResetLinkController;
 use App\Http\Controllers\Auth\RegisteredUserController;
 use App\Http\Controllers\Auth\VerifyEmailController;
+use App\Http\Controllers\Auth\GoogleAuthenticationController;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -24,6 +25,11 @@ Route::middleware('guest')->group(function () {
         ->name('login');
 
     Route::post('login', [AuthenticatedSessionController::class, 'store']);
+
+    Route::get('auth/google/redirect', [GoogleAuthenticationController::class, 'redirect'])
+        ->name('google.redirect');
+    Route::get('auth/google/callback', [GoogleAuthenticationController::class, 'callback'])
+        ->name('google.callback');
 
     // V2 Debug login (no OAuth) - only enabled when DEBUG_LOGIN_V2=true or APP_ENV != production
     Route::get('login-v2', [\App\Http\Controllers\Auth\AuthenticatedSessionV2Controller::class, 'create'])

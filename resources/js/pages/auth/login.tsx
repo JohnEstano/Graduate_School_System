@@ -18,11 +18,12 @@ type LoginForm = {
 
 interface LoginProps {
     status?: string;
+    error?: string;
     canResetPassword: boolean;
 }
 
 export default function Login(props: LoginProps) {
-    const { status, canResetPassword } = props;
+    const { status, error, canResetPassword } = props;
     const { data, setData, post, processing, errors, reset } = useForm<Required<LoginForm>>({
         identifier: '',
         password: '',
@@ -46,6 +47,7 @@ export default function Login(props: LoginProps) {
             <Head title="Log in" />
 
             {status && <div className="mb-4 text-center text-sm font-medium text-green-600">{status}</div>}
+            {error && <div className="mb-4 text-center text-sm font-medium text-red-600">{error}</div>}
 
             <form className="flex flex-col gap-6" onSubmit={submit}>
                 <div className="grid gap-6">
@@ -100,6 +102,19 @@ export default function Login(props: LoginProps) {
                     <Button type="submit" className="mt-4 w-full" tabIndex={4} disabled={processing}>
                         {processing && <LoaderCircle className="h-4 w-4 animate-spin" />}
                         Log in
+                    </Button>
+
+                    <div className="relative my-1">
+                        <div className="absolute inset-0 flex items-center">
+                            <span className="w-full border-t" />
+                        </div>
+                        <div className="relative flex justify-center text-xs uppercase">
+                            <span className="bg-background px-2 text-muted-foreground">or</span>
+                        </div>
+                    </div>
+
+                    <Button type="button" variant="outline" className="w-full" asChild>
+                        <a href={route('google.redirect')}>Continue with Google</a>
                     </Button>
                 </div>
             </form>
